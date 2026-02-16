@@ -146,5 +146,11 @@ pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut Sessio
             }
             true
         }
+        LayerGroupAction::Rename(group_id, name) => {
+            if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
+                gm.name = name.clone();
+            }
+            true
+        }
     }
 }

@@ -293,6 +293,8 @@ pub enum LayerGroupAction {
     ToggleEq(u32),
     /// Set an EQ band parameter on a layer group (group_id, band_index, param, value)
     SetEqParam(u32, usize, EqParamKind, f32),
+    /// Rename a layer group
+    Rename(u32, String),
 }
 
 /// Sample chopper actions.

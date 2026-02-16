@@ -4,12 +4,13 @@ use crate::state::{AppState, OwnershipDisplayStatus, SourceType};
 use crate::ui::action_id::{ActionId, InstrumentListActionId, ModeActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::performance::PerformanceController;
+use crate::ui::widgets::TextInput;
 use crate::ui::{
     translate_key, Action, Color, InputEvent, InstrumentAction, KeyCode, Keymap, MouseButton,
     MouseEvent, MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf, SessionAction, Style,
     ToggleResult,
 };
-use imbolc_types::InstrumentId;
+use imbolc_types::{InstrumentId, LayerGroupAction};
 
 fn source_color(source: SourceType) -> Color {
     match source {
@@ -48,6 +49,10 @@ pub struct InstrumentPane {
     perf: PerformanceController,
     /// When Some, we're waiting for the user to select a target instrument to link with
     linking_from: Option<crate::state::InstrumentId>,
+    /// Text input for renaming layer groups
+    edit_input: TextInput,
+    /// Layer group being renamed (None = not editing)
+    editing_group: Option<u32>,
 }
 
 impl InstrumentPane {
@@ -56,7 +61,13 @@ impl InstrumentPane {
             keymap,
             perf: PerformanceController::new(),
             linking_from: None,
+            edit_input: TextInput::new(""),
+            editing_group: None,
         }
+    }
+
+    pub fn is_editing(&self) -> bool {
+        self.editing_group.is_some()
     }
 
     pub fn set_enhanced_keyboard(&mut self, enabled: bool) {
@@ -99,7 +110,13 @@ impl InstrumentPane {
 
 impl Default for InstrumentPane {
     fn default() -> Self {
-        Self::new(Keymap::new())
+        Self {
+            keymap: Keymap::new(),
+            perf: PerformanceController::new(),
+            linking_from: None,
+            edit_input: TextInput::new(""),
+            editing_group: None,
+        }
     }
 }
 
@@ -203,6 +220,39 @@ impl Pane for InstrumentPane {
                     Action::None
                 }
             }
+            ActionId::InstrumentList(InstrumentListActionId::RenameLayerGroup) => {
+                if let Some(instrument) = state.instruments.selected_instrument() {
+                    if let Some(group_id) = instrument.layer.group {
+                        let current_name = state
+                            .session
+                            .mixer
+                            .layer_group_mixer(group_id)
+                            .map(|gm| gm.name.clone())
+                            .unwrap_or_default();
+                        self.edit_input.set_value(&current_name);
+                        self.edit_input.select_all();
+                        self.edit_input.set_focused(true);
+                        self.editing_group = Some(group_id);
+                        return Action::PushLayer("text_edit");
+                    }
+                }
+                Action::None
+            }
+
+            // Text edit mode actions
+            ActionId::Mode(ModeActionId::TextConfirm) => {
+                if let Some(group_id) = self.editing_group.take() {
+                    let name = self.edit_input.value().to_string();
+                    self.edit_input.set_focused(false);
+                    return Action::LayerGroup(LayerGroupAction::Rename(group_id, name));
+                }
+                Action::None
+            }
+            ActionId::Mode(ModeActionId::TextCancel) => {
+                self.editing_group = None;
+                self.edit_input.set_focused(false);
+                Action::None
+            }
 
             // Piano layer actions
             ActionId::Mode(ModeActionId::PianoEscape) => {
@@ -269,6 +319,13 @@ impl Pane for InstrumentPane {
 
             _ => Action::None,
         }
+    }
+
+    fn handle_raw_input(&mut self, event: &InputEvent, _state: &AppState) -> Action {
+        if self.editing_group.is_some() {
+            self.edit_input.handle_input(event);
+        }
+        Action::None
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
@@ -358,10 +415,24 @@ impl Pane for InstrumentPane {
             let source_c = source_color(instrument.source);
 
             let layer_str = match instrument.layer.group {
-                Some(g) if instrument.layer.octave_offset != 0 => {
-                    format!(" [L{}:{:+}]", g, instrument.layer.octave_offset)
+                Some(g) => {
+                    let group_name = state
+                        .session
+                        .mixer
+                        .layer_group_mixer(g)
+                        .map(|gm| gm.name.as_str())
+                        .unwrap_or("");
+                    let label = if group_name.is_empty() {
+                        format!("L{}", g)
+                    } else {
+                        group_name.to_string()
+                    };
+                    if instrument.layer.octave_offset != 0 {
+                        format!(" [{}:{:+}]", label, instrument.layer.octave_offset)
+                    } else {
+                        format!(" [{}]", label)
+                    }
                 }
-                Some(g) => format!(" [L{}]", g),
                 None => String::new(),
             };
 
@@ -453,6 +524,26 @@ impl Pane for InstrumentPane {
                 Rect::new(link_x, rect.y, link_str.len() as u16, 1),
                 &[(link_str, Style::new().fg(Color::BLACK).bg(Color::ORANGE))],
             );
+        }
+
+        // Rename mode indicator + inline text input
+        if self.editing_group.is_some() {
+            let rename_str = " RENAME: Enter confirm, Esc cancel ";
+            let rename_x = rect.x + rect.width - rename_str.len() as u16 - 1;
+            buf.draw_line(
+                Rect::new(rename_x, rect.y, rename_str.len() as u16, 1),
+                &[(rename_str, Style::new().fg(Color::BLACK).bg(Color::LIME))],
+            );
+
+            // Draw text input at the bottom of the inner area
+            let input_y = inner.y + inner.height.saturating_sub(2);
+            let input_x = inner.x + 1;
+            let input_width = inner.width.saturating_sub(2);
+            self.edit_input
+                .render_buf(buf.raw_buf(), input_x, input_y, input_width);
+            if let Some((cx, cy)) = self.edit_input.screen_cursor() {
+                buf.set_cursor_position(cx, cy);
+            }
         }
     }
 

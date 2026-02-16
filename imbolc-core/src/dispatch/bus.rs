@@ -162,6 +162,8 @@ pub fn dispatch_layer_group(
             }
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
+
+        LayerGroupAction::Rename(_, _) => {}
     }
 
     result

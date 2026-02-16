@@ -230,6 +230,7 @@ define_action_enum! {
         UnlinkLayer => "unlink_layer",
         LayerOctaveUp => "layer_octave_up",
         LayerOctaveDown => "layer_octave_down",
+        RenameLayerGroup => "rename_layer_group",
     }
 }
 
@@ -1022,6 +1023,7 @@ mod tests {
             InstrumentListActionId::UnlinkLayer,
             InstrumentListActionId::LayerOctaveUp,
             InstrumentListActionId::LayerOctaveDown,
+            InstrumentListActionId::RenameLayerGroup,
         ];
 
         for action in actions {

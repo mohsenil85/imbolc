@@ -182,6 +182,7 @@ repl_actions! {
         "adjust-effect-param"   => AdjustEffectParam(gid: u32, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust layer group effect param"
         "toggle-eq"             => ToggleEq(gid: u32);                                             "Toggle layer group EQ"
         "set-eq-param"          => SetEqParam(gid: u32, band: usize, kind: EqParamKind, v: f32);   "Set layer group EQ band param"
+        "rename"                => Rename(gid: u32, name: String);                                  "Rename layer group"
     }
 
     group "generative" => DomainAction::Generative, GenerativeAction {

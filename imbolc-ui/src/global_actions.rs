@@ -6,8 +6,8 @@ use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
 use crate::panes::{
     AutomationPane, CommandPalettePane, ConfirmPane, DocsPane, FileBrowserPane, FrameEditPane,
-    HelpPane, InstrumentEditPane, PaneSwitcherPane, PendingAction, PianoRollPane, SaveAsPane,
-    SequencerPane, ServerPane, VstParamPane,
+    HelpPane, InstrumentEditPane, InstrumentPane, PaneSwitcherPane, PendingAction, PianoRollPane,
+    SaveAsPane, SequencerPane, ServerPane, VstParamPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -207,6 +207,9 @@ pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &
             "server" => panes
                 .get_pane_mut::<ServerPane>("server")
                 .is_some_and(|p| p.is_editing_scsynth_args()),
+            "instrument" => panes
+                .get_pane_mut::<InstrumentPane>("instrument")
+                .is_some_and(|p| p.is_editing()),
             _ => false,
         };
         if !still_editing {
