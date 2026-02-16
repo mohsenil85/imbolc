@@ -24,6 +24,7 @@ use imbolc_types::*;
 
 use completion::ReplHelper;
 
+#[derive(Debug)]
 enum ReplResult {
     /// A read-only query produced output text.
     Output(String),
@@ -32,6 +33,9 @@ enum ReplResult {
     /// User wants to quit.
     Quit,
 }
+
+#[cfg(test)]
+mod tests;
 
 pub fn run(project_arg: Option<String>) -> ! {
     let (io_tx, io_rx) = mpsc::channel::<IoFeedback>();
