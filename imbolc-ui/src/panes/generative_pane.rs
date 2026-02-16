@@ -64,8 +64,8 @@ impl GenerativePane {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
                     match &voice.algorithm {
                         GenerativeAlgorithm::Euclidean(_) => VOICE_ALG_PARAM_START + 4, // pulses, steps, rotation, pitch_mode
-                        GenerativeAlgorithm::Markov(_) => VOICE_ALG_PARAM_START + 3,    // rest_prob, duration_mode, randomize
-                        GenerativeAlgorithm::LSystem(_) => VOICE_ALG_PARAM_START + 3,   // axiom, iterations, step_interval
+                        GenerativeAlgorithm::Markov(_) => VOICE_ALG_PARAM_START + 3, // rest_prob, duration_mode, randomize
+                        GenerativeAlgorithm::LSystem(_) => VOICE_ALG_PARAM_START + 3, // axiom, iterations, step_interval
                     }
                 } else {
                     0
@@ -117,8 +117,7 @@ impl Pane for GenerativePane {
             }
             ActionId::Generative(GenerativeActionId::NextVoice) => {
                 if !gen.voices.is_empty() {
-                    self.selected_voice =
-                        (self.selected_voice + 1).min(gen.voices.len() - 1);
+                    self.selected_voice = (self.selected_voice + 1).min(gen.voices.len() - 1);
                     self.selected_param = 0;
                 }
                 Action::None
@@ -136,9 +135,9 @@ impl Pane for GenerativePane {
                 Action::Generative(GenerativeAction::ClearCapture)
             }
             ActionId::Generative(GenerativeActionId::AddVoice) => {
-                Action::Generative(GenerativeAction::AddVoice(
-                    GenerativeAlgorithm::Euclidean(EuclideanConfig::default()),
-                ))
+                Action::Generative(GenerativeAction::AddVoice(GenerativeAlgorithm::Euclidean(
+                    EuclideanConfig::default(),
+                )))
             }
             ActionId::Generative(GenerativeActionId::RemoveVoice) => {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
@@ -228,15 +227,9 @@ impl Pane for GenerativePane {
                     Action::None
                 }
             }
-            ActionId::Generative(GenerativeActionId::Toggle) => {
-                self.handle_toggle(state)
-            }
-            ActionId::Generative(GenerativeActionId::Increase) => {
-                self.handle_adjust(state, true)
-            }
-            ActionId::Generative(GenerativeActionId::Decrease) => {
-                self.handle_adjust(state, false)
-            }
+            ActionId::Generative(GenerativeActionId::Toggle) => self.handle_toggle(state),
+            ActionId::Generative(GenerativeActionId::Increase) => self.handle_adjust(state, true),
+            ActionId::Generative(GenerativeActionId::Decrease) => self.handle_adjust(state, false),
             _ => Action::None,
         }
     }
@@ -270,7 +263,12 @@ impl Pane for GenerativePane {
         let col_w = area.width / 3;
         let macros_area = Rect::new(area.x, content_y, col_w.min(30), content_h);
         let constraints_area = Rect::new(area.x + col_w, content_y, col_w.min(30), content_h);
-        let voices_area = Rect::new(area.x + col_w * 2, content_y, area.width - col_w * 2, content_h);
+        let voices_area = Rect::new(
+            area.x + col_w * 2,
+            content_y,
+            area.width - col_w * 2,
+            content_h,
+        );
 
         self.render_macros(macros_area, buf, state);
         self.render_constraints(constraints_area, buf, state);
@@ -289,7 +287,10 @@ impl Pane for GenerativePane {
             } else {
                 Style::new().fg(Color::DARK_GRAY)
             };
-            buf.draw_line(Rect::new(x, header_y, name.len() as u16, 1), &[(name, style)]);
+            buf.draw_line(
+                Rect::new(x, header_y, name.len() as u16, 1),
+                &[(name, style)],
+            );
         }
     }
 
@@ -320,9 +321,7 @@ impl GenerativePane {
                         VOICE_ENABLED => {
                             Action::Generative(GenerativeAction::ToggleVoice(voice.id))
                         }
-                        VOICE_MUTED => {
-                            Action::Generative(GenerativeAction::MuteVoice(voice.id))
-                        }
+                        VOICE_MUTED => Action::Generative(GenerativeAction::MuteVoice(voice.id)),
                         _ => Action::None,
                     }
                 } else {
@@ -340,22 +339,14 @@ impl GenerativePane {
 
         match self.focus_section {
             SECTION_MACROS => match self.selected_param {
-                MACRO_DENSITY => {
-                    Action::Generative(GenerativeAction::AdjustDensity(small_delta))
-                }
+                MACRO_DENSITY => Action::Generative(GenerativeAction::AdjustDensity(small_delta)),
                 MACRO_CHAOS => Action::Generative(GenerativeAction::AdjustChaos(small_delta)),
-                MACRO_ENERGY => {
-                    Action::Generative(GenerativeAction::AdjustEnergy(small_delta))
-                }
-                MACRO_MOTION => {
-                    Action::Generative(GenerativeAction::AdjustMotion(small_delta))
-                }
+                MACRO_ENERGY => Action::Generative(GenerativeAction::AdjustEnergy(small_delta)),
+                MACRO_MOTION => Action::Generative(GenerativeAction::AdjustMotion(small_delta)),
                 _ => Action::None,
             },
             SECTION_CONSTRAINTS => match self.selected_param {
-                CONSTRAINT_SCALE_LOCK => {
-                    Action::Generative(GenerativeAction::ToggleScaleLock)
-                }
+                CONSTRAINT_SCALE_LOCK => Action::Generative(GenerativeAction::ToggleScaleLock),
                 CONSTRAINT_PITCH_MIN => {
                     Action::Generative(GenerativeAction::AdjustPitchMin(delta as i8))
                 }
@@ -389,8 +380,7 @@ impl GenerativePane {
                                 match voice.target_instrument {
                                     None => Some(instruments[0].id),
                                     Some(current) => {
-                                        let pos =
-                                            instruments.iter().position(|i| i.id == current);
+                                        let pos = instruments.iter().position(|i| i.id == current);
                                         match pos {
                                             Some(idx) if idx + 1 < instruments.len() => {
                                                 Some(instruments[idx + 1].id)
@@ -403,8 +393,7 @@ impl GenerativePane {
                                 match voice.target_instrument {
                                     None => instruments.last().map(|i| i.id),
                                     Some(current) => {
-                                        let pos =
-                                            instruments.iter().position(|i| i.id == current);
+                                        let pos = instruments.iter().position(|i| i.id == current);
                                         match pos {
                                             Some(0) => None,
                                             Some(idx) => Some(instruments[idx - 1].id),
@@ -561,7 +550,10 @@ impl GenerativePane {
             };
             let bar = render_bar(*value, 12);
             let val_str = format!("{}: {} {:.0}%", name, bar, value * 100.0);
-            buf.draw_line(Rect::new(area.x + 1, y, val_str.len() as u16, 1), &[(&val_str, label_style)]);
+            buf.draw_line(
+                Rect::new(area.x + 1, y, val_str.len() as u16, 1),
+                &[(&val_str, label_style)],
+            );
         }
     }
 
@@ -571,12 +563,37 @@ impl GenerativePane {
         let is_focused = self.focus_section == SECTION_CONSTRAINTS;
 
         let params: Vec<(String, usize)> = vec![
-            (format!("Scale Lock: {}", if c.scale_lock { "ON" } else { "OFF" }), CONSTRAINT_SCALE_LOCK),
-            (format!("Pitch Min:  {}", note_name(c.pitch_min)), CONSTRAINT_PITCH_MIN),
-            (format!("Pitch Max:  {}", note_name(c.pitch_max)), CONSTRAINT_PITCH_MAX),
-            (format!("Max Notes:  {}", if c.max_notes_per_beat == 0 { "Inf".to_string() } else { c.max_notes_per_beat.to_string() }), CONSTRAINT_MAX_NOTES),
-            (format!("Hum. Time:  {:.0}%", c.humanize_timing * 100.0), CONSTRAINT_HUMANIZE_TIME),
-            (format!("Hum. Vel:   {:.0}%", c.humanize_velocity * 100.0), CONSTRAINT_HUMANIZE_VEL),
+            (
+                format!("Scale Lock: {}", if c.scale_lock { "ON" } else { "OFF" }),
+                CONSTRAINT_SCALE_LOCK,
+            ),
+            (
+                format!("Pitch Min:  {}", note_name(c.pitch_min)),
+                CONSTRAINT_PITCH_MIN,
+            ),
+            (
+                format!("Pitch Max:  {}", note_name(c.pitch_max)),
+                CONSTRAINT_PITCH_MAX,
+            ),
+            (
+                format!(
+                    "Max Notes:  {}",
+                    if c.max_notes_per_beat == 0 {
+                        "Inf".to_string()
+                    } else {
+                        c.max_notes_per_beat.to_string()
+                    }
+                ),
+                CONSTRAINT_MAX_NOTES,
+            ),
+            (
+                format!("Hum. Time:  {:.0}%", c.humanize_timing * 100.0),
+                CONSTRAINT_HUMANIZE_TIME,
+            ),
+            (
+                format!("Hum. Vel:   {:.0}%", c.humanize_velocity * 100.0),
+                CONSTRAINT_HUMANIZE_VEL,
+            ),
         ];
 
         for (text, idx) in &params {
@@ -591,7 +608,10 @@ impl GenerativePane {
             } else {
                 Style::new().fg(Color::WHITE)
             };
-            buf.draw_line(Rect::new(area.x + 1, y, text.len() as u16, 1), &[(text, style)]);
+            buf.draw_line(
+                Rect::new(area.x + 1, y, text.len() as u16, 1),
+                &[(text, style)],
+            );
         }
     }
 
@@ -602,7 +622,10 @@ impl GenerativePane {
         if gen.voices.is_empty() {
             let msg = "(no voices - press 'a' to add)";
             let style = Style::new().fg(Color::DARK_GRAY);
-            buf.draw_line(Rect::new(area.x + 1, area.y, msg.len() as u16, 1), &[(msg, style)]);
+            buf.draw_line(
+                Rect::new(area.x + 1, area.y, msg.len() as u16, 1),
+                &[(msg, style)],
+            );
             return;
         }
 
@@ -663,7 +686,10 @@ impl GenerativePane {
                 };
                 let max_w = (area.width.saturating_sub(1)) as usize;
                 let text: String = label.chars().take(max_w).collect();
-                buf.draw_line(Rect::new(area.x + 1, y, text.len() as u16, 1), &[(&text, style)]);
+                buf.draw_line(
+                    Rect::new(area.x + 1, y, text.len() as u16, 1),
+                    &[(&text, style)],
+                );
                 y += 1;
             }
         }
@@ -702,17 +728,26 @@ fn build_voice_detail_params(
 
     match &voice.algorithm {
         GenerativeAlgorithm::Euclidean(cfg) => {
-            params.push((format!("Pulses:    {}/{}", cfg.pulses, cfg.steps), String::new()));
+            params.push((
+                format!("Pulses:    {}/{}", cfg.pulses, cfg.steps),
+                String::new(),
+            ));
             params.push((format!("Steps:     {}", cfg.steps), String::new()));
             params.push((format!("Rotation:  {}", cfg.rotation), String::new()));
-            params.push((format!("Pitch:     {}", cfg.pitch_mode.name()), String::new()));
+            params.push((
+                format!("Pitch:     {}", cfg.pitch_mode.name()),
+                String::new(),
+            ));
         }
         GenerativeAlgorithm::Markov(cfg) => {
             params.push((
                 format!("Rest Prob: {:.0}%", cfg.rest_probability * 100.0),
                 String::new(),
             ));
-            params.push((format!("Duration:  {}", cfg.duration_mode.name()), String::new()));
+            params.push((
+                format!("Duration:  {}", cfg.duration_mode.name()),
+                String::new(),
+            ));
             params.push(("Randomize: [+]".to_string(), String::new()));
         }
         GenerativeAlgorithm::LSystem(cfg) => {
@@ -732,7 +767,9 @@ fn render_bar(value: f32, width: usize) -> String {
 }
 
 fn note_name(midi: u8) -> String {
-    let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    let names = [
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    ];
     let octave = (midi as i16 / 12) - 1;
     let note = midi % 12;
     format!("{}{}", names[note as usize], octave)

@@ -73,7 +73,17 @@ pub fn tick_generative(
         .voices
         .iter()
         .filter(|v| v.enabled && !v.muted && v.target_instrument.is_some())
-        .map(|v| (v.id, v.target_instrument.unwrap(), v.algorithm.clone(), v.velocity_min, v.velocity_max, v.octave_min, v.octave_max))
+        .map(|v| {
+            (
+                v.id,
+                v.target_instrument.unwrap(),
+                v.algorithm.clone(),
+                v.velocity_min,
+                v.velocity_max,
+                v.octave_min,
+                v.octave_max,
+            )
+        })
         .collect();
 
     let macros = &gen.macros;
@@ -136,11 +146,17 @@ pub fn tick_generative(
                     eff.pulses = (cfg.pulses as f32 * macros.density).round().max(0.0) as u8;
                     eff.pulses = eff.pulses.min(eff.steps);
                     // Chaos: offset rotation
-                    eff.rotation = ((cfg.rotation as f32
-                        + macros.chaos * cfg.steps as f32 * 0.25)
+                    eff.rotation = ((cfg.rotation as f32 + macros.chaos * cfg.steps as f32 * 0.25)
                         as u8)
                         % cfg.steps.max(1);
-                    generate_euclidean(&eff, state, &session.key, &session.scale, &gen.constraints, rng_state)
+                    generate_euclidean(
+                        &eff,
+                        state,
+                        &session.key,
+                        &session.scale,
+                        &gen.constraints,
+                        rng_state,
+                    )
                 }
                 GenerativeAlgorithm::Markov(cfg) => {
                     let mut eff = cfg.clone();
@@ -159,7 +175,16 @@ pub fn tick_generative(
                     let oct_spread = (macros.motion * 2.0) as i8; // 0-2 extra octaves
                     let eff_oct_min = (*oct_min - oct_spread).max(0);
                     let eff_oct_max = (*oct_max + oct_spread).min(9);
-                    generate_markov(&eff, state, &session.key, &session.scale, &gen.constraints, rng_state, eff_oct_min, eff_oct_max)
+                    generate_markov(
+                        &eff,
+                        state,
+                        &session.key,
+                        &session.scale,
+                        &gen.constraints,
+                        rng_state,
+                        eff_oct_min,
+                        eff_oct_max,
+                    )
                 }
                 GenerativeAlgorithm::LSystem(cfg) => {
                     let mut eff = cfg.clone();
@@ -260,7 +285,11 @@ fn generate_euclidean(
 ) -> Option<(u8, u8)> {
     // Cache or regenerate Euclidean pattern
     let pattern = state.euclidean_pattern.get_or_insert_with(|| {
-        euclidean_rhythm(cfg.pulses as usize, cfg.steps as usize, cfg.rotation as usize)
+        euclidean_rhythm(
+            cfg.pulses as usize,
+            cfg.steps as usize,
+            cfg.rotation as usize,
+        )
     });
 
     let step = state.step_index % pattern.len().max(1);
@@ -362,9 +391,7 @@ fn generate_lsystem(
     constraints: &GenerativeConstraints,
 ) -> Option<(u8, u8)> {
     // Cache or regenerate expanded string
-    let expanded = state
-        .lsystem_expanded
-        .get_or_insert_with(|| cfg.expand());
+    let expanded = state.lsystem_expanded.get_or_insert_with(|| cfg.expand());
 
     if expanded.is_empty() {
         return None;
@@ -386,10 +413,10 @@ fn generate_lsystem(
         match ch {
             'F' | 'G' => {
                 // Play note at current pitch
-                let pitch = state.lsystem_current_pitch.clamp(
-                    constraints.pitch_min as i16,
-                    constraints.pitch_max as i16,
-                ) as u8;
+                let pitch = state
+                    .lsystem_current_pitch
+                    .clamp(constraints.pitch_min as i16, constraints.pitch_max as i16)
+                    as u8;
                 note_event = Some((pitch, cfg.velocity));
                 break;
             }
@@ -484,7 +511,14 @@ mod tests {
         // All 4 steps should produce notes since pulses == steps
         for i in 0..4 {
             state.step_index = i;
-            let event = generate_euclidean(&cfg, &mut state, &Key::C, &Scale::Major, &constraints, &mut rng);
+            let event = generate_euclidean(
+                &cfg,
+                &mut state,
+                &Key::C,
+                &Scale::Major,
+                &constraints,
+                &mut rng,
+            );
             assert!(event.is_some(), "Step {} should produce a note", i);
         }
     }
@@ -506,7 +540,16 @@ mod tests {
         for i in 0..4 {
             state.step_index = i;
             state.euclidean_pattern = None; // Clear cache each time for test
-            if generate_euclidean(&cfg, &mut state, &Key::C, &Scale::Major, &constraints, &mut rng).is_some() {
+            if generate_euclidean(
+                &cfg,
+                &mut state,
+                &Key::C,
+                &Scale::Major,
+                &constraints,
+                &mut rng,
+            )
+            .is_some()
+            {
                 note_count += 1;
             }
         }
@@ -523,7 +566,16 @@ mod tests {
         let mut rng = 12345u64;
         let constraints = GenerativeConstraints::default();
 
-        let event = generate_markov(&cfg, &mut state, &Key::C, &Scale::Major, &constraints, &mut rng, 3, 6);
+        let event = generate_markov(
+            &cfg,
+            &mut state,
+            &Key::C,
+            &Scale::Major,
+            &constraints,
+            &mut rng,
+            3,
+            6,
+        );
         assert!(event.is_some());
     }
 
@@ -537,7 +589,16 @@ mod tests {
         let mut rng = 12345u64;
         let constraints = GenerativeConstraints::default();
 
-        let event = generate_markov(&cfg, &mut state, &Key::C, &Scale::Major, &constraints, &mut rng, 3, 6);
+        let event = generate_markov(
+            &cfg,
+            &mut state,
+            &Key::C,
+            &Scale::Major,
+            &constraints,
+            &mut rng,
+            3,
+            6,
+        );
         assert!(event.is_none());
     }
 

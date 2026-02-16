@@ -293,13 +293,19 @@ mod tests {
     #[test]
     fn parse_instrument_add() {
         let action = parse_action("instrument add saw").unwrap();
-        assert!(matches!(action, DomainAction::Instrument(InstrumentAction::Add(SourceType::Saw))));
+        assert!(matches!(
+            action,
+            DomainAction::Instrument(InstrumentAction::Add(SourceType::Saw))
+        ));
     }
 
     #[test]
     fn parse_instrument_select_next() {
         let action = parse_action("instrument select-next").unwrap();
-        assert!(matches!(action, DomainAction::Instrument(InstrumentAction::SelectNext)));
+        assert!(matches!(
+            action,
+            DomainAction::Instrument(InstrumentAction::SelectNext)
+        ));
     }
 
     #[test]
@@ -317,7 +323,10 @@ mod tests {
     #[test]
     fn parse_mixer_toggle_mute() {
         let action = parse_action("mixer toggle-mute").unwrap();
-        assert!(matches!(action, DomainAction::Mixer(MixerAction::ToggleMute)));
+        assert!(matches!(
+            action,
+            DomainAction::Mixer(MixerAction::ToggleMute)
+        ));
     }
 
     #[test]

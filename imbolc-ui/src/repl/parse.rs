@@ -134,7 +134,9 @@ impl ReplParseable for PathBuf {
 
 impl ReplParseable for InstrumentId {
     fn parse_repl(s: &str) -> Result<Self, String> {
-        let id: u32 = s.parse().map_err(|_| format!("invalid instrument id: {s}"))?;
+        let id: u32 = s
+            .parse()
+            .map_err(|_| format!("invalid instrument id: {s}"))?;
         Ok(InstrumentId::new(id))
     }
     fn type_hint() -> &'static str {
@@ -241,8 +243,9 @@ impl ReplParseable for ParameterTarget {
 
 impl ReplParseable for CurveType {
     fn parse_repl(s: &str) -> Result<Self, String> {
-        CurveType::from_name(s)
-            .ok_or_else(|| format!("unknown curve type: {s} (try: linear, exponential, step, scurve)"))
+        CurveType::from_name(s).ok_or_else(|| {
+            format!("unknown curve type: {s} (try: linear, exponential, step, scurve)")
+        })
     }
     fn type_hint() -> &'static str {
         "<curve>"
@@ -280,18 +283,26 @@ impl ReplParseable for MixerSelection {
             return Ok(MixerSelection::Master);
         }
         if let Some(rest) = s.strip_prefix("instrument:") {
-            let idx: usize = rest.parse().map_err(|_| format!("invalid instrument index: {rest}"))?;
+            let idx: usize = rest
+                .parse()
+                .map_err(|_| format!("invalid instrument index: {rest}"))?;
             return Ok(MixerSelection::Instrument(idx));
         }
         if let Some(rest) = s.strip_prefix("bus:") {
-            let id: u8 = rest.parse().map_err(|_| format!("invalid bus id: {rest}"))?;
+            let id: u8 = rest
+                .parse()
+                .map_err(|_| format!("invalid bus id: {rest}"))?;
             return Ok(MixerSelection::Bus(BusId::new(id)));
         }
         if let Some(rest) = s.strip_prefix("group:") {
-            let id: u32 = rest.parse().map_err(|_| format!("invalid group id: {rest}"))?;
+            let id: u32 = rest
+                .parse()
+                .map_err(|_| format!("invalid group id: {rest}"))?;
             return Ok(MixerSelection::LayerGroup(id));
         }
-        Err(format!("invalid mixer selection: {s} (try: master, instrument:0, bus:1, group:0)"))
+        Err(format!(
+            "invalid mixer selection: {s} (try: master, instrument:0, bus:1, group:0)"
+        ))
     }
     fn type_hint() -> &'static str {
         "<selection>"
@@ -304,7 +315,9 @@ impl ReplParseable for VstTarget {
             return Ok(VstTarget::Source);
         }
         if let Some(rest) = s.strip_prefix("effect:") {
-            let id: u32 = rest.parse().map_err(|_| format!("invalid effect id: {rest}"))?;
+            let id: u32 = rest
+                .parse()
+                .map_err(|_| format!("invalid effect id: {rest}"))?;
             return Ok(VstTarget::Effect(EffectId::new(id)));
         }
         Err(format!("invalid vst target: {s} (try: source, effect:0)"))
@@ -329,8 +342,9 @@ impl ReplParseable for VstPluginKind {
 
 impl ReplParseable for Key {
     fn parse_repl(s: &str) -> Result<Self, String> {
-        Key::from_name(s)
-            .ok_or_else(|| format!("unknown key: {s} (try: C, C#, D, D#, E, F, F#, G, G#, A, A#, B)"))
+        Key::from_name(s).ok_or_else(|| {
+            format!("unknown key: {s} (try: C, C#, D, D#, E, F, F#, G, G#, A, A#, B)")
+        })
     }
     fn type_hint() -> &'static str {
         "<key>"
@@ -349,8 +363,9 @@ impl ReplParseable for Scale {
 
 impl ReplParseable for Tuning {
     fn parse_repl(s: &str) -> Result<Self, String> {
-        Tuning::from_name(s)
-            .ok_or_else(|| format!("unknown tuning: {s} (try: 12-TET, ScaleJI, ChordJI, AdaptiveJI, GlobalJI)"))
+        Tuning::from_name(s).ok_or_else(|| {
+            format!("unknown tuning: {s} (try: 12-TET, ScaleJI, ChordJI, AdaptiveJI, GlobalJI)")
+        })
     }
     fn type_hint() -> &'static str {
         "<tuning>"
@@ -402,7 +417,10 @@ mod tests {
     #[test]
     fn parse_effect_type() {
         assert_eq!(EffectType::parse_repl("delay").unwrap(), EffectType::Delay);
-        assert_eq!(EffectType::parse_repl("reverb").unwrap(), EffectType::Reverb);
+        assert_eq!(
+            EffectType::parse_repl("reverb").unwrap(),
+            EffectType::Reverb
+        );
     }
 
     #[test]
@@ -425,9 +443,18 @@ mod tests {
 
     #[test]
     fn parse_mixer_selection() {
-        assert_eq!(MixerSelection::parse_repl("master").unwrap(), MixerSelection::Master);
-        assert_eq!(MixerSelection::parse_repl("instrument:0").unwrap(), MixerSelection::Instrument(0));
-        assert_eq!(MixerSelection::parse_repl("bus:1").unwrap(), MixerSelection::Bus(BusId::new(1)));
+        assert_eq!(
+            MixerSelection::parse_repl("master").unwrap(),
+            MixerSelection::Master
+        );
+        assert_eq!(
+            MixerSelection::parse_repl("instrument:0").unwrap(),
+            MixerSelection::Instrument(0)
+        );
+        assert_eq!(
+            MixerSelection::parse_repl("bus:1").unwrap(),
+            MixerSelection::Bus(BusId::new(1))
+        );
     }
 
     #[test]

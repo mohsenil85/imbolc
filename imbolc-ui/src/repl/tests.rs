@@ -183,7 +183,10 @@ fn test_error_cases() {
     // Missing args
     assert!(exec("set", &mut d, &mut a).is_err());
     let err = exec("set bpm", &mut d, &mut a).unwrap_err();
-    assert!(err.contains("bpm") || err.contains("set"), "error should mention the command: {err}");
+    assert!(
+        err.contains("bpm") || err.contains("set"),
+        "error should mention the command: {err}"
+    );
 
     // Invalid args
     assert!(exec("set bpm notanumber", &mut d, &mut a).is_err());
@@ -211,7 +214,10 @@ fn test_help_system() {
 
     match exec("help instrument", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => {
-            assert!(text.contains("add"), "help instrument should list 'add': {text}");
+            assert!(
+                text.contains("add"),
+                "help instrument should list 'add': {text}"
+            );
         }
         other => panic!("expected Output, got: {other:?}"),
     }
@@ -237,7 +243,10 @@ fn test_status_command() {
 
     match exec("status", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => {
-            assert!(text.contains("Instruments: 2"), "expected instrument count: {text}");
+            assert!(
+                text.contains("Instruments: 2"),
+                "expected instrument count: {text}"
+            );
             assert!(text.contains("BPM: 160"), "expected bpm: {text}");
             assert!(text.contains("STOPPED"), "expected stopped: {text}");
         }

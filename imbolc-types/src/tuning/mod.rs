@@ -295,7 +295,12 @@ mod tests {
     #[test]
     fn custom_tuning_a4() {
         // With A4=432Hz, A4 should be 432
-        let freq = pitch_to_freq(69, 432.0, Tuning::EqualTemperament, &TuningContext::default());
+        let freq = pitch_to_freq(
+            69,
+            432.0,
+            Tuning::EqualTemperament,
+            &TuningContext::default(),
+        );
         assert!((freq - 432.0).abs() < 1e-10);
     }
 
@@ -305,7 +310,12 @@ mod tests {
         for tuning in Tuning::ALL {
             for pitch in 0..=127u8 {
                 let freq = pitch_to_freq(pitch, A4, tuning, &ctx);
-                assert!(freq > 0.0, "{:?} pitch {} produced non-positive freq", tuning, pitch);
+                assert!(
+                    freq > 0.0,
+                    "{:?} pitch {} produced non-positive freq",
+                    tuning,
+                    pitch
+                );
             }
         }
     }

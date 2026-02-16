@@ -43,7 +43,7 @@ pub struct PianoRollPane {
     pub(crate) selection_anchor: Option<(u32, u8)>, // (tick, pitch)
     // Step sequencer view state
     pub(super) view_mode: ViewMode,
-    pub(super) seq_cursor_pad: usize,     // 0..11
+    pub(super) seq_cursor_pad: usize, // 0..11
     pub(super) seq_cursor_step: usize,
     pub(super) seq_view_start_step: usize,
     pub(super) seq_selection_anchor: Option<(usize, usize)>, // (pad, step)

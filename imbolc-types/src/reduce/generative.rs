@@ -194,7 +194,8 @@ pub fn reduce(action: &GenerativeAction, session: &mut SessionState) -> bool {
         GenerativeAction::AdjustLSystemStepInterval(id, delta) => {
             if let Some(v) = voice_mut(gen, *id) {
                 if let GenerativeAlgorithm::LSystem(ref mut cfg) = v.algorithm {
-                    cfg.step_interval = (cfg.step_interval as i16 + *delta as i16).clamp(-12, 12) as i8;
+                    cfg.step_interval =
+                        (cfg.step_interval as i16 + *delta as i16).clamp(-12, 12) as i8;
                 }
             }
         }
@@ -219,7 +220,10 @@ pub fn reduce(action: &GenerativeAction, session: &mut SessionState) -> bool {
     true
 }
 
-fn voice_mut(gen: &mut crate::state::generative::GenerativeState, id: GenVoiceId) -> Option<&mut GenVoice> {
+fn voice_mut(
+    gen: &mut crate::state::generative::GenerativeState,
+    id: GenVoiceId,
+) -> Option<&mut GenVoice> {
     gen.voices.iter_mut().find(|v| v.id == id)
 }
 
@@ -356,7 +360,10 @@ mod tests {
         let id = session.generative.voices[0].id;
         let original_rate = *session.generative.voices[0].algorithm.rate();
         reduce(&GenerativeAction::CycleVoiceRate(id), &mut session);
-        assert_ne!(*session.generative.voices[0].algorithm.rate(), original_rate);
+        assert_ne!(
+            *session.generative.voices[0].algorithm.rate(),
+            original_rate
+        );
     }
 
     #[test]
@@ -367,7 +374,10 @@ mod tests {
             &mut session,
         );
         let id = session.generative.voices[0].id;
-        reduce(&GenerativeAction::AdjustMarkovRestProb(id, 2.0), &mut session);
+        reduce(
+            &GenerativeAction::AdjustMarkovRestProb(id, 2.0),
+            &mut session,
+        );
         if let GenerativeAlgorithm::Markov(cfg) = &session.generative.voices[0].algorithm {
             assert_eq!(cfg.rest_probability, 1.0);
         }
@@ -381,7 +391,10 @@ mod tests {
             &mut session,
         );
         let id = session.generative.voices[0].id;
-        reduce(&GenerativeAction::SetLSystemIterations(id, 20), &mut session);
+        reduce(
+            &GenerativeAction::SetLSystemIterations(id, 20),
+            &mut session,
+        );
         if let GenerativeAlgorithm::LSystem(cfg) = &session.generative.voices[0].algorithm {
             assert_eq!(cfg.iterations, 6);
         }
@@ -412,7 +425,13 @@ mod tests {
         );
         let id = session.generative.voices[0].id;
         let inst_id = crate::InstrumentId::new(42);
-        reduce(&GenerativeAction::SetVoiceTarget(id, Some(inst_id)), &mut session);
-        assert_eq!(session.generative.voices[0].target_instrument, Some(inst_id));
+        reduce(
+            &GenerativeAction::SetVoiceTarget(id, Some(inst_id)),
+            &mut session,
+        );
+        assert_eq!(
+            session.generative.voices[0].target_instrument,
+            Some(inst_id)
+        );
     }
 }

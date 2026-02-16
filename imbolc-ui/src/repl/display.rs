@@ -40,15 +40,31 @@ pub fn format_instrument_detail(state: &AppState, id: InstrumentId) -> String {
 
     let mut lines = vec![
         format!("Instrument: {} (id: {})", inst.name, id),
-        format!("  Source: {} ({})", inst.source.name(), inst.source.short_name()),
-        format!("  Level: {:.2}  Pan: {}  Active: {}", inst.mixer.level, format_pan(inst.mixer.pan), inst.mixer.active),
+        format!(
+            "  Source: {} ({})",
+            inst.source.name(),
+            inst.source.short_name()
+        ),
+        format!(
+            "  Level: {:.2}  Pan: {}  Active: {}",
+            inst.mixer.level,
+            format_pan(inst.mixer.pan),
+            inst.mixer.active
+        ),
         format!("  Mute: {}  Solo: {}", inst.mixer.mute, inst.mixer.solo),
     ];
 
     // Filter
     if let Some(filter) = inst.filter() {
-        lines.push(format!("  Filter: {} ({})", filter.filter_type.name(), if filter.enabled { "on" } else { "off" }));
-        lines.push(format!("    Cutoff: {:.1}  Resonance: {:.2}", filter.cutoff.value, filter.resonance.value));
+        lines.push(format!(
+            "  Filter: {} ({})",
+            filter.filter_type.name(),
+            if filter.enabled { "on" } else { "off" }
+        ));
+        lines.push(format!(
+            "    Cutoff: {:.1}  Resonance: {:.2}",
+            filter.cutoff.value, filter.resonance.value
+        ));
     } else {
         lines.push("  Filter: none".to_string());
     }
@@ -79,16 +95,25 @@ pub fn format_instrument_detail(state: &AppState, id: InstrumentId) -> String {
         lines.push("  Effects:".to_string());
         for slot in effects {
             let bypass = if slot.enabled { "" } else { " [bypassed]" };
-            lines.push(format!("    - {} (id:{}){}",
-                slot.effect_type.name(), slot.id, bypass));
+            lines.push(format!(
+                "    - {} (id:{}){}",
+                slot.effect_type.name(),
+                slot.id,
+                bypass
+            ));
         }
     }
 
     // Arpeggiator
     let arp = &inst.note_input.arpeggiator;
     if arp.enabled {
-        lines.push(format!("  Arpeggiator: on (dir:{}, rate:{}, oct:{}, gate:{:.2})",
-            arp.direction.name(), arp.rate.name(), arp.octaves, arp.gate));
+        lines.push(format!(
+            "  Arpeggiator: on (dir:{}, rate:{}, oct:{}, gate:{:.2})",
+            arp.direction.name(),
+            arp.rate.name(),
+            arp.octaves,
+            arp.gate
+        ));
     }
 
     // Chord shape
@@ -111,7 +136,13 @@ pub fn format_transport(state: &AppState) -> String {
     format!(
         "Transport: {}  BPM: {}  Key: {} {}  Time: {}/{}  Tuning: {}  Playhead: {} ticks",
         if playing { "PLAYING" } else { "STOPPED" },
-        bpm, key, scale, num, den, tuning, playhead,
+        bpm,
+        key,
+        scale,
+        num,
+        den,
+        tuning,
+        playhead,
     )
 }
 
@@ -124,7 +155,12 @@ pub fn format_mixer(state: &AppState) -> String {
         let solo = if inst.mixer.solo { " S" } else { "" };
         lines.push(format!(
             "  [{:>2}] {:<16} vol:{:.2}  pan:{}{}{}",
-            i, inst.name, inst.mixer.level, format_pan(inst.mixer.pan), mute, solo,
+            i,
+            inst.name,
+            inst.mixer.level,
+            format_pan(inst.mixer.pan),
+            mute,
+            solo,
         ));
     }
 
@@ -134,12 +170,21 @@ pub fn format_mixer(state: &AppState) -> String {
         let solo = if bus.solo { " S" } else { "" };
         lines.push(format!(
             "  [B{}] {:<16} vol:{:.2}  pan:{}{}{}",
-            bus.id, bus.name, bus.level, format_pan(bus.pan), mute, solo,
+            bus.id,
+            bus.name,
+            bus.level,
+            format_pan(bus.pan),
+            mute,
+            solo,
         ));
     }
 
     // Master
-    let master_mute = if state.session.mixer.master_mute { " M" } else { "" };
+    let master_mute = if state.session.mixer.master_mute {
+        " M"
+    } else {
+        ""
+    };
     lines.push(format!(
         "  [MST] Master            vol:{:.2}{}",
         state.session.mixer.master_level, master_mute,
@@ -151,7 +196,11 @@ pub fn format_mixer(state: &AppState) -> String {
 pub fn format_notes(state: &AppState, track_idx: usize) -> String {
     let track_order = &state.session.piano_roll.track_order;
     if track_idx >= track_order.len() {
-        return format!("Track index {} out of range (0..{})", track_idx, track_order.len());
+        return format!(
+            "Track index {} out of range (0..{})",
+            track_idx,
+            track_order.len()
+        );
     }
     let inst_id = track_order[track_idx];
     let track = match state.session.piano_roll.tracks.get(&inst_id) {
@@ -187,7 +236,12 @@ pub fn format_effects(state: &AppState, id: InstrumentId) -> String {
     let mut lines = vec![format!("Effects for {} (id: {}):", inst.name, id)];
     for slot in effects {
         let bypass = if slot.enabled { "on" } else { "bypassed" };
-        lines.push(format!("  [{}] {} ({})", slot.id, slot.effect_type.name(), bypass));
+        lines.push(format!(
+            "  [{}] {} ({})",
+            slot.id,
+            slot.effect_type.name(),
+            bypass
+        ));
         for (i, param) in slot.params.iter().enumerate() {
             lines.push(format!("    {}: {} = {:?}", i, param.name, param.value));
         }
@@ -205,12 +259,20 @@ pub fn format_buses(state: &AppState) -> String {
         let mute = if bus.mute { " M" } else { "" };
         lines.push(format!(
             "  [{}] {} vol:{:.2} pan:{}{}",
-            bus.id, bus.name, bus.level, format_pan(bus.pan), mute,
+            bus.id,
+            bus.name,
+            bus.level,
+            format_pan(bus.pan),
+            mute,
         ));
         for fx in &bus.effect_chain.effects {
             let bypass = if fx.enabled { "" } else { " [bypassed]" };
-            lines.push(format!("    - {} (id:{}){}",
-                fx.effect_type.name(), fx.id, bypass));
+            lines.push(format!(
+                "    - {} (id:{}){}",
+                fx.effect_type.name(),
+                fx.id,
+                bypass
+            ));
         }
     }
     lines.join("\n")
@@ -218,19 +280,29 @@ pub fn format_buses(state: &AppState) -> String {
 
 pub fn format_arrangement(state: &AppState) -> String {
     let arr = &state.session.arrangement;
-    let mut lines = vec![format!("Arrangement ({} clips, {} placements):", arr.clips.len(), arr.placements.len())];
+    let mut lines = vec![format!(
+        "Arrangement ({} clips, {} placements):",
+        arr.clips.len(),
+        arr.placements.len()
+    )];
 
     if !arr.clips.is_empty() {
         lines.push("  Clips:".to_string());
         for clip in &arr.clips {
-            lines.push(format!("    [{}] {} (inst:{}, len:{})", clip.id, clip.name, clip.instrument_id, clip.length_ticks));
+            lines.push(format!(
+                "    [{}] {} (inst:{}, len:{})",
+                clip.id, clip.name, clip.instrument_id, clip.length_ticks
+            ));
         }
     }
 
     if !arr.placements.is_empty() {
         lines.push("  Placements:".to_string());
         for p in &arr.placements {
-            lines.push(format!("    [{}] clip:{} inst:{} start:{}", p.id, p.clip_id, p.instrument_id, p.start_tick));
+            lines.push(format!(
+                "    [{}] clip:{} inst:{} start:{}",
+                p.id, p.clip_id, p.instrument_id, p.start_tick
+            ));
         }
     }
 
@@ -247,8 +319,14 @@ pub fn format_automation(state: &AppState) -> String {
     for lane in &auto.lanes {
         let armed = if lane.record_armed { " [armed]" } else { "" };
         let enabled = if lane.enabled { "" } else { " [disabled]" };
-        lines.push(format!("  [{}] {}{}{} ({} points)",
-            lane.id, lane.target.short_name(), armed, enabled, lane.points.len()));
+        lines.push(format!(
+            "  [{}] {}{}{} ({} points)",
+            lane.id,
+            lane.target.short_name(),
+            armed,
+            enabled,
+            lane.points.len()
+        ));
     }
     lines.join("\n")
 }
@@ -256,11 +334,22 @@ pub fn format_automation(state: &AppState) -> String {
 pub fn format_generative(state: &AppState) -> String {
     let gen = &state.session.generative;
     let mut lines = vec![
-        format!("Generative Engine: {}", if gen.enabled { "on" } else { "off" }),
-        format!("  Capture: {}  Scale Lock: {}", gen.capture_enabled, gen.constraints.scale_lock),
-        format!("  Macros: density:{:.2} chaos:{:.2} energy:{:.2} motion:{:.2}",
-            gen.macros.density, gen.macros.chaos, gen.macros.energy, gen.macros.motion),
-        format!("  Pitch range: {}..{}", gen.constraints.pitch_min, gen.constraints.pitch_max),
+        format!(
+            "Generative Engine: {}",
+            if gen.enabled { "on" } else { "off" }
+        ),
+        format!(
+            "  Capture: {}  Scale Lock: {}",
+            gen.capture_enabled, gen.constraints.scale_lock
+        ),
+        format!(
+            "  Macros: density:{:.2} chaos:{:.2} energy:{:.2} motion:{:.2}",
+            gen.macros.density, gen.macros.chaos, gen.macros.energy, gen.macros.motion
+        ),
+        format!(
+            "  Pitch range: {}..{}",
+            gen.constraints.pitch_min, gen.constraints.pitch_max
+        ),
     ];
 
     if gen.voices.is_empty() {
@@ -268,13 +357,17 @@ pub fn format_generative(state: &AppState) -> String {
     } else {
         lines.push(format!("  Voices ({}):", gen.voices.len()));
         for voice in &gen.voices {
-            let target = voice.target_instrument
+            let target = voice
+                .target_instrument
                 .map(|id| format!("inst:{}", id))
                 .unwrap_or_else(|| "unassigned".to_string());
-            lines.push(format!("    [{}] {} ({}) -> {}",
-                voice.id, voice.algorithm.name(),
+            lines.push(format!(
+                "    [{}] {} ({}) -> {}",
+                voice.id,
+                voice.algorithm.name(),
                 if voice.enabled { "on" } else { "off" },
-                target));
+                target
+            ));
         }
     }
 
@@ -285,12 +378,24 @@ pub fn format_session(state: &AppState) -> String {
     let s = &state.session;
     let mut lines = vec![
         format!("Session:"),
-        format!("  BPM: {}  Key: {} {}  Time: {}/{}",
-            s.bpm, s.key.name(), s.scale.name(), s.time_signature.0, s.time_signature.1),
-        format!("  Tuning: {} (A4={:.1}Hz)  JI: {}",
-            s.tuning.name(), s.tuning_a4, s.ji_flavor.name()),
-        format!("  Snap: {}  Humanize: vel:{:.2} time:{:.2}",
-            s.snap, s.humanize.velocity, s.humanize.timing),
+        format!(
+            "  BPM: {}  Key: {} {}  Time: {}/{}",
+            s.bpm,
+            s.key.name(),
+            s.scale.name(),
+            s.time_signature.0,
+            s.time_signature.1
+        ),
+        format!(
+            "  Tuning: {} (A4={:.1}Hz)  JI: {}",
+            s.tuning.name(),
+            s.tuning_a4,
+            s.ji_flavor.name()
+        ),
+        format!(
+            "  Snap: {}  Humanize: vel:{:.2} time:{:.2}",
+            s.snap, s.humanize.velocity, s.humanize.timing
+        ),
     ];
 
     if let Some(path) = &state.project.path {
@@ -314,13 +419,16 @@ pub fn format_sequencer(state: &AppState) -> String {
         _ => return "No drum sequencer on selected instrument".to_string(),
     };
 
-    let mut lines = vec![
-        format!("Drum Sequencer for {} (pattern {}/{}):",
-            inst.name, seq.current_pattern + 1, seq.patterns.len()),
-    ];
+    let mut lines = vec![format!(
+        "Drum Sequencer for {} (pattern {}/{}):",
+        inst.name,
+        seq.current_pattern + 1,
+        seq.patterns.len()
+    )];
     if let Some(pattern) = seq.patterns.get(seq.current_pattern) {
         for (pad_idx, pad_steps) in pattern.steps.iter().enumerate() {
-            let steps_str: String = pad_steps.iter()
+            let steps_str: String = pad_steps
+                .iter()
                 .map(|s| if s.active { 'x' } else { '.' })
                 .collect();
             lines.push(format!("  [{:>2}] {}", pad_idx, steps_str));

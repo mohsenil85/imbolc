@@ -142,7 +142,12 @@ impl Frame {
                 if drift.abs() < 0.05 {
                     format!("{} {}", session.tuning.short_name(), a4)
                 } else {
-                    format!("{} {} {:+.1}\u{00A2}", session.tuning.short_name(), a4, drift)
+                    format!(
+                        "{} {} {:+.1}\u{00A2}",
+                        session.tuning.short_name(),
+                        a4,
+                        drift
+                    )
                 }
             }
         };

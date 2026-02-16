@@ -184,7 +184,17 @@ fn roundtrip_effect_type() {
 #[test]
 fn roundtrip_filter_type() {
     use crate::state::instrument::FilterType::*;
-    let all = [Lpf, Hpf, Bpf, Notch, Comb, Allpass, Vowel, ResDrive, ParametricEq];
+    let all = [
+        Lpf,
+        Hpf,
+        Bpf,
+        Notch,
+        Comb,
+        Allpass,
+        Vowel,
+        ResDrive,
+        ParametricEq,
+    ];
     for &f in &all {
         match f {
             Lpf | Hpf | Bpf | Notch | Comb | Allpass | Vowel | ResDrive | ParametricEq => {}

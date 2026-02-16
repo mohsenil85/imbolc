@@ -98,9 +98,20 @@ fn complete_input(input: &str) -> Vec<String> {
         let group = parts[0];
         match group {
             "show" => vec![
-                "instruments", "instrument", "transport", "mixer", "notes", "effects",
-                "buses", "arrangement", "automation", "generative", "session",
-                "sequencer", "server", "midi",
+                "instruments",
+                "instrument",
+                "transport",
+                "mixer",
+                "notes",
+                "effects",
+                "buses",
+                "arrangement",
+                "automation",
+                "generative",
+                "session",
+                "sequencer",
+                "server",
+                "midi",
             ]
             .into_iter()
             .map(String::from)
@@ -126,9 +137,20 @@ fn complete_input(input: &str) -> Vec<String> {
         match group {
             "show" => {
                 let subs = [
-                    "instruments", "instrument", "transport", "mixer", "notes", "effects",
-                    "buses", "arrangement", "automation", "generative", "session",
-                    "sequencer", "server", "midi",
+                    "instruments",
+                    "instrument",
+                    "transport",
+                    "mixer",
+                    "notes",
+                    "effects",
+                    "buses",
+                    "arrangement",
+                    "automation",
+                    "generative",
+                    "session",
+                    "sequencer",
+                    "server",
+                    "midi",
                 ];
                 subs.iter()
                     .filter(|s| s.starts_with(prefix))
@@ -153,10 +175,7 @@ fn complete_input(input: &str) -> Vec<String> {
                     .into_iter()
                     .map(|s| {
                         // Extract just the subcommand part
-                        s.split_whitespace()
-                            .nth(1)
-                            .unwrap_or(&s)
-                            .to_string()
+                        s.split_whitespace().nth(1).unwrap_or(&s).to_string()
                     })
                     .collect()
             }

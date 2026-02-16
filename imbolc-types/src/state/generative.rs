@@ -8,9 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::InstrumentId;
 
 /// Unique identifier for a generative voice.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct GenVoiceId(u32);
 
@@ -587,7 +585,10 @@ mod tests {
 
     #[test]
     fn gen_voice_default() {
-        let voice = GenVoice::new(GenVoiceId::new(1), GenerativeAlgorithm::Euclidean(EuclideanConfig::default()));
+        let voice = GenVoice::new(
+            GenVoiceId::new(1),
+            GenerativeAlgorithm::Euclidean(EuclideanConfig::default()),
+        );
         assert!(voice.enabled);
         assert!(!voice.muted);
         assert!(voice.target_instrument.is_none());
@@ -606,16 +607,34 @@ mod tests {
 
     #[test]
     fn algorithm_names() {
-        assert_eq!(GenerativeAlgorithm::Euclidean(EuclideanConfig::default()).name(), "Euclidean");
-        assert_eq!(GenerativeAlgorithm::Markov(MarkovConfig::default()).name(), "Markov");
-        assert_eq!(GenerativeAlgorithm::LSystem(LSystemConfig::default()).name(), "L-System");
+        assert_eq!(
+            GenerativeAlgorithm::Euclidean(EuclideanConfig::default()).name(),
+            "Euclidean"
+        );
+        assert_eq!(
+            GenerativeAlgorithm::Markov(MarkovConfig::default()).name(),
+            "Markov"
+        );
+        assert_eq!(
+            GenerativeAlgorithm::LSystem(LSystemConfig::default()).name(),
+            "L-System"
+        );
     }
 
     #[test]
     fn algorithm_short_names() {
-        assert_eq!(GenerativeAlgorithm::Euclidean(EuclideanConfig::default()).short_name(), 'E');
-        assert_eq!(GenerativeAlgorithm::Markov(MarkovConfig::default()).short_name(), 'M');
-        assert_eq!(GenerativeAlgorithm::LSystem(LSystemConfig::default()).short_name(), 'L');
+        assert_eq!(
+            GenerativeAlgorithm::Euclidean(EuclideanConfig::default()).short_name(),
+            'E'
+        );
+        assert_eq!(
+            GenerativeAlgorithm::Markov(MarkovConfig::default()).short_name(),
+            'M'
+        );
+        assert_eq!(
+            GenerativeAlgorithm::LSystem(LSystemConfig::default()).short_name(),
+            'L'
+        );
     }
 
     #[test]

@@ -212,15 +212,17 @@ pub fn dispatch_audio_feedback(
             tick,
         } => {
             if state.session.generative.capture_enabled {
-                state.session.generative.captured_events.push(
-                    imbolc_types::CapturedGenEvent {
+                state
+                    .session
+                    .generative
+                    .captured_events
+                    .push(imbolc_types::CapturedGenEvent {
                         instrument_id: *instrument_id,
                         pitch: *pitch,
                         velocity: *velocity,
                         duration_ticks: *duration_ticks,
                         tick: *tick,
-                    },
-                );
+                    });
             }
         }
         AudioFeedback::TuningDrift(drift) => {

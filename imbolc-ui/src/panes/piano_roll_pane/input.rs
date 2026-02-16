@@ -166,32 +166,28 @@ impl PianoRollPane {
             }
             ActionId::PianoRoll(PianoRollActionId::SelectUp) => {
                 if self.seq_selection_anchor.is_none() {
-                    self.seq_selection_anchor =
-                        Some((self.seq_cursor_pad, self.seq_cursor_step));
+                    self.seq_selection_anchor = Some((self.seq_cursor_pad, self.seq_cursor_step));
                 }
                 self.seq_cursor_pad = self.seq_cursor_pad.saturating_sub(1);
                 Action::None
             }
             ActionId::PianoRoll(PianoRollActionId::SelectDown) => {
                 if self.seq_selection_anchor.is_none() {
-                    self.seq_selection_anchor =
-                        Some((self.seq_cursor_pad, self.seq_cursor_step));
+                    self.seq_selection_anchor = Some((self.seq_cursor_pad, self.seq_cursor_step));
                 }
                 self.seq_cursor_pad = (self.seq_cursor_pad + 1).min(NUM_PADS - 1);
                 Action::None
             }
             ActionId::PianoRoll(PianoRollActionId::SelectLeft) => {
                 if self.seq_selection_anchor.is_none() {
-                    self.seq_selection_anchor =
-                        Some((self.seq_cursor_pad, self.seq_cursor_step));
+                    self.seq_selection_anchor = Some((self.seq_cursor_pad, self.seq_cursor_step));
                 }
                 self.seq_cursor_step = self.seq_cursor_step.saturating_sub(1);
                 Action::None
             }
             ActionId::PianoRoll(PianoRollActionId::SelectRight) => {
                 if self.seq_selection_anchor.is_none() {
-                    self.seq_selection_anchor =
-                        Some((self.seq_cursor_pad, self.seq_cursor_step));
+                    self.seq_selection_anchor = Some((self.seq_cursor_pad, self.seq_cursor_step));
                 }
                 self.seq_cursor_step = (self.seq_cursor_step + 1).min(pattern_length - 1);
                 Action::None

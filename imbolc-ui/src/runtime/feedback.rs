@@ -86,7 +86,8 @@ impl AppRuntime {
                                 }
                             }
                             if recovering_autosave {
-                                self.app_frame.set_project_name("autosave-recovered".to_string());
+                                self.app_frame
+                                    .set_project_name("autosave-recovered".to_string());
                             } else {
                                 self.recent_projects.add(&path, &name);
                                 self.recent_projects.save();

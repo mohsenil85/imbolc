@@ -24,10 +24,7 @@ pub fn detect_chord(pitches: &[u8]) -> Option<(u8, ChordQuality)> {
     let mut best: Option<(u8, ChordQuality, u8)> = None; // (root, quality, score)
 
     for &root in &pc_set {
-        let intervals: Vec<u8> = pc_set
-            .iter()
-            .map(|&pc| (pc + 12 - root) % 12)
-            .collect();
+        let intervals: Vec<u8> = pc_set.iter().map(|&pc| (pc + 12 - root) % 12).collect();
 
         for &(quality, template, score) in &CHORD_TEMPLATES {
             if matches_template(&intervals, template) {
@@ -43,11 +40,10 @@ pub fn detect_chord(pitches: &[u8]) -> Option<(u8, ChordQuality)> {
     }
 
     // Fallback: use lowest bass note as root with Unknown quality
-    best.map(|(root, quality, _)| (root, quality))
-        .or_else(|| {
-            let lowest = pitches.iter().min()?;
-            Some((lowest % 12, ChordQuality::Unknown))
-        })
+    best.map(|(root, quality, _)| (root, quality)).or_else(|| {
+        let lowest = pitches.iter().min()?;
+        Some((lowest % 12, ChordQuality::Unknown))
+    })
 }
 
 fn matches_template(intervals: &[u8], template: &[u8]) -> bool {

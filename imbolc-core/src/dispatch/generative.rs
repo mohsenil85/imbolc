@@ -4,10 +4,7 @@ use crate::action::{AudioEffect, DispatchResult};
 use crate::state::AppState;
 use imbolc_types::GenerativeAction;
 
-pub fn dispatch_generative(
-    action: &GenerativeAction,
-    state: &mut AppState,
-) -> DispatchResult {
+pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> DispatchResult {
     // Delegate pure state mutation to the shared reducer
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Generative(action.clone()),

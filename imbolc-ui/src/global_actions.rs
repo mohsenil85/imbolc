@@ -108,9 +108,7 @@ pub(crate) fn sync_piano_roll_to_selection(
                 }
                 // Set view mode on piano roll when instrument type changes
                 if target == NavPaneId::PianoRoll {
-                    if let Some(pr_pane) =
-                        panes.get_pane_mut::<PianoRollPane>("piano_roll")
-                    {
+                    if let Some(pr_pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
                         use crate::panes::ViewMode;
                         if is_kit {
                             pr_pane.set_view_mode(ViewMode::StepSequencer);
@@ -513,9 +511,7 @@ pub(crate) fn handle_global_action(
                 switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
                 // Set view mode after switching
                 if target == NavPaneId::PianoRoll {
-                    if let Some(pr_pane) =
-                        panes.get_pane_mut::<PianoRollPane>("piano_roll")
-                    {
+                    if let Some(pr_pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
                         use crate::panes::ViewMode;
                         if is_kit {
                             pr_pane.set_view_mode(ViewMode::StepSequencer);

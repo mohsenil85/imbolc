@@ -69,9 +69,7 @@ pub fn run(project_arg: Option<String>) -> ! {
     let _startup_events = setup::auto_start_sc(&mut audio);
 
     // Set up rustyline editor with tab completion
-    let rl_config = rustyline::Config::builder()
-        .auto_add_history(true)
-        .build();
+    let rl_config = rustyline::Config::builder().auto_add_history(true).build();
     let mut rl = Editor::with_config(rl_config).expect("failed to create readline editor");
     rl.set_helper(Some(ReplHelper));
 
@@ -210,7 +208,9 @@ fn parse_and_execute(
 
 fn handle_show(args: &[&str], state: &AppState) -> Result<ReplResult, String> {
     if args.is_empty() {
-        return Err("show what? Try: show instruments, show transport, show mixer, ...".to_string());
+        return Err(
+            "show what? Try: show instruments, show transport, show mixer, ...".to_string(),
+        );
     }
 
     let output = match args[0] {
@@ -325,7 +325,12 @@ fn handle_set(
                 .map_err(|_| format!("invalid snap value: {} (try: on, off)", args[1]))?;
             settings.snap = snap;
         }
-        other => return Err(format!("unknown setting: '{}' (try: bpm, key, scale, tuning, ji-flavor, tuning-a4, snap)", other)),
+        other => {
+            return Err(format!(
+                "unknown setting: '{}' (try: bpm, key, scale, tuning, ji-flavor, tuning-a4, snap)",
+                other
+            ))
+        }
     }
 
     let action = DomainAction::Session(SessionAction::UpdateSession(settings));
@@ -405,7 +410,10 @@ fn format_help(args: &[&str]) -> String {
                     cmd.group, cmd.name, args_str, cmd.description
                 )
             }
-            None => format!("Unknown command: '{} {}'. Try: help {}", group, cmd_name, group),
+            None => format!(
+                "Unknown command: '{} {}'. Try: help {}",
+                group, cmd_name, group
+            ),
         }
     }
 }
@@ -471,12 +479,13 @@ fn drain_io_feedback(dispatcher: &mut LocalDispatcher, io_rx: &Receiver<IoFeedba
 
 fn drain_audio_feedback(dispatcher: &mut LocalDispatcher, audio: &mut AudioHandle) {
     for feedback in audio.drain_feedback() {
-        let result = dispatcher.dispatch_domain(
-            &DomainAction::AudioFeedback(feedback),
-            audio,
-        );
+        let result = dispatcher.dispatch_domain(&DomainAction::AudioFeedback(feedback), audio);
         if !result.audio_effects.is_empty() {
-            audio.apply_effects(dispatcher.state(), &result.audio_effects, result.needs_full_sync);
+            audio.apply_effects(
+                dispatcher.state(),
+                &result.audio_effects,
+                result.needs_full_sync,
+            );
         }
     }
 }

@@ -3,7 +3,9 @@ use std::any::Any;
 use crate::state::{AppState, InstrumentId};
 use crate::ui::action_id::{ActionId, ArpeggiatorActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style};
+use crate::ui::{
+    Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style,
+};
 
 /// Parameter indices for the arpeggiator pane
 const PARAM_ENABLED: usize = 0;
@@ -113,34 +115,94 @@ impl Pane for ArpeggiatorPane {
         } else {
             off_style
         };
-        render_param_row(buf, label_x, value_x, y, "Enabled:", enabled_str,
-            self.selected_param == PARAM_ENABLED, normal_style, selected_style, enabled_val_style);
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y,
+            "Enabled:",
+            enabled_str,
+            self.selected_param == PARAM_ENABLED,
+            normal_style,
+            selected_style,
+            enabled_val_style,
+        );
 
         // Direction
-        render_param_row(buf, label_x, value_x, y + 1, "Direction:", arp.direction.name(),
-            self.selected_param == PARAM_DIRECTION, normal_style, selected_style, normal_style);
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 1,
+            "Direction:",
+            arp.direction.name(),
+            self.selected_param == PARAM_DIRECTION,
+            normal_style,
+            selected_style,
+            normal_style,
+        );
 
         // Rate
-        render_param_row(buf, label_x, value_x, y + 2, "Rate:", arp.rate.name(),
-            self.selected_param == PARAM_RATE, normal_style, selected_style, normal_style);
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 2,
+            "Rate:",
+            arp.rate.name(),
+            self.selected_param == PARAM_RATE,
+            normal_style,
+            selected_style,
+            normal_style,
+        );
 
         // Octaves
         let octaves_str = format!("{}", arp.octaves);
-        render_param_row(buf, label_x, value_x, y + 3, "Octaves:", &octaves_str,
-            self.selected_param == PARAM_OCTAVES, normal_style, selected_style, normal_style);
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 3,
+            "Octaves:",
+            &octaves_str,
+            self.selected_param == PARAM_OCTAVES,
+            normal_style,
+            selected_style,
+            normal_style,
+        );
 
         // Gate
         let gate_str = format!("{:.0}%", arp.gate * 100.0);
-        render_param_row(buf, label_x, value_x, y + 4, "Gate:", &gate_str,
-            self.selected_param == PARAM_GATE, normal_style, selected_style, normal_style);
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 4,
+            "Gate:",
+            &gate_str,
+            self.selected_param == PARAM_GATE,
+            normal_style,
+            selected_style,
+            normal_style,
+        );
 
         // Chord shape
         let chord_str = match chord {
             Some(shape) => shape.name(),
             None => "None",
         };
-        render_param_row(buf, label_x, value_x, y + 5, "Chord:", chord_str,
-            self.selected_param == PARAM_CHORD, normal_style, selected_style, normal_style);
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 5,
+            "Chord:",
+            chord_str,
+            self.selected_param == PARAM_CHORD,
+            normal_style,
+            selected_style,
+            normal_style,
+        );
     }
 
     fn keymap(&self) -> &Keymap {
@@ -174,8 +236,16 @@ fn render_param_row(
     selected_style: Style,
     value_style_override: Style,
 ) {
-    let label_style = if is_selected { selected_style } else { normal_style };
-    let value_style = if is_selected { selected_style } else { value_style_override };
+    let label_style = if is_selected {
+        selected_style
+    } else {
+        normal_style
+    };
+    let value_style = if is_selected {
+        selected_style
+    } else {
+        value_style_override
+    };
 
     for (i, ch) in label.chars().enumerate() {
         buf.set_cell(label_x + i as u16, y, ch, label_style);
