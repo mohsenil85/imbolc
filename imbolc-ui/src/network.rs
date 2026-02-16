@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 
 use imbolc_net::{NetworkState, RemoteDispatcher};
-use imbolc_types::Action;
+use imbolc_types::{Action, InstrumentId};
 
 use crate::action::{AudioEffect, IoFeedback};
 use crate::audio::AudioHandle;
@@ -244,7 +244,8 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
         .unwrap_or_else(|_| "unknown".to_string());
 
     // Convert CLI instrument IDs to InstrumentId type
-    let requested_instruments: Vec<_> = own_instruments.into_iter().collect();
+    let requested_instruments: Vec<InstrumentId> =
+        own_instruments.into_iter().map(InstrumentId::new).collect();
 
     let mut remote = RemoteDispatcher::connect(addr, &client_name, requested_instruments)?;
     log::info!(
@@ -483,6 +484,7 @@ pub fn network_action_to_action(net_action: imbolc_net::NetworkAction) -> Action
         NetworkAction::Bus(a) => Action::Bus(a),
         NetworkAction::LayerGroup(a) => Action::LayerGroup(a),
         NetworkAction::VstParam(a) => Action::VstParam(a),
+        NetworkAction::Generative(a) => Action::Generative(a),
         NetworkAction::Undo => Action::Undo,
         NetworkAction::Redo => Action::Redo,
     }
@@ -507,6 +509,7 @@ pub fn action_to_network_action(action: &Action) -> Option<imbolc_net::NetworkAc
         Action::Bus(a) => Some(NetworkAction::Bus(a.clone())),
         Action::LayerGroup(a) => Some(NetworkAction::LayerGroup(a.clone())),
         Action::VstParam(a) => Some(NetworkAction::VstParam(a.clone())),
+        Action::Generative(a) => Some(NetworkAction::Generative(a.clone())),
         Action::Undo => Some(NetworkAction::Undo),
         Action::Redo => Some(NetworkAction::Redo),
         // Local-only actions
@@ -586,4 +589,27 @@ pub fn sync_network_context(local_state: &mut AppState, remote: &RemoteDispatche
         client_name,
         connected_clients,
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{action_to_network_action, network_action_to_action};
+    use imbolc_net::NetworkAction;
+    use imbolc_types::{Action, GenerativeAction};
+
+    #[test]
+    fn generative_round_trips_between_action_and_network_action() {
+        let action = Action::Generative(GenerativeAction::ToggleEnabled);
+        let network = action_to_network_action(&action).expect("Generative should be networked");
+        assert!(matches!(
+            network,
+            NetworkAction::Generative(GenerativeAction::ToggleEnabled)
+        ));
+
+        let mapped_back = network_action_to_action(network);
+        assert!(matches!(
+            mapped_back,
+            Action::Generative(GenerativeAction::ToggleEnabled)
+        ));
+    }
 }

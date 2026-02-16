@@ -169,6 +169,9 @@ impl DirtyFlags {
             NetworkAction::Session(_) | NetworkAction::Server(_) | NetworkAction::Chopper(_) => {
                 self.session = true;
             }
+            NetworkAction::Generative(_) => {
+                self.session = true;
+            }
             NetworkAction::Mixer(_) => {
                 self.mixer_structural = true;
                 self.instruments_structural = true;
@@ -1130,6 +1133,13 @@ impl NetServer {
                     );
                 }
             }
+            NetworkAction::Generative(_) => {
+                if !self.is_privileged(client_id) {
+                    return Err(
+                        "Generative controls require privilege (use 'Request Privilege')".into(),
+                    );
+                }
+            }
             NetworkAction::Bus(_) | NetworkAction::LayerGroup(_) => {
                 if !self.is_privileged(client_id) {
                     return Err("Bus controls require privilege (use 'Request Privilege')".into());
@@ -1589,9 +1599,9 @@ mod tests {
     use crate::protocol::NetworkAction;
     use imbolc_types::{
         ArrangementAction, AutomationAction, AutomationTarget, BusAction, ChopperAction,
-        InstrumentAction, InstrumentParameter, MidiAction, MixerAction, ParameterTarget,
-        PianoRollAction, SequencerAction, ServerAction, SessionAction, SourceType, VstParamAction,
-        VstTarget,
+        GenerativeAction, InstrumentAction, InstrumentParameter, MidiAction, MixerAction,
+        ParameterTarget, PianoRollAction, SequencerAction, ServerAction, SessionAction, SourceType,
+        VstParamAction, VstTarget,
     };
 
     /// Helper: check that dirty flags indicate instruments are dirty in some way
@@ -1660,6 +1670,7 @@ mod tests {
             NetworkAction::Session(SessionAction::Save),
             NetworkAction::Server(ServerAction::Connect),
             NetworkAction::Chopper(ChopperAction::LoadSample),
+            NetworkAction::Generative(GenerativeAction::ToggleEnabled),
         ];
         for action in &cases {
             let mut d = DirtyFlags::default();

@@ -21,11 +21,11 @@ use std::fs::File;
 
 use panes::{
     AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane,
-    CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane, GroovePane,
-    HelpPane, HomePane, InstrumentEditPane, InstrumentPane, InstrumentPickerPane,
-    MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane, ProjectBrowserPane,
-    QuitPromptPane, SampleChopperPane, SaveAsPane, SequencerPane, ServerPane, TrackPane,
-    GenerativePane, TunerPane, VstParamPane, WaveformPane,
+    CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane,
+    GenerativePane, GroovePane, HelpPane, HomePane, InstrumentEditPane, InstrumentPane,
+    InstrumentPickerPane, MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane,
+    ProjectBrowserPane, QuitPromptPane, SampleChopperPane, SaveAsPane, SequencerPane, ServerPane,
+    TrackPane, TunerPane, VstParamPane, WaveformPane,
 };
 use ui::{Keymap, PaneManager, RatatuiBackend};
 
@@ -62,7 +62,7 @@ fn main() -> std::io::Result<()> {
 
     // Check for network modes
     let server_mode = args.iter().any(|a| a == "--server");
-    let _discover_mode = args.iter().any(|a| a == "--discover");
+    let discover_mode = args.iter().any(|a| a == "--discover");
     let connect_addr = args
         .iter()
         .position(|a| a == "--connect")
@@ -98,7 +98,7 @@ fn main() -> std::io::Result<()> {
     #[cfg(not(feature = "net"))]
     {
         let _ = own_instruments; // Silence unused warning when net feature disabled
-        if server_mode || connect_addr.is_some() {
+        if server_mode || discover_mode || connect_addr.is_some() {
             eprintln!(
                 "Network mode requires the 'net' feature. Build with: cargo build --features net"
             );
