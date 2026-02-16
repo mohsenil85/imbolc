@@ -3,24 +3,7 @@
 //! This module defines enums for all action identifiers used in the keybinding system,
 //! replacing the previous string-based approach with type-safe enums.
 
-/// Pane identifiers for navigation actions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PaneId {
-    InstrumentEdit,
-    InstrumentList,
-    PianoRollOrSequencer,
-    Track,
-    Mixer,
-    Server,
-    Automation,
-    Eq,
-    FrameEdit,
-    MidiSettings,
-    Groove,
-    Arpeggiator,
-    Generative,
-    Tuner,
-}
+use imbolc_types::PaneId;
 
 /// Macro to generate action enums with string conversion methods
 macro_rules! define_action_enum {
@@ -88,6 +71,7 @@ pub enum GlobalActionId {
     RequestPrivilege,
     OpenCheckpointList,
     SwitchPane(PaneId),
+    SwitchPianoRollOrSequencer,
     SelectInstrument(u8), // 1-10
 }
 
@@ -129,8 +113,7 @@ impl GlobalActionId {
             GlobalActionId::OpenCheckpointList => "open_checkpoint_list",
             GlobalActionId::SwitchPane(pane) => match pane {
                 PaneId::InstrumentEdit => "switch:instrument",
-                PaneId::InstrumentList => "switch:instrument_list",
-                PaneId::PianoRollOrSequencer => "switch:piano_roll_or_sequencer",
+                PaneId::Instrument => "switch:instrument_list",
                 PaneId::Track => "switch:track",
                 PaneId::Mixer => "switch:mixer",
                 PaneId::Server => "switch:server",
@@ -142,7 +125,9 @@ impl GlobalActionId {
                 PaneId::Arpeggiator => "switch:arpeggiator",
                 PaneId::Generative => "switch:generative",
                 PaneId::Tuner => "switch:tuner",
+                _ => "switch:unknown",
             },
+            GlobalActionId::SwitchPianoRollOrSequencer => "switch:piano_roll_or_sequencer",
             GlobalActionId::SelectInstrument(n) => match n {
                 1 => "select:1",
                 2 => "select:2",
@@ -195,10 +180,8 @@ impl GlobalActionId {
             "request_privilege" => Some(GlobalActionId::RequestPrivilege),
             "open_checkpoint_list" => Some(GlobalActionId::OpenCheckpointList),
             "switch:instrument" => Some(GlobalActionId::SwitchPane(PaneId::InstrumentEdit)),
-            "switch:instrument_list" => Some(GlobalActionId::SwitchPane(PaneId::InstrumentList)),
-            "switch:piano_roll_or_sequencer" => {
-                Some(GlobalActionId::SwitchPane(PaneId::PianoRollOrSequencer))
-            }
+            "switch:instrument_list" => Some(GlobalActionId::SwitchPane(PaneId::Instrument)),
+            "switch:piano_roll_or_sequencer" => Some(GlobalActionId::SwitchPianoRollOrSequencer),
             "switch:track" => Some(GlobalActionId::SwitchPane(PaneId::Track)),
             "switch:mixer" => Some(GlobalActionId::SwitchPane(PaneId::Mixer)),
             "switch:server" => Some(GlobalActionId::SwitchPane(PaneId::Server)),
@@ -963,8 +946,8 @@ mod tests {
             GlobalActionId::SelectNextInstrument,
             GlobalActionId::SelectTwoDigit,
             GlobalActionId::SwitchPane(PaneId::InstrumentEdit),
-            GlobalActionId::SwitchPane(PaneId::InstrumentList),
-            GlobalActionId::SwitchPane(PaneId::PianoRollOrSequencer),
+            GlobalActionId::SwitchPane(PaneId::Instrument),
+            GlobalActionId::SwitchPianoRollOrSequencer,
             GlobalActionId::SwitchPane(PaneId::Track),
             GlobalActionId::SwitchPane(PaneId::Mixer),
             GlobalActionId::SwitchPane(PaneId::Server),

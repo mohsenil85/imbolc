@@ -1,6 +1,6 @@
 use crate::action::{
     AudioEffect, AutomationAction, ClickAction, DomainAction, MixerAction, PaneId as NavPaneId,
-    PianoRollAction, SequencerAction,
+    PianoRollAction, RoutedAction, SequencerAction, UiAction,
 };
 use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
@@ -10,9 +10,9 @@ use crate::panes::{
     SequencerPane, ServerPane, VstParamPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
-use crate::ui::action_id::{ActionId, GlobalActionId, PaneId as ShortcutPaneId};
+use crate::ui::action_id::{ActionId, GlobalActionId};
 use crate::ui::{
-    self, Action, DispatchResult, Frame, LayerStack, NavIntent, PaneManager, RatatuiBackend, Rect,
+    self, DispatchResult, Frame, LayerStack, NavIntent, PaneManager, RatatuiBackend, Rect,
     RenderBuf, SessionAction, StatusEvent, ToggleResult, ViewState,
 };
 
@@ -176,16 +176,16 @@ pub(crate) fn sync_pane_layer(panes: &mut PaneManager, layer_stack: &mut LayerSt
     }
 }
 
-/// Process layer management from an action. Called by both standalone and network client.
+/// Process layer management from a routed action. Called by both standalone and network client.
 pub(crate) fn process_layer_actions(
-    action: &Action,
+    action: &RoutedAction,
     layer_stack: &mut LayerStack,
     panes: &mut PaneManager,
 ) {
     match action {
-        Action::PushLayer(name) => layer_stack.push(name),
-        Action::PopLayer(name) => layer_stack.pop(name),
-        Action::ExitPerformanceMode => {
+        RoutedAction::Ui(UiAction::PushLayer(name)) => layer_stack.push(name),
+        RoutedAction::Ui(UiAction::PopLayer(name)) => layer_stack.pop(name),
+        RoutedAction::Ui(UiAction::ExitPerformanceMode) => {
             layer_stack.pop("piano_mode");
             layer_stack.pop("pad_mode");
             panes.active_mut().deactivate_performance();
@@ -215,15 +215,15 @@ pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &
     }
 }
 
-/// Process navigation from an action and sync the layer stack.
+/// Process navigation from a routed action and sync the layer stack.
 pub(crate) fn process_nav_and_sync(
-    action: &Action,
+    action: &RoutedAction,
     panes: &mut PaneManager,
     layer_stack: &mut LayerStack,
     state: &AppState,
 ) {
     panes.process_nav(action, state);
-    if matches!(action, Action::Nav(_)) {
+    if matches!(action, RoutedAction::Ui(UiAction::Nav(_))) {
         sync_pane_layer(panes, layer_stack);
     }
 }
@@ -479,7 +479,7 @@ pub(crate) fn handle_global_action(
             GlobalActionId::SelectAll => {
                 select_all_in_active_pane(dispatcher.state_mut(), panes);
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::InstrumentEdit) => {
+            GlobalActionId::SwitchPane(NavPaneId::InstrumentEdit) => {
                 let target = if dispatcher.state().instruments.instruments.is_empty() {
                     NavPaneId::Add
                 } else {
@@ -487,7 +487,7 @@ pub(crate) fn handle_global_action(
                 };
                 switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::InstrumentList) => {
+            GlobalActionId::SwitchPane(NavPaneId::Instrument) => {
                 switch_to_pane(
                     NavPaneId::Instrument,
                     panes,
@@ -497,7 +497,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::PianoRollOrSequencer) => {
+            GlobalActionId::SwitchPianoRollOrSequencer => {
                 let (target, is_kit) =
                     if let Some(inst) = dispatcher.state().instruments.selected_instrument() {
                         if inst.source.is_audio_input() || inst.source.is_bus_in() {
@@ -521,7 +521,7 @@ pub(crate) fn handle_global_action(
                     }
                 }
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Track) => {
+            GlobalActionId::SwitchPane(NavPaneId::Track) => {
                 switch_to_pane(
                     NavPaneId::Track,
                     panes,
@@ -531,7 +531,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Mixer) => {
+            GlobalActionId::SwitchPane(NavPaneId::Mixer) => {
                 switch_to_pane(
                     NavPaneId::Mixer,
                     panes,
@@ -541,7 +541,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Server) => {
+            GlobalActionId::SwitchPane(NavPaneId::Server) => {
                 switch_to_pane(
                     NavPaneId::Server,
                     panes,
@@ -551,7 +551,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Automation) => {
+            GlobalActionId::SwitchPane(NavPaneId::Automation) => {
                 switch_to_pane(
                     NavPaneId::Automation,
                     panes,
@@ -561,7 +561,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Eq) => {
+            GlobalActionId::SwitchPane(NavPaneId::Eq) => {
                 switch_to_pane(
                     NavPaneId::Eq,
                     panes,
@@ -571,7 +571,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::MidiSettings) => {
+            GlobalActionId::SwitchPane(NavPaneId::MidiSettings) => {
                 switch_to_pane(
                     NavPaneId::MidiSettings,
                     panes,
@@ -581,7 +581,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Groove) => {
+            GlobalActionId::SwitchPane(NavPaneId::Groove) => {
                 switch_to_pane(
                     NavPaneId::Groove,
                     panes,
@@ -591,7 +591,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Arpeggiator) => {
+            GlobalActionId::SwitchPane(NavPaneId::Arpeggiator) => {
                 switch_to_pane(
                     NavPaneId::Arpeggiator,
                     panes,
@@ -601,7 +601,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Generative) => {
+            GlobalActionId::SwitchPane(NavPaneId::Generative) => {
                 switch_to_pane(
                     NavPaneId::Generative,
                     panes,
@@ -611,7 +611,7 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::Tuner) => {
+            GlobalActionId::SwitchPane(NavPaneId::Tuner) => {
                 switch_to_pane(
                     NavPaneId::Tuner,
                     panes,
@@ -621,12 +621,15 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
-            GlobalActionId::SwitchPane(ShortcutPaneId::FrameEdit) => {
+            GlobalActionId::SwitchPane(NavPaneId::FrameEdit) => {
                 if panes.active().id() == "frame_edit" {
                     panes.pop(dispatcher.state());
                 } else {
                     panes.push_to(NavPaneId::FrameEdit, dispatcher.state());
                 }
+            }
+            GlobalActionId::SwitchPane(target) => {
+                switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
             }
             GlobalActionId::NavBack => {
                 let history = &mut app_frame.view_history;

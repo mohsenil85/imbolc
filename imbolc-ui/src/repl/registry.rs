@@ -85,7 +85,6 @@ repl_actions! {
         "bounce"            => BounceToWav;                                         "Bounce master to WAV"
         "export-stems"      => ExportStems;                                         "Export individual stems"
         "cancel-export"     => CancelExport;                                        "Cancel export in progress"
-        // ToggleNote is a struct variant — handled below as a hand-written command
     }
 
     group "sequencer" => DomainAction::Sequencer, SequencerAction {

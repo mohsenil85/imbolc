@@ -74,7 +74,7 @@ impl LocalDispatcher {
     /// to its local copies, avoiding full-state clones.
     pub fn dispatch_with_audio(
         &mut self,
-        action: &Action,
+        action: Action,
         audio: &mut AudioHandle,
     ) -> DispatchResult {
         match action.route() {

@@ -12,7 +12,7 @@ use super::AppRuntime;
 use crate::action;
 use crate::global_actions::*;
 use crate::panes::*;
-use crate::ui::{self, Action, AppEvent, InputSource, KeyCode, LayerResult};
+use crate::ui::{self, AppEvent, InputSource, KeyCode, LayerResult};
 
 impl AppRuntime {
     /// Process input events. Returns true if the app should quit.
@@ -143,7 +143,7 @@ impl AppRuntime {
             }
 
             // Process layer management actions
-            process_layer_actions(&pane_action, &mut self.layer_stack, &mut self.panes);
+            process_layer_actions(&routed_action, &mut self.layer_stack, &mut self.panes);
 
             // Auto-pop text_edit layer when pane is no longer editing
             process_text_edit_auto_pop(&mut self.panes, &mut self.layer_stack);
@@ -177,7 +177,7 @@ impl AppRuntime {
 
             // Process navigation and sync pane layer
             process_nav_and_sync(
-                &pane_action,
+                &routed_action,
                 &mut self.panes,
                 &mut self.layer_stack,
                 self.dispatcher.state(),
@@ -245,8 +245,9 @@ impl AppRuntime {
                                 &dummy_event,
                                 self.dispatcher.state(),
                             );
-                            self.panes.process_nav(&re_action, self.dispatcher.state());
-                            match re_action.route() {
+                            let re_routed = re_action.route();
+                            self.panes.process_nav(&re_routed, self.dispatcher.state());
+                            match re_routed {
                                 RoutedAction::Ui(UiAction::Nav(_)) => {
                                     sync_pane_layer(&mut self.panes, &mut self.layer_stack);
                                 }
@@ -294,7 +295,10 @@ impl AppRuntime {
             );
 
             // Intercept MIDI port actions that need MidiInputManager
-            if let Action::Midi(action::MidiAction::ConnectPort(port_idx)) = &pane_action {
+            if let RoutedAction::Domain(action::DomainAction::Midi(
+                action::MidiAction::ConnectPort(port_idx),
+            )) = &routed_action
+            {
                 let port_idx = *port_idx;
                 self.midi_input.refresh_ports();
                 match self.midi_input.connect(port_idx) {
@@ -312,7 +316,10 @@ impl AppRuntime {
                     .iter()
                     .map(|p| p.name.clone())
                     .collect();
-            } else if let Action::Midi(action::MidiAction::DisconnectPort) = &pane_action {
+            } else if let RoutedAction::Domain(action::DomainAction::Midi(
+                action::MidiAction::DisconnectPort,
+            )) = &routed_action
+            {
                 self.midi_input.disconnect();
                 self.dispatcher.state_mut().midi.connected_port = None;
             }
@@ -392,7 +399,7 @@ impl AppRuntime {
         if !tick_actions.is_empty() {
             self.render_needed = true;
         }
-        for action in &tick_actions {
+        for action in tick_actions {
             match action.route() {
                 RoutedAction::Domain(ref domain) => {
                     let r = self.dispatcher.dispatch_domain(domain, &mut self.audio);

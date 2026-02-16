@@ -23,14 +23,14 @@ This document captures the 11 key review points discussed: the original 10 codeb
 7. **[P1] REPL parser ignores trailing tokens and lacks quoted args** — FIXED
    `imbolc-ui/src/repl/macro_def.rs:27` tokenization by `split_whitespace` plus permissive arity meant extra tokens were accepted and quoted/spaced args unsupported. Added `tokenize()` with quote support, trailing-token validation in macro and meta-commands.
 
-8. **[P2] REPL registry has stale contract for piano-roll note editing**  
-   `imbolc-ui/src/repl/registry.rs:88` references a handwritten `ToggleNote` handler that does not exist, creating docs/behavior drift.
+8. **[P2] REPL registry has stale contract for piano-roll note editing** — FIXED
+   `imbolc-ui/src/repl/registry.rs:88` references a handwritten `ToggleNote` handler that does not exist, creating docs/behavior drift. Removed the stale comment.
 
-9. **[P2] Pane identity duplicated across independent enums**  
-   `imbolc-ui/src/ui/action_id.rs:6` duplicates pane identity already modeled by `imbolc_types::PaneId`, increasing mapper/drift surface.
+9. **[P2] Pane identity duplicated across independent enums** — FIXED
+   `imbolc-ui/src/ui/action_id.rs:6` duplicates pane identity already modeled by `imbolc_types::PaneId`, increasing mapper/drift surface. Deleted the local 13-variant `PaneId` enum; `GlobalActionId::SwitchPane` now uses `imbolc_types::PaneId` directly. Added standalone `SwitchPianoRollOrSequencer` variant for the context-sensitive F2 key.
 
-10. **[P2] Hot-path action routing clones large enum payloads**  
-    `imbolc-types/src/action.rs:1140` `Action::route()` clones payloads for all domain variants, including heavy variants like generative actions.
+10. **[P2] Hot-path action routing clones large enum payloads** — FIXED
+    `imbolc-types/src/action.rs:1140` `Action::route()` clones payloads for all domain variants, including heavy variants like generative actions. Changed `route(&self)` to `route(self)` (move semantics), eliminating 17 clone calls per domain action. Updated the full call chain across 7 files.
 
 11. **[Architecture] Generative actions should be network-synced and server-authoritative**  
     Given the “only DAW” principle (single transport, single global tuning/BPM, single rendering engine), `GenerativeAction` belongs in the shared network command model and should be validated by server authority policy (privilege/ownership model), then broadcast through normal state patch/full sync paths.

@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 
 use imbolc_net::{NetworkState, RemoteDispatcher};
-use imbolc_types::{Action, InstrumentId};
+use imbolc_types::{Action, DomainAction, InstrumentId, RoutedAction, UiAction};
 
 use crate::action::{AudioEffect, IoFeedback};
 use crate::audio::AudioHandle;
@@ -95,7 +95,7 @@ pub fn run_server() -> std::io::Result<()> {
             let action = network_action_to_action(net_action);
 
             // Dispatch
-            let result = dispatcher.dispatch_with_audio(&action, &mut audio);
+            let result = dispatcher.dispatch_with_audio(action, &mut audio);
             pending_audio_effects.extend(result.audio_effects);
 
             if result.quit {
@@ -134,7 +134,7 @@ pub fn run_server() -> std::io::Result<()> {
         // Drain audio feedback
         for feedback in audio.drain_feedback() {
             let action = Action::AudioFeedback(feedback);
-            let result = dispatcher.dispatch_with_audio(&action, &mut audio);
+            let result = dispatcher.dispatch_with_audio(action, &mut audio);
             pending_audio_effects.extend(result.audio_effects);
         }
 
@@ -414,20 +414,22 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
                 }
             };
 
+            let routed_action = pane_action.route();
+
             // Layer management
-            process_layer_actions(&pane_action, &mut layer_stack, &mut panes);
+            process_layer_actions(&routed_action, &mut layer_stack, &mut panes);
 
             // Auto-pop text_edit layer when pane is no longer editing
             process_text_edit_auto_pop(&mut panes, &mut layer_stack);
 
             // Navigation and pane layer sync
-            process_nav_and_sync(&pane_action, &mut panes, &mut layer_stack, &local_state);
+            process_nav_and_sync(&routed_action, &mut panes, &mut layer_stack, &local_state);
 
             // Auto-pop pane_switcher layer and switch to selected pane
             process_pane_switcher_auto_pop(&mut panes, &mut layer_stack, &local_state);
 
             // Convert to NetworkAction and send to server
-            if let Some(net_action) = action_to_network_action(&pane_action) {
+            if let Some(net_action) = routed_to_network_action(&routed_action) {
                 if let Err(e) = remote.dispatch(net_action) {
                     log::error!("Failed to send action to server: {}", e);
                     break;
@@ -435,7 +437,10 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
             }
 
             // Local quit — network client has no dirty state to check
-            if matches!(&pane_action, Action::Quit | Action::QuitIntent) {
+            if matches!(
+                &routed_action,
+                RoutedAction::Ui(UiAction::Quit | UiAction::QuitIntent)
+            ) {
                 break;
             }
         }
@@ -490,38 +495,36 @@ pub fn network_action_to_action(net_action: imbolc_net::NetworkAction) -> Action
     }
 }
 
-/// Convert Action to NetworkAction for transmission (returns None for local-only actions).
-pub fn action_to_network_action(action: &Action) -> Option<imbolc_net::NetworkAction> {
+/// Convert a routed action to NetworkAction for transmission (returns None for local-only actions).
+pub fn routed_to_network_action(action: &RoutedAction) -> Option<imbolc_net::NetworkAction> {
     use imbolc_net::NetworkAction;
     match action {
-        Action::None => Some(NetworkAction::None),
-        Action::Quit => Some(NetworkAction::Quit),
-        Action::Instrument(a) => Some(NetworkAction::Instrument(a.clone())),
-        Action::Mixer(a) => Some(NetworkAction::Mixer(a.clone())),
-        Action::PianoRoll(a) => Some(NetworkAction::PianoRoll(a.clone())),
-        Action::Arrangement(a) => Some(NetworkAction::Arrangement(a.clone())),
-        Action::Server(a) => Some(NetworkAction::Server(a.clone())),
-        Action::Session(a) => Some(NetworkAction::Session(a.clone())),
-        Action::Sequencer(a) => Some(NetworkAction::Sequencer(a.clone())),
-        Action::Chopper(a) => Some(NetworkAction::Chopper(a.clone())),
-        Action::Automation(a) => Some(NetworkAction::Automation(a.clone())),
-        Action::Midi(a) => Some(NetworkAction::Midi(a.clone())),
-        Action::Bus(a) => Some(NetworkAction::Bus(a.clone())),
-        Action::LayerGroup(a) => Some(NetworkAction::LayerGroup(a.clone())),
-        Action::VstParam(a) => Some(NetworkAction::VstParam(a.clone())),
-        Action::Generative(a) => Some(NetworkAction::Generative(a.clone())),
-        Action::Undo => Some(NetworkAction::Undo),
-        Action::Redo => Some(NetworkAction::Redo),
-        // Local-only actions
-        Action::QuitIntent => None,
-        Action::Nav(_) => None,
-        Action::AudioFeedback(_) => None,
-        Action::ExitPerformanceMode => None,
-        Action::PushLayer(_) => None,
-        Action::PopLayer(_) => None,
-        Action::SaveAndQuit => None,
-        Action::Click(_) => None,
-        Action::Tuner(_) => None,
+        RoutedAction::Domain(domain) => match domain {
+            DomainAction::Instrument(a) => Some(NetworkAction::Instrument(a.clone())),
+            DomainAction::Mixer(a) => Some(NetworkAction::Mixer(a.clone())),
+            DomainAction::PianoRoll(a) => Some(NetworkAction::PianoRoll(a.clone())),
+            DomainAction::Arrangement(a) => Some(NetworkAction::Arrangement(a.clone())),
+            DomainAction::Server(a) => Some(NetworkAction::Server(a.clone())),
+            DomainAction::Session(a) => Some(NetworkAction::Session(a.clone())),
+            DomainAction::Sequencer(a) => Some(NetworkAction::Sequencer(a.clone())),
+            DomainAction::Chopper(a) => Some(NetworkAction::Chopper(a.clone())),
+            DomainAction::Automation(a) => Some(NetworkAction::Automation(a.clone())),
+            DomainAction::Midi(a) => Some(NetworkAction::Midi(a.clone())),
+            DomainAction::Bus(a) => Some(NetworkAction::Bus(a.clone())),
+            DomainAction::LayerGroup(a) => Some(NetworkAction::LayerGroup(a.clone())),
+            DomainAction::VstParam(a) => Some(NetworkAction::VstParam(a.clone())),
+            DomainAction::Generative(a) => Some(NetworkAction::Generative(a.clone())),
+            DomainAction::Undo => Some(NetworkAction::Undo),
+            DomainAction::Redo => Some(NetworkAction::Redo),
+            // Local-only domain actions
+            DomainAction::AudioFeedback(_) => None,
+            DomainAction::Click(_) => None,
+            DomainAction::Tuner(_) => None,
+        },
+        RoutedAction::Ui(UiAction::Quit) => Some(NetworkAction::Quit),
+        RoutedAction::Ui(UiAction::None) => Some(NetworkAction::None),
+        // Local-only UI actions
+        RoutedAction::Ui(_) => None,
     }
 }
 
@@ -593,14 +596,14 @@ pub fn sync_network_context(local_state: &mut AppState, remote: &RemoteDispatche
 
 #[cfg(test)]
 mod tests {
-    use super::{action_to_network_action, network_action_to_action};
+    use super::{network_action_to_action, routed_to_network_action};
     use imbolc_net::NetworkAction;
-    use imbolc_types::{Action, GenerativeAction};
+    use imbolc_types::{Action, DomainAction, GenerativeAction, RoutedAction};
 
     #[test]
     fn generative_round_trips_between_action_and_network_action() {
-        let action = Action::Generative(GenerativeAction::ToggleEnabled);
-        let network = action_to_network_action(&action).expect("Generative should be networked");
+        let routed = Action::Generative(GenerativeAction::ToggleEnabled).route();
+        let network = routed_to_network_action(&routed).expect("Generative should be networked");
         assert!(matches!(
             network,
             NetworkAction::Generative(GenerativeAction::ToggleEnabled)

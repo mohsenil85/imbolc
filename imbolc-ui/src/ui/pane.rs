@@ -144,16 +144,17 @@ impl PaneManager {
         }
     }
 
-    /// Process navigation actions from a pane result
-    pub fn process_nav(&mut self, action: &Action, state: &AppState) {
+    /// Process navigation actions from a routed action
+    pub fn process_nav(&mut self, action: &crate::action::RoutedAction, state: &AppState) {
+        use crate::action::UiAction;
         match action {
-            Action::Nav(NavAction::SwitchPane(id)) => {
+            crate::action::RoutedAction::Ui(UiAction::Nav(NavAction::SwitchPane(id))) => {
                 self.switch_to(*id, state);
             }
-            Action::Nav(NavAction::PushPane(id)) => {
+            crate::action::RoutedAction::Ui(UiAction::Nav(NavAction::PushPane(id))) => {
                 self.push_to(*id, state);
             }
-            Action::Nav(NavAction::PopPane) => {
+            crate::action::RoutedAction::Ui(UiAction::Nav(NavAction::PopPane)) => {
                 self.pop(state);
             }
             _ => {}
