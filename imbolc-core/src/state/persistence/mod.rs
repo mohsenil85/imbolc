@@ -29,6 +29,7 @@ pub fn save_project(
 
     let tx = conn.unchecked_transaction()?;
     schema::create_tables(&tx)?;
+    schema::migrate(&tx)?;
     save::save_relational(&tx, session, instruments)?;
     tx.commit()?;
 
@@ -47,6 +48,8 @@ pub fn load_project(path: &Path) -> SqlResult<(SessionState, InstrumentState)> {
     )? > 0;
 
     if has_schema_version {
+        // Migrate schema if loading an older version
+        schema::migrate(&conn)?;
         // Relational format
         let (mut session, instruments) = load::load_relational(&conn)?;
         session.recompute_next_bus_id();

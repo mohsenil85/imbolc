@@ -8,6 +8,52 @@ pub fn create_tables(conn: &Connection) -> SqlResult<()> {
     conn.execute_batch(SCHEMA_SQL)
 }
 
+/// Migrate an existing database to the current schema version.
+///
+/// Runs ALTER TABLE statements for columns added in newer schema versions.
+/// Safe to call on databases that are already up-to-date (checks column existence).
+pub fn migrate(conn: &Connection) -> SqlResult<()> {
+    let version = get_schema_version(conn)?;
+
+    // v13 → v14: added `source` column to midi_cc_mappings
+    if version < 14 && !column_exists(conn, "midi_cc_mappings", "source")? {
+        conn.execute_batch(
+            "ALTER TABLE midi_cc_mappings ADD COLUMN source TEXT NOT NULL DEFAULT 'Manual'",
+        )?;
+    }
+
+    Ok(())
+}
+
+/// Read the current schema version from the DB, defaulting to 0 if no table exists.
+fn get_schema_version(conn: &Connection) -> SqlResult<i32> {
+    let table_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_version'",
+        [],
+        |row| row.get::<_, i64>(0),
+    )? > 0;
+
+    if !table_exists {
+        return Ok(0);
+    }
+
+    conn.query_row(
+        "SELECT COALESCE(MAX(version), 0) FROM schema_version",
+        [],
+        |row| row.get(0),
+    )
+}
+
+/// Check whether a column exists in a table.
+fn column_exists(conn: &Connection, table: &str, column: &str) -> SqlResult<bool> {
+    let sql = format!("PRAGMA table_info({})", table);
+    let mut stmt = conn.prepare(&sql)?;
+    let exists = stmt.query_map([], |row| row.get::<_, String>(1))?.any(
+        |name| matches!(name, Ok(ref n) if n == column),
+    );
+    Ok(exists)
+}
+
 /// Delete all data from all tables (preserving schema).
 pub fn delete_all_data(conn: &Connection) -> SqlResult<()> {
     conn.execute_batch(DELETE_ALL_SQL)
