@@ -107,7 +107,7 @@ pub fn reduce(action: &GenerativeAction, session: &mut SessionState) -> bool {
         GenerativeAction::SetEuclideanSteps(id, steps) => {
             if let Some(v) = voice_mut(gen, *id) {
                 if let GenerativeAlgorithm::Euclidean(ref mut cfg) = v.algorithm {
-                    cfg.steps = (*steps).max(1).min(64);
+                    cfg.steps = (*steps).clamp(1, 64);
                     cfg.pulses = cfg.pulses.min(cfg.steps);
                     cfg.rotation = cfg.rotation.min(cfg.steps.saturating_sub(1));
                 }
@@ -370,7 +370,7 @@ mod tests {
     fn markov_rest_prob_clamped() {
         let mut session = make_session();
         reduce(
-            &GenerativeAction::AddVoice(GenerativeAlgorithm::Markov(MarkovConfig::default())),
+            &GenerativeAction::AddVoice(GenerativeAlgorithm::Markov(Box::default())),
             &mut session,
         );
         let id = session.generative.voices[0].id;

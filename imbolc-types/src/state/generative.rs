@@ -97,7 +97,7 @@ impl GenVoice {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GenerativeAlgorithm {
     Euclidean(EuclideanConfig),
-    Markov(MarkovConfig),
+    Markov(Box<MarkovConfig>),
     LSystem(LSystemConfig),
 }
 
@@ -611,10 +611,7 @@ mod tests {
             GenerativeAlgorithm::Euclidean(EuclideanConfig::default()).name(),
             "Euclidean"
         );
-        assert_eq!(
-            GenerativeAlgorithm::Markov(MarkovConfig::default()).name(),
-            "Markov"
-        );
+        assert_eq!(GenerativeAlgorithm::Markov(Box::default()).name(), "Markov");
         assert_eq!(
             GenerativeAlgorithm::LSystem(LSystemConfig::default()).name(),
             "L-System"
@@ -628,7 +625,7 @@ mod tests {
             'E'
         );
         assert_eq!(
-            GenerativeAlgorithm::Markov(MarkovConfig::default()).short_name(),
+            GenerativeAlgorithm::Markov(Box::default()).short_name(),
             'M'
         );
         assert_eq!(

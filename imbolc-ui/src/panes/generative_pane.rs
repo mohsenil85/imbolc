@@ -168,7 +168,7 @@ impl Pane for GenerativePane {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
                     let new_alg = match &voice.algorithm {
                         GenerativeAlgorithm::Euclidean(_) => {
-                            GenerativeAlgorithm::Markov(Default::default())
+                            GenerativeAlgorithm::Markov(Box::default())
                         }
                         GenerativeAlgorithm::Markov(_) => {
                             GenerativeAlgorithm::LSystem(Default::default())
@@ -408,7 +408,7 @@ impl GenerativePane {
                             let new_alg = if increase {
                                 match &voice.algorithm {
                                     GenerativeAlgorithm::Euclidean(_) => {
-                                        GenerativeAlgorithm::Markov(Default::default())
+                                        GenerativeAlgorithm::Markov(Box::default())
                                     }
                                     GenerativeAlgorithm::Markov(_) => {
                                         GenerativeAlgorithm::LSystem(Default::default())
@@ -426,7 +426,7 @@ impl GenerativePane {
                                         GenerativeAlgorithm::Euclidean(Default::default())
                                     }
                                     GenerativeAlgorithm::LSystem(_) => {
-                                        GenerativeAlgorithm::Markov(Default::default())
+                                        GenerativeAlgorithm::Markov(Box::default())
                                     }
                                 }
                             };

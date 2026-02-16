@@ -99,8 +99,8 @@ fn scale_ji_freq(pitch: u8, tuning_a4: f64, ctx: &TuningContext) -> f64 {
 /// Chord JI: chord-tone ratios relative to chord root, fallback to scale JI
 fn chord_ji_freq(pitch: u8, tuning_a4: f64, ctx: &TuningContext) -> f64 {
     if let (Some(chord_root), Some(chord_quality)) = (ctx.chord_root, ctx.chord_quality) {
-        let pc = (pitch % 12) as u8;
-        let offset = ((pc + 12 - chord_root) % 12) as u8;
+        let pc = pitch % 12;
+        let offset = (pc + 12 - chord_root) % 12;
 
         // Check if this pitch is a chord tone
         let chord_tones = ratios::chord_ratios(chord_quality, ctx.ji_flavor);

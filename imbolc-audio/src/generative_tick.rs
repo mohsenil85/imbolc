@@ -336,6 +336,7 @@ fn generate_euclidean(
 }
 
 /// Generate event from Markov chain.
+#[allow(clippy::too_many_arguments)]
 fn generate_markov(
     cfg: &MarkovConfig,
     state: &mut VoicePlayState,

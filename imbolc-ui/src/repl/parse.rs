@@ -152,9 +152,9 @@ impl ReplParseable for char {
 
 impl ReplParseable for PathBuf {
     fn parse_repl(s: &str) -> Result<Self, String> {
-        let expanded = if s.starts_with('~') {
+        let expanded = if let Some(rest) = s.strip_prefix('~') {
             if let Some(home) = dirs::home_dir() {
-                home.join(&s[1..].trim_start_matches('/'))
+                home.join(rest.trim_start_matches('/'))
             } else {
                 PathBuf::from(s)
             }

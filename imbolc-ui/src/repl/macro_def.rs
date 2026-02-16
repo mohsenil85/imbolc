@@ -68,18 +68,18 @@ macro_rules! repl_actions {
         }
 
         pub fn all_commands() -> Vec<$crate::repl::macro_def::CommandInfo> {
-            let mut cmds = Vec::new();
+            vec![
             $(
                 $(
-                    cmds.push($crate::repl::macro_def::CommandInfo {
+                    $crate::repl::macro_def::CommandInfo {
                         group: $group,
                         name: $cmd,
                         args: repl_actions!(@args_str $( $($arg_name : $arg_type),+ )? ),
                         description: $desc,
-                    });
+                    },
                 )*
             )*
-            cmds
+            ]
         }
 
         pub fn complete_command(partial: &str) -> Vec<String> {

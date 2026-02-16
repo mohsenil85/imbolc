@@ -174,9 +174,10 @@ impl Scale {
 }
 
 /// Tuning system for pitch-to-frequency conversion
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Tuning {
     /// Standard 12-tone equal temperament
+    #[default]
     EqualTemperament,
     /// Just intonation ratios relative to scale tonic
     ScaleJI,
@@ -229,16 +230,11 @@ impl Tuning {
     }
 }
 
-impl Default for Tuning {
-    fn default() -> Self {
-        Tuning::EqualTemperament
-    }
-}
-
 /// JI ratio philosophy — controls which ratio table is used by all JI variants
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum JIFlavor {
     /// Classic 5-limit: 9/5 minor 7th
+    #[default]
     FiveLimit,
     /// Septimal 7-limit: 7/4 minor 7th
     SevenLimit,
@@ -268,12 +264,6 @@ impl JIFlavor {
             "Pythagorean" | "pythagorean" => Some(JIFlavor::Pythagorean),
             _ => None,
         }
-    }
-}
-
-impl Default for JIFlavor {
-    fn default() -> Self {
-        JIFlavor::FiveLimit
     }
 }
 
