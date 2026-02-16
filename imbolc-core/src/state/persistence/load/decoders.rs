@@ -321,6 +321,11 @@ pub(crate) fn decode_parameter_target(s: &str) -> crate::state::instrument::Para
             return ParameterTarget::VstParam(idx);
         }
     }
+    if let Some(rest) = s.strip_prefix("SourceParam:") {
+        if let Ok(idx) = rest.parse::<usize>() {
+            return ParameterTarget::SourceParam(imbolc_types::ParamIndex::new(idx));
+        }
+    }
 
     match s {
         "Level" => ParameterTarget::Level,

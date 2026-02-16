@@ -30,6 +30,7 @@ pub fn save_relational(
     save_custom_synthdefs(conn, session)?;
     save_vst_plugins(conn, session)?;
     save_midi_recording(conn, session)?;
+    save_param_tags(conn, session)?;
     save_arrangement(conn, session)?;
 
     Ok(())
@@ -1011,15 +1012,20 @@ fn save_midi_recording(conn: &Connection, session: &SessionState) -> SqlResult<(
             target_param_idx,
             target_extra,
         ) = encode_automation_target(&cc.target);
+        let source_str = match cc.source {
+            imbolc_types::CcMappingSource::Manual => "Manual",
+            imbolc_types::CcMappingSource::Tag => "Tag",
+        };
         conn.execute(
-            "INSERT INTO midi_cc_mappings (id, cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO midi_cc_mappings (id, cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 idx as i64, cc.cc_number as i32,
                 cc.channel.map(|ch| ch as i32),
                 target_type, target_inst_id, target_bus_id,
                 target_effect_id, target_param_idx, target_extra,
                 cc.min_value, cc.max_value,
+                source_str,
             ],
         )?;
     }
@@ -1043,6 +1049,40 @@ fn save_midi_recording(conn: &Connection, session: &SessionState) -> SqlResult<(
                 pb.center_value, pb.range, pb.sensitivity,
             ],
         )?;
+    }
+    Ok(())
+}
+
+// ============================================================
+// Parameter Tags
+// ============================================================
+
+fn save_param_tags(conn: &Connection, session: &SessionState) -> SqlResult<()> {
+    for (pos, tag) in session.param_tags.tags.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO param_tags (id, name, position) VALUES (?1, ?2, ?3)",
+            params![pos as i64, tag.name, pos as i32],
+        )?;
+
+        for (tpos, target) in tag.targets.iter().enumerate() {
+            let (
+                target_type,
+                target_inst_id,
+                target_bus_id,
+                target_effect_id,
+                target_param_idx,
+                target_extra,
+            ) = encode_automation_target(target);
+            conn.execute(
+                "INSERT INTO param_tag_targets (tag_id, position, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    pos as i64, tpos as i32,
+                    target_type, target_inst_id, target_bus_id,
+                    target_effect_id, target_param_idx, target_extra,
+                ],
+            )?;
+        }
     }
     Ok(())
 }
@@ -1191,6 +1231,7 @@ pub fn encode_parameter_target(target: &crate::state::instrument::ParameterTarge
         ParameterTarget::EqBandGain(idx) => format!("EqBandGain:{}", idx),
         ParameterTarget::EqBandQ(idx) => format!("EqBandQ:{}", idx),
         ParameterTarget::VstParam(idx) => format!("VstParam:{}", idx),
+        ParameterTarget::SourceParam(idx) => format!("SourceParam:{}", idx),
         other => format!("{:?}", other),
     }
 }
@@ -1219,6 +1260,7 @@ pub fn encode_automation_target(
                 ParameterTarget::EqBandGain(idx) => Some(format!("{}", idx)),
                 ParameterTarget::EqBandQ(idx) => Some(format!("{}", idx)),
                 ParameterTarget::VstParam(idx) => Some(format!("{}", idx)),
+                ParameterTarget::SourceParam(idx) => Some(format!("{}", idx)),
                 _ => None,
             };
             let param_name = encode_parameter_target(param_target);

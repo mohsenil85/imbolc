@@ -287,6 +287,8 @@ fn roundtrip_parameter_target() {
         EqBandGain(1),
         EqBandQ(2),
         VstParam(7),
+        SourceParam(ParamIndex::new(0)),
+        SourceParam(ParamIndex::new(3)),
     ];
     for pt in &all {
         match pt {
@@ -336,7 +338,8 @@ fn roundtrip_parameter_target() {
             | EqBandFreq(_)
             | EqBandGain(_)
             | EqBandQ(_)
-            | VstParam(_) => {}
+            | VstParam(_)
+            | SourceParam(_) => {}
         }
         // Use the same encoding as save.rs: {:?} for simple variants,
         // "SendLevel:N" / "EffectParam:E:P" / "EffectBypass:E" / etc for data variants
@@ -348,6 +351,7 @@ fn roundtrip_parameter_target() {
             EqBandGain(idx) => format!("EqBandGain:{}", idx),
             EqBandQ(idx) => format!("EqBandQ:{}", idx),
             VstParam(idx) => format!("VstParam:{}", idx),
+            SourceParam(idx) => format!("SourceParam:{}", idx),
             _ => format!("{:?}", pt),
         };
         let decoded = decoders::decode_parameter_target(&save_str);

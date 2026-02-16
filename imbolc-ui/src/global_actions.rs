@@ -941,6 +941,10 @@ pub(crate) fn apply_dispatch_result(
                 }
                 panes.push_to(NavPaneId::VstParams, dispatcher.state());
             }
+            NavIntent::OpenTagPicker(_) => {
+                // pending_target is already set by the reducer
+                panes.push_to(NavPaneId::TagPicker, dispatcher.state());
+            }
             _ => {}
         }
     }

@@ -25,7 +25,7 @@ use panes::{
     GenerativePane, GroovePane, HelpPane, HomePane, InstrumentEditPane, InstrumentPane,
     InstrumentPickerPane, MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane,
     ProjectBrowserPane, QuitPromptPane, SampleChopperPane, SaveAsPane, SequencerPane, ServerPane,
-    TrackPane, TunerPane, VstParamPane, WaveformPane,
+    TagPickerPane, TagViewPane, TrackPane, TunerPane, VstParamPane, WaveformPane,
 };
 use ui::{Keymap, PaneManager, RatatuiBackend};
 
@@ -246,5 +246,7 @@ pub(crate) fn register_all_panes(
         keymaps,
         "checkpoint_list",
     ))));
+    panes.add_pane(Box::new(TagViewPane::new(pane_keymap(keymaps, "tag_view"))));
+    panes.add_pane(Box::new(TagPickerPane::new(pane_keymap(keymaps, "add"))));
     panes
 }

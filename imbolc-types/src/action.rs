@@ -50,6 +50,8 @@ pub enum PaneId {
     SaveAs,
     Sequencer,
     Server,
+    TagPicker,
+    TagView,
     Track,
     Tuner,
     VstParams,
@@ -88,6 +90,8 @@ impl PaneId {
             PaneId::SaveAs => "save_as",
             PaneId::Sequencer => "sequencer",
             PaneId::Server => "server",
+            PaneId::TagPicker => "tag_picker",
+            PaneId::TagView => "tag_view",
             PaneId::Track => "track",
             PaneId::Tuner => "tuner",
             PaneId::VstParams => "vst_params",
@@ -127,6 +131,8 @@ impl PaneId {
             "save_as" => Some(PaneId::SaveAs),
             "sequencer" => Some(PaneId::Sequencer),
             "server" => Some(PaneId::Server),
+            "tag_picker" => Some(PaneId::TagPicker),
+            "tag_view" => Some(PaneId::TagView),
             "track" => Some(PaneId::Track),
             "tuner" => Some(PaneId::Tuner),
             "vst_params" => Some(PaneId::VstParams),
@@ -338,6 +344,8 @@ pub enum NavIntent {
     OpenFileBrowser(FileSelectAction),
     /// Configure and push to the VST param pane for a specific target
     OpenVstParams(InstrumentId, VstTarget),
+    /// Open tag picker modal with context target for tag assignment
+    OpenTagPicker(AutomationTarget),
 }
 
 /// Status event returned from dispatch — forwarded to the server pane by the UI layer.
@@ -971,6 +979,27 @@ pub enum TunerAction {
     StopTone,
 }
 
+/// Parameter tag actions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TagAction {
+    /// Create a new tag with the given name.
+    CreateTag(String),
+    /// Delete a tag by index.
+    DeleteTag(usize),
+    /// Rename a tag (index, new name).
+    RenameTag(usize, String),
+    /// Add a target to a tag (tag index, target).
+    AddTarget(usize, AutomationTarget),
+    /// Remove a target from a tag (tag index, target).
+    RemoveTarget(usize, AutomationTarget),
+    /// Select a tag by index (None to deselect).
+    SelectTag(Option<usize>),
+    /// Move a target within a tag (tag index, target index, delta).
+    MoveTarget(usize, usize, i8),
+    /// Set the pending target for the tag picker modal.
+    SetPendingTarget(AutomationTarget),
+}
+
 /// Click track (metronome) actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ClickAction {
@@ -1064,6 +1093,7 @@ pub enum Action {
     Click(ClickAction),
     Tuner(TunerAction),
     Generative(GenerativeAction),
+    Tag(TagAction),
     AudioFeedback(crate::AudioFeedback),
     /// Pane signals: pop piano_mode/pad_mode layer
     ExitPerformanceMode,
@@ -1135,6 +1165,7 @@ pub enum DomainAction {
     Click(ClickAction),
     Tuner(TunerAction),
     Generative(GenerativeAction),
+    Tag(TagAction),
     AudioFeedback(crate::AudioFeedback),
     Undo,
     Redo,
@@ -1161,6 +1192,7 @@ impl Action {
             Self::Click(a) => RoutedAction::Domain(DomainAction::Click(a)),
             Self::Tuner(a) => RoutedAction::Domain(DomainAction::Tuner(a)),
             Self::Generative(a) => RoutedAction::Domain(DomainAction::Generative(a)),
+            Self::Tag(a) => RoutedAction::Domain(DomainAction::Tag(a)),
             Self::AudioFeedback(f) => RoutedAction::Domain(DomainAction::AudioFeedback(f)),
             Self::Undo => RoutedAction::Domain(DomainAction::Undo),
             Self::Redo => RoutedAction::Domain(DomainAction::Redo),
@@ -1195,6 +1227,7 @@ impl From<DomainAction> for Action {
             DomainAction::Click(a) => Self::Click(a),
             DomainAction::Tuner(a) => Self::Tuner(a),
             DomainAction::Generative(a) => Self::Generative(a),
+            DomainAction::Tag(a) => Self::Tag(a),
             DomainAction::AudioFeedback(f) => Self::AudioFeedback(f),
             DomainAction::Undo => Self::Undo,
             DomainAction::Redo => Self::Redo,
@@ -1237,6 +1270,8 @@ mod tests {
             PaneId::SaveAs,
             PaneId::Sequencer,
             PaneId::Server,
+            PaneId::TagPicker,
+            PaneId::TagView,
             PaneId::Track,
             PaneId::Tuner,
             PaneId::VstParams,

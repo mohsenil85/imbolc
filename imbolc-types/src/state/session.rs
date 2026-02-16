@@ -11,6 +11,7 @@ use super::instrument::MixerBus;
 use super::midi_recording::MidiRecordingState;
 use super::mixer::{MixerState, DEFAULT_BUS_COUNT};
 use super::music::{JIFlavor, Key, Scale, Tuning};
+use super::param_tag::ParamTagState;
 use super::piano_roll::PianoRollState;
 use super::theme::Theme;
 use super::vst::VstPluginRegistry;
@@ -122,6 +123,10 @@ pub struct SessionState {
     // Generative music engine
     #[serde(default)]
     pub generative: GenerativeState,
+
+    // Parameter tags for performance views
+    #[serde(default)]
+    pub param_tags: ParamTagState,
 }
 
 impl SessionState {
@@ -150,6 +155,7 @@ impl SessionState {
             click_track: ClickTrackState::default(),
             theme: Theme::default(),
             generative: GenerativeState::default(),
+            param_tags: ParamTagState::new(),
         }
     }
 

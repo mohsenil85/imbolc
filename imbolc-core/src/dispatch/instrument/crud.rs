@@ -68,6 +68,9 @@ pub(super) fn handle_delete(
         }
     }
 
+    // Remove deleted instrument from all param tags
+    state.session.param_tags.remove_instrument(inst_id);
+
     let mut result = if state.instruments.instruments.is_empty() {
         DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::Add))
     } else {

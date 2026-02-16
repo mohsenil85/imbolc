@@ -12,6 +12,7 @@ mod piano_roll;
 mod sequencer;
 mod server;
 mod session;
+mod tag;
 mod vst_param;
 
 pub use local::LocalDispatcher;
@@ -99,6 +100,7 @@ pub fn dispatch_action(
         DomainAction::Click(a) => dispatch_click(a, state, audio),
         DomainAction::Tuner(a) => dispatch_tuner(a, audio),
         DomainAction::Generative(a) => generative::dispatch_generative(a, state),
+        DomainAction::Tag(a) => tag::dispatch_tag(a, state),
         DomainAction::AudioFeedback(f) => audio_feedback::dispatch_audio_feedback(f, state, audio),
         DomainAction::Undo => {
             if let Some(scope) = state

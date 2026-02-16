@@ -588,6 +588,14 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
+            InstrumentEditActionId::TagParam => {
+                if let Some(id) = self.instrument_id {
+                    if let Some(target) = self.build_automation_target(id) {
+                        return Action::Tag(imbolc_types::TagAction::SetPendingTarget(target));
+                    }
+                }
+                Action::None
+            }
         }
     }
 

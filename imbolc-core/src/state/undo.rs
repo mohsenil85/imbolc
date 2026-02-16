@@ -8,6 +8,7 @@ use crate::action::{
     VstParamAction,
 };
 use imbolc_types::InstrumentId;
+use imbolc_types::TagAction;
 
 /// What scope of state an undo entry covers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -312,7 +313,8 @@ pub fn undo_scope(
         | DomainAction::Arrangement(_)
         | DomainAction::Session(_)
         | DomainAction::Midi(_)
-        | DomainAction::Generative(_) => UndoScope::Session,
+        | DomainAction::Generative(_)
+        | DomainAction::Tag(_) => UndoScope::Session,
 
         // Bus add/remove syncs instrument sends — touches both trees
         DomainAction::Bus(BusAction::Add | BusAction::Remove(_)) => UndoScope::Full,
@@ -458,6 +460,8 @@ pub fn coalesce_key(
         ) => CoalesceKey::SessionParam,
         DomainAction::Generative(_) => CoalesceKey::None,
 
+        DomainAction::Tag(_) => CoalesceKey::None,
+
         // Everything else — no coalescing
         _ => CoalesceKey::None,
     }
@@ -551,6 +555,9 @@ pub fn is_undoable(action: &DomainAction) -> bool {
                 | VstParamAction::ResetParam(_, _, _)
         ),
         DomainAction::Generative(_) => true,
+        DomainAction::Tag(a) => {
+            !matches!(a, TagAction::SelectTag(_) | TagAction::SetPendingTarget(_))
+        }
         DomainAction::Undo | DomainAction::Redo => false,
         _ => false,
     }

@@ -127,6 +127,7 @@ impl GlobalActionId {
                 PaneId::Arpeggiator => "switch:arpeggiator",
                 PaneId::Generative => "switch:generative",
                 PaneId::Tuner => "switch:tuner",
+                PaneId::TagView => "switch:tag_view",
                 _ => "switch:unknown",
             },
             GlobalActionId::SwitchPianoRollOrSequencer => "switch:piano_roll_or_sequencer",
@@ -196,6 +197,7 @@ impl GlobalActionId {
             "switch:arpeggiator" => Some(GlobalActionId::SwitchPane(PaneId::Arpeggiator)),
             "switch:generative" => Some(GlobalActionId::SwitchPane(PaneId::Generative)),
             "switch:tuner" => Some(GlobalActionId::SwitchPane(PaneId::Tuner)),
+            "switch:tag_view" => Some(GlobalActionId::SwitchPane(PaneId::TagView)),
             "select:1" => Some(GlobalActionId::SelectInstrument(1)),
             "select:2" => Some(GlobalActionId::SelectInstrument(2)),
             "select:3" => Some(GlobalActionId::SelectInstrument(3)),
@@ -267,6 +269,7 @@ define_action_enum! {
         MoveStageDown => "move_stage_down",
         ToggleEffectBypass => "toggle_effect_bypass",
         Done => "done",
+        TagParam => "tag_param",
     }
 }
 
@@ -808,6 +811,26 @@ define_action_enum! {
     }
 }
 
+define_action_enum! {
+    /// Tag view layer actions
+    pub enum TagViewActionId {
+        PrevParam => "prev_param",
+        NextParam => "next_param",
+        Increase => "increase",
+        Decrease => "decrease",
+        IncreaseBig => "increase_big",
+        DecreaseBig => "decrease_big",
+        IncreaseTiny => "increase_tiny",
+        DecreaseTiny => "decrease_tiny",
+        NextTag => "next_tag",
+        PrevTag => "prev_tag",
+        RemoveTarget => "remove_target",
+        DeleteTag => "delete_tag",
+        CreateTag => "create_tag",
+        RenameTag => "rename_tag",
+    }
+}
+
 /// Top-level action identifier wrapping all layer-specific action enums
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ActionId {
@@ -839,6 +862,7 @@ pub enum ActionId {
     ProjectBrowser(ProjectBrowserActionId),
     CheckpointList(CheckpointListActionId),
     Tuner(TunerActionId),
+    TagView(TagViewActionId),
 }
 
 impl ActionId {
@@ -872,6 +896,7 @@ impl ActionId {
             ActionId::ProjectBrowser(a) => a.as_str(),
             ActionId::CheckpointList(a) => a.as_str(),
             ActionId::Tuner(a) => a.as_str(),
+            ActionId::TagView(a) => a.as_str(),
         }
     }
 }
@@ -886,7 +911,7 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "piano_roll" => PianoRollActionId::from_str(action).map(ActionId::PianoRoll),
         "sequencer" => SequencerActionId::from_str(action).map(ActionId::Sequencer),
         "server" => ServerActionId::from_str(action).map(ActionId::Server),
-        "add" | "add_effect" => AddActionId::from_str(action).map(ActionId::Add),
+        "add" | "add_effect" | "tag_picker" => AddActionId::from_str(action).map(ActionId::Add),
         "home" => HomeActionId::from_str(action).map(ActionId::Home),
         "help" => HelpActionId::from_str(action).map(ActionId::Help),
         "docs" => DocsActionId::from_str(action).map(ActionId::Docs),
@@ -906,6 +931,7 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "confirm" => ConfirmActionId::from_str(action).map(ActionId::Confirm),
         "project_browser" => ProjectBrowserActionId::from_str(action).map(ActionId::ProjectBrowser),
         "checkpoint_list" => CheckpointListActionId::from_str(action).map(ActionId::CheckpointList),
+        "tag_view" => TagViewActionId::from_str(action).map(ActionId::TagView),
         "piano_mode" | "pad_mode" | "text_edit" | "command_palette" | "pane_switcher" => {
             ModeActionId::from_str(action).map(ActionId::Mode)
         }
@@ -959,6 +985,7 @@ mod tests {
             GlobalActionId::SwitchPane(PaneId::Eq),
             GlobalActionId::SwitchPane(PaneId::FrameEdit),
             GlobalActionId::SwitchPane(PaneId::MidiSettings),
+            GlobalActionId::SwitchPane(PaneId::TagView),
             GlobalActionId::SelectInstrument(1),
             GlobalActionId::SelectInstrument(2),
             GlobalActionId::SelectInstrument(3),
@@ -1039,6 +1066,7 @@ mod tests {
             InstrumentEditActionId::MoveStageDown,
             InstrumentEditActionId::ToggleEffectBypass,
             InstrumentEditActionId::Done,
+            InstrumentEditActionId::TagParam,
         ];
 
         for action in actions {

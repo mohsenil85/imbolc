@@ -335,7 +335,8 @@ impl AudioEngine {
             | ParameterTarget::DelayTime
             | ParameterTarget::DelayFeedback
             | ParameterTarget::ReverbMix
-            | ParameterTarget::GateRate => {
+            | ParameterTarget::GateRate
+            | ParameterTarget::SourceParam(_) => {
                 // These are state-only updates for now
                 // Future: map to appropriate SynthDef params
             }
@@ -641,7 +642,8 @@ impl AudioEngine {
             | ParameterTarget::DelayTime
             | ParameterTarget::DelayFeedback
             | ParameterTarget::ReverbMix
-            | ParameterTarget::GateRate => {
+            | ParameterTarget::GateRate
+            | ParameterTarget::SourceParam(_) => {
                 // State-only updates for now
             }
         }

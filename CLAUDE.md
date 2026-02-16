@@ -6,6 +6,8 @@ Multi-crate Rust workspace for Imbolc, a terminal-based DAW (Digital Audio Works
 
 For each proposed change, examine the existing system and redesign it into the most elegant solution that would have emerged if the change had been a foundational assumption from the start.
 
+**Keybinding convention:** Although Imbolc takes inspiration from vim, never use j/k for scrolling. Always use the arrow keys for scrolling.
+
 ## Workspace Structure
 
 ```

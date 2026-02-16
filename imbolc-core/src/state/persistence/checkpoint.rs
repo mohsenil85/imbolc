@@ -46,6 +46,8 @@ const DIFF_TABLES: &[&str] = &[
     "midi_recording_settings",
     "midi_cc_mappings",
     "midi_pitch_bend_configs",
+    "param_tags",
+    "param_tag_targets",
     "arrangement_state",
     "arrangement_clips",
     "arrangement_clip_notes",

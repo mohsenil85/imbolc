@@ -129,6 +129,10 @@ pub enum ParameterTarget {
     /// VST plugin parameter (param_index)
     VstParam(u32),
 
+    // === Source ===
+    /// Source-specific parameter by index (for custom synthdefs, etc.)
+    SourceParam(ParamIndex),
+
     // === Session ===
     /// Time signature (discrete)
     TimeSignature,
@@ -184,6 +188,7 @@ impl ParameterTarget {
             Self::HumanizeTiming => "HumTm",
             Self::TimingOffset => "TmOfs",
             Self::VstParam(_) => "VstP",
+            Self::SourceParam(_) => "SrcP",
             Self::TimeSignature => "TSig",
         }
     }
@@ -239,6 +244,7 @@ impl ParameterTarget {
             Self::HumanizeTiming => "Humanize Timing".to_string(),
             Self::TimingOffset => "Timing Offset".to_string(),
             Self::VstParam(idx) => format!("VST P{}", idx),
+            Self::SourceParam(idx) => format!("Source P{}", idx.get() + 1),
             Self::TimeSignature => "Time Signature".to_string(),
         }
     }
@@ -280,7 +286,10 @@ impl ParameterTarget {
             Self::EqBandQ(_) => (0.1, 10.0),
 
             // Discrete/toggle parameters use 0-1 normalized
-            Self::FilterBypass | Self::EffectBypass(_) | Self::TimeSignature => (0.0, 1.0),
+            Self::FilterBypass
+            | Self::EffectBypass(_)
+            | Self::TimeSignature
+            | Self::SourceParam(_) => (0.0, 1.0),
 
             // Voice synthesis params - ranges vary by implementation
             Self::Pitch => (-24.0, 24.0),    // semitones
@@ -396,6 +405,7 @@ impl ParameterTarget {
             "HumTm" => Some(Self::HumanizeTiming),
             "TmOfs" => Some(Self::TimingOffset),
             "TSig" => Some(Self::TimeSignature),
+            "SrcP" => Some(Self::SourceParam(crate::ParamIndex::new(0))),
             _ => None,
         }
     }

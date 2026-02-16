@@ -20,6 +20,7 @@ mod generative;
 mod mixer;
 mod piano_roll;
 mod session;
+mod tag;
 mod vst_param;
 
 use crate::{
@@ -33,7 +34,10 @@ use crate::{
 /// state not available on the audio thread).
 pub fn is_reducible(action: &DomainAction) -> bool {
     match action {
-        DomainAction::Midi(_) | DomainAction::Tuner(_) | DomainAction::AudioFeedback(_) => true,
+        DomainAction::Midi(_)
+        | DomainAction::Tuner(_)
+        | DomainAction::AudioFeedback(_)
+        | DomainAction::Tag(_) => true,
 
         DomainAction::Undo | DomainAction::Redo => false,
 
@@ -87,6 +91,11 @@ pub fn reduce_action(
     match action {
         // Actions that don't affect audio-thread state (no-op, handled)
         DomainAction::Midi(_) | DomainAction::Tuner(_) | DomainAction::AudioFeedback(_) => true,
+
+        DomainAction::Tag(a) => {
+            tag::reduce(a, session);
+            true
+        }
 
         // Undo/Redo: not reducible (wholesale state replacement)
         DomainAction::Undo | DomainAction::Redo => false,

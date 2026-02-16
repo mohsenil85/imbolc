@@ -27,6 +27,7 @@ pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, Instrument
     instruments::load_instruments(conn, &mut instruments)?;
     arrangement::load_automation(conn, &mut session)?;
     arrangement::load_midi_recording(conn, &mut session)?;
+    arrangement::load_param_tags(conn, &mut session)?;
     arrangement::load_arrangement(conn, &mut session)?;
 
     // Recompute derived state

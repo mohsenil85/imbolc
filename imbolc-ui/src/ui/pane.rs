@@ -184,7 +184,9 @@ impl PaneManager {
                         self.switch_to(*fallback, state);
                     }
                 }
-                NavIntent::OpenFileBrowser(_) | NavIntent::OpenVstParams(_, _) => {
+                NavIntent::OpenFileBrowser(_)
+                | NavIntent::OpenVstParams(_, _)
+                | NavIntent::OpenTagPicker(_) => {
                     // Handled by main.rs which configures the pane before pushing
                 }
             }

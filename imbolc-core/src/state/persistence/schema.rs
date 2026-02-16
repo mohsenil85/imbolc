@@ -1,7 +1,7 @@
 use rusqlite::{Connection, Result as SqlResult};
 
 /// Schema version for the relational format.
-pub const SCHEMA_VERSION: i32 = 13;
+pub const SCHEMA_VERSION: i32 = 14;
 
 /// Create all tables for the relational schema.
 pub fn create_tables(conn: &Connection) -> SqlResult<()> {
@@ -594,7 +594,8 @@ CREATE TABLE IF NOT EXISTS midi_cc_mappings (
     target_param_idx INTEGER,
     target_extra TEXT,
     min_value REAL NOT NULL,
-    max_value REAL NOT NULL
+    max_value REAL NOT NULL,
+    source TEXT NOT NULL DEFAULT 'Manual'
 );
 
 CREATE TABLE IF NOT EXISTS midi_pitch_bend_configs (
@@ -608,6 +609,28 @@ CREATE TABLE IF NOT EXISTS midi_pitch_bend_configs (
     center_value REAL NOT NULL,
     range REAL NOT NULL,
     sensitivity REAL NOT NULL
+);
+
+-- ============================================================
+-- Parameter Tags
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS param_tags (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    position INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS param_tag_targets (
+    tag_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    target_type TEXT NOT NULL,
+    target_instrument_id INTEGER,
+    target_bus_id INTEGER,
+    target_effect_id INTEGER,
+    target_param_idx INTEGER,
+    target_extra TEXT,
+    PRIMARY KEY (tag_id, position)
 );
 
 -- ============================================================
@@ -743,6 +766,8 @@ DELETE FROM chopper_slices;
 DELETE FROM midi_recording_settings;
 DELETE FROM midi_cc_mappings;
 DELETE FROM midi_pitch_bend_configs;
+DELETE FROM param_tags;
+DELETE FROM param_tag_targets;
 DELETE FROM arrangement_state;
 DELETE FROM arrangement_clips;
 DELETE FROM arrangement_clip_notes;

@@ -22,6 +22,7 @@ bindings = [
   { key = "Ctrl+S", action = "save_as", description = "Save project as..." },
   { key = "Ctrl+f", action = "switch:frame_edit", description = "Frame edit" },
   { key = "Ctrl+m", action = "switch:midi_settings", description = "MIDI settings" },
+  { key = "Ctrl+t", action = "switch:tag_view", description = "Parameter tags" },
   { key = "`", action = "nav_back", description = "Back / Forward" },
   { key = "~", action = "nav_forward", description = "Forward" },
   { key = "?", action = "help", description = "Context help" },
@@ -224,6 +225,7 @@ bindings = [
   { key = "Ctrl+Up", action = "move_stage_up", description = "Move processing stage up" },
   { key = "Ctrl+Down", action = "move_stage_down", description = "Move processing stage down" },
   { key = "b", action = "toggle_effect_bypass", description = "Toggle effect bypass" },
+  { key = "T", action = "tag_param", description = "Tag parameter" },
 ]
 
 [layers.server]
@@ -248,6 +250,14 @@ bindings = [
   { key = "j", action = "next", description = "Next" },
   { key = "Up", action = "prev", description = "Previous" },
   { key = "k", action = "prev", description = "Previous" },
+]
+
+[layers.tag_picker]
+bindings = [
+  { key = "Enter", action = "confirm", description = "Assign to selected tag" },
+  { key = "Escape", action = "cancel", description = "Cancel" },
+  { key = "Down", action = "next", description = "Next" },
+  { key = "Up", action = "prev", description = "Previous" },
 ]
 
 [layers.add_effect]
@@ -541,6 +551,26 @@ bindings = [
   { key = "c", action = "set_channel_all", description = "Clear channel filter" },
   { key = "i", action = "set_live_instrument", description = "Set live input to selected" },
   { key = "I", action = "clear_live_instrument", description = "Clear live input instrument" },
+]
+
+[layers.tag_view]
+bindings = [
+  { key = "Up", action = "prev_param", description = "Previous parameter" },
+  { key = "Down", action = "next_param", description = "Next parameter" },
+  { key = "k", action = "prev_param", description = "Previous parameter" },
+  { key = "j", action = "next_param", description = "Next parameter" },
+  { key = "Left", action = "decrease", description = "Decrease value" },
+  { key = "Right", action = "increase", description = "Increase value" },
+  { key = "PageUp", action = "increase_big", description = "Increase +10%" },
+  { key = "PageDown", action = "decrease_big", description = "Decrease -10%" },
+  { key = "Ctrl+Right", action = "increase_tiny", description = "Fine increase" },
+  { key = "Ctrl+Left", action = "decrease_tiny", description = "Fine decrease" },
+  { key = "Tab", action = "next_tag", description = "Next tag" },
+  { key = "Shift+Tab", action = "prev_tag", description = "Previous tag" },
+  { key = "d", action = "remove_target", description = "Remove param from tag" },
+  { key = "x", action = "delete_tag", description = "Delete current tag" },
+  { key = "n", action = "create_tag", description = "Create new tag" },
+  { key = "r", action = "rename_tag", description = "Rename current tag" },
 ]
 
 # --- Mode layers ---

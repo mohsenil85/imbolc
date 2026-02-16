@@ -93,7 +93,7 @@ pub(super) fn load_automation(conn: &Connection, session: &mut SessionState) -> 
 }
 
 pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState) -> SqlResult<()> {
-    use crate::state::midi_recording::{MidiCcMapping, PitchBendConfig};
+    use crate::state::midi_recording::{CcMappingSource, MidiCcMapping, PitchBendConfig};
 
     let result = conn.query_row(
         "SELECT live_input_instrument, note_passthrough, channel_filter FROM midi_recording_settings WHERE id = 1",
@@ -111,7 +111,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     // CC mappings
     session.midi_recording.cc_mappings.clear();
     let mut cc_stmt = conn.prepare(
-        "SELECT cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value
+        "SELECT cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source
          FROM midi_cc_mappings ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -126,6 +126,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
         Option<String>,
         f32,
         f32,
+        String,
     )> = cc_stmt
         .query_map([], |row| {
             Ok((
@@ -139,6 +140,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
                 row.get(7)?,
                 row.get(8)?,
                 row.get(9)?,
+                row.get(10)?,
             ))
         })?
         .collect::<SqlResult<_>>()?;
@@ -154,6 +156,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
         target_extra,
         min_value,
         max_value,
+        source,
     ) in cc_rows
     {
         let target = decode_automation_target(
@@ -166,6 +169,10 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
         mapping.channel = channel.map(|v| v as u8);
         mapping.min_value = min_value;
         mapping.max_value = max_value;
+        mapping.source = match source.as_str() {
+            "Tag" => CcMappingSource::Tag,
+            _ => CcMappingSource::Manual,
+        };
         session.midi_recording.cc_mappings.push(mapping);
     }
 
@@ -229,6 +236,59 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
                 range,
                 sensitivity,
             });
+    }
+
+    Ok(())
+}
+
+pub(super) fn load_param_tags(conn: &Connection, session: &mut SessionState) -> SqlResult<()> {
+    use imbolc_types::ParamTag;
+
+    if !super::table_exists(conn, "param_tags")? {
+        return Ok(());
+    }
+
+    session.param_tags.tags.clear();
+
+    let mut tag_stmt = conn.prepare("SELECT id, name FROM param_tags ORDER BY position")?;
+    let tags: Vec<(i64, String)> = tag_stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<SqlResult<_>>()?;
+
+    for (tag_id, name) in tags {
+        let mut tag = ParamTag::new(name);
+
+        let mut target_stmt = conn.prepare(
+            "SELECT target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra
+             FROM param_tag_targets WHERE tag_id = ?1 ORDER BY position"
+        )?;
+        #[allow(clippy::type_complexity)]
+        let target_rows: Vec<(
+            String,
+            Option<i64>,
+            Option<i64>,
+            Option<i64>,
+            Option<i64>,
+            Option<String>,
+        )> = target_stmt
+            .query_map(params![tag_id], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            })?
+            .collect::<SqlResult<_>>()?;
+
+        for (target_type, inst_id, bus_id, _effect_id, _param_idx, extra) in target_rows {
+            let target = decode_automation_target(&target_type, inst_id, bus_id, extra.as_deref());
+            tag.targets.push(target);
+        }
+
+        session.param_tags.tags.push(tag);
     }
 
     Ok(())

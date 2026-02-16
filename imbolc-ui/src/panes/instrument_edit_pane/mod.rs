@@ -225,6 +225,72 @@ impl InstrumentEditPane {
     pub fn is_editing(&self) -> bool {
         self.editing
     }
+
+    /// Build an AutomationTarget for the currently selected row.
+    fn build_automation_target(&self, id: InstrumentId) -> Option<imbolc_types::AutomationTarget> {
+        use imbolc_types::{
+            AutomationTarget, InstrumentParameter, ParamIndex, ParameterTarget, ProcessingStage,
+        };
+        let (section, local_idx) = self.row_info(self.selected_row);
+        let param = match section {
+            InstrumentSection::Source => {
+                let param_idx = if self.source.is_sample() {
+                    if local_idx == 0 {
+                        return None; // sample file row, not a parameter
+                    }
+                    local_idx - 1
+                } else {
+                    local_idx
+                };
+                ParameterTarget::SourceParam(ParamIndex::new(param_idx))
+            }
+            InstrumentSection::Processing(i) => {
+                match self.processing_chain.get(i)? {
+                    ProcessingStage::Filter(f) => match local_idx {
+                        0 => return None, // filter type header
+                        1 => ParameterTarget::FilterCutoff,
+                        2 => ParameterTarget::FilterResonance,
+                        idx => {
+                            let extra_idx = idx - 3;
+                            if extra_idx < f.extra_params.len() {
+                                // Extra filter params don't have dedicated ParameterTargets
+                                return None;
+                            }
+                            return None;
+                        }
+                    },
+                    ProcessingStage::Eq(_) => return None,
+                    ProcessingStage::Effect(e) => {
+                        if local_idx == 0 {
+                            return None; // effect header
+                        }
+                        let param_idx = local_idx - 1;
+                        if param_idx < e.params.len() {
+                            ParameterTarget::EffectParam(e.id, ParamIndex::new(param_idx))
+                        } else {
+                            return None;
+                        }
+                    }
+                }
+            }
+            InstrumentSection::Lfo => match local_idx {
+                0 => ParameterTarget::LfoRate,
+                1 => ParameterTarget::LfoDepth,
+                _ => return None,
+            },
+            InstrumentSection::Envelope => match local_idx {
+                0 => ParameterTarget::Attack,
+                1 => ParameterTarget::Decay,
+                2 => ParameterTarget::Sustain,
+                3 => ParameterTarget::Release,
+                _ => return None,
+            },
+        };
+        Some(AutomationTarget::Instrument(
+            id,
+            InstrumentParameter::Standard(param),
+        ))
+    }
 }
 
 impl Pane for InstrumentEditPane {
