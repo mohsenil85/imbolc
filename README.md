@@ -2,15 +2,14 @@
 
 Imbolc is a complete music studio that runs right in your terminal. Write beats, layer synthesizers, shape sounds with effects, mix tracks, and record finished songs — all without leaving your keyboard. It ships with 55 built-in instruments, 39 effects, a piano roll, a drum sequencer, a mixer, and even real-time collaboration over your local network. It's free, open-source, and yours to keep.
 
-Under the hood it's a Rust application powered by SuperCollider for audio synthesis, with a terminal UI built on ratatui and an experimental Dioxus GUI — both sharing the same core engine.
+Under the hood it's a Rust application powered by SuperCollider for audio synthesis, with a terminal UI built on ratatui.
 
 ## Quick start
 
 - **Terminal requirement:** The TUI requires a terminal that supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), such as [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/). The default macOS Terminal and GNOME Terminal are not supported.
 - Install Rust (edition 2021) and SuperCollider (`scsynth` on PATH; `sclang` needed for SynthDef compilation).
 - Compile SynthDefs: `imbolc-core/bin/compile-synthdefs`
-- Run the TUI: `cargo run -p imbolc-ui --release`
-- Run the GUI: `cargo run -p imbolc-gui --release`
+- Run: `cargo run -p imbolc-ui --release`
 
 Developer mode (UI only):
 
@@ -27,30 +26,23 @@ Optional: override SynthDef location with `IMBOLC_SYNTHDEFS_DIR=/path/to/synthde
 
 ### Linux dependencies (Debian/Ubuntu)
 
-The GUI crate (`imbolc-gui`) uses Dioxus/WebKit and needs several system libraries. On Debian/Ubuntu:
+On Debian/Ubuntu, install build dependencies:
 
 ```bash
 sudo apt-get install -y \
   pkg-config \
-  libglib2.0-dev \
-  libgtk-3-dev \
-  libsoup-3.0-dev \
-  libjavascriptcoregtk-4.1-dev \
-  libwebkit2gtk-4.1-dev \
-  libxdo-dev \
-  libclang-dev
+  libclang-dev \
+  libasound2-dev
 ```
-
-The TUI crate (`imbolc-ui`) only requires `libclang-dev` (for SQLite bindgen).
 
 ## Features
 
 ### Audio engine (SuperCollider backend)
 
 - Instrument model: source + filter + EQ + FX chain + LFO + envelope + mixer; mono/stereo per instrument.
-- Sources: 55 built-in types (oscillators, FM/PM, physical models, mallets, strings, drums, classic synths, experimental, additive/wavetable/granular, audio/bus input, samplers, time stretch, kit) plus custom SynthDefs and VST instruments.
+- Sources: 58 built-in types (oscillators, FM/PM, physical models, mallets, strings, drums, classic synths, experimental, additive/wavetable/granular, audio/bus input, samplers, time stretch, kit) plus custom SynthDefs and VST instruments.
 - Filters: 8 types (low/high/band-pass, notch, comb, allpass, vowel, resdrive).
-- Effects: 39 built-ins (delay/reverb/comp, modulation, distortion, EQ, granular, spectral, utility, etc.) plus VST effects.
+- Effects: 40 built-ins (delay/reverb/comp, modulation, distortion, EQ, granular, spectral, utility, etc.) plus VST effects.
 - Modulation + automation share a unified `ParameterTarget` covering mixer, filter, envelope, synthesis, FX, EQ, groove, VST, and session params.
 - Voice allocation: polyphonic voice stealing with `/n_end` feedback for accurate release + control-bus recycling.
 - Low-latency scheduling: dedicated audio thread with lookahead OSC bundling.
@@ -73,7 +65,7 @@ The TUI crate (`imbolc-ui`) only requires `libclang-dev` (for SQLite bindgen).
 
 ### UI
 
-- TUI with 30 panes: instruments, instrument editor, piano roll, sequencer, track/arrangement, mixer, automation, EQ, VST params, server control, waveform/spectrum/oscilloscope/level meter, project browser, docs, command palette, help, groove, tuner, checkpoints, and more.
+- TUI with 35 panes: instruments, instrument editor, piano roll, sequencer, track/arrangement, mixer, automation, EQ, VST params, server control, waveform/spectrum/oscilloscope/level meter, project browser, docs, command palette, command line, help, groove, tuner, checkpoints, arpeggiator, generative, tags, and more.
 - Keyboard-first navigation with contextual help and command palette.
 - Performance mode: piano/pad overlay (`/`).
 - Full undo/redo history and clipboard.
@@ -192,7 +184,6 @@ Output targets route instruments to master (hardware bus 0) or named buses. Per-
 ```
 imbolc/
 ├── imbolc-ui/       Terminal UI (ratatui + crossterm)
-├── imbolc-gui/      Experimental GUI (Dioxus)
 ├── imbolc-core/     Core engine (state, dispatch, audio, persistence)
 │   └── synthdefs/   SuperCollider SynthDefs (.scd → .scsyndef)
 ├── imbolc-types/    Shared type definitions
@@ -206,7 +197,6 @@ imbolc/
 ```bash
 cargo build
 cargo run -p imbolc-ui
-cargo run -p imbolc-gui
 cargo test
 cargo test -- --ignored     # Run tmux-based E2E examples (ignored by default)
 ```

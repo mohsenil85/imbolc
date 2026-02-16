@@ -89,7 +89,8 @@ Default output paths:
 ## 10. Useful Keys While Learning
 
 - Context help: `?`
-- Command palette: `:`
+- Command line: `:`
+- Command palette: `Ctrl+p`
 - Pane switcher: `;`
 - Undo/redo: `Ctrl+z` / `Ctrl+Z`
 

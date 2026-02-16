@@ -6,62 +6,7 @@ See TASKS_DONE.md for completed work.
 
 ---
 
-## Polish
-
-### Handle small terminal + resize
-
-**Sources:** R2 #13
-
-Fixed-size boxes (height 29) break on small terminals. Resize events
-not handled.
-
-1. Minimum size check on startup and resize — show message if too small
-2. Handle `Event::Resize` in the main event loop
-3. Clamp `box_width`/`box_height` to available terminal size
-4. Graceful degradation: hide optional elements on small terminals
-
-**Files:** `imbolc-ui/src/main.rs`, `imbolc-ui/src/ui/ratatui_impl.rs`,
-`imbolc-ui/src/ui/graphics.rs`
-
----
-
 ## Features
-
-### Automation Recording
-
-**Sources:** NEXT_STEPS #4, UNWIRED #2
-
-Record parameter changes over time. `AutomationState`,
-`AutomationLane`, etc. exist and are persisted, but missing:
-automation editing pane and playback tick loop integration.
-
-| Need | Status |
-|------|--------|
-| Automation lanes | Data structures exist, persisted |
-| Recording mode | Not implemented |
-| Playback interpolation | Not implemented |
-| Editing pane | Not implemented |
-
----
-
-### Audio Export
-
-**Sources:** NEXT_STEPS #5
-
-Render to WAV via SC NRT mode or real-time capture. Progress UI for
-render status.
-
----
-
-### Sequencer: Note Duration Grid Selection
-
-**Sources:** FEATURES #4
-
-In the sequencer view, allow switching between note durations for
-placement (quarter, eighth, sixteenth notes, etc.). Keybind to cycle
-or select grid resolution.
-
----
 
 ### LayerGroup Undo Support
 
@@ -75,6 +20,15 @@ toggles, skip for real-time param tweaks) and testing undo/redo
 round-trips.
 
 **Files:** `imbolc-core/src/state/undo.rs`, `imbolc-core/src/dispatch/bus.rs`
+
+---
+
+### MIDI Learn
+
+"Wiggle a knob to assign it" workflow. CC mapping state exists but
+there's no interactive UI for binding a physical controller to a
+parameter. Should support learn mode where the next incoming CC
+automatically maps to the selected target.
 
 ---
 
@@ -109,47 +63,12 @@ switcher. Large change touching every pane.
 
 ---
 
-### Input/Automation Capture
-
-Live recording of parameter changes and MIDI input as automation
-data. When a user tweaks a knob or moves a fader during playback,
-those movements should be captured as automation points on the
-corresponding lane. MIDI CC input should record directly to automation
-lanes. Arm/disarm per-lane recording.
-
----
-
 ### VST Parameter Discovery
 
 Replace synthetic 128-parameter placeholders with real parameter
 names, units, and ranges from the plugin via SuperCollider OSC
 replies. Currently usable but clunky — users see "Param 0", "Param 1"
 instead of meaningful names.
-
----
-
-### MIDI Learn
-
-"Wiggle a knob to assign it" workflow. CC mapping state exists but
-there's no interactive UI for binding a physical controller to a
-parameter. Should support learn mode where the next incoming CC
-automatically maps to the selected target.
-
----
-
-### Notification/Feedback System
-
-A one-line status bar across the bottom of the screen that we can
-print to programatically.
-
----
-
-### Test Coverage
-
-~31 unit tests and a handful of e2e tests — low for a project this
-size. The e2e harness (tmux-based) is a good foundation but covers
-very little. Needs render snapshot tests, UI interaction tests,
-multi-step workflow tests, and regression coverage for input handling.
 
 ---
 

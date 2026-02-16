@@ -26,6 +26,8 @@ Comprehensive code map for agents. Read this first to avoid re-exploring.
 | `Click(a)` | `dispatch_click` (inline) | Click track toggle/volume |
 | `Tuner(a)` | `dispatch_tuner` (inline) | Reference pitch play/stop |
 | `AudioFeedback(f)` | `audio_feedback::dispatch_audio_feedback` | Process audio thread feedback |
+| `Generative(a)` | `generative::dispatch_generative` | Generative/procedural music tools |
+| `Tag(a)` | `tag::dispatch_tag` | Tag/label management |
 | `Undo` | inline | Pop undo stack, apply, audio dirty based on undo scope |
 | `Redo` | inline | Pop redo stack, apply, audio dirty based on undo scope |
 | `None` | inline | No-op |
@@ -120,21 +122,20 @@ AppState (imbolc-core/src/state/mod.rs)
 | Variant | Purpose |
 |---|---|
 | `RebuildInstruments` | Instrument add/delete, source/processing chain change |
-| `UpdateSession` | BPM/key/scale/time signature/humanize changes |
-| `UpdatePianoRoll` | Note edits, loop change |
-| `UpdateAutomation` | Automation lane/point change |
+| `RebuildSession` | BPM/key/scale/time signature/humanize changes |
 | `RebuildRouting` | Full SC node graph rebuild |
 | `RebuildRoutingForInstrument(InstrumentId)` | Targeted per-instrument rebuild |
 | `AddInstrumentRouting(InstrumentId)` | Add instrument without teardown |
 | `DeleteInstrumentRouting(InstrumentId)` | Delete instrument without teardown |
 | `RebuildBusProcessing` | Bus/layer-group effect changes |
 | `UpdateMixerParams` | Level/pan/mute/solo on instruments/buses/groups |
-| `UpdateFilterParam(InstrumentId, FilterParamKind, f32)` | Direct filter node update |
-| `UpdateEffectParam(InstrumentId, EffectId, usize, f32)` | Direct effect node update |
-| `UpdateLfoParam(InstrumentId, LfoParamKind, f32)` | Direct LFO node update |
-| `UpdateBusEffectParam(u8, EffectId, usize, f32)` | Direct bus effect update |
-| `UpdateLayerGroupEffectParam(u32, EffectId, usize, f32)` | Direct layer group effect update |
-| `UpdateEqParam(InstrumentId)` | EQ parameter update |
+| `UpdatePianoRoll` | Note edits, loop change |
+| `UpdateAutomation` | Automation lane/point change |
+| `SetFilterParam(InstrumentId, FilterParamKind, f32)` | Direct filter node update |
+| `SetEffectParam(InstrumentId, EffectId, ParamIndex, f32)` | Direct effect node update |
+| `SetLfoParam(InstrumentId, LfoParamKind, f32)` | Direct LFO node update |
+| `SetBusEffectParam(BusId, EffectId, ParamIndex, f32)` | Direct bus effect update |
+| `SetLayerGroupEffectParam(u32, EffectId, ParamIndex, f32)` | Direct layer group effect update |
 
 Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and applied by the runtime after dispatch returns.
 
@@ -171,6 +172,8 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `vst_param.rs` | VST parameter editing |
 | `arrangement.rs` | Clip/arrangement actions |
 | `audio_feedback.rs` | Audio feedback processing |
+| `generative.rs` | Generative/procedural music dispatch |
+| `tag.rs` | Tag/label management |
 
 ### imbolc-audio: src/ (separate crate, re-exported by core as `pub use imbolc_audio as audio`)
 
@@ -231,12 +234,17 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `midi_connection.rs` | MIDI device state |
 | `clipboard.rs` | Re-exports from imbolc-types |
 
-### imbolc-ui: panes/ (30 panes)
+### imbolc-ui: panes/ (35 panes)
 
 | File | Pane ID | Purpose |
 |---|---|---|
 | `instrument_edit_pane/` | instrument_edit | Main instrument parameter editor (source, filter, effects, ADSR, LFO) |
 | `instrument_pane.rs` | instrument | Instrument list with CRUD |
+| `arpeggiator_pane.rs` | arpeggiator | Arpeggiator settings editor |
+| `command_line_pane.rs` | command_line | Command line input |
+| `generative_pane.rs` | generative | Generative/procedural tools |
+| `tag_picker_pane.rs` | tag_picker | Tag selection |
+| `tag_view_pane.rs` | tag_view | Tag view/browser |
 | `piano_roll_pane/` | piano_roll | Note editor with grid, selection, zoom |
 | `mixer_pane/` | mixer | Console view: channels, buses, groups, faders |
 | `track_pane.rs` | track | Timeline clip arrangement |
@@ -286,7 +294,7 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 
 ## Key Enums Quick Reference
 
-### SourceType (56 built-in + 2 parametric)
+### SourceType (58 built-in + 2 parametric)
 
 - **Oscillators**: Saw, Sin, Sqr, Tri, Noise, Pulse, SuperSaw, Sync
 - **FM/Modulation**: Ring, FBSin, FM, PhaseMod, FMBell, FMBrass
@@ -301,7 +309,7 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 - **Samplers**: PitchedSampler, TimeStretch, Kit
 - **External**: Custom(CustomSynthDefId), Vst(VstPluginId)
 
-### EffectType (40 built-in + 1 parametric)
+### EffectType (39 built-in + 1 parametric)
 
 - **Time**: Delay, Reverb, SpringReverb
 - **Dynamics**: Gate, TapeComp, SidechainComp, Limiter, MultibandComp

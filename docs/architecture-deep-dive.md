@@ -10,7 +10,6 @@ Imbolc is a multi-crate Rust workspace:
 - `imbolc-audio`: realtime audio subsystem and SuperCollider integration.
 - `imbolc-core`: app state, dispatch orchestration, persistence, config.
 - `imbolc-ui`: terminal app (ratatui/crossterm) runtime and panes.
-- `imbolc-gui`: experimental Dioxus desktop UI.
 - `imbolc-net`: optional LAN collaboration protocol/server/client.
 
 Dependency direction is intentionally one-way:
@@ -25,8 +24,6 @@ graph TD
     A --> U
     T --> U
     N --> U
-    C --> G["imbolc-gui"]
-    T --> G
 ```
 
 ## Runtime Architecture (Standalone TUI)
@@ -325,22 +322,11 @@ Writer thread keeps per-client outboxes with frame kinds:
 
 Includes heartbeat, privilege ownership model, and reconnect tokens.
 
-## GUI (`imbolc-gui`) Status
-
-The Dioxus GUI is a parallel frontend using core/audio directly:
-
-- owns `SharedState { AppState, AudioHandle }`,
-- dispatches through `imbolc_core::dispatch::dispatch_action`,
-- applies `AudioEffect` similarly to TUI,
-- polls audio feedback on async interval (~33ms).
-
-It shares backend architecture, but feature/UI coverage is still behind the TUI.
-
 ## End-to-End Dataflow Summary
 
 ```mermaid
 flowchart LR
-    UI["TUI/GUI Input"] --> ACT["Action"]
+    UI["TUI Input"] --> ACT["Action"]
     ACT --> ROUTE["Action::route()"]
     ROUTE --> DISP["Core Dispatch (DomainAction)"]
     DISP --> STATE["AppState Mutation + Undo"]

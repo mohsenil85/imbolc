@@ -5,7 +5,6 @@ members = [
     "imbolc-core",
     "imbolc-types",
     "imbolc-net",
-    "imbolc-gui",
     "imbolc-audio",
 ]
 

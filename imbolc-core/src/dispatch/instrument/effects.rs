@@ -129,3 +129,147 @@ pub(super) fn handle_open_vst_effect_params(
         VstTarget::Effect(effect_id),
     ))
 }
+
+#[cfg(test)]
+#[allow(unused_must_use)]
+mod tests {
+    use super::*;
+    use crate::state::AppState;
+    use crate::state::SourceType;
+
+    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+        let mut state = AppState::new();
+        let id = state.add_instrument(SourceType::Saw);
+        (state, id)
+    }
+
+    #[test]
+    fn add_effect() {
+        let (mut state, id) = setup();
+        let result = handle_add_effect(&mut state, id, crate::state::EffectType::Delay);
+
+        // Verify effect was added
+        let inst = state.instruments.instrument(id).unwrap();
+        assert_eq!(inst.effects().count(), 1);
+        let effect = inst.effects().next().unwrap();
+        assert_eq!(effect.effect_type, crate::state::EffectType::Delay);
+        assert!(effect.enabled);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+
+        // Verify nav intent (Pop)
+        assert_eq!(result.nav.len(), 1);
+    }
+
+    #[test]
+    fn remove_effect() {
+        let (mut state, id) = setup();
+        handle_add_effect(&mut state, id, crate::state::EffectType::Delay);
+
+        let effect_id = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .effects()
+            .next()
+            .unwrap()
+            .id;
+
+        let result = handle_remove_effect(&mut state, id, effect_id);
+
+        // Verify effect was removed
+        let inst = state.instruments.instrument(id).unwrap();
+        assert_eq!(inst.effects().count(), 0);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+
+    #[test]
+    fn toggle_effect_bypass() {
+        let (mut state, id) = setup();
+        handle_add_effect(&mut state, id, crate::state::EffectType::Reverb);
+
+        let effect_id = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .effects()
+            .next()
+            .unwrap()
+            .id;
+
+        // Effect starts enabled
+        assert!(
+            state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .effect_by_id(effect_id)
+                .unwrap()
+                .enabled
+        );
+
+        let result = handle_toggle_effect_bypass(&mut state, id, effect_id);
+
+        // Effect should now be bypassed
+        assert!(
+            !state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .effect_by_id(effect_id)
+                .unwrap()
+                .enabled
+        );
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+    }
+
+    #[test]
+    fn adjust_effect_param() {
+        let (mut state, id) = setup();
+        handle_add_effect(&mut state, id, crate::state::EffectType::Delay);
+
+        let effect_id = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .effects()
+            .next()
+            .unwrap()
+            .id;
+
+        let param_idx = imbolc_types::ParamIndex::new(0);
+        let result = handle_adjust_effect_param(&mut state, id, effect_id, param_idx, 0.1);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+
+        // Should have SetEffectParam for targeted param update
+        let has_set_effect = result.audio_effects.iter().any(|e| {
+            matches!(
+                e,
+                AudioEffect::SetEffectParam(inst_id, eff_id, p_idx, _)
+                    if *inst_id == id && *eff_id == effect_id && *p_idx == param_idx
+            )
+        });
+        assert!(has_set_effect, "expected SetEffectParam in audio_effects");
+    }
+}

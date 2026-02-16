@@ -75,18 +75,6 @@ imbolc-core/bin/compile-synthdefs
 cargo run -p imbolc-ui --release
 ```
 
-Optional GUI dependencies (only if building `imbolc-gui`):
-
-```bash
-sudo apt-get install -y \
-  libglib2.0-dev \
-  libgtk-3-dev \
-  libsoup-3.0-dev \
-  libjavascriptcoregtk-4.1-dev \
-  libwebkit2gtk-4.1-dev \
-  libxdo-dev
-```
-
 ## Optional VST Setup
 
 If you want VST support:
@@ -140,7 +128,3 @@ imbolc-core/bin/compile-synthdefs
 
 - Confirm `imbolc-core/synthdefs/` contains `.scsyndef` files.
 
-### GUI build fails on Linux
-
-- Install the optional GUI dependencies listed above, or use the TUI
-  (`imbolc-ui`) for alpha.

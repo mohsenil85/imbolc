@@ -99,3 +99,210 @@ pub(super) fn handle_set_lfo_target(
         .push(AudioEffect::RebuildRoutingForInstrument(id));
     result
 }
+
+#[cfg(test)]
+#[allow(unused_must_use)]
+mod tests {
+    use super::*;
+    use crate::state::AppState;
+    use crate::state::SourceType;
+
+    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+        let mut state = AppState::new();
+        let id = state.add_instrument(SourceType::Saw);
+        (state, id)
+    }
+
+    #[test]
+    fn toggle_lfo() {
+        let (mut state, id) = setup();
+
+        // LFO starts disabled
+        assert!(
+            !state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .enabled
+        );
+
+        let result = handle_toggle_lfo(&mut state, id);
+
+        // LFO should now be enabled
+        assert!(
+            state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .enabled
+        );
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+
+        // Toggle again to disable
+        handle_toggle_lfo(&mut state, id);
+        assert!(
+            !state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .enabled
+        );
+    }
+
+    #[test]
+    fn adjust_lfo_rate() {
+        let (mut state, id) = setup();
+        let original = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .lfo
+            .rate;
+
+        let result = handle_adjust_lfo_rate(&mut state, id, 1.0);
+
+        let new_val = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .lfo
+            .rate;
+        assert!((new_val - original).abs() > f32::EPSILON);
+
+        // Verify SetLfoParam audio effect
+        let has_set_lfo = result.audio_effects.iter().any(|e| {
+            matches!(e, AudioEffect::SetLfoParam(inst_id, LfoParamKind::Rate, _) if *inst_id == id)
+        });
+        assert!(has_set_lfo, "expected SetLfoParam(Rate) in audio_effects");
+
+        // Also has RebuildInstruments
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+    }
+
+    #[test]
+    fn adjust_lfo_depth() {
+        let (mut state, id) = setup();
+        let original = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .lfo
+            .depth;
+
+        let result = handle_adjust_lfo_depth(&mut state, id, 0.1);
+
+        let new_val = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .lfo
+            .depth;
+        assert!((new_val - original).abs() > f32::EPSILON);
+
+        // Verify SetLfoParam audio effect
+        let has_set_lfo = result.audio_effects.iter().any(|e| {
+            matches!(e, AudioEffect::SetLfoParam(inst_id, LfoParamKind::Depth, _) if *inst_id == id)
+        });
+        assert!(has_set_lfo, "expected SetLfoParam(Depth) in audio_effects");
+
+        // Also has RebuildInstruments
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+    }
+
+    #[test]
+    fn set_lfo_shape() {
+        let (mut state, id) = setup();
+
+        // Default shape is Sine
+        assert_eq!(
+            state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .shape,
+            LfoShape::Sine
+        );
+
+        let result = handle_set_lfo_shape(&mut state, id, LfoShape::Square);
+
+        assert_eq!(
+            state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .shape,
+            LfoShape::Square
+        );
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+
+    #[test]
+    fn set_lfo_target() {
+        let (mut state, id) = setup();
+
+        // Default target is FilterCutoff
+        assert_eq!(
+            state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .target,
+            ParameterTarget::FilterCutoff
+        );
+
+        let result = handle_set_lfo_target(&mut state, id, ParameterTarget::Pan);
+
+        assert_eq!(
+            state
+                .instruments
+                .instrument(id)
+                .unwrap()
+                .modulation
+                .lfo
+                .target,
+            ParameterTarget::Pan
+        );
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+}

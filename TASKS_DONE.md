@@ -252,3 +252,41 @@ clutters the UI. The `?` key already opens context-sensitive help via
 **Files:** All panes in `imbolc-ui/src/panes/`, `imbolc-ui/src/ui/frame.rs`
 
 ---
+
+## Road to Alpha (Phases 0-5)
+
+### Handle small terminal + resize — DONE (Phase 1)
+
+Minimum size check on startup and resize, `Event::Resize` handling,
+graceful degradation on small terminals.
+
+### Automation Recording — DONE (Phase 4.3)
+
+Recording mode toggle, lane arming, capture parameter changes during
+playback (`RecordValue` flow), playback interpolation via lane
+`value_at()` in tick loop, automation editing pane with lane/point
+operations.
+
+### Audio Export — DONE (Phase 4.1)
+
+Render to WAV, master bounce, stem export with progress UI.
+
+### Sequencer Grid Selection — DONE (Phase 5.2)
+
+Keybind-based step resolution cycle in sequencer.
+
+### Notification/Feedback System — DONE (Phase 1)
+
+Status bar with levels and expiry across the bottom of the screen.
+
+### Input/Automation Capture — DONE
+
+Subsumed by Automation Recording (Phase 4.3). Parameter changes and
+MIDI CC input are captured as automation points during playback.
+
+### Test Coverage Expansion — IN PROGRESS
+
+Grew from ~31 tests to 866 tests across all crates. Ongoing
+expansion in Phase 5.1.
+
+---

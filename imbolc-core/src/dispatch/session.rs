@@ -372,3 +372,496 @@ pub(super) fn dispatch_session(
 
     result
 }
+
+#[cfg(test)]
+#[allow(unused_must_use)]
+mod tests {
+    use super::*;
+    use crate::state::AppState;
+    use imbolc_audio::AudioHandle;
+    use imbolc_types::state::music::{Key, Scale};
+    use imbolc_types::state::session::MusicalSettings;
+
+    fn setup() -> (AppState, AudioHandle, Sender<IoFeedback>) {
+        let (io_tx, _io_rx) = std::sync::mpsc::channel();
+        (AppState::new(), AudioHandle::new(), io_tx)
+    }
+
+    // -----------------------------------------------------------------------
+    // NewProject
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn new_project_resets_instruments() {
+        let (mut state, mut audio, io_tx) = setup();
+        state.add_instrument(crate::state::SourceType::Saw);
+        assert!(!state.instruments.instruments.is_empty());
+
+        dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        assert!(state.instruments.instruments.is_empty());
+    }
+
+    #[test]
+    fn new_project_clears_undo_history() {
+        let (mut state, mut audio, io_tx) = setup();
+        // Push something so undo is non-empty
+        use crate::state::undo::UndoScope;
+        state.undo_history.push_scoped(
+            UndoScope::Instruments,
+            &state.session.clone(),
+            &state.instruments.clone(),
+        );
+        assert!(state.undo_history.can_undo());
+
+        dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        assert!(!state.undo_history.can_undo());
+    }
+
+    #[test]
+    fn new_project_clears_dirty_flag() {
+        let (mut state, mut audio, io_tx) = setup();
+        state.project.dirty = true;
+
+        dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        assert!(!state.project.dirty);
+    }
+
+    #[test]
+    fn new_project_clears_project_path() {
+        let (mut state, mut audio, io_tx) = setup();
+        state.project.path = Some(PathBuf::from("/some/path.sqlite"));
+
+        dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        assert!(state.project.path.is_none());
+    }
+
+    #[test]
+    fn new_project_produces_all_audio_effects() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        let all = AudioEffect::all();
+        for effect in &all {
+            assert!(
+                result.audio_effects.contains(effect),
+                "Missing audio effect: {:?}",
+                effect
+            );
+        }
+    }
+
+    #[test]
+    fn new_project_sets_project_name_untitled() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(result.project_name, Some("untitled".to_string()));
+    }
+
+    #[test]
+    fn new_project_emits_nav_intents() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
+
+        let nav_dbg: Vec<String> = result.nav.iter().map(|n| format!("{:?}", n)).collect();
+        assert!(nav_dbg
+            .iter()
+            .any(|s| s.contains("ConditionalPop") && s.contains("Confirm")));
+        assert!(nav_dbg
+            .iter()
+            .any(|s| s.contains("ConditionalPop") && s.contains("ProjectBrowser")));
+        assert!(nav_dbg
+            .iter()
+            .any(|s| s.contains("SwitchTo") && s.contains("Add")));
+    }
+
+    // -----------------------------------------------------------------------
+    // UpdateSession
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn update_session_changes_bpm() {
+        let (mut state, mut audio, io_tx) = setup();
+        assert_eq!(state.session.bpm, 120);
+
+        let settings = MusicalSettings {
+            bpm: 140,
+            ..MusicalSettings::default()
+        };
+
+        dispatch_session(
+            &SessionAction::UpdateSession(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert_eq!(state.session.bpm, 140);
+    }
+
+    #[test]
+    fn update_session_changes_key_and_scale() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let settings = MusicalSettings {
+            key: Key::Fs,
+            scale: Scale::Dorian,
+            ..MusicalSettings::default()
+        };
+
+        dispatch_session(
+            &SessionAction::UpdateSession(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert_eq!(state.session.key, Key::Fs);
+        assert_eq!(state.session.scale, Scale::Dorian);
+    }
+
+    #[test]
+    fn update_session_produces_rebuild_and_piano_roll_effects() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let settings = MusicalSettings {
+            bpm: 90,
+            ..MusicalSettings::default()
+        };
+
+        let result = dispatch_session(
+            &SessionAction::UpdateSession(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
+        assert!(result.audio_effects.contains(&AudioEffect::UpdatePianoRoll));
+    }
+
+    #[test]
+    fn update_session_emits_pop_or_switch_nav() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let settings = MusicalSettings::default();
+
+        let result = dispatch_session(
+            &SessionAction::UpdateSession(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        let nav_dbg: Vec<String> = result.nav.iter().map(|n| format!("{:?}", n)).collect();
+        assert!(nav_dbg
+            .iter()
+            .any(|s| s.contains("PopOrSwitchTo") && s.contains("Instrument")));
+    }
+
+    // -----------------------------------------------------------------------
+    // UpdateSessionLive
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn update_session_live_changes_bpm() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let settings = MusicalSettings {
+            bpm: 80,
+            ..MusicalSettings::default()
+        };
+
+        dispatch_session(
+            &SessionAction::UpdateSessionLive(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert_eq!(state.session.bpm, 80);
+    }
+
+    #[test]
+    fn update_session_live_produces_rebuild_and_piano_roll_effects() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let settings = MusicalSettings {
+            bpm: 200,
+            ..MusicalSettings::default()
+        };
+
+        let result = dispatch_session(
+            &SessionAction::UpdateSessionLive(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
+        assert!(result.audio_effects.contains(&AudioEffect::UpdatePianoRoll));
+    }
+
+    #[test]
+    fn update_session_live_has_no_nav_intent() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let settings = MusicalSettings::default();
+
+        let result = dispatch_session(
+            &SessionAction::UpdateSessionLive(settings),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!(result.nav.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // ToggleMasterMute
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn toggle_master_mute_toggles_flag() {
+        let (mut state, mut audio, io_tx) = setup();
+        assert!(!state.session.mixer.master_mute);
+
+        dispatch_session(
+            &SessionAction::ToggleMasterMute,
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+        assert!(state.session.mixer.master_mute);
+
+        dispatch_session(
+            &SessionAction::ToggleMasterMute,
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+        assert!(!state.session.mixer.master_mute);
+    }
+
+    #[test]
+    fn toggle_master_mute_produces_rebuild_and_mixer_effects() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(
+            &SessionAction::ToggleMasterMute,
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::UpdateMixerParams));
+    }
+
+    // -----------------------------------------------------------------------
+    // CycleTheme
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn cycle_theme_dark_to_light() {
+        let (mut state, mut audio, io_tx) = setup();
+        assert_eq!(state.session.theme.name, "Dark");
+
+        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "Light");
+    }
+
+    #[test]
+    fn cycle_theme_light_to_high_contrast() {
+        let (mut state, mut audio, io_tx) = setup();
+        // Set to Light first
+        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        assert_eq!(state.session.theme.name, "Light");
+
+        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "High Contrast");
+    }
+
+    #[test]
+    fn cycle_theme_wraps_to_dark() {
+        let (mut state, mut audio, io_tx) = setup();
+        // Cycle through all three
+        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        assert_eq!(state.session.theme.name, "High Contrast");
+
+        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "Dark");
+    }
+
+    #[test]
+    fn cycle_theme_produces_status_message() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+
+        assert!(!result.status.is_empty());
+        assert!(result.status[0].message.contains("Theme:"));
+    }
+
+    #[test]
+    fn cycle_theme_no_audio_effects() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+
+        assert!(result.audio_effects.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // Save
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn save_sets_in_progress_and_clears_error() {
+        let (mut state, mut audio, io_tx) = setup();
+        state.io.last_io_error = Some("previous error".to_string());
+
+        dispatch_session(&SessionAction::Save, &mut state, &mut audio, &io_tx);
+
+        assert!(state.io.save_in_progress);
+        assert!(state.io.last_io_error.is_none());
+    }
+
+    // -----------------------------------------------------------------------
+    // AdjustHumanizeVelocity
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn humanize_velocity_increases() {
+        let (mut state, mut audio, io_tx) = setup();
+        assert_eq!(state.session.humanize.velocity, 0.0);
+
+        dispatch_session(
+            &SessionAction::AdjustHumanizeVelocity(0.3),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!((state.session.humanize.velocity - 0.3).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn humanize_velocity_clamps_to_one() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        dispatch_session(
+            &SessionAction::AdjustHumanizeVelocity(1.5),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!((state.session.humanize.velocity - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn humanize_velocity_clamps_to_zero() {
+        let (mut state, mut audio, io_tx) = setup();
+        state.session.humanize.velocity = 0.2;
+
+        dispatch_session(
+            &SessionAction::AdjustHumanizeVelocity(-0.5),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!((state.session.humanize.velocity - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn humanize_velocity_produces_rebuild_session() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(
+            &SessionAction::AdjustHumanizeVelocity(0.1),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
+    }
+
+    // -----------------------------------------------------------------------
+    // AdjustHumanizeTiming
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn humanize_timing_increases() {
+        let (mut state, mut audio, io_tx) = setup();
+        assert_eq!(state.session.humanize.timing, 0.0);
+
+        dispatch_session(
+            &SessionAction::AdjustHumanizeTiming(0.4),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!((state.session.humanize.timing - 0.4).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn humanize_timing_clamps_to_one() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        dispatch_session(
+            &SessionAction::AdjustHumanizeTiming(2.0),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!((state.session.humanize.timing - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn humanize_timing_clamps_to_zero() {
+        let (mut state, mut audio, io_tx) = setup();
+        state.session.humanize.timing = 0.1;
+
+        dispatch_session(
+            &SessionAction::AdjustHumanizeTiming(-0.5),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!((state.session.humanize.timing - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn humanize_timing_produces_rebuild_session() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(
+            &SessionAction::AdjustHumanizeTiming(0.1),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
+    }
+}

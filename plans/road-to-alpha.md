@@ -4,15 +4,14 @@ _Last updated: 2026-02-13_
 
 ## Context
 
-Imbolc is now a 6-crate workspace (`imbolc-ui`, `imbolc-core`,
-`imbolc-types`, `imbolc-audio`, `imbolc-net`, `imbolc-gui`). Core
+Imbolc is now a 5-crate workspace (`imbolc-ui`, `imbolc-core`,
+`imbolc-types`, `imbolc-audio`, `imbolc-net`). Core
 music-making flow is implemented: sequencing, playback, mixing,
 persistence, MIDI, recording/export, and automation lanes.
 
 Current product posture for alpha:
 
 - TUI is the primary product experience.
-- GUI (`imbolc-gui`) is experimental and non-blocking for alpha.
 - Networking (`imbolc-net`) is optional and feature-flagged, not a gate
   for local alpha quality.
 - Priority remains: **stability > usability > features**.
@@ -162,8 +161,7 @@ Required before inviting broader testers.
 
 ### 6.1 Workspace/release posture
 
-- [ ] Decide alpha stance for `imbolc-gui` and `imbolc-net` in release
-  messaging (primary vs experimental)
+- [x] `imbolc-gui` removed — TUI is the product
 - [ ] Update README release framing accordingly
 
 ### 6.2 Release prep
@@ -199,7 +197,7 @@ Required before inviting broader testers.
 | Scheduling | Keep current tick/lookahead model; tune via config only if needed. |
 | Undo scaling | Keep capped history and monitor in real use. |
 | Networking | Keep feature-flagged and optional; local workflow is the alpha gate. |
-| GUI scope | Keep experimental; no alpha blocker dependency. |
+| GUI scope | Removed — TUI is the product. |
 | Docs policy | Treat docs as maintained notes with explicit verification dates. |
 
 ---

@@ -99,3 +99,141 @@ pub(super) fn handle_adjust_envelope_release(
     }
     result
 }
+
+#[cfg(test)]
+#[allow(unused_must_use)]
+mod tests {
+    use super::*;
+    use crate::state::AppState;
+    use crate::state::SourceType;
+
+    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+        let mut state = AppState::new();
+        let id = state.add_instrument(SourceType::Saw);
+        (state, id)
+    }
+
+    #[test]
+    fn adjust_attack() {
+        let (mut state, id) = setup();
+        let original = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .attack;
+
+        let result = handle_adjust_envelope_attack(&mut state, id, 0.1);
+
+        let new_val = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .attack;
+        assert!((new_val - original).abs() > f32::EPSILON);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+
+    #[test]
+    fn adjust_decay() {
+        let (mut state, id) = setup();
+        let original = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .decay;
+
+        let result = handle_adjust_envelope_decay(&mut state, id, 0.1);
+
+        let new_val = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .decay;
+        assert!((new_val - original).abs() > f32::EPSILON);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+
+    #[test]
+    fn adjust_sustain() {
+        let (mut state, id) = setup();
+        let original = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .sustain;
+
+        let result = handle_adjust_envelope_sustain(&mut state, id, 0.2);
+
+        let new_val = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .sustain;
+        assert!((new_val - original).abs() > f32::EPSILON);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+
+    #[test]
+    fn adjust_release() {
+        let (mut state, id) = setup();
+        let original = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .release;
+
+        let result = handle_adjust_envelope_release(&mut state, id, 0.2);
+
+        let new_val = state
+            .instruments
+            .instrument(id)
+            .unwrap()
+            .modulation
+            .amp_envelope
+            .release;
+        assert!((new_val - original).abs() > f32::EPSILON);
+
+        // Verify audio effects
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildInstruments));
+        assert!(result
+            .audio_effects
+            .contains(&AudioEffect::RebuildRoutingForInstrument(id)));
+    }
+}

@@ -428,13 +428,13 @@ mod tests {
 
     #[test]
     fn parse_primitives() {
-        assert_eq!(f32::parse_repl("3.14").unwrap(), 3.14);
+        assert_eq!(f32::parse_repl("2.5").unwrap(), 2.5);
         assert_eq!(u8::parse_repl("42").unwrap(), 42);
         assert_eq!(u32::parse_repl("1000").unwrap(), 1000);
         assert_eq!(i8::parse_repl("-5").unwrap(), -5);
         assert_eq!(usize::parse_repl("0").unwrap(), 0);
-        assert_eq!(bool::parse_repl("true").unwrap(), true);
-        assert_eq!(bool::parse_repl("off").unwrap(), false);
+        assert!(bool::parse_repl("true").unwrap());
+        assert!(!bool::parse_repl("off").unwrap());
     }
 
     #[test]
