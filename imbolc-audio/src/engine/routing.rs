@@ -66,7 +66,7 @@ impl AudioEngine {
 
     // ── Shared helpers for per-instrument chain building ──────────
 
-    /// Build the signal chain for a single instrument: source → LFO → filter → EQ → effects → output.
+    /// Build the signal chain for a single instrument: source → LFO → filter → effects → EQ → output.
     /// Allocates buses, creates synth nodes, and registers everything in node_map/node_registry.
     fn build_instrument_chain(
         &mut self,
@@ -77,6 +77,7 @@ impl AudioEngine {
         let mut source_node: Option<i32> = None;
         let mut lfo_node: Option<i32> = None;
         let mut filter_node: Option<i32> = None;
+        let mut eq_node: Option<i32> = None;
         let mut effect_nodes: HashMap<EffectId, i32> = HashMap::new();
         let mut effect_order: Vec<EffectId> = Vec::new();
 
@@ -257,36 +258,6 @@ impl AudioEngine {
             current_bus = filter_out_bus;
         }
 
-        // EQ (12-band parametric, if present)
-        // Note: EQ doesn't have mono variants yet, stays stereo
-        let mut eq_node: Option<i32> = None;
-        if let Some(eq) = instrument.eq() {
-            let node_id = self.next_node_id;
-            self.next_node_id += 1;
-            let eq_out_bus = self
-                .bus_allocator
-                .get_or_alloc_audio_bus(instrument.id, "eq_out");
-
-            let mut params: Vec<(String, f32)> = vec![
-                ("in".to_string(), current_bus as f32),
-                ("out".to_string(), eq_out_bus as f32),
-            ];
-            for (i, band) in eq.bands.iter().enumerate() {
-                params.push((format!("b{}_freq", i), band.freq));
-                params.push((format!("b{}_gain", i), band.gain));
-                params.push((format!("b{}_q", i), 1.0 / band.q)); // SC expects reciprocal Q
-                params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
-            }
-
-            let client = self.backend.as_ref().ok_or("Not connected")?;
-            client
-                .create_synth("imbolc_eq12", node_id, GROUP_PROCESSING, &params)
-                .map_err(|e| e.to_string())?;
-
-            eq_node = Some(node_id);
-            current_bus = eq_out_bus;
-        }
-
         // Effects
         for effect in instrument.effects() {
             if !effect.enabled {
@@ -395,6 +366,35 @@ impl AudioEngine {
             effect_nodes.insert(effect.id, node_id);
             effect_order.push(effect.id);
             current_bus = effect_out_bus;
+        }
+
+        // EQ (12-band parametric, if present)
+        // Note: EQ doesn't have mono variants yet, stays stereo
+        if let Some(eq) = instrument.eq() {
+            let node_id = self.next_node_id;
+            self.next_node_id += 1;
+            let eq_out_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(instrument.id, "eq_out");
+
+            let mut params: Vec<(String, f32)> = vec![
+                ("in".to_string(), current_bus as f32),
+                ("out".to_string(), eq_out_bus as f32),
+            ];
+            for (i, band) in eq.bands.iter().enumerate() {
+                params.push((format!("b{}_freq", i), band.freq));
+                params.push((format!("b{}_gain", i), band.gain));
+                params.push((format!("b{}_q", i), 1.0 / band.q)); // SC expects reciprocal Q
+                params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
+            }
+
+            let client = self.backend.as_ref().ok_or("Not connected")?;
+            client
+                .create_synth("imbolc_eq12", node_id, GROUP_PROCESSING, &params)
+                .map_err(|e| e.to_string())?;
+
+            eq_node = Some(node_id);
+            current_bus = eq_out_bus;
         }
 
         // Output synth
@@ -685,36 +685,6 @@ impl AudioEngine {
     ) -> Result<i32, String> {
         let mut current_bus = group_bus;
 
-        // EQ (12-band parametric, if present) — inserted before effects
-        if let Some(ref eq) = gm.eq {
-            let node_id = self.next_node_id;
-            self.next_node_id += 1;
-            let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - gm.group_id),
-                "group_eq_out",
-            );
-
-            let mut params: Vec<(String, f32)> = vec![
-                ("in".to_string(), current_bus as f32),
-                ("out".to_string(), eq_out_bus as f32),
-            ];
-            for (i, band) in eq.bands.iter().enumerate() {
-                params.push((format!("b{}_freq", i), band.freq));
-                params.push((format!("b{}_gain", i), band.gain));
-                params.push((format!("b{}_q", i), 1.0 / band.q));
-                params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
-            }
-
-            let client = self.backend.as_ref().ok_or("Not connected")?;
-            client
-                .create_synth("imbolc_eq12", node_id, GROUP_BUS_PROCESSING, &params)
-                .map_err(|e| e.to_string())?;
-
-            self.node_registry.register(node_id);
-            self.layer_group_eq_node_map.insert(gm.group_id, node_id);
-            current_bus = eq_out_bus;
-        }
-
         for effect in &gm.effect_chain.effects {
             if !effect.enabled {
                 continue;
@@ -794,6 +764,36 @@ impl AudioEngine {
             self.layer_group_effect_node_map
                 .insert((gm.group_id, effect.id), node_id);
             current_bus = effect_out_bus;
+        }
+
+        // EQ (12-band parametric, if present) — inserted after effects
+        if let Some(ref eq) = gm.eq {
+            let node_id = self.next_node_id;
+            self.next_node_id += 1;
+            let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
+                InstrumentId::new(u32::MAX - 256 - gm.group_id),
+                "group_eq_out",
+            );
+
+            let mut params: Vec<(String, f32)> = vec![
+                ("in".to_string(), current_bus as f32),
+                ("out".to_string(), eq_out_bus as f32),
+            ];
+            for (i, band) in eq.bands.iter().enumerate() {
+                params.push((format!("b{}_freq", i), band.freq));
+                params.push((format!("b{}_gain", i), band.gain));
+                params.push((format!("b{}_q", i), 1.0 / band.q));
+                params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
+            }
+
+            let client = self.backend.as_ref().ok_or("Not connected")?;
+            client
+                .create_synth("imbolc_eq12", node_id, GROUP_BUS_PROCESSING, &params)
+                .map_err(|e| e.to_string())?;
+
+            self.node_registry.register(node_id);
+            self.layer_group_eq_node_map.insert(gm.group_id, node_id);
+            current_bus = eq_out_bus;
         }
 
         Ok(current_bus)
