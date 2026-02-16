@@ -66,7 +66,7 @@ impl Completer for ReplHelper {
     }
 }
 
-fn complete_input(input: &str) -> Vec<String> {
+pub fn complete_input(input: &str) -> Vec<String> {
     let parts: Vec<&str> = input.split_whitespace().collect();
     let trailing_space = input.ends_with(' ');
 

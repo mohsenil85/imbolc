@@ -287,6 +287,31 @@ impl AppRuntime {
                 sync_pane_layer(&mut self.panes, &mut self.layer_stack);
             }
 
+            // Auto-pop command_line and dispatch pending action
+            if self.panes.active().id() != "command_line" {
+                if let Some(cl) = self.panes.get_pane_mut::<CommandLinePane>("command_line") {
+                    if let Some(action) = cl.take_action() {
+                        let mut r = self.dispatcher.dispatch_domain(&action, &mut self.audio);
+                        if r.quit {
+                            should_quit = true;
+                            break 'events;
+                        }
+                        if r.needs_full_sync {
+                            self.needs_full_sync = true;
+                        }
+                        self.pending_audio_effects
+                            .extend(std::mem::take(&mut r.audio_effects));
+                        apply_dispatch_result(
+                            r,
+                            &mut self.dispatcher,
+                            &mut self.panes,
+                            &mut self.app_frame,
+                            &mut self.audio,
+                        );
+                    }
+                }
+            }
+
             // Auto-pop pane_switcher layer and switch to selected pane
             process_pane_switcher_auto_pop(
                 &mut self.panes,

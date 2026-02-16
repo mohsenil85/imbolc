@@ -56,6 +56,7 @@ pub enum GlobalActionId {
     Help,
     OpenDocs,
     OpenLearn,
+    CommandLine,
     CommandPalette,
     TogglePianoMode,
     OpenProjectBrowser,
@@ -97,6 +98,7 @@ impl GlobalActionId {
             GlobalActionId::Help => "help",
             GlobalActionId::OpenDocs => "open_docs",
             GlobalActionId::OpenLearn => "open_learn",
+            GlobalActionId::CommandLine => "command_line",
             GlobalActionId::CommandPalette => "command_palette",
             GlobalActionId::TogglePianoMode => "toggle_piano_mode",
             GlobalActionId::OpenProjectBrowser => "open_project_browser",
@@ -165,6 +167,7 @@ impl GlobalActionId {
             "help" => Some(GlobalActionId::Help),
             "open_docs" => Some(GlobalActionId::OpenDocs),
             "open_learn" => Some(GlobalActionId::OpenLearn),
+            "command_line" => Some(GlobalActionId::CommandLine),
             "command_palette" => Some(GlobalActionId::CommandPalette),
             "toggle_piano_mode" => Some(GlobalActionId::TogglePianoMode),
             "open_project_browser" => Some(GlobalActionId::OpenProjectBrowser),
@@ -906,7 +909,7 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "piano_mode" | "pad_mode" | "text_edit" | "command_palette" | "pane_switcher" => {
             ModeActionId::from_str(action).map(ActionId::Mode)
         }
-        "quit_prompt" | "save_as" => None, // No actions — handled via raw input
+        "command_line" | "quit_prompt" | "save_as" => None, // No actions — handled via raw input
         _ => None,
     }
 }
@@ -935,6 +938,7 @@ mod tests {
             GlobalActionId::NavBack,
             GlobalActionId::NavForward,
             GlobalActionId::Help,
+            GlobalActionId::CommandLine,
             GlobalActionId::CommandPalette,
             GlobalActionId::TogglePianoMode,
             GlobalActionId::OpenProjectBrowser,

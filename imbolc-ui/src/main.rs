@@ -20,7 +20,7 @@ mod ui;
 use std::fs::File;
 
 use panes::{
-    AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane,
+    AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane, CommandLinePane,
     CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane,
     GenerativePane, GroovePane, HelpPane, HomePane, InstrumentEditPane, InstrumentPane,
     InstrumentPickerPane, MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane,
@@ -224,6 +224,10 @@ pub(crate) fn register_all_panes(
         "project_browser",
     ))));
     panes.add_pane(Box::new(SaveAsPane::new(pane_keymap(keymaps, "save_as"))));
+    panes.add_pane(Box::new(CommandLinePane::new(pane_keymap(
+        keymaps,
+        "command_line",
+    ))));
     panes.add_pane(Box::new(CommandPalettePane::new(pane_keymap(
         keymaps,
         "command_palette",

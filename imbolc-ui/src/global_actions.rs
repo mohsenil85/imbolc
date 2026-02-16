@@ -763,6 +763,10 @@ pub(crate) fn handle_global_action(
                     sync_instrument_edit(dispatcher.state(), panes);
                 }
             }
+            GlobalActionId::CommandLine => {
+                panes.push_to(NavPaneId::CommandLine, dispatcher.state());
+                sync_pane_layer(panes, layer_stack);
+            }
             GlobalActionId::CommandPalette => {
                 let commands = layer_stack.collect_commands();
                 if let Some(palette) = panes.get_pane_mut::<CommandPalettePane>("command_palette") {
