@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 use std::fs;
+use std::net::UdpSocket;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use super::backend::{AudioBackend, RawArg, ScBackend};
 use super::{
@@ -20,6 +21,27 @@ pub(crate) struct ServerSpawnResult {
     pub use_pw_jack: bool,
 }
 
+/// Send `/quit` to any orphaned scsynth on port 57110 and wait for the port to free up.
+/// This is fire-and-forget: if nothing is listening, the UDP send is a no-op.
+fn kill_orphaned_scsynth() {
+    // Send /quit OSC message to 127.0.0.1:57110
+    if let Ok(sock) = UdpSocket::bind("127.0.0.1:0") {
+        // /quit as OSC: pad to 8 bytes, no arguments
+        let msg = b"/quit\0\0\0,\0\0\0";
+        let _ = sock.send_to(msg, "127.0.0.1:57110");
+    }
+
+    // Poll up to 500ms for port 57110 to become free
+    let deadline = Instant::now() + Duration::from_millis(500);
+    while Instant::now() < deadline {
+        if UdpSocket::bind("127.0.0.1:57110").is_ok() {
+            return; // Port is free
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+    // If still occupied after 500ms, proceed anyway — post-spawn check will catch the failure
+}
+
 /// Spawn scsynth in the current thread (meant to be called from a background thread).
 /// Handles device resolution, argument building, and process spawning.
 /// Returns the Child process on success.
@@ -29,6 +51,8 @@ fn spawn_scsynth(
     buffer_size: u32,
     scsynth_args: String,
 ) -> Result<ServerSpawnResult, String> {
+    kill_orphaned_scsynth();
+
     let scsynth_paths = [
         "scsynth",
         "/Applications/SuperCollider.app/Contents/Resources/scsynth",
@@ -122,8 +146,32 @@ fn spawn_scsynth(
             )
             .spawn()
         {
-            Ok(child) => {
-                return Ok(ServerSpawnResult { child, use_pw_jack });
+            Ok(mut child) => {
+                // Wait briefly and check if scsynth exited immediately
+                // (e.g. "address in use", bad audio device)
+                thread::sleep(Duration::from_millis(200));
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        // scsynth exited immediately — read log for details
+                        let detail = fs::read_to_string(&log_path)
+                            .ok()
+                            .and_then(|content| {
+                                content
+                                    .lines()
+                                    .rev()
+                                    .find(|l| !l.trim().is_empty())
+                                    .map(|l| l.to_string())
+                            })
+                            .unwrap_or_default();
+                        let msg = if detail.is_empty() {
+                            format!("scsynth exited immediately ({status})")
+                        } else {
+                            format!("scsynth exited immediately ({status}): {detail}")
+                        };
+                        return Err(msg);
+                    }
+                    _ => return Ok(ServerSpawnResult { child, use_pw_jack }),
+                }
             }
             Err(_) => continue,
         }
