@@ -3,7 +3,7 @@ use rusqlite::{params, Connection, Result as SqlResult};
 use crate::state::instrument_state::InstrumentState;
 use crate::state::session::SessionState;
 
-use super::schema::{self, SCHEMA_VERSION};
+use super::schema;
 
 /// Save project state to relational tables. Performs DELETE-all + INSERT-current atomically.
 pub fn save_relational(
@@ -12,12 +12,6 @@ pub fn save_relational(
     instruments: &InstrumentState,
 ) -> SqlResult<()> {
     schema::delete_all_data(conn)?;
-
-    // Schema version
-    conn.execute(
-        "INSERT INTO schema_version (version, applied_at) VALUES (?1, datetime('now'))",
-        params![SCHEMA_VERSION],
-    )?;
 
     save_session(conn, session, instruments)?;
     save_theme(conn, session)?;

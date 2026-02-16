@@ -19,6 +19,8 @@ use super::session::SessionState;
 ///
 /// Uses WAL mode and an explicit transaction so the write is atomic:
 /// if the process crashes mid-save the previous data remains intact.
+/// Drops and recreates all tables on every save so schema changes
+/// are applied automatically without migrations.
 pub fn save_project(
     path: &Path,
     session: &SessionState,
@@ -28,63 +30,19 @@ pub fn save_project(
     conn.pragma_update(None, "journal_mode", "WAL")?;
 
     let tx = conn.unchecked_transaction()?;
+    schema::drop_all_tables(&tx)?;
     schema::create_tables(&tx)?;
-    schema::migrate(&tx)?;
     save::save_relational(&tx, session, instruments)?;
     tx.commit()?;
 
     Ok(())
 }
 
-/// Load project from relational format (v7+), with fallback to blob format (v1-v2).
+/// Load project from relational format.
 pub fn load_project(path: &Path) -> SqlResult<(SessionState, InstrumentState)> {
     let conn = SqlConnection::open(path)?;
 
-    // Check which format this file uses by looking for the schema_version table
-    let has_schema_version: bool = conn.query_row(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_version'",
-        [],
-        |row| row.get::<_, i64>(0),
-    )? > 0;
-
-    if has_schema_version {
-        // Migrate schema if loading an older version
-        schema::migrate(&conn)?;
-        // Relational format
-        let (mut session, instruments) = load::load_relational(&conn)?;
-        session.recompute_next_bus_id();
-        Ok((session, instruments))
-    } else {
-        // Legacy blob format — try to load
-        load_project_blob(&conn)
-    }
-}
-
-/// Current blob format version (legacy).
-const BLOB_FORMAT_VERSION: i32 = 2;
-
-fn load_project_blob(conn: &SqlConnection) -> SqlResult<(SessionState, InstrumentState)> {
-    let (format_version, session_bytes, instrument_bytes): (i32, Vec<u8>, Vec<u8>) = conn
-        .query_row(
-            "SELECT format_version, session_data, instrument_data FROM project_blob WHERE id = 1",
-            [],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )?;
-
-    if format_version > BLOB_FORMAT_VERSION {
-        return Err(rusqlite::Error::InvalidParameterName(format!(
-            "Project format version {} is newer than supported ({})",
-            format_version, BLOB_FORMAT_VERSION
-        )));
-    }
-
-    let mut session = blob::deserialize_session(&session_bytes)
-        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
-    let instruments = blob::deserialize_instruments(&instrument_bytes)
-        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
-
-    // Recompute next_bus_id from loaded buses (not persisted, computed on load)
+    let (mut session, instruments) = load::load_relational(&conn)?;
     session.recompute_next_bus_id();
-
     Ok((session, instruments))
 }

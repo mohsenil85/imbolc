@@ -1,57 +1,13 @@
 use rusqlite::{Connection, Result as SqlResult};
 
-/// Schema version for the relational format.
-pub const SCHEMA_VERSION: i32 = 14;
-
 /// Create all tables for the relational schema.
 pub fn create_tables(conn: &Connection) -> SqlResult<()> {
     conn.execute_batch(SCHEMA_SQL)
 }
 
-/// Migrate an existing database to the current schema version.
-///
-/// Runs ALTER TABLE statements for columns added in newer schema versions.
-/// Safe to call on databases that are already up-to-date (checks column existence).
-pub fn migrate(conn: &Connection) -> SqlResult<()> {
-    let version = get_schema_version(conn)?;
-
-    // v13 → v14: added `source` column to midi_cc_mappings
-    if version < 14 && !column_exists(conn, "midi_cc_mappings", "source")? {
-        conn.execute_batch(
-            "ALTER TABLE midi_cc_mappings ADD COLUMN source TEXT NOT NULL DEFAULT 'Manual'",
-        )?;
-    }
-
-    Ok(())
-}
-
-/// Read the current schema version from the DB, defaulting to 0 if no table exists.
-fn get_schema_version(conn: &Connection) -> SqlResult<i32> {
-    let table_exists: bool = conn.query_row(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_version'",
-        [],
-        |row| row.get::<_, i64>(0),
-    )? > 0;
-
-    if !table_exists {
-        return Ok(0);
-    }
-
-    conn.query_row(
-        "SELECT COALESCE(MAX(version), 0) FROM schema_version",
-        [],
-        |row| row.get(0),
-    )
-}
-
-/// Check whether a column exists in a table.
-fn column_exists(conn: &Connection, table: &str, column: &str) -> SqlResult<bool> {
-    let sql = format!("PRAGMA table_info({})", table);
-    let mut stmt = conn.prepare(&sql)?;
-    let exists = stmt.query_map([], |row| row.get::<_, String>(1))?.any(
-        |name| matches!(name, Ok(ref n) if n == column),
-    );
-    Ok(exists)
+/// Drop all tables so create_tables() rebuilds a fresh schema.
+pub fn drop_all_tables(conn: &Connection) -> SqlResult<()> {
+    conn.execute_batch(DROP_ALL_SQL)
 }
 
 /// Delete all data from all tables (preserving schema).
@@ -60,11 +16,6 @@ pub fn delete_all_data(conn: &Connection) -> SqlResult<()> {
 }
 
 const SCHEMA_SQL: &str = "
-CREATE TABLE IF NOT EXISTS schema_version (
-    version INTEGER PRIMARY KEY,
-    applied_at TEXT NOT NULL
-);
-
 -- ============================================================
 -- Session & Metadata
 -- ============================================================
@@ -766,7 +717,6 @@ CREATE TABLE IF NOT EXISTS checkpoint_changesets (
 ";
 
 const DELETE_ALL_SQL: &str = "
-DELETE FROM schema_version;
 DELETE FROM session;
 DELETE FROM theme;
 DELETE FROM instruments;
@@ -820,4 +770,63 @@ DELETE FROM arrangement_clip_notes;
 DELETE FROM arrangement_placements;
 DELETE FROM arrangement_clip_automation_lanes;
 DELETE FROM arrangement_clip_automation_points;
+";
+
+const DROP_ALL_SQL: &str = "
+DROP TABLE IF EXISTS schema_version;
+DROP TABLE IF EXISTS session;
+DROP TABLE IF EXISTS theme;
+DROP TABLE IF EXISTS instruments;
+DROP TABLE IF EXISTS instrument_source_params;
+DROP TABLE IF EXISTS instrument_effects;
+DROP TABLE IF EXISTS instrument_effect_params;
+DROP TABLE IF EXISTS instrument_sends;
+DROP TABLE IF EXISTS instrument_modulations;
+DROP TABLE IF EXISTS instrument_filter_extra_params;
+DROP TABLE IF EXISTS instrument_eq_bands;
+DROP TABLE IF EXISTS instrument_processing_chain;
+DROP TABLE IF EXISTS instrument_vst_params;
+DROP TABLE IF EXISTS effect_vst_params;
+DROP TABLE IF EXISTS mixer_buses;
+DROP TABLE IF EXISTS mixer_master;
+DROP TABLE IF EXISTS layer_group_mixers;
+DROP TABLE IF EXISTS layer_group_eq_bands;
+DROP TABLE IF EXISTS layer_group_sends;
+DROP TABLE IF EXISTS bus_effects;
+DROP TABLE IF EXISTS bus_effect_params;
+DROP TABLE IF EXISTS bus_effect_vst_params;
+DROP TABLE IF EXISTS layer_group_effects;
+DROP TABLE IF EXISTS layer_group_effect_params;
+DROP TABLE IF EXISTS layer_group_effect_vst_params;
+DROP TABLE IF EXISTS musical_settings;
+DROP TABLE IF EXISTS piano_roll_tracks;
+DROP TABLE IF EXISTS piano_roll_notes;
+DROP TABLE IF EXISTS sampler_configs;
+DROP TABLE IF EXISTS sampler_slices;
+DROP TABLE IF EXISTS vst_plugins;
+DROP TABLE IF EXISTS vst_plugin_params;
+DROP TABLE IF EXISTS automation_lanes;
+DROP TABLE IF EXISTS automation_points;
+DROP TABLE IF EXISTS custom_synthdefs;
+DROP TABLE IF EXISTS custom_synthdef_params;
+DROP TABLE IF EXISTS drum_sequencer_state;
+DROP TABLE IF EXISTS drum_sequencer_chain;
+DROP TABLE IF EXISTS drum_pads;
+DROP TABLE IF EXISTS drum_patterns;
+DROP TABLE IF EXISTS drum_steps;
+DROP TABLE IF EXISTS chopper_states;
+DROP TABLE IF EXISTS chopper_slices;
+DROP TABLE IF EXISTS midi_recording_settings;
+DROP TABLE IF EXISTS midi_cc_mappings;
+DROP TABLE IF EXISTS midi_pitch_bend_configs;
+DROP TABLE IF EXISTS param_tags;
+DROP TABLE IF EXISTS param_tag_targets;
+DROP TABLE IF EXISTS arrangement_state;
+DROP TABLE IF EXISTS arrangement_clips;
+DROP TABLE IF EXISTS arrangement_clip_notes;
+DROP TABLE IF EXISTS arrangement_placements;
+DROP TABLE IF EXISTS arrangement_clip_automation_lanes;
+DROP TABLE IF EXISTS arrangement_clip_automation_points;
+DROP TABLE IF EXISTS checkpoints;
+DROP TABLE IF EXISTS checkpoint_changesets;
 ";
