@@ -117,6 +117,10 @@ pub struct DrumPad {
     pub pitch: i8,        // semitone offset, -24 to +24
 }
 
+fn default_midi_base_note() -> u8 {
+    36
+}
+
 fn default_trigger_freq() -> f32 {
     440.0
 }
@@ -192,6 +196,9 @@ pub struct DrumSequencerState {
     /// Step resolution (grid subdivision)
     #[serde(default)]
     pub step_resolution: StepResolution,
+    /// MIDI base note for pad mapping (default 36 = GM kick drum / C1)
+    #[serde(default = "default_midi_base_note")]
+    pub midi_base_note: u8,
 }
 
 impl DrumSequencerState {
@@ -214,6 +221,7 @@ impl DrumSequencerState {
             chain_position: 0,
             editing_pad: None,
             step_resolution: StepResolution::default(),
+            midi_base_note: 36,
         }
     }
 
@@ -336,6 +344,12 @@ mod tests {
         assert!(!seq.pattern().steps[0][0].active);
         seq.current_pattern = 0;
         assert!(seq.pattern().steps[0][0].active);
+    }
+
+    #[test]
+    fn test_midi_base_note_default() {
+        let seq = DrumSequencerState::new();
+        assert_eq!(seq.midi_base_note, 36);
     }
 
     #[test]

@@ -126,7 +126,7 @@ pub(super) fn reduce(
         // PlayNote/PlayNotes/PlayDrumPad: audio side effects only, no state mutation
         InstrumentAction::PlayNote(_, _)
         | InstrumentAction::PlayNotes(_, _)
-        | InstrumentAction::PlayDrumPad(_) => true,
+        | InstrumentAction::PlayDrumPad(_, _) => true,
 
         InstrumentAction::Select(idx) => {
             if *idx < instruments.instruments.len() {

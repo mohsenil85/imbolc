@@ -1,6 +1,7 @@
 use crate::action::{Action, AutomationAction, InstrumentAction};
 use crate::midi::{MidiEvent, MidiEventKind};
 use crate::state::AppState;
+use imbolc_types::state::drum_sequencer::NUM_PADS;
 
 /// Process a MIDI event and return an Action if one should be dispatched.
 /// The timestamp in MidiEvent can be used for sample-accurate scheduling
@@ -44,7 +45,29 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
                 return None;
             }
 
-            // PlayNote uses the selected instrument
+            // Check if the target instrument is a Kit — route to PlayDrumPad
+            let instrument = midi_rec
+                .live_input_instrument
+                .and_then(|id| state.instruments.instrument(id))
+                .or_else(|| state.instruments.selected_instrument());
+
+            if let Some(inst) = instrument {
+                if let Some(seq) = inst.drum_sequencer() {
+                    let base = seq.midi_base_note;
+                    if *note >= base {
+                        let pad_idx = (*note - base) as usize;
+                        if pad_idx < NUM_PADS {
+                            return Some(Action::Instrument(InstrumentAction::PlayDrumPad(
+                                pad_idx, *velocity,
+                            )));
+                        }
+                    }
+                    // Notes outside pad range are ignored for Kit instruments
+                    return None;
+                }
+            }
+
+            // Non-Kit: PlayNote uses the selected instrument
             Some(Action::Instrument(InstrumentAction::PlayNote(
                 *note, *velocity,
             )))
@@ -179,5 +202,84 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         assert!(action.is_none());
+    }
+
+    #[test]
+    fn test_kit_instrument_routes_to_play_drum_pad() {
+        let mut state = test_state();
+        state.add_instrument(crate::state::SourceType::Kit);
+        // midi_base_note defaults to 36
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::NoteOn {
+                channel: 0,
+                note: 38, // pad index 2 (38 - 36)
+                velocity: 90,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        match action {
+            Some(Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, vel))) => {
+                assert_eq!(pad_idx, 2);
+                assert_eq!(vel, 90);
+            }
+            other => panic!("Expected PlayDrumPad(2, 90), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_kit_instrument_note_outside_pad_range_returns_none() {
+        let mut state = test_state();
+        state.add_instrument(crate::state::SourceType::Kit);
+        // base_note=36, NUM_PADS=12, so note 48 (36+12) is out of range
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::NoteOn {
+                channel: 0,
+                note: 48,
+                velocity: 100,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        assert!(action.is_none());
+    }
+
+    #[test]
+    fn test_kit_instrument_note_below_base_returns_none() {
+        let mut state = test_state();
+        state.add_instrument(crate::state::SourceType::Kit);
+        // note 35 is below base_note 36
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::NoteOn {
+                channel: 0,
+                note: 35,
+                velocity: 100,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        assert!(action.is_none());
+    }
+
+    #[test]
+    fn test_non_kit_instrument_still_gets_play_note() {
+        let mut state = test_state();
+        state.add_instrument(crate::state::SourceType::Saw);
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::NoteOn {
+                channel: 0,
+                note: 60,
+                velocity: 100,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        match action {
+            Some(Action::Instrument(InstrumentAction::PlayNote(note, vel))) => {
+                assert_eq!(note, 60);
+                assert_eq!(vel, 100);
+            }
+            other => panic!("Expected PlayNote(60, 100), got {:?}", other),
+        }
     }
 }

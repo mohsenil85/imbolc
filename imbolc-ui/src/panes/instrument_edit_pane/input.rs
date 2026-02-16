@@ -68,7 +68,7 @@ impl InstrumentEditPane {
                     if let KeyCode::Char(c) = event.key {
                         let c = translate_key(c, state.keyboard_layout);
                         if let Some(pad_idx) = self.perf.pad.key_to_pad(c) {
-                            return Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx));
+                            return Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, 100));
                         }
                     }
                     Action::None

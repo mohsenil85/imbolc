@@ -469,7 +469,7 @@ pub fn is_undoable(action: &DomainAction) -> bool {
             a,
             InstrumentAction::PlayNote(_, _)
                 | InstrumentAction::PlayNotes(_, _)
-                | InstrumentAction::PlayDrumPad(_)
+                | InstrumentAction::PlayDrumPad(_, _)
                 | InstrumentAction::Select(_)
                 | InstrumentAction::SelectNext
                 | InstrumentAction::SelectPrev

@@ -839,7 +839,7 @@ pub enum InstrumentAction {
     SelectPrev,
     SelectFirst,
     SelectLast,
-    PlayDrumPad(usize),
+    PlayDrumPad(usize, u8),
     LoadSampleResult(InstrumentId, PathBuf),
     ToggleArp(InstrumentId),
     CycleArpDirection(InstrumentId),
@@ -901,7 +901,7 @@ impl InstrumentAction {
             Self::SelectPrev => None,
             Self::SelectFirst => None,
             Self::SelectLast => None,
-            Self::PlayDrumPad(_) => None,
+            Self::PlayDrumPad(_, _) => None,
 
             // Actions targeting a specific instrument
             Self::Delete(id)

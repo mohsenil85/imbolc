@@ -36,8 +36,8 @@ pub(super) fn dispatch_instrument(
         | InstrumentAction::SelectPrev
         | InstrumentAction::SelectFirst
         | InstrumentAction::SelectLast => selection::handle_select(state, action),
-        InstrumentAction::PlayDrumPad(pad_idx) => {
-            playback::handle_play_drum_pad(state, audio, *pad_idx)
+        InstrumentAction::PlayDrumPad(pad_idx, velocity) => {
+            playback::handle_play_drum_pad(state, audio, *pad_idx, *velocity)
         }
         InstrumentAction::LoadSampleResult(instrument_id, ref path) => {
             sample::handle_load_sample_result(state, audio, *instrument_id, path)
