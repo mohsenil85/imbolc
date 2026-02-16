@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/beltane-domain",
+    "crates/beltane-ports",
+    "crates/beltane-application",
+    "crates/beltane-runtime",
+    "crates/beltane-gui",
+]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+license = "GPL-3.0"

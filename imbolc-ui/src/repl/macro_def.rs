@@ -25,13 +25,13 @@ macro_rules! repl_actions {
     ) => {
         #[allow(unused_assignments)]
         pub fn parse_action(input: &str) -> Result<imbolc_types::DomainAction, String> {
-            let parts: Vec<&str> = input.split_whitespace().collect();
+            let parts = $crate::repl::parse::tokenize(input)?;
             if parts.is_empty() {
                 return Err("empty command".to_string());
             }
 
-            let group = parts[0];
-            let subcommand = parts.get(1).copied().unwrap_or("");
+            let group = parts[0].as_str();
+            let subcommand = parts.get(1).map(|s| s.as_str()).unwrap_or("");
 
             match group {
                 $(
@@ -45,10 +45,14 @@ macro_rules! repl_actions {
                                         $(
                                             let $arg_name = parts.get(arg_idx)
                                                 .ok_or_else(|| format!("missing argument '{}' ({})", stringify!($arg_name), <$arg_type as $crate::repl::parse::ReplParseable>::type_hint()))
-                                                .and_then(|s| <$arg_type as $crate::repl::parse::ReplParseable>::parse_repl(s))?;
+                                                .and_then(|s| <$arg_type as $crate::repl::parse::ReplParseable>::parse_repl(s.as_str()))?;
                                             arg_idx += 1;
                                         )+
                                     )?
+                                    if parts.len() > arg_idx {
+                                        let trailing: Vec<&str> = parts[arg_idx..].iter().map(|s| s.as_str()).collect();
+                                        return Err(format!("unexpected trailing: '{}'", trailing.join(" ")));
+                                    }
                                     Ok($wrapper(
                                         imbolc_types::$enum::$variant $(( $($arg_name),+ ))?
                                     ))

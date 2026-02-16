@@ -140,28 +140,79 @@ fn parse_and_execute(
     dispatcher: &mut LocalDispatcher,
     audio: &mut AudioHandle,
 ) -> Result<ReplResult, String> {
-    let parts: Vec<&str> = input.split_whitespace().collect();
+    let parts = parse::tokenize(input)?;
     if parts.is_empty() {
         return Err("empty command".to_string());
     }
 
     // Meta commands
-    match parts[0] {
-        "quit" | "exit" => return Ok(ReplResult::Quit),
-        "help" => return Ok(ReplResult::Output(format_help(&parts[1..]))),
-        "show" => return handle_show(&parts[1..], dispatcher.state()),
-        "set" => return handle_set(&parts[1..], dispatcher, audio),
+    match parts[0].as_str() {
+        "quit" | "exit" => {
+            if parts.len() > 1 {
+                return Err(format!(
+                    "unexpected trailing: '{}'",
+                    parts[1..]
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
+            return Ok(ReplResult::Quit);
+        }
+        "help" => {
+            let str_parts: Vec<&str> = parts[1..].iter().map(|s| s.as_str()).collect();
+            return Ok(ReplResult::Output(format_help(&str_parts)));
+        }
+        "show" => {
+            let str_parts: Vec<&str> = parts[1..].iter().map(|s| s.as_str()).collect();
+            return handle_show(&str_parts, dispatcher.state());
+        }
+        "set" => {
+            let str_parts: Vec<&str> = parts[1..].iter().map(|s| s.as_str()).collect();
+            return handle_set(&str_parts, dispatcher, audio);
+        }
         "undo" => {
+            if parts.len() > 1 {
+                return Err(format!(
+                    "unexpected trailing: '{}'",
+                    parts[1..]
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
             let result = dispatcher.dispatch_domain(&DomainAction::Undo, audio);
             return Ok(ReplResult::Dispatched(DomainAction::Undo, result));
         }
         "redo" => {
+            if parts.len() > 1 {
+                return Err(format!(
+                    "unexpected trailing: '{}'",
+                    parts[1..]
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
             let result = dispatcher.dispatch_domain(&DomainAction::Redo, audio);
             return Ok(ReplResult::Dispatched(DomainAction::Redo, result));
         }
         "save" => {
+            if parts.len() > 2 {
+                return Err(format!(
+                    "unexpected trailing: '{}'",
+                    parts[2..]
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
             return if parts.len() > 1 {
-                let path = PathBuf::from(parts[1]);
+                let path = PathBuf::from(&parts[1]);
                 let action = DomainAction::Session(SessionAction::SaveAs(path));
                 let result = dispatcher.dispatch_domain(&action, audio);
                 Ok(ReplResult::Dispatched(action, result))
@@ -172,8 +223,18 @@ fn parse_and_execute(
             };
         }
         "load" => {
+            if parts.len() > 2 {
+                return Err(format!(
+                    "unexpected trailing: '{}'",
+                    parts[2..]
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
             return if parts.len() > 1 {
-                let path = PathBuf::from(parts[1]);
+                let path = PathBuf::from(&parts[1]);
                 let action = DomainAction::Session(SessionAction::LoadFrom(path));
                 let result = dispatcher.dispatch_domain(&action, audio);
                 Ok(ReplResult::Dispatched(action, result))
@@ -184,6 +245,16 @@ fn parse_and_execute(
             };
         }
         "status" => {
+            if parts.len() > 1 {
+                return Err(format!(
+                    "unexpected trailing: '{}'",
+                    parts[1..]
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ));
+            }
             let state = dispatcher.state();
             let server = format!("{:?}", state.audio.server_status);
             let playing = if state.audio.playing {
@@ -265,6 +336,9 @@ fn handle_set(
 ) -> Result<ReplResult, String> {
     if args.len() < 2 {
         return Err("set what? Try: set bpm 140, set key C, set scale Minor, set tuning 12-TET, set ji-flavor 5-Limit".to_string());
+    }
+    if args.len() > 2 {
+        return Err(format!("unexpected trailing: '{}'", args[2..].join(" ")));
     }
 
     let state = dispatcher.state();

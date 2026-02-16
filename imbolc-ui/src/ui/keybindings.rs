@@ -62,7 +62,11 @@ fn parse_key(s: &str) -> Option<KeyPattern> {
             parse_named_key(rest).map(KeyPattern::CtrlKey)
         }
     } else if let Some(rest) = s.strip_prefix("Alt+") {
-        Some(KeyPattern::Alt(rest.chars().next().unwrap()))
+        if rest.len() == 1 {
+            Some(KeyPattern::Alt(rest.chars().next().unwrap()))
+        } else {
+            parse_named_key(rest).map(KeyPattern::AltKey)
+        }
     } else if let Some(rest) = s.strip_prefix("Shift+") {
         parse_named_key(rest).map(KeyPattern::ShiftKey)
     } else if s.len() == 1 {
@@ -230,6 +234,21 @@ mod tests {
     fn test_parse_key_f_keys() {
         assert_eq!(parse_key("F1"), Some(KeyPattern::Key(KeyCode::F(1))));
         assert_eq!(parse_key("F12"), Some(KeyPattern::Key(KeyCode::F(12))));
+    }
+
+    #[test]
+    fn test_parse_key_alt_named() {
+        assert_eq!(
+            parse_key("Alt+Left"),
+            Some(KeyPattern::AltKey(KeyCode::Left))
+        );
+        assert_eq!(
+            parse_key("Alt+Right"),
+            Some(KeyPattern::AltKey(KeyCode::Right))
+        );
+        assert_eq!(parse_key("Alt+Bogus"), None);
+        // Single char still produces Alt(char)
+        assert_eq!(parse_key("Alt+x"), Some(KeyPattern::Alt('x')));
     }
 
     #[test]

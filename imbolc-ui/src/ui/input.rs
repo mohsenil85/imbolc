@@ -83,6 +83,15 @@ impl Modifiers {
             shift: false,
         }
     }
+
+    #[allow(dead_code)]
+    pub const fn alt() -> Self {
+        Self {
+            ctrl: false,
+            alt: true,
+            shift: false,
+        }
+    }
 }
 
 /// Input event from the user

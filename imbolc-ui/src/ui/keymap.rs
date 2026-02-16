@@ -14,6 +14,9 @@ pub enum KeyPattern {
     /// Alt + character
     #[allow(dead_code)]
     Alt(char),
+    /// Alt + special key
+    #[allow(dead_code)]
+    AltKey(KeyCode),
     /// Ctrl + special key
     #[allow(dead_code)]
     CtrlKey(KeyCode),
@@ -42,6 +45,7 @@ impl KeyPattern {
             KeyPattern::Alt(ch) => {
                 matches!(event.key, KeyCode::Char(c) if c == *ch) && event.modifiers.alt
             }
+            KeyPattern::AltKey(code) => event.key == *code && event.modifiers.alt,
             KeyPattern::CtrlKey(code) => event.key == *code && event.modifiers.ctrl,
             KeyPattern::ShiftKey(code) => event.key == *code && event.modifiers.shift,
         }
@@ -54,6 +58,7 @@ impl KeyPattern {
             KeyPattern::Key(code) => format!("{:?}", code),
             KeyPattern::Ctrl(ch) => format!("Ctrl+{}", ch),
             KeyPattern::Alt(ch) => format!("Alt+{}", ch),
+            KeyPattern::AltKey(code) => format!("Alt+{:?}", code),
             KeyPattern::CtrlKey(code) => format!("Ctrl+{:?}", code),
             KeyPattern::ShiftKey(code) => format!("Shift+{:?}", code),
         }
@@ -75,6 +80,7 @@ pub struct KeyBinding {
 /// - `bind_key(KeyCode, action, desc)` — special key (arrows, F-keys, etc.)
 /// - `bind_ctrl(char, action, desc)` — Ctrl + character
 /// - `bind_alt(char, action, desc)` — Alt + character
+/// - `bind_alt_key(KeyCode, action, desc)` — Alt + special key
 /// - `bind_ctrl_key(KeyCode, action, desc)` — Ctrl + special key
 ///
 /// Other methods:
@@ -133,6 +139,22 @@ impl Keymap {
     pub fn bind_alt(mut self, ch: char, action: ActionId, description: &'static str) -> Self {
         self.bindings.push(KeyBinding {
             pattern: KeyPattern::Alt(ch),
+            action,
+            description,
+        });
+        self
+    }
+
+    /// Add an Alt+key binding
+    #[allow(dead_code)]
+    pub fn bind_alt_key(
+        mut self,
+        key: KeyCode,
+        action: ActionId,
+        description: &'static str,
+    ) -> Self {
+        self.bindings.push(KeyBinding {
+            pattern: KeyPattern::AltKey(key),
             action,
             description,
         });
@@ -214,6 +236,20 @@ mod tests {
 
         let event_no_ctrl = InputEvent::new(KeyCode::Char('s'), Modifiers::none());
         assert!(!pattern.matches(&event_no_ctrl));
+    }
+
+    #[test]
+    fn test_alt_key_pattern_matches() {
+        let pattern = KeyPattern::AltKey(KeyCode::Right);
+        let event = InputEvent::new(KeyCode::Right, Modifiers::alt());
+        assert!(pattern.matches(&event));
+
+        let event_no_alt = InputEvent::new(KeyCode::Right, Modifiers::none());
+        assert!(!pattern.matches(&event_no_alt));
+
+        // Alt+Left should not match Alt+Right
+        let event_left = InputEvent::new(KeyCode::Left, Modifiers::alt());
+        assert!(!pattern.matches(&event_left));
     }
 
     #[test]

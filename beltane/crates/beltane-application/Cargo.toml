@@ -1,0 +1,8 @@
+[package]
+name = "beltane-application"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+beltane-domain = { path = "../beltane-domain" }
+beltane-ports = { path = "../beltane-ports" }

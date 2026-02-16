@@ -253,3 +253,55 @@ fn test_status_command() {
         other => panic!("expected Output, got: {other:?}"),
     }
 }
+
+// ---------------------------------------------------------------------------
+// Trailing token rejection
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_trailing_tokens_rejected() {
+    let (mut d, mut a) = test_setup();
+
+    // Registry commands should reject trailing tokens
+    let err = exec("instrument add saw garbage", &mut d, &mut a).unwrap_err();
+    assert!(
+        err.contains("unexpected trailing"),
+        "expected trailing error, got: {err}"
+    );
+
+    // Meta commands should reject trailing tokens
+    assert!(exec("undo extra", &mut d, &mut a).is_err());
+    assert!(exec("redo extra", &mut d, &mut a).is_err());
+    assert!(exec("status extra", &mut d, &mut a).is_err());
+    assert!(exec("quit extra", &mut d, &mut a).is_err());
+    assert!(exec("save path extra", &mut d, &mut a).is_err());
+    assert!(exec("load path extra", &mut d, &mut a).is_err());
+}
+
+// ---------------------------------------------------------------------------
+// Quoted string arguments
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_quoted_args() {
+    let (mut d, mut a) = test_setup();
+
+    // Quoted strings should work for string arguments
+    let result = exec(r#"session create-checkpoint "pre-mix v2""#, &mut d, &mut a);
+    assert!(
+        result.is_ok(),
+        "quoted checkpoint name should work: {:?}",
+        result.err()
+    );
+}
+
+#[test]
+fn test_unclosed_quote_error() {
+    let (mut d, mut a) = test_setup();
+
+    let err = exec(r#"session create-checkpoint "unclosed"#, &mut d, &mut a).unwrap_err();
+    assert!(
+        err.contains("unclosed quote"),
+        "expected unclosed quote error, got: {err}"
+    );
+}

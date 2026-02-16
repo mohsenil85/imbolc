@@ -2,6 +2,46 @@ use std::path::PathBuf;
 
 use imbolc_types::*;
 
+/// Split input into tokens, respecting double-quoted strings.
+///
+/// Splits on whitespace but preserves spaces inside `"..."`. Quotes are stripped
+/// from the output. Returns `Err` for unclosed quotes.
+pub fn tokenize(input: &str) -> Result<Vec<String>, String> {
+    let mut tokens = Vec::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(&ch) = chars.peek() {
+        if ch.is_whitespace() {
+            chars.next();
+            continue;
+        }
+        if ch == '"' {
+            chars.next(); // consume opening quote
+            let mut token = String::new();
+            loop {
+                match chars.next() {
+                    Some('"') => break,
+                    Some(c) => token.push(c),
+                    None => return Err("unclosed quote".to_string()),
+                }
+            }
+            tokens.push(token);
+        } else {
+            let mut token = String::new();
+            while let Some(&c) = chars.peek() {
+                if c.is_whitespace() {
+                    break;
+                }
+                token.push(c);
+                chars.next();
+            }
+            tokens.push(token);
+        }
+    }
+
+    Ok(tokens)
+}
+
 /// Trait for types that can be parsed from REPL command arguments.
 pub trait ReplParseable: Sized {
     fn parse_repl(s: &str) -> Result<Self, String>;
@@ -474,5 +514,40 @@ mod tests {
     fn parse_scale() {
         assert_eq!(Scale::parse_repl("Major").unwrap(), Scale::Major);
         assert_eq!(Scale::parse_repl("Minor").unwrap(), Scale::Minor);
+    }
+
+    #[test]
+    fn tokenize_simple() {
+        assert_eq!(
+            tokenize("instrument add saw").unwrap(),
+            vec!["instrument", "add", "saw"]
+        );
+    }
+
+    #[test]
+    fn tokenize_quoted() {
+        assert_eq!(
+            tokenize(r#"session create-checkpoint "pre-mix v2""#).unwrap(),
+            vec!["session", "create-checkpoint", "pre-mix v2"]
+        );
+    }
+
+    #[test]
+    fn tokenize_unclosed_quote() {
+        assert!(tokenize(r#"session create-checkpoint "unclosed"#).is_err());
+    }
+
+    #[test]
+    fn tokenize_empty() {
+        assert_eq!(tokenize("").unwrap(), Vec::<String>::new());
+        assert_eq!(tokenize("   ").unwrap(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn tokenize_extra_whitespace() {
+        assert_eq!(
+            tokenize("  instrument   add   saw  ").unwrap(),
+            vec!["instrument", "add", "saw"]
+        );
     }
 }

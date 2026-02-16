@@ -6,3 +6,5 @@
 cclsp.json
 */.obsidian
 .DS_Store
+
+/beltane/target/

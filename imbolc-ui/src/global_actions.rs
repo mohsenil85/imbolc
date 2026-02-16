@@ -630,50 +630,24 @@ pub(crate) fn handle_global_action(
             }
             GlobalActionId::NavBack => {
                 let history = &mut app_frame.view_history;
-                if !history.is_empty() {
+                if !history.is_empty() && app_frame.history_cursor > 0 {
                     let current = capture_view(panes, dispatcher.state());
                     history[app_frame.history_cursor] = current;
-
-                    let at_front = app_frame.history_cursor == history.len() - 1;
-                    if at_front {
-                        if app_frame.history_cursor > 0 {
-                            app_frame.history_cursor -= 1;
-                            let view = history[app_frame.history_cursor].clone();
-                            restore_view(panes, dispatcher, &view);
-                            sync_pane_layer(panes, layer_stack);
-                        }
-                    } else if app_frame.history_cursor < history.len() - 1 {
-                        app_frame.history_cursor += 1;
-                        let view = history[app_frame.history_cursor].clone();
-                        restore_view(panes, dispatcher, &view);
-                        sync_pane_layer(panes, layer_stack);
-                    }
+                    app_frame.history_cursor -= 1;
+                    let view = history[app_frame.history_cursor].clone();
+                    restore_view(panes, dispatcher, &view);
+                    sync_pane_layer(panes, layer_stack);
                 }
             }
             GlobalActionId::NavForward => {
                 let history = &mut app_frame.view_history;
-                if !history.is_empty() {
+                if !history.is_empty() && app_frame.history_cursor < history.len() - 1 {
                     let current = capture_view(panes, dispatcher.state());
                     history[app_frame.history_cursor] = current;
-
-                    let at_front = app_frame.history_cursor == history.len() - 1;
-                    if at_front {
-                        let target = app_frame.history_cursor.saturating_sub(2);
-                        if target != app_frame.history_cursor {
-                            app_frame.history_cursor = target;
-                            let view = history[app_frame.history_cursor].clone();
-                            restore_view(panes, dispatcher, &view);
-                            sync_pane_layer(panes, layer_stack);
-                        }
-                    } else {
-                        let target = (app_frame.history_cursor + 2).min(history.len() - 1);
-                        if target != app_frame.history_cursor {
-                            app_frame.history_cursor = target;
-                            let view = history[app_frame.history_cursor].clone();
-                            restore_view(panes, dispatcher, &view);
-                            sync_pane_layer(panes, layer_stack);
-                        }
-                    }
+                    app_frame.history_cursor += 1;
+                    let view = history[app_frame.history_cursor].clone();
+                    restore_view(panes, dispatcher, &view);
+                    sync_pane_layer(panes, layer_stack);
                 }
             }
             GlobalActionId::Help => {
