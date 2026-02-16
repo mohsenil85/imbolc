@@ -156,10 +156,6 @@ bindings = [
   { key = "Down", action = "down", description = "Next pad" },
   { key = "Left", action = "left", description = "Previous step" },
   { key = "Right", action = "right", description = "Next step" },
-  { key = "j", action = "down", description = "Next pad" },
-  { key = "k", action = "up", description = "Previous pad" },
-  { key = "h", action = "left", description = "Previous step" },
-  { key = "l", action = "right", description = "Next step" },
   { key = "Enter", action = "toggle", description = "Toggle step" },
   { key = "s", action = "load_sample", description = "Load sample for pad" },
   { key = "c", action = "chopper", description = "Sample chopper" },
@@ -247,9 +243,7 @@ bindings = [
   { key = "Enter", action = "confirm", description = "Add selected instrument" },
   { key = "Escape", action = "cancel", description = "Cancel and return" },
   { key = "Down", action = "next", description = "Next" },
-  { key = "j", action = "next", description = "Next" },
   { key = "Up", action = "prev", description = "Previous" },
-  { key = "k", action = "prev", description = "Previous" },
 ]
 
 [layers.tag_picker]
@@ -266,16 +260,12 @@ bindings = [
   { key = "Escape", action = "cancel", description = "Cancel" },
   { key = "Up", action = "prev", description = "Previous" },
   { key = "Down", action = "next", description = "Next" },
-  { key = "k", action = "prev", description = "Previous" },
-  { key = "j", action = "next", description = "Next" },
 ]
 
 [layers.home]
 bindings = [
   { key = "Up", action = "up", description = "Previous item" },
   { key = "Down", action = "down", description = "Next item" },
-  { key = "k", action = "up", description = "Previous item" },
-  { key = "j", action = "down", description = "Next item" },
   { key = "Enter", action = "select", description = "Open selected pane" },
   { key = "Space", action = "select", description = "Open selected pane" },
   { key = "q", action = "quit", description = "Quit" },
@@ -287,8 +277,6 @@ bindings = [
   { key = "?", action = "close", description = "Close help" },
   { key = "Up", action = "up", description = "Scroll up" },
   { key = "Down", action = "down", description = "Scroll down" },
-  { key = "k", action = "up", description = "Scroll up" },
-  { key = "j", action = "down", description = "Scroll down" },
   { key = "Home", action = "top", description = "Go to top" },
   { key = "End", action = "bottom", description = "Go to bottom" },
 ]
@@ -299,8 +287,6 @@ bindings = [
   { key = "q", action = "close", description = "Close docs" },
   { key = "Up", action = "scroll_up", description = "Scroll up" },
   { key = "Down", action = "scroll_down", description = "Scroll down" },
-  { key = "k", action = "scroll_up", description = "Scroll up" },
-  { key = "j", action = "scroll_down", description = "Scroll down" },
   { key = "Ctrl+u", action = "page_up", description = "Page up" },
   { key = "Ctrl+d", action = "page_down", description = "Page down" },
   { key = "Home", action = "top", description = "Go to top" },
@@ -325,12 +311,9 @@ bindings = [
   { key = "Enter", action = "select", description = "Select file/enter directory" },
   { key = "Escape", action = "cancel", description = "Cancel and return" },
   { key = "Backspace", action = "parent", description = "Go to parent directory" },
-  { key = "h", action = "parent", description = "Go to parent directory" },
   { key = "^", action = "parent", description = "Go to parent directory" },
   { key = "Down", action = "next", description = "Next entry" },
-  { key = "j", action = "next", description = "Next entry" },
   { key = "Up", action = "prev", description = "Previous entry" },
-  { key = "k", action = "prev", description = "Previous entry" },
   { key = "~", action = "home", description = "Go to home directory" },
   { key = "Home", action = "goto_top", description = "Go to top" },
   { key = "End", action = "goto_bottom", description = "Go to bottom" },
@@ -340,13 +323,9 @@ bindings = [
 [layers.sample_chopper]
 transparent = false
 bindings = [
-  { key = "h", action = "move_left", description = "Move cursor left" },
   { key = "Left", action = "move_left", description = "Move cursor left" },
-  { key = "l", action = "move_right", description = "Move cursor right" },
   { key = "Right", action = "move_right", description = "Move cursor right" },
-  { key = "j", action = "next_slice", description = "Select next slice" },
   { key = "Down", action = "next_slice", description = "Select next slice" },
-  { key = "k", action = "prev_slice", description = "Select previous slice" },
   { key = "Up", action = "prev_slice", description = "Select previous slice" },
   { key = "Enter", action = "chop", description = "Split slice at cursor" },
   { key = "x", action = "delete", description = "Remove selected slice" },
@@ -415,12 +394,8 @@ bindings = [
 bindings = [
   { key = "Up", action = "prev_string", description = "Previous string" },
   { key = "Down", action = "next_string", description = "Next string" },
-  { key = "k", action = "prev_string", description = "Previous string" },
-  { key = "j", action = "next_string", description = "Next string" },
   { key = "Left", action = "prev_instrument", description = "Previous instrument" },
   { key = "Right", action = "next_instrument", description = "Next instrument" },
-  { key = "h", action = "prev_instrument", description = "Previous instrument" },
-  { key = "l", action = "next_instrument", description = "Next instrument" },
   { key = "Enter", action = "play_stop", description = "Play / Stop tone" },
 ]
 
@@ -428,12 +403,8 @@ bindings = [
 bindings = [
   { key = "Up", action = "prev_param", description = "Previous parameter" },
   { key = "Down", action = "next_param", description = "Next parameter" },
-  { key = "k", action = "prev_param", description = "Previous parameter" },
-  { key = "j", action = "next_param", description = "Next parameter" },
   { key = "Left", action = "decrease", description = "Decrease value" },
   { key = "Right", action = "increase", description = "Increase value" },
-  { key = "h", action = "decrease", description = "Decrease value" },
-  { key = "l", action = "increase", description = "Increase value" },
   { key = "PageUp", action = "increase_big", description = "Big increase" },
   { key = "PageDown", action = "decrease_big", description = "Big decrease" },
   { key = "Ctrl+Left", action = "decrease_tiny", description = "Fine decrease" },
@@ -447,12 +418,8 @@ bindings = [
 bindings = [
   { key = "Up", action = "prev_param", description = "Previous parameter" },
   { key = "Down", action = "next_param", description = "Next parameter" },
-  { key = "k", action = "prev_param", description = "Previous parameter" },
-  { key = "j", action = "next_param", description = "Next parameter" },
   { key = "Left", action = "decrease", description = "Decrease / Cycle back" },
   { key = "Right", action = "increase", description = "Increase / Cycle forward" },
-  { key = "h", action = "decrease", description = "Decrease / Cycle back" },
-  { key = "l", action = "increase", description = "Increase / Cycle forward" },
   { key = "Space", action = "toggle", description = "Toggle arp on/off" },
   { key = "Enter", action = "toggle", description = "Toggle arp on/off" },
   { key = "Backspace", action = "clear_chord", description = "Clear chord shape" },
@@ -463,12 +430,8 @@ bindings = [
 bindings = [
   { key = "Up", action = "prev_param", description = "Previous parameter" },
   { key = "Down", action = "next_param", description = "Next parameter" },
-  { key = "k", action = "prev_param", description = "Previous parameter" },
-  { key = "j", action = "next_param", description = "Next parameter" },
   { key = "Left", action = "decrease", description = "Decrease / Cycle back" },
   { key = "Right", action = "increase", description = "Increase / Cycle forward" },
-  { key = "h", action = "decrease", description = "Decrease / Cycle back" },
-  { key = "l", action = "increase", description = "Increase / Cycle forward" },
   { key = "Tab", action = "next_section", description = "Next section" },
   { key = "Shift+Tab", action = "prev_section", description = "Previous section" },
   { key = "Space", action = "toggle", description = "Toggle selected param" },
@@ -519,8 +482,6 @@ bindings = [
 bindings = [
   { key = "Up", action = "up", description = "Select previous param" },
   { key = "Down", action = "down", description = "Select next param" },
-  { key = "k", action = "up", description = "Select previous param" },
-  { key = "j", action = "down", description = "Select next param" },
   { key = "Left", action = "left", description = "Adjust value down (fine)" },
   { key = "Right", action = "right", description = "Adjust value up (fine)" },
   { key = "Shift+Left", action = "coarse_left", description = "Adjust value down (coarse)" },
@@ -557,8 +518,6 @@ bindings = [
 bindings = [
   { key = "Up", action = "prev_param", description = "Previous parameter" },
   { key = "Down", action = "next_param", description = "Next parameter" },
-  { key = "k", action = "prev_param", description = "Previous parameter" },
-  { key = "j", action = "next_param", description = "Next parameter" },
   { key = "Left", action = "decrease", description = "Decrease value" },
   { key = "Right", action = "increase", description = "Increase value" },
   { key = "PageUp", action = "increase_big", description = "Increase +10%" },
@@ -685,8 +644,6 @@ bindings = [
   { key = "Escape", action = "close", description = "Close browser" },
   { key = "Up", action = "up", description = "Previous project" },
   { key = "Down", action = "down", description = "Next project" },
-  { key = "k", action = "up", description = "Previous project" },
-  { key = "j", action = "down", description = "Next project" },
 ]
 
 [layers.checkpoint_list]
@@ -695,8 +652,6 @@ bindings = [
   { key = "Escape", action = "close", description = "Close" },
   { key = "Up", action = "up", description = "Previous" },
   { key = "Down", action = "down", description = "Next" },
-  { key = "k", action = "up", description = "Previous" },
-  { key = "j", action = "down", description = "Next" },
   { key = "d", action = "delete", description = "Delete checkpoint" },
 ]
 
