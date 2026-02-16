@@ -65,6 +65,9 @@ impl AddPane {
             AddOption::Source(SourceType::BrassStab),
             AddOption::Source(SourceType::Strings),
             AddOption::Source(SourceType::Acid),
+            AddOption::Source(SourceType::Universe),
+            AddOption::Source(SourceType::Dreamscape),
+            AddOption::Source(SourceType::Soundtrack),
             // Physical Modeling
             AddOption::Separator("── Physical ──"),
             AddOption::Source(SourceType::Pluck),

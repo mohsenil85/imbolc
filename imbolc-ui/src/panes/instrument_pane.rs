@@ -32,7 +32,8 @@ fn source_color(source: SourceType) -> Color {
         | SourceType::Clave | SourceType::Conga
         // Classic synths
         | SourceType::Choir | SourceType::EPiano | SourceType::Organ | SourceType::BrassStab
-        | SourceType::Strings | SourceType::Acid => Color::OSC_COLOR,
+        | SourceType::Strings | SourceType::Acid
+        | SourceType::Universe | SourceType::Dreamscape | SourceType::Soundtrack => Color::OSC_COLOR,
         SourceType::AudioIn => Color::AUDIO_IN_COLOR,
         SourceType::PitchedSampler | SourceType::TimeStretch => Color::SAMPLE_COLOR,
         SourceType::Kit => Color::KIT_COLOR,

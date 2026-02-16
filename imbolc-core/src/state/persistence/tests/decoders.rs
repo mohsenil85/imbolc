@@ -82,6 +82,9 @@ fn roundtrip_source_type() {
         BrassStab,
         Strings,
         Acid,
+        Universe,
+        Dreamscape,
+        Soundtrack,
         Gendy,
         Chaos,
         Additive,
@@ -102,8 +105,9 @@ fn roundtrip_source_type() {
             | Marimba | Vibes | Kalimba | SteelDrum | TubularBell | Glockenspiel | Guitar
             | BassGuitar | Harp | Koto | Kick | Snare | HihatClosed | HihatOpen | Clap
             | Cowbell | Rim | Tom | Clave | Conga | Choir | EPiano | Organ | BrassStab
-            | Strings | Acid | Gendy | Chaos | Additive | Wavetable | Granular | AudioIn
-            | BusIn | PitchedSampler | TimeStretch | Kit | Custom(_) | Vst(_) => {}
+            | Strings | Acid | Universe | Dreamscape | Soundtrack | Gendy | Chaos | Additive
+            | Wavetable | Granular | AudioIn | BusIn | PitchedSampler | TimeStretch | Kit
+            | Custom(_) | Vst(_) => {}
         }
         let encoded = format!("{:?}", s);
         // Custom and Vst use "Custom:42" / "Vst:99" encoding in save
