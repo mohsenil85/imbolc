@@ -87,7 +87,8 @@ pub(super) fn reduce(
                         FilterType::Comb => FilterType::Allpass,
                         FilterType::Allpass => FilterType::Vowel,
                         FilterType::Vowel => FilterType::ResDrive,
-                        FilterType::ResDrive => FilterType::Lpf,
+                        FilterType::ResDrive => FilterType::ParametricEq,
+                        FilterType::ParametricEq => FilterType::Lpf,
                     };
                     filter.extra_params = filter.filter_type.default_extra_params();
                 }

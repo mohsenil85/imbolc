@@ -13,6 +13,7 @@ pub enum FilterType {
     Allpass,
     Vowel,
     ResDrive,
+    ParametricEq,
 }
 
 impl FilterType {
@@ -26,6 +27,31 @@ impl FilterType {
             FilterType::Allpass => "Allpass",
             FilterType::Vowel => "Vowel",
             FilterType::ResDrive => "ResDrive",
+            FilterType::ParametricEq => "Parametric",
+        }
+    }
+
+    /// Reverse lookup from name() or short variant.
+    pub fn from_name(s: &str) -> Option<FilterType> {
+        match s {
+            "lpf" | "Low-Pass" => Some(FilterType::Lpf),
+            "hpf" | "High-Pass" => Some(FilterType::Hpf),
+            "bpf" | "Band-Pass" => Some(FilterType::Bpf),
+            "notch" | "Notch" => Some(FilterType::Notch),
+            "comb" | "Comb" => Some(FilterType::Comb),
+            "allpass" | "Allpass" => Some(FilterType::Allpass),
+            "vowel" | "Vowel" => Some(FilterType::Vowel),
+            "resdrive" | "ResDrive" => Some(FilterType::ResDrive),
+            "parametric" | "Parametric" | "ParametricEq" => Some(FilterType::ParametricEq),
+            _ => None,
+        }
+    }
+
+    /// Display labels for the cutoff and resonance parameters.
+    pub fn param_labels(&self) -> (&'static str, &'static str) {
+        match self {
+            FilterType::ParametricEq => ("Frequency", "Q"),
+            _ => ("Cutoff", "Resonance"),
         }
     }
 
@@ -39,6 +65,7 @@ impl FilterType {
             FilterType::Allpass => "imbolc_allpass",
             FilterType::Vowel => "imbolc_vowel",
             FilterType::ResDrive => "imbolc_resdrive",
+            FilterType::ParametricEq => "imbolc_parametric_eq",
         }
     }
 
@@ -52,6 +79,7 @@ impl FilterType {
             FilterType::Allpass => "imbolc_allpass_mono",
             FilterType::Vowel => "imbolc_vowel_mono",
             FilterType::ResDrive => "imbolc_resdrive_mono",
+            FilterType::ParametricEq => "imbolc_parametric_eq_mono",
         }
     }
 
@@ -66,6 +94,7 @@ impl FilterType {
             FilterType::Allpass,
             FilterType::Vowel,
             FilterType::ResDrive,
+            FilterType::ParametricEq,
         ]
     }
 
@@ -82,6 +111,12 @@ impl FilterType {
                 value: ParamValue::Float(1.0),
                 min: 1.0,
                 max: 8.0,
+            }],
+            FilterType::ParametricEq => vec![Param {
+                name: "gain".to_string(),
+                value: ParamValue::Float(0.0),
+                min: -24.0,
+                max: 24.0,
             }],
             _ => vec![],
         }
@@ -281,11 +316,11 @@ mod tests {
     #[test]
     fn filter_type_all_returns_all_variants() {
         let all = FilterType::all();
-        assert_eq!(all.len(), 8);
+        assert_eq!(all.len(), 9);
         // No duplicates
         let mut deduped = all.clone();
         deduped.dedup();
-        assert_eq!(deduped.len(), 8);
+        assert_eq!(deduped.len(), 9);
     }
 
     #[test]
@@ -300,6 +335,13 @@ mod tests {
         let params = FilterType::ResDrive.default_extra_params();
         assert_eq!(params.len(), 1);
         assert_eq!(params[0].name, "drive");
+    }
+
+    #[test]
+    fn filter_type_default_extra_params_parametric_eq() {
+        let params = FilterType::ParametricEq.default_extra_params();
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].name, "gain");
     }
 
     #[test]

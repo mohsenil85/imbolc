@@ -47,6 +47,18 @@ pub enum CurveType {
     SCurve,
 }
 
+impl CurveType {
+    pub fn from_name(s: &str) -> Option<CurveType> {
+        match s {
+            "linear" | "Linear" => Some(CurveType::Linear),
+            "exponential" | "Exponential" | "exp" => Some(CurveType::Exponential),
+            "step" | "Step" => Some(CurveType::Step),
+            "scurve" | "SCurve" | "s-curve" => Some(CurveType::SCurve),
+            _ => None,
+        }
+    }
+}
+
 /// A single automation point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomationPoint {

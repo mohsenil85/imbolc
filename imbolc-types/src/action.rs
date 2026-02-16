@@ -23,6 +23,7 @@ use crate::{
 pub enum PaneId {
     Add,
     AddEffect,
+    Arpeggiator,
     Automation,
     CheckpointList,
     CommandPalette,
@@ -59,6 +60,7 @@ impl PaneId {
         match self {
             PaneId::Add => "add",
             PaneId::AddEffect => "add_effect",
+            PaneId::Arpeggiator => "arpeggiator",
             PaneId::Automation => "automation",
             PaneId::CheckpointList => "checkpoint_list",
             PaneId::CommandPalette => "command_palette",
@@ -96,6 +98,7 @@ impl PaneId {
         match s {
             "add" => Some(PaneId::Add),
             "add_effect" => Some(PaneId::AddEffect),
+            "arpeggiator" => Some(PaneId::Arpeggiator),
             "automation" => Some(PaneId::Automation),
             "checkpoint_list" => Some(PaneId::CheckpointList),
             "command_palette" => Some(PaneId::CommandPalette),

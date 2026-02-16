@@ -50,6 +50,24 @@ impl Key {
         }
     }
 
+    pub fn from_name(s: &str) -> Option<Key> {
+        match s {
+            "C" => Some(Key::C),
+            "C#" | "Cs" => Some(Key::Cs),
+            "D" => Some(Key::D),
+            "D#" | "Ds" => Some(Key::Ds),
+            "E" => Some(Key::E),
+            "F" => Some(Key::F),
+            "F#" | "Fs" => Some(Key::Fs),
+            "G" => Some(Key::G),
+            "G#" | "Gs" => Some(Key::Gs),
+            "A" => Some(Key::A),
+            "A#" | "As" => Some(Key::As),
+            "B" => Some(Key::B),
+            _ => None,
+        }
+    }
+
     /// MIDI note number for this key in octave 0
     pub fn semitone(&self) -> i32 {
         match self {
@@ -116,6 +134,23 @@ impl Scale {
         }
     }
 
+    pub fn from_name(s: &str) -> Option<Scale> {
+        match s {
+            "Major" | "major" => Some(Scale::Major),
+            "Minor" | "minor" => Some(Scale::Minor),
+            "Dorian" | "dorian" => Some(Scale::Dorian),
+            "Phrygian" | "phrygian" => Some(Scale::Phrygian),
+            "Lydian" | "lydian" => Some(Scale::Lydian),
+            "Mixolydian" | "mixolydian" => Some(Scale::Mixolydian),
+            "Aeolian" | "aeolian" => Some(Scale::Aeolian),
+            "Locrian" | "locrian" => Some(Scale::Locrian),
+            "Pentatonic" | "pentatonic" => Some(Scale::Pentatonic),
+            "Blues" | "blues" => Some(Scale::Blues),
+            "Chromatic" | "chromatic" => Some(Scale::Chromatic),
+            _ => None,
+        }
+    }
+
     pub fn short_name(&self) -> &'static str {
         self.name()
     }
@@ -172,6 +207,17 @@ impl Tuning {
         }
     }
 
+    pub fn from_name(s: &str) -> Option<Tuning> {
+        match s {
+            "EqualTemperament" | "ET" | "12-TET" => Some(Tuning::EqualTemperament),
+            "ScaleJI" => Some(Tuning::ScaleJI),
+            "ChordJI" => Some(Tuning::ChordJI),
+            "AdaptiveJI" => Some(Tuning::AdaptiveJI),
+            "GlobalJI" => Some(Tuning::GlobalJI),
+            _ => None,
+        }
+    }
+
     pub fn short_name(&self) -> &'static str {
         match self {
             Tuning::EqualTemperament => "12-TET",
@@ -212,6 +258,15 @@ impl JIFlavor {
             JIFlavor::FiveLimit => "5-Limit",
             JIFlavor::SevenLimit => "7-Limit",
             JIFlavor::Pythagorean => "Pythagorean",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<JIFlavor> {
+        match s {
+            "FiveLimit" | "5-Limit" | "5L" => Some(JIFlavor::FiveLimit),
+            "SevenLimit" | "7-Limit" | "7L" => Some(JIFlavor::SevenLimit),
+            "Pythagorean" | "pythagorean" => Some(JIFlavor::Pythagorean),
+            _ => None,
         }
     }
 }

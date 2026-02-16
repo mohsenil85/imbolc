@@ -45,7 +45,7 @@ Comprehensive code map for agents. Read this first to avoid re-exploring.
 | `filter.rs` | SetFilter, ToggleFilter, CycleFilterType, AdjustFilterCutoff/Resonance | Filter configuration |
 | `lfo.rs` | ToggleLfo, AdjustLfoRate/Depth, SetLfoShape/Target | LFO modulation |
 | `envelope.rs` | AdjustEnvelopeAttack/Decay/Sustain/Release | ADSR envelope |
-| `eq.rs` | SetEqParam, ToggleEq | Parametric EQ |
+| `eq.rs` | SetEqParam, ToggleEq | 12-Band EQ |
 | `arpeggiator.rs` | ToggleArp, CycleArpDirection/Rate, AdjustArpOctaves/Gate, CycleChordShape, ClearChordShape | Arpeggiator + chord |
 | `groove.rs` | SetTrackSwing/SwingGrid, AdjustTrackSwing, SetTrackHumanize*, SetTrackTimingOffset, ResetTrackGroove, Set/CycleTrackTimeSignature | Per-track groove/timing |
 | `layer.rs` | LinkLayer, UnlinkLayer | Layer group membership |
@@ -155,7 +155,7 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `instrument/filter.rs` | Filter type/cutoff/resonance |
 | `instrument/lfo.rs` | LFO toggle/rate/depth/shape/target |
 | `instrument/envelope.rs` | ADSR adjustment |
-| `instrument/eq.rs` | Parametric EQ params |
+| `instrument/eq.rs` | 12-Band EQ params |
 | `instrument/arpeggiator.rs` | Arpeggiator + chord shapes |
 | `instrument/groove.rs` | Per-track swing/humanize/timing |
 | `instrument/layer.rs` | Layer group link/unlink |

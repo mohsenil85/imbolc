@@ -201,6 +201,83 @@ impl SourceType {
         }
     }
 
+    /// Reverse lookup from short_name() string.
+    pub fn from_short_name(s: &str) -> Option<SourceType> {
+        match s {
+            "saw" => Some(SourceType::Saw),
+            "sin" => Some(SourceType::Sin),
+            "sqr" => Some(SourceType::Sqr),
+            "tri" => Some(SourceType::Tri),
+            "noise" => Some(SourceType::Noise),
+            "pulse" => Some(SourceType::Pulse),
+            "supersaw" => Some(SourceType::SuperSaw),
+            "sync" => Some(SourceType::Sync),
+            "ring" => Some(SourceType::Ring),
+            "fbsin" => Some(SourceType::FBSin),
+            "fm" => Some(SourceType::FM),
+            "phasemod" => Some(SourceType::PhaseMod),
+            "fmbell" => Some(SourceType::FMBell),
+            "fmbrass" => Some(SourceType::FMBrass),
+            "pluck" => Some(SourceType::Pluck),
+            "formant" => Some(SourceType::Formant),
+            "bowed" => Some(SourceType::Bowed),
+            "blown" => Some(SourceType::Blown),
+            "membrane" => Some(SourceType::Membrane),
+            "marimba" => Some(SourceType::Marimba),
+            "vibes" => Some(SourceType::Vibes),
+            "kalimba" => Some(SourceType::Kalimba),
+            "steeldrum" => Some(SourceType::SteelDrum),
+            "tubular" => Some(SourceType::TubularBell),
+            "glock" => Some(SourceType::Glockenspiel),
+            "guitar" => Some(SourceType::Guitar),
+            "bass" => Some(SourceType::BassGuitar),
+            "harp" => Some(SourceType::Harp),
+            "koto" => Some(SourceType::Koto),
+            "kick" => Some(SourceType::Kick),
+            "snare" => Some(SourceType::Snare),
+            "hh_cl" => Some(SourceType::HihatClosed),
+            "hh_op" => Some(SourceType::HihatOpen),
+            "clap" => Some(SourceType::Clap),
+            "cowbell" => Some(SourceType::Cowbell),
+            "rim" => Some(SourceType::Rim),
+            "tom" => Some(SourceType::Tom),
+            "clave" => Some(SourceType::Clave),
+            "conga" => Some(SourceType::Conga),
+            "choir" => Some(SourceType::Choir),
+            "epiano" => Some(SourceType::EPiano),
+            "organ" => Some(SourceType::Organ),
+            "brass" => Some(SourceType::BrassStab),
+            "strings" => Some(SourceType::Strings),
+            "acid" => Some(SourceType::Acid),
+            "gendy" => Some(SourceType::Gendy),
+            "chaos" => Some(SourceType::Chaos),
+            "additive" => Some(SourceType::Additive),
+            "wavetable" => Some(SourceType::Wavetable),
+            "granular" => Some(SourceType::Granular),
+            "audio_in" => Some(SourceType::AudioIn),
+            "bus_in" => Some(SourceType::BusIn),
+            "sample" => Some(SourceType::PitchedSampler),
+            "stretch" => Some(SourceType::TimeStretch),
+            "kit" => Some(SourceType::Kit),
+            _ => None,
+        }
+    }
+
+    /// All short names for built-in source types (for tab completion).
+    pub fn all_short_names() -> &'static [&'static str] {
+        &[
+            "saw", "sin", "sqr", "tri", "noise", "pulse", "supersaw", "sync",
+            "ring", "fbsin", "fm", "phasemod", "fmbell", "fmbrass",
+            "pluck", "formant", "bowed", "blown", "membrane",
+            "marimba", "vibes", "kalimba", "steeldrum", "tubular", "glock",
+            "guitar", "bass", "harp", "koto",
+            "kick", "snare", "hh_cl", "hh_op", "clap", "cowbell", "rim", "tom", "clave", "conga",
+            "choir", "epiano", "organ", "brass", "strings", "acid",
+            "gendy", "chaos", "additive", "wavetable", "granular",
+            "audio_in", "bus_in", "sample", "stretch", "kit",
+        ]
+    }
+
     /// Get the SuperCollider synthdef name (static for built-ins)
     pub fn synth_def_name(&self) -> &'static str {
         match self {

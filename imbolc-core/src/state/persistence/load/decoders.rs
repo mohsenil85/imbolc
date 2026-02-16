@@ -226,6 +226,7 @@ pub(crate) fn decode_filter_type(s: &str) -> crate::state::instrument::FilterTyp
         "Allpass" => FilterType::Allpass,
         "Vowel" => FilterType::Vowel,
         "ResDrive" => FilterType::ResDrive,
+        "ParametricEq" => FilterType::ParametricEq,
         other => {
             eprintln!(
                 "[imbolc] persistence: unknown FilterType '{}', using Lpf",

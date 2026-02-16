@@ -357,7 +357,8 @@ impl InstrumentEditPane {
                             FilterType::Comb => FilterType::Allpass,
                             FilterType::Allpass => FilterType::Vowel,
                             FilterType::Vowel => FilterType::ResDrive,
-                            FilterType::ResDrive => FilterType::Lpf,
+                            FilterType::ResDrive => FilterType::ParametricEq,
+                            FilterType::ParametricEq => FilterType::Lpf,
                         };
                         f.extra_params = f.filter_type.default_extra_params();
                         return self.emit_update();

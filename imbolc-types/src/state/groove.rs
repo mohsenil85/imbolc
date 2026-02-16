@@ -29,6 +29,16 @@ impl SwingGrid {
         }
     }
 
+    /// Reverse lookup from name().
+    pub fn from_name(s: &str) -> Option<SwingGrid> {
+        match s {
+            "8ths" | "eighths" | "Eighths" => Some(SwingGrid::Eighths),
+            "16ths" | "sixteenths" | "Sixteenths" => Some(SwingGrid::Sixteenths),
+            "both" | "Both" => Some(SwingGrid::Both),
+            _ => None,
+        }
+    }
+
     /// Human-readable name for display.
     pub fn name(self) -> &'static str {
         match self {

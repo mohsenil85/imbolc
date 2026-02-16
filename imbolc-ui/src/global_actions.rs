@@ -595,6 +595,16 @@ pub(crate) fn handle_global_action(
                     layer_stack,
                 );
             }
+            GlobalActionId::SwitchPane(ShortcutPaneId::Arpeggiator) => {
+                switch_to_pane(
+                    NavPaneId::Arpeggiator,
+                    panes,
+                    dispatcher,
+                    audio,
+                    app_frame,
+                    layer_stack,
+                );
+            }
             GlobalActionId::SwitchPane(ShortcutPaneId::Generative) => {
                 switch_to_pane(
                     NavPaneId::Generative,
@@ -685,7 +695,7 @@ pub(crate) fn handle_global_action(
                         "track" => "Track",
                         "waveform" => "Waveform",
                         "automation" => "Automation",
-                        "eq" => "Parametric EQ",
+                        "eq" => "12-Band EQ",
                         _ => current_id,
                     };
                     if let Some(help) = panes.get_pane_mut::<HelpPane>("help") {

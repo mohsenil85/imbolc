@@ -103,6 +103,52 @@ impl EffectType {
         }
     }
 
+    /// Reverse lookup from name() string.
+    pub fn from_name(s: &str) -> Option<EffectType> {
+        match s {
+            "delay" | "Delay" => Some(EffectType::Delay),
+            "reverb" | "Reverb" => Some(EffectType::Reverb),
+            "gate" | "Gate" => Some(EffectType::Gate),
+            "tapecomp" | "Tape Comp" => Some(EffectType::TapeComp),
+            "sccomp" | "SC Comp" => Some(EffectType::SidechainComp),
+            "chorus" | "Chorus" => Some(EffectType::Chorus),
+            "flanger" | "Flanger" => Some(EffectType::Flanger),
+            "phaser" | "Phaser" => Some(EffectType::Phaser),
+            "tremolo" | "Tremolo" => Some(EffectType::Tremolo),
+            "distortion" | "Distortion" => Some(EffectType::Distortion),
+            "bitcrusher" | "Bitcrusher" => Some(EffectType::Bitcrusher),
+            "wavefolder" | "Wavefolder" => Some(EffectType::Wavefolder),
+            "saturator" | "Saturator" => Some(EffectType::Saturator),
+            "tilteq" | "Tilt EQ" => Some(EffectType::TiltEq),
+            "stereowidener" | "Stereo Widener" => Some(EffectType::StereoWidener),
+            "freqshifter" | "Freq Shifter" => Some(EffectType::FreqShifter),
+            "limiter" | "Limiter" => Some(EffectType::Limiter),
+            "pitchshifter" | "Pitch Shifter" => Some(EffectType::PitchShifter),
+            "vinyl" | "Vinyl" => Some(EffectType::Vinyl),
+            "cabinet" | "Cabinet" => Some(EffectType::Cabinet),
+            "granulardelay" | "Granular Delay" => Some(EffectType::GranularDelay),
+            "granularfreeze" | "Granular Freeze" => Some(EffectType::GranularFreeze),
+            "convreverb" | "Conv Reverb" => Some(EffectType::ConvolutionReverb),
+            "vocoder" | "Vocoder" => Some(EffectType::Vocoder),
+            "ringmod" | "Ring Mod" => Some(EffectType::RingMod),
+            "autopan" | "Autopan" => Some(EffectType::Autopan),
+            "resonator" | "Resonator" => Some(EffectType::Resonator),
+            "mbcomp" | "MB Comp" => Some(EffectType::MultibandComp),
+            "paraeq" | "Para EQ" => Some(EffectType::ParaEq),
+            "spectralfreeze" | "Spectral Freeze" => Some(EffectType::SpectralFreeze),
+            "glitch" | "Glitch" => Some(EffectType::Glitch),
+            "leslie" | "Leslie" => Some(EffectType::Leslie),
+            "springreverb" | "Spring Reverb" => Some(EffectType::SpringReverb),
+            "envfollower" | "Env Follower" => Some(EffectType::EnvFollower),
+            "midside" | "Mid/Side" => Some(EffectType::MidSide),
+            "crossfader" | "Crossfader" => Some(EffectType::Crossfader),
+            "denoise" | "Denoise" => Some(EffectType::Denoise),
+            "autotune" | "Autotune" => Some(EffectType::Autotune),
+            "wahpedal" | "Wah Pedal" => Some(EffectType::WahPedal),
+            _ => None,
+        }
+    }
+
     pub fn synth_def_name(&self) -> &'static str {
         match self {
             EffectType::Delay => "imbolc_delay",

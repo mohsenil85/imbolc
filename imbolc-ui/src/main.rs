@@ -12,6 +12,7 @@ mod midi_dispatch;
 #[cfg(feature = "net")]
 mod network;
 mod panes;
+mod repl;
 mod runtime;
 mod setup;
 mod ui;
@@ -19,7 +20,7 @@ mod ui;
 use std::fs::File;
 
 use panes::{
-    AddEffectPane, AddPane, AutomationPane, CheckpointListPane,
+    AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane,
     CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane, GroovePane,
     HelpPane, HomePane, InstrumentEditPane, InstrumentPane, InstrumentPickerPane,
     MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane, ProjectBrowserPane,
@@ -103,6 +104,12 @@ fn main() -> std::io::Result<()> {
             );
             std::process::exit(1);
         }
+    }
+
+    // REPL mode — accessible text-based interface (no TUI)
+    if args.iter().any(|a| a == "--repl") {
+        let project_arg = args.iter().skip(1).find(|a| !a.starts_with('-')).cloned();
+        repl::run(project_arg);
     }
 
     // Install panic hook to restore terminal before printing panic info
@@ -195,6 +202,10 @@ pub(crate) fn register_all_panes(
     ))));
     panes.add_pane(Box::new(EqPane::new(pane_keymap(keymaps, "eq"))));
     panes.add_pane(Box::new(GroovePane::new(pane_keymap(keymaps, "groove"))));
+    panes.add_pane(Box::new(ArpeggiatorPane::new(pane_keymap(
+        keymaps,
+        "arpeggiator",
+    ))));
     panes.add_pane(Box::new(GenerativePane::new(pane_keymap(
         keymaps,
         "generative",

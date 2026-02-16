@@ -30,6 +30,7 @@ toml = "0.8"
 rat-widget = "2.11"
 rat-event = "1.4"
 rat-dialog = "1.1"
+rustyline = "14"
 
 [dev-dependencies]
 tempfile = "3"

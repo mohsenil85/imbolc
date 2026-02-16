@@ -233,14 +233,16 @@ impl InstrumentEditPane {
                         }
                         global_row += 1;
 
-                        // Cutoff row
+                        let (cutoff_label, res_label) = f.filter_type.param_labels();
+
+                        // Cutoff / Frequency row
                         if is_visible(global_row) && visual_y < max_y {
                             let is_sel = self.selected_row == global_row;
                             render_value_row_buf(
                                 buf,
                                 content_x,
                                 visual_y,
-                                "Cutoff",
+                                cutoff_label,
                                 f.cutoff.value,
                                 f.cutoff.min,
                                 f.cutoff.max,
@@ -252,14 +254,14 @@ impl InstrumentEditPane {
                         }
                         global_row += 1;
 
-                        // Resonance row
+                        // Resonance / Q row
                         if is_visible(global_row) && visual_y < max_y {
                             let is_sel = self.selected_row == global_row;
                             render_value_row_buf(
                                 buf,
                                 content_x,
                                 visual_y,
-                                "Resonance",
+                                res_label,
                                 f.resonance.value,
                                 f.resonance.min,
                                 f.resonance.max,
