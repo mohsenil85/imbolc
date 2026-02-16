@@ -256,10 +256,17 @@ pub(crate) fn render_frame(
     let mut frame = backend.begin_frame()?;
     let area = frame.area();
     *last_area = area;
-    let mut rbuf = RenderBuf::new(frame.buffer_mut());
-    app_frame.render_buf(area, &mut rbuf, state);
-    if ui::Frame::is_size_ok(area) {
-        panes.render(area, &mut rbuf, state);
+    let cursor_pos;
+    {
+        let mut rbuf = RenderBuf::new(frame.buffer_mut());
+        app_frame.render_buf(area, &mut rbuf, state);
+        if ui::Frame::is_size_ok(area) {
+            panes.render(area, &mut rbuf, state);
+        }
+        cursor_pos = rbuf.cursor_position();
+    }
+    if let Some((x, y)) = cursor_pos {
+        frame.set_cursor_position(x, y);
     }
     backend.end_frame(frame)
 }

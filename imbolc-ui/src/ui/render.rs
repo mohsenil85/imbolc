@@ -13,11 +13,15 @@ use super::style::Style;
 /// as an escape hatch for code that still talks to ratatui directly.
 pub struct RenderBuf<'a> {
     buf: &'a mut Buffer,
+    cursor_position: Option<(u16, u16)>,
 }
 
 impl<'a> RenderBuf<'a> {
     pub fn new(buf: &'a mut Buffer) -> Self {
-        Self { buf }
+        Self {
+            buf,
+            cursor_position: None,
+        }
     }
 
     /// Set a single character at (x, y) with the given style.
@@ -75,6 +79,16 @@ impl<'a> RenderBuf<'a> {
         for col in x..x.saturating_add(width) {
             self.set_cell(col, y, ' ', style);
         }
+    }
+
+    /// Set the terminal cursor position (for blinking cursor in text inputs).
+    pub fn set_cursor_position(&mut self, x: u16, y: u16) {
+        self.cursor_position = Some((x, y));
+    }
+
+    /// Get the cursor position set during rendering, if any.
+    pub fn cursor_position(&self) -> Option<(u16, u16)> {
+        self.cursor_position
     }
 
     /// Escape hatch: direct access to the underlying ratatui `Buffer`.

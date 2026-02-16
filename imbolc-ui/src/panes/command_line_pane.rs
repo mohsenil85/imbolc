@@ -138,10 +138,7 @@ impl Pane for CommandLinePane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
-        let width = 70u16.min(area.width.saturating_sub(4));
-        let output_rows = 10u16.min(area.height.saturating_sub(6));
-        let total_height = output_rows + 4; // border(1) + output + error/divider(1) + input(1) + border(1)
-        let rect = center_rect(area, width, total_height);
+        let rect = center_rect(area, 97, 29);
 
         // Clear background
         let bg_style = Style::new().bg(Color::new(20, 20, 30));
@@ -219,6 +216,9 @@ impl Pane for CommandLinePane {
             input_y,
             inner.width.saturating_sub(2),
         );
+        if let Some((cx, cy)) = self.text_input.screen_cursor() {
+            buf.set_cursor_position(cx, cy);
+        }
     }
 
     fn keymap(&self) -> &Keymap {

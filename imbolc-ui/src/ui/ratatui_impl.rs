@@ -102,14 +102,19 @@ impl RatatuiBackend {
         Ok(RatatuiFrame {
             buffer,
             size: (area.width, area.height),
+            cursor_position: None,
         })
     }
 
     /// End the current frame and render to screen
     pub fn end_frame(&mut self, frame: RatatuiFrame) -> io::Result<()> {
+        let cursor_pos = frame.cursor_position;
         self.terminal.draw(|f| {
             let area = f.area();
             f.render_widget(BufferWidget(frame.buffer), area);
+            if let Some((x, y)) = cursor_pos {
+                f.set_cursor_position(ratatui::layout::Position { x, y });
+            }
         })?;
         Ok(())
     }
@@ -129,6 +134,7 @@ impl RatatuiBackend {
 pub struct RatatuiFrame {
     buffer: Buffer,
     size: (u16, u16),
+    cursor_position: Option<(u16, u16)>,
 }
 
 impl RatatuiFrame {
@@ -140,6 +146,11 @@ impl RatatuiFrame {
     /// Get the full terminal area as a ratatui Rect
     pub fn area(&self) -> RatatuiRect {
         RatatuiRect::new(0, 0, self.size.0, self.size.1)
+    }
+
+    /// Set cursor position to show the terminal's blinking cursor.
+    pub fn set_cursor_position(&mut self, x: u16, y: u16) {
+        self.cursor_position = Some((x, y));
     }
 }
 

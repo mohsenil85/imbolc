@@ -4,6 +4,7 @@ use ratatui::widgets::StatefulWidget;
 
 use rat_event::{HandleEvent, Regular};
 use rat_widget::focus::HasFocus;
+use rat_widget::text::HasScreenCursor;
 use rat_widget::text_input::{TextInput as RatTextInput, TextInputState};
 
 use crate::ui::input::InputEvent;
@@ -58,6 +59,11 @@ impl TextInput {
 
     pub fn set_focused(&mut self, focused: bool) {
         self.state.focus.set(focused);
+    }
+
+    /// Returns the screen cursor position after rendering (from rat-text).
+    pub fn screen_cursor(&self) -> Option<(u16, u16)> {
+        self.state.screen_cursor()
     }
 
     #[allow(dead_code)]
