@@ -62,7 +62,7 @@ struct ClientInfo {
 
 /// Client write half — owned by the writer thread.
 struct ClientWriter {
-    stream: TcpStream,
+    stream: Option<TcpStream>,
     /// Per-client outbox for frames that couldn't be fully written.
     outbox: VecDeque<QueuedFrame>,
 }
@@ -331,8 +331,9 @@ impl DirtyFlags {
 impl ClientWriter {
     /// Try to write a frame directly; queue the remainder on partial write or timeout.
     fn send_frame(&mut self, data: &[u8], kind: FrameKind) -> io::Result<()> {
+        let stream = self.stream.as_mut().expect("send_frame requires a stream");
         // First try a direct write
-        match self.stream.write(data) {
+        match stream.write(data) {
             Ok(n) if n == data.len() => {
                 // Wrote everything — still need to push through to the OS
                 Ok(())
@@ -388,9 +389,14 @@ impl ClientWriter {
 
     /// Drain the outbox by writing queued frames. Returns Ok(true) if outbox is empty.
     fn flush_outbox(&mut self) -> io::Result<bool> {
-        while let Some(front) = self.outbox.front_mut() {
+        let stream = self
+            .stream
+            .as_mut()
+            .expect("flush_outbox requires a stream");
+        let outbox = &mut self.outbox;
+        while let Some(front) = outbox.front_mut() {
             let remaining = &front.data[front.offset..];
-            match self.stream.write(remaining) {
+            match stream.write(remaining) {
                 Ok(0) => {
                     // Connection closed
                     return Err(io::Error::new(io::ErrorKind::WriteZero, "write returned 0"));
@@ -398,7 +404,7 @@ impl ClientWriter {
                 Ok(n) => {
                     front.offset += n;
                     if front.offset >= front.data.len() {
-                        self.outbox.pop_front();
+                        outbox.pop_front();
                     } else {
                         // Partial write — stop for now
                         return Ok(false);
@@ -472,7 +478,7 @@ fn writer_thread(cmd_rx: Receiver<WriterCommand>, feedback_tx: Sender<WriterFeed
                             writers.insert(
                                 client_id,
                                 ClientWriter {
-                                    stream,
+                                    stream: Some(stream),
                                     outbox: VecDeque::new(),
                                 },
                             );
@@ -2049,14 +2055,12 @@ mod tests {
         }
     }
 
-    /// Helper: create a ClientWriter with an outbox (no real socket needed for unit tests).
+    /// Helper: create a ClientWriter with an outbox (no socket — pure outbox logic tests).
     fn make_test_writer(outbox: VecDeque<QueuedFrame>) -> ClientWriter {
-        // Use a loopback TCP connection — we only test the outbox logic, not actual I/O
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        let stream = TcpStream::connect(addr).unwrap();
-        let _ = listener.accept().unwrap();
-        ClientWriter { stream, outbox }
+        ClientWriter {
+            stream: None,
+            outbox,
+        }
     }
 
     #[test]

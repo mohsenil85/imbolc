@@ -137,9 +137,15 @@ All docs live at workspace root in `./docs/`:
 - [TASKS.md](TASKS.md) — current bugs, features, and refactors
 - [TASKS_DONE.md](TASKS_DONE.md) — completed work history
 
-## Formatting
+## Green Build Policy
 
-Always run `cargo fmt --all` before finishing work to ensure consistent formatting across all crates.
+Before finishing any work, ensure a clean build:
+
+1. `cargo fmt --all` — consistent formatting
+2. `cargo clippy --all -- -D warnings` — no lint warnings
+3. `cargo test` — all tests pass
+
+Do not leave the codebase in a broken state. Every session should end green.
 
 ## Plans
 

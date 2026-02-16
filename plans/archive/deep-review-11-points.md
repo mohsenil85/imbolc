@@ -1,9 +1,9 @@
-# Imbolc Deep Review: 11 Points
+# Imbolc Deep Review: 11 Points — ALL COMPLETE
 
-This document captures the 11 key review points discussed: the original 10 codebase findings plus the generative-networking architecture decision.
+This document captures the 11 key review points discussed: the original 10 codebase findings plus the generative-networking architecture decision. All 10 code issues are fixed; #11 is an architecture decision recorded for future reference.
 
-1. **[P3] Net outbox unit tests depend on real loopback sockets**  
-   `imbolc-net/src/server.rs:2041` tests queue-drop logic using real TCP loopback binds, which makes the suite environment-sensitive in sandboxed/locked-down CI.
+1. **[P3] Net outbox unit tests depend on real loopback sockets** — FIXED
+   `imbolc-net/src/server.rs:2041` tests queue-drop logic using real TCP loopback binds, which makes the suite environment-sensitive in sandboxed/locked-down CI. Changed `ClientWriter.stream` to `Option<TcpStream>`; test helper now constructs with `None`, eliminating all socket ops from outbox unit tests.
 
 2. **[P0] Net feature build breaks on discover flag variable** — FIXED (commit fefe8f2)
    `imbolc-ui/src/main.rs:65` used `_discover_mode` while later referencing `discover_mode`, causing compile failure in net builds.
