@@ -137,6 +137,10 @@ All docs live at workspace root in `./docs/`:
 - [TASKS.md](TASKS.md) — current bugs, features, and refactors
 - [TASKS_DONE.md](TASKS_DONE.md) — completed work history
 
+## Formatting
+
+Always run `cargo fmt --all` before finishing work to ensure consistent formatting across all crates.
+
 ## Plans
 
 Implementation plans live in `./plans/` at workspace root.
