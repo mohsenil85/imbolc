@@ -9,13 +9,13 @@ use super::schema;
 pub fn save_relational(
     conn: &Connection,
     session: &SessionState,
-    instruments: &TrackState,
+    tracks: &TrackState,
 ) -> SqlResult<()> {
     schema::delete_all_data(conn)?;
 
-    save_session(conn, session, instruments)?;
+    save_session(conn, session, tracks)?;
     save_theme(conn, session)?;
-    save_instruments(conn, instruments)?;
+    save_instruments(conn, tracks)?;
     save_mixer(conn, session)?;
     save_layer_group_mixers(conn, session)?;
     save_musical_settings(conn, session)?;
@@ -34,14 +34,10 @@ pub fn save_relational(
 // Session
 // ============================================================
 
-fn save_session(
-    conn: &Connection,
-    session: &SessionState,
-    instruments: &TrackState,
-) -> SqlResult<()> {
+fn save_session(conn: &Connection, session: &SessionState, tracks: &TrackState) -> SqlResult<()> {
     conn.execute(
         "INSERT INTO session (id, bpm, time_sig_num, time_sig_denom, key, scale, tuning_a4, snap,
-            next_instrument_id, next_sampler_buffer_id, selected_instrument, next_layer_group_id,
+            next_track_id, next_sampler_buffer_id, selected_track, next_layer_group_id,
             humanize_velocity, humanize_timing,
             click_enabled, click_volume, click_muted,
             tuning, ji_flavor)
@@ -54,10 +50,10 @@ fn save_session(
             format!("{:?}", session.scale),
             session.tuning_a4,
             session.snap as i32,
-            instruments.next_id.get(),
-            instruments.next_sampler_buffer_id,
-            instruments.selected.map(|s| s as i64),
-            instruments.next_layer_group_id,
+            tracks.next_id.get(),
+            tracks.next_sampler_buffer_id,
+            tracks.selected.map(|s| s as i64),
+            tracks.next_layer_group_id,
             session.humanize.velocity,
             session.humanize.timing,
             session.click_track.enabled as i32,
@@ -201,9 +197,9 @@ fn save_theme(conn: &Connection, session: &SessionState) -> SqlResult<()> {
 // Instruments
 // ============================================================
 
-fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()> {
+fn save_instruments(conn: &Connection, tracks: &TrackState) -> SqlResult<()> {
     let mut inst_stmt = conn.prepare(
-        "INSERT INTO instruments (
+        "INSERT INTO tracks (
             id, name, position, source_type,
             filter_type, filter_cutoff, filter_cutoff_min, filter_cutoff_max,
             filter_resonance, filter_resonance_min, filter_resonance_max,
@@ -222,7 +218,7 @@ fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()
          VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31,?32,?33,?34,?35,?36,?37,?38,?39,?40,?41,?42,?43,?44,?45,?46,?47,?48)",
     )?;
 
-    for (pos, inst) in instruments.tracks.iter().enumerate() {
+    for (pos, inst) in tracks.tracks.iter().enumerate() {
         let source_type = encode_source_type(&inst.source);
         let output_target = encode_output_target(&inst.channel_strip.output_target);
         let channel_config = format!("{:?}", inst.channel_strip.channel_config);
@@ -322,8 +318,8 @@ fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()
         // Source params
         save_params(
             conn,
-            "instrument_source_params",
-            "instrument_id",
+            "track_source_params",
+            "track_id",
             inst.id.get(),
             &inst.source_params,
         )?;
@@ -335,7 +331,7 @@ fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()
         // Sends
         for send in inst.channel_strip.sends.values() {
             conn.execute(
-                "INSERT INTO instrument_sends (instrument_id, bus_id, level, enabled, tap_point)
+                "INSERT INTO track_sends (track_id, bus_id, level, enabled, tap_point)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![
                     inst.id.get(),
@@ -355,8 +351,8 @@ fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()
             // Filter extra params
             save_params(
                 conn,
-                "instrument_filter_extra_params",
-                "instrument_id",
+                "track_filter_extra_params",
+                "track_id",
                 inst.id.get(),
                 &f.extra_params,
             )?;
@@ -366,7 +362,7 @@ fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()
         if let Some(eq) = inst.eq() {
             for (i, band) in eq.bands.iter().enumerate() {
                 conn.execute(
-                    "INSERT INTO instrument_eq_bands (instrument_id, band_index, band_type, freq, gain, q, enabled)
+                    "INSERT INTO track_eq_bands (track_id, band_index, band_type, freq, gain, q, enabled)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                     params![
                         inst.id.get(), i as i32, format!("{:?}", band.band_type),
@@ -382,7 +378,7 @@ fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()
         // VST param values
         for (param_idx, value) in inst.vst_source_params() {
             conn.execute(
-                "INSERT INTO instrument_vst_params (instrument_id, param_index, value)
+                "INSERT INTO track_vst_params (track_id, param_index, value)
                  VALUES (?1, ?2, ?3)",
                 params![inst.id.get(), param_idx, value],
             )?;
@@ -427,16 +423,16 @@ fn save_params(
 
 fn save_effects(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
     effects: &[crate::state::track::EffectSlot],
 ) -> SqlResult<()> {
     save_effects_to(
         conn,
-        "instrument_effects",
-        "instrument_effect_params",
+        "track_effects",
+        "track_effect_params",
         "effect_vst_params",
-        "instrument_id",
-        instrument_id,
+        "track_id",
+        track_id,
         effects,
     )
 }
@@ -515,12 +511,12 @@ fn save_effects_to(
 
 fn save_processing_chain(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
     chain: &[imbolc_types::ProcessingStage],
 ) -> SqlResult<()> {
     let mut stmt = conn.prepare(
-        "INSERT INTO instrument_processing_chain \
-         (instrument_id, position, stage_type, effect_id) \
+        "INSERT INTO track_processing_chain \
+         (track_id, position, stage_type, effect_id) \
          VALUES (?1, ?2, ?3, ?4)",
     )?;
     for (pos, stage) in chain.iter().enumerate() {
@@ -529,14 +525,14 @@ fn save_processing_chain(
             imbolc_types::ProcessingStage::Eq(_) => ("eq", None),
             imbolc_types::ProcessingStage::Effect(e) => ("effect", Some(e.id.get())),
         };
-        stmt.execute(params![instrument_id, pos as i32, stage_type, effect_id])?;
+        stmt.execute(params![track_id, pos as i32, stage_type, effect_id])?;
     }
     Ok(())
 }
 
 fn save_modulation(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
     target_param: &str,
     mod_source: &Option<crate::state::track::ModSource>,
 ) -> SqlResult<()> {
@@ -546,11 +542,11 @@ fn save_modulation(
         match ms {
             ModSource::Lfo(lfo) => {
                 conn.execute(
-                    "INSERT INTO instrument_modulations (instrument_id, target_param, mod_type,
+                    "INSERT INTO track_modulations (track_id, target_param, mod_type,
                         lfo_enabled, lfo_rate, lfo_depth, lfo_shape, lfo_target)
                      VALUES (?1, ?2, 'Lfo', ?3, ?4, ?5, ?6, ?7)",
                     params![
-                        instrument_id,
+                        track_id,
                         target_param,
                         lfo.enabled as i32,
                         lfo.rate,
@@ -562,11 +558,11 @@ fn save_modulation(
             }
             ModSource::Envelope(env) => {
                 conn.execute(
-                    "INSERT INTO instrument_modulations (instrument_id, target_param, mod_type,
+                    "INSERT INTO track_modulations (track_id, target_param, mod_type,
                         env_attack, env_decay, env_sustain, env_release)
                      VALUES (?1, ?2, 'Envelope', ?3, ?4, ?5, ?6)",
                     params![
-                        instrument_id,
+                        track_id,
                         target_param,
                         env.attack,
                         env.decay,
@@ -577,10 +573,10 @@ fn save_modulation(
             }
             ModSource::TrackParam(src_id, param_name) => {
                 conn.execute(
-                    "INSERT INTO instrument_modulations (instrument_id, target_param, mod_type,
-                        source_instrument_id, source_param_name)
+                    "INSERT INTO track_modulations (track_id, target_param, mod_type,
+                        source_track_id, source_param_name)
                      VALUES (?1, ?2, 'TrackParam', ?3, ?4)",
-                    params![instrument_id, target_param, src_id.get(), param_name],
+                    params![track_id, target_param, src_id.get(), param_name],
                 )?;
             }
         }
@@ -590,14 +586,14 @@ fn save_modulation(
 
 fn save_sampler_config(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
     config: &crate::state::sampler::SamplerConfig,
 ) -> SqlResult<()> {
     conn.execute(
-        "INSERT INTO sampler_configs (instrument_id, buffer_id, sample_name, loop_mode, pitch_tracking, next_slice_id, selected_slice)
+        "INSERT INTO sampler_configs (track_id, buffer_id, sample_name, loop_mode, pitch_tracking, next_slice_id, selected_slice)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
-            instrument_id,
+            track_id,
             config.buffer_id.map(|id| id as i64),
             config.sample_name.as_deref(),
             config.loop_mode as i32,
@@ -609,10 +605,10 @@ fn save_sampler_config(
 
     for (pos, slice) in config.slices.iter().enumerate() {
         conn.execute(
-            "INSERT INTO sampler_slices (instrument_id, slice_id, position, start_pos, end_pos, name, root_note)
+            "INSERT INTO sampler_slices (track_id, slice_id, position, start_pos, end_pos, name, root_note)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
-                instrument_id, slice.id, pos as i32,
+                track_id, slice.id, pos as i32,
                 slice.start, slice.end, slice.name, slice.root_note as i32,
             ],
         )?;
@@ -622,14 +618,14 @@ fn save_sampler_config(
 
 fn save_drum_sequencer(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
     seq: &crate::state::drum_sequencer::DrumSequencerState,
 ) -> SqlResult<()> {
     conn.execute(
-        "INSERT INTO drum_sequencer_state (instrument_id, current_pattern, next_buffer_id, swing_amount, chain_enabled, step_resolution)
+        "INSERT INTO drum_sequencer_state (track_id, current_pattern, next_buffer_id, swing_amount, chain_enabled, step_resolution)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
-            instrument_id,
+            track_id,
             seq.current_pattern as i32,
             seq.next_buffer_id,
             seq.swing_amount,
@@ -641,19 +637,19 @@ fn save_drum_sequencer(
     // Chain
     for (pos, &pattern_idx) in seq.chain.iter().enumerate() {
         conn.execute(
-            "INSERT INTO drum_sequencer_chain (instrument_id, position, pattern_index)
+            "INSERT INTO drum_sequencer_chain (track_id, position, pattern_index)
              VALUES (?1, ?2, ?3)",
-            params![instrument_id, pos as i32, pattern_idx as i32],
+            params![track_id, pos as i32, pattern_idx as i32],
         )?;
     }
 
     // Pads
     for (pad_idx, pad) in seq.pads.iter().enumerate() {
         conn.execute(
-            "INSERT INTO drum_pads (instrument_id, pad_index, buffer_id, path, name, level, slice_start, slice_end, reverse, pitch, trigger_instrument_id, trigger_freq)
+            "INSERT INTO drum_pads (track_id, pad_index, buffer_id, path, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
-                instrument_id, pad_idx as i32,
+                track_id, pad_idx as i32,
                 pad.buffer_id.map(|id| id as i64),
                 pad.path.as_deref(),
                 pad.name,
@@ -671,9 +667,9 @@ fn save_drum_sequencer(
     // Patterns and steps
     for (pat_idx, pattern) in seq.patterns.iter().enumerate() {
         conn.execute(
-            "INSERT INTO drum_patterns (instrument_id, pattern_index, length)
+            "INSERT INTO drum_patterns (track_id, pattern_index, length)
              VALUES (?1, ?2, ?3)",
-            params![instrument_id, pat_idx as i32, pattern.length as i32],
+            params![track_id, pat_idx as i32, pattern.length as i32],
         )?;
 
         // Only save active steps (sparse)
@@ -681,10 +677,10 @@ fn save_drum_sequencer(
             for (step_idx, step) in pad_steps.iter().enumerate() {
                 if step.active {
                     conn.execute(
-                        "INSERT INTO drum_steps (instrument_id, pattern_index, pad_index, step_index, velocity, probability, pitch_offset)
+                        "INSERT INTO drum_steps (track_id, pattern_index, pad_index, step_index, velocity, probability, pitch_offset)
                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                         params![
-                            instrument_id, pat_idx as i32, pad_idx as i32, step_idx as i32,
+                            track_id, pat_idx as i32, pad_idx as i32, step_idx as i32,
                             step.velocity as i32, step.probability, step.pitch_offset as i32,
                         ],
                     )?;
@@ -707,10 +703,10 @@ fn save_drum_sequencer(
         };
 
         conn.execute(
-            "INSERT INTO chopper_states (instrument_id, buffer_id, path, name, selected_slice, next_slice_id, duration_secs, waveform_peaks)
+            "INSERT INTO chopper_states (track_id, buffer_id, path, name, selected_slice, next_slice_id, duration_secs, waveform_peaks)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                instrument_id,
+                track_id,
                 chopper.buffer_id.map(|id| id as i64),
                 chopper.path.as_deref(),
                 chopper.name,
@@ -723,10 +719,10 @@ fn save_drum_sequencer(
 
         for (pos, slice) in chopper.slices.iter().enumerate() {
             conn.execute(
-                "INSERT INTO chopper_slices (instrument_id, slice_id, position, start_pos, end_pos, name, root_note)
+                "INSERT INTO chopper_slices (track_id, slice_id, position, start_pos, end_pos, name, root_note)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
-                    instrument_id, slice.id, pos as i32,
+                    track_id, slice.id, pos as i32,
                     slice.start, slice.end, slice.name, slice.root_note as i32,
                 ],
             )?;
@@ -859,14 +855,14 @@ fn save_piano_roll(conn: &Connection, session: &SessionState) -> SqlResult<()> {
     for (pos, &inst_id) in pr.sequence_order.iter().enumerate() {
         if let Some(seq) = pr.sequences.get(&inst_id) {
             conn.execute(
-                "INSERT INTO piano_roll_tracks (instrument_id, position, polyphonic)
+                "INSERT INTO piano_roll_tracks (track_id, position, polyphonic)
                  VALUES (?1, ?2, ?3)",
                 params![inst_id.get(), pos as i32, seq.polyphonic as i32],
             )?;
 
             for note in &seq.notes {
                 conn.execute(
-                    "INSERT INTO piano_roll_notes (id, track_instrument_id, tick, duration, pitch, velocity, probability)
+                    "INSERT INTO piano_roll_notes (id, track_track_id, tick, duration, pitch, velocity, probability)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                     params![
                         note_id, inst_id.get(),
@@ -990,7 +986,7 @@ fn save_vst_plugins(conn: &Connection, session: &SessionState) -> SqlResult<()> 
 fn save_midi_recording(conn: &Connection, session: &SessionState) -> SqlResult<()> {
     let midi = &session.midi_recording;
     conn.execute(
-        "INSERT INTO midi_recording_settings (id, live_input_instrument, note_passthrough, channel_filter)
+        "INSERT INTO midi_recording_settings (id, live_input_track, note_passthrough, channel_filter)
          VALUES (1, ?1, ?2, ?3)",
         params![
             midi.live_input_instrument.map(|id| id.get() as i64),
@@ -1109,7 +1105,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
     // Clips
     for clip in &arr.clips {
         conn.execute(
-            "INSERT INTO arrangement_clips (id, name, instrument_id, length_ticks)
+            "INSERT INTO arrangement_clips (id, name, track_id, length_ticks)
              VALUES (?1, ?2, ?3, ?4)",
             params![
                 clip.id,
@@ -1167,7 +1163,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
     // Placements
     for placement in &arr.placements {
         conn.execute(
-            "INSERT INTO arrangement_placements (id, clip_id, instrument_id, start_tick, length_override)
+            "INSERT INTO arrangement_placements (id, clip_id, track_id, start_tick, length_override)
              VALUES (?1, ?2, ?3, ?4, ?5)",
             params![
                 placement.id, placement.clip_id, placement.instrument_id.get(),

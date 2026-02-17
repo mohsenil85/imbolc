@@ -21,18 +21,14 @@ use super::track_state::TrackState;
 /// if the process crashes mid-save the previous data remains intact.
 /// Drops and recreates all tables on every save so schema changes
 /// are applied automatically without migrations.
-pub fn save_project(
-    path: &Path,
-    session: &SessionState,
-    instruments: &TrackState,
-) -> SqlResult<()> {
+pub fn save_project(path: &Path, session: &SessionState, tracks: &TrackState) -> SqlResult<()> {
     let conn = SqlConnection::open(path)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
 
     let tx = conn.unchecked_transaction()?;
     schema::drop_all_tables(&tx)?;
     schema::create_tables(&tx)?;
-    save::save_relational(&tx, session, instruments)?;
+    save::save_relational(&tx, session, tracks)?;
     tx.commit()?;
 
     Ok(())
@@ -42,7 +38,7 @@ pub fn save_project(
 pub fn load_project(path: &Path) -> SqlResult<(SessionState, TrackState)> {
     let conn = SqlConnection::open(path)?;
 
-    let (mut session, instruments) = load::load_relational(&conn)?;
+    let (mut session, tracks) = load::load_relational(&conn)?;
     session.recompute_next_bus_id();
-    Ok((session, instruments))
+    Ok((session, tracks))
 }

@@ -25,9 +25,9 @@ fn save_and_load_round_trip_basic() {
     session.piano_roll.bpm = session.bpm as f32;
     session.piano_roll.time_signature = session.time_signature;
 
-    let mut instruments = TrackState::new();
-    let inst_id = instruments.add_track(SourceType::Saw);
-    let inst = instruments.track_mut(inst_id).unwrap();
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
+    let inst = tracks.track_mut(inst_id).unwrap();
     inst.name = "Test".to_string();
     inst.set_filter(Some(FilterType::Hpf));
     if let Some(filter) = inst.filter_mut() {
@@ -52,7 +52,7 @@ fn save_and_load_round_trip_basic() {
     lane.add_point(480, 0.75);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save_project");
+    save_project(&path, &session, &tracks).expect("save_project");
     let (loaded_session, loaded_instruments) = load_project(&path).expect("load_project");
 
     assert_eq!(loaded_session.bpm, session.bpm);
@@ -118,11 +118,11 @@ fn save_and_load_round_trip_complex() {
     session.piano_roll.loop_start = 480;
     session.piano_roll.loop_end = 960;
 
-    let mut instruments = TrackState::new();
+    let mut tracks = TrackState::new();
 
-    let saw_id = instruments.add_track(SourceType::Saw);
-    let sampler_id = instruments.add_track(SourceType::PitchedSampler);
-    let kit_id = instruments.add_track(SourceType::Kit);
+    let saw_id = tracks.add_track(SourceType::Saw);
+    let sampler_id = tracks.add_track(SourceType::PitchedSampler);
+    let kit_id = tracks.add_track(SourceType::Kit);
 
     let mut registry = CustomSynthDefRegistry::new();
     let custom_id = registry.add(CustomSynthDef {
@@ -139,10 +139,10 @@ fn save_and_load_round_trip_complex() {
     });
     session.custom_synthdefs = registry;
 
-    let custom_inst_id = instruments.add_track(SourceType::Custom(custom_id));
+    let custom_inst_id = tracks.add_track(SourceType::Custom(custom_id));
 
     // Saw instrument: filter, mod source, effect, output, send, and source param
-    if let Some(inst) = instruments.track_mut(saw_id) {
+    if let Some(inst) = tracks.track_mut(saw_id) {
         inst.set_filter(Some(FilterType::Hpf));
         if let Some(filter) = inst.filter_mut() {
             filter.cutoff.value = 1234.0;
@@ -180,7 +180,7 @@ fn save_and_load_round_trip_complex() {
     }
 
     // Sampler instrument: config and slices
-    if let Some(inst) = instruments.track_mut(sampler_id) {
+    if let Some(inst) = tracks.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
             config.buffer_id = Some(77);
             config.sample_name = Some("kick.wav".to_string());
@@ -197,7 +197,7 @@ fn save_and_load_round_trip_complex() {
     }
 
     // Kit instrument: pads, steps, and chopper state
-    if let Some(inst) = instruments.track_mut(kit_id) {
+    if let Some(inst) = tracks.track_mut(kit_id) {
         if let Some(seq) = inst.drum_sequencer_mut() {
             seq.pads[0].buffer_id = Some(123);
             seq.pads[0].path = Some("/tmp/kick.wav".to_string());
@@ -260,7 +260,7 @@ fn save_and_load_round_trip_complex() {
         });
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save_project");
+    save_project(&path, &session, &tracks).expect("save_project");
     let (loaded_session, loaded_instruments) = load_project(&path).expect("load_project");
 
     // Custom synthdefs

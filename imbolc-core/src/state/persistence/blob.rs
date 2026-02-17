@@ -5,15 +5,15 @@ pub fn serialize_session(session: &SessionState) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(session).map_err(|e| e.to_string())
 }
 
-pub fn serialize_instruments(instruments: &TrackState) -> Result<Vec<u8>, String> {
-    rmp_serde::to_vec_named(instruments).map_err(|e| e.to_string())
+pub fn serialize_tracks(tracks: &TrackState) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(tracks).map_err(|e| e.to_string())
 }
 
 pub fn deserialize_session(bytes: &[u8]) -> Result<SessionState, String> {
     rmp_serde::from_slice(bytes).map_err(|e| e.to_string())
 }
 
-pub fn deserialize_instruments(bytes: &[u8]) -> Result<TrackState, String> {
+pub fn deserialize_tracks(bytes: &[u8]) -> Result<TrackState, String> {
     rmp_serde::from_slice(bytes).map_err(|e| e.to_string())
 }
 
@@ -46,11 +46,11 @@ mod tests {
         session.piano_roll.loop_start = 480;
         session.piano_roll.loop_end = 960;
 
-        let mut instruments = TrackState::new();
+        let mut tracks = TrackState::new();
 
-        let saw_id = instruments.add_track(SourceType::Saw);
-        let sampler_id = instruments.add_track(SourceType::PitchedSampler);
-        let kit_id = instruments.add_track(SourceType::Kit);
+        let saw_id = tracks.add_track(SourceType::Saw);
+        let sampler_id = tracks.add_track(SourceType::PitchedSampler);
+        let kit_id = tracks.add_track(SourceType::Kit);
 
         let mut registry = CustomSynthDefRegistry::new();
         let custom_id = registry.add(CustomSynthDef {
@@ -67,10 +67,10 @@ mod tests {
         });
         session.custom_synthdefs = registry;
 
-        let custom_inst_id = instruments.add_track(SourceType::Custom(custom_id));
+        let custom_inst_id = tracks.add_track(SourceType::Custom(custom_id));
 
         // Saw instrument: filter, mod source, effect, output, send, and source param
-        if let Some(inst) = instruments.track_mut(saw_id) {
+        if let Some(inst) = tracks.track_mut(saw_id) {
             inst.set_filter(Some(FilterType::Hpf));
             if let Some(filter) = inst.filter_mut() {
                 filter.cutoff.value = 1234.0;
@@ -108,7 +108,7 @@ mod tests {
         }
 
         // Sampler instrument: config and slices
-        if let Some(inst) = instruments.track_mut(sampler_id) {
+        if let Some(inst) = tracks.track_mut(sampler_id) {
             if let Some(config) = inst.sampler_config_mut() {
                 config.buffer_id = Some(77);
                 config.sample_name = Some("kick.wav".to_string());
@@ -125,7 +125,7 @@ mod tests {
         }
 
         // Kit instrument: pads, steps, and chopper state
-        if let Some(inst) = instruments.track_mut(kit_id) {
+        if let Some(inst) = tracks.track_mut(kit_id) {
             if let Some(seq) = inst.drum_sequencer_mut() {
                 seq.pads[0].buffer_id = Some(123);
                 seq.pads[0].path = Some("/tmp/kick.wav".to_string());
@@ -208,13 +208,13 @@ mod tests {
 
         // --- Serialize ---
         let session_bytes = serialize_session(&session).expect("serialize session");
-        let instrument_bytes = serialize_instruments(&instruments).expect("serialize instruments");
+        let instrument_bytes = serialize_tracks(&tracks).expect("serialize tracks");
 
         // --- Deserialize ---
         let loaded_session: SessionState =
             deserialize_session(&session_bytes).expect("deserialize session");
         let loaded_instruments: TrackState =
-            deserialize_instruments(&instrument_bytes).expect("deserialize instruments");
+            deserialize_tracks(&instrument_bytes).expect("deserialize tracks");
 
         // --- Assert session ---
         assert_eq!(loaded_session.bpm, 98);
@@ -266,7 +266,7 @@ mod tests {
             crate::state::session::MixerSelection::Track(0)
         );
 
-        // --- Assert instruments ---
+        // --- Assert tracks ---
         assert_eq!(loaded_instruments.tracks.len(), 4);
         assert_eq!(loaded_instruments.editing_track_id, None); // skipped
         assert_eq!(loaded_instruments.next_sampler_buffer_id, 20000);

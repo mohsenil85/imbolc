@@ -7,16 +7,16 @@ use super::{load_effects_from, load_params, table_exists};
 use crate::state::track_state::TrackState;
 use imbolc_types::BusId;
 
-pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) -> SqlResult<()> {
+pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResult<()> {
     use crate::state::arpeggiator::ArpeggiatorConfig;
     use crate::state::track::*;
     use imbolc_types::state::groove::GrooveConfig;
     use imbolc_types::ProcessingStage;
 
-    instruments.tracks.clear();
+    tracks.tracks.clear();
 
     let has_layer_octave_offset = conn
-        .prepare("SELECT layer_octave_offset FROM instruments LIMIT 0")
+        .prepare("SELECT layer_octave_offset FROM tracks LIMIT 0")
         .is_ok();
 
     let mut stmt = conn.prepare(
@@ -34,12 +34,12 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
             groove_swing_amount, groove_swing_grid,
             groove_humanize_velocity, groove_humanize_timing,
             groove_timing_offset_ms, groove_time_sig_num, groove_time_sig_denom
-         FROM instruments ORDER BY position",
+         FROM tracks ORDER BY position",
     )?;
 
-    let rows: Vec<InstrumentRow> = stmt
+    let rows: Vec<TrackRow> = stmt
         .query_map([], |row| {
-            Ok(InstrumentRow {
+            Ok(TrackRow {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 source_type: row.get(2)?,
@@ -122,12 +122,7 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
             load_modulation(conn, r.id, "resonance", &mut fc.resonance.mod_source)?;
 
             // Load filter extra params
-            fc.extra_params = load_params(
-                conn,
-                "instrument_filter_extra_params",
-                "instrument_id",
-                r.id,
-            )?;
+            fc.extra_params = load_params(conn, "track_filter_extra_params", "track_id", r.id)?;
 
             Some(fc)
         } else {
@@ -142,7 +137,7 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
             };
 
             let mut eq_stmt = conn.prepare(
-                "SELECT band_index, band_type, freq, gain, q, enabled FROM instrument_eq_bands WHERE instrument_id = ?1 ORDER BY band_index"
+                "SELECT band_index, band_type, freq, gain, q, enabled FROM track_eq_bands WHERE track_id = ?1 ORDER BY band_index"
             )?;
             let bands: Vec<(usize, String, f32, f32, f32, bool)> = eq_stmt
                 .query_map(params![r.id], |row| {
@@ -240,7 +235,7 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
         if has_layer_octave_offset {
             let offset: i32 = conn
                 .query_row(
-                    "SELECT layer_octave_offset FROM instruments WHERE id = ?1",
+                    "SELECT layer_octave_offset FROM tracks WHERE id = ?1",
                     params![r.id],
                     |row| row.get(0),
                 )
@@ -249,7 +244,7 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
         }
 
         // Source params
-        inst.source_params = load_params(conn, "instrument_source_params", "instrument_id", r.id)?;
+        inst.source_params = load_params(conn, "track_source_params", "track_id", r.id)?;
 
         // Load effects for chain assembly
         let mut effects = load_effects(conn, r.id)?;
@@ -258,10 +253,10 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
 
         // Build processing_chain: use persisted ordering if available, else legacy fallback
         inst.channel_strip.processing_chain.clear();
-        if table_exists(conn, "instrument_processing_chain")? {
+        if table_exists(conn, "track_processing_chain")? {
             let mut ord_stmt = conn.prepare(
-                "SELECT stage_type, effect_id FROM instrument_processing_chain \
-                 WHERE instrument_id = ?1 ORDER BY position",
+                "SELECT stage_type, effect_id FROM track_processing_chain \
+                 WHERE track_id = ?1 ORDER BY position",
             )?;
             let ordering: Vec<(String, Option<u32>)> = ord_stmt
                 .query_map(params![r.id], |row| {
@@ -356,14 +351,14 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
             inst.source_extra = SourceExtra::Kit(seq);
         }
 
-        instruments.tracks.push(inst);
+        tracks.tracks.push(inst);
     }
 
     Ok(())
 }
 
 #[derive(Debug)]
-struct InstrumentRow {
+struct TrackRow {
     id: u32,
     name: String,
     source_type: String,
@@ -414,36 +409,36 @@ struct InstrumentRow {
 
 fn load_effects(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
 ) -> SqlResult<Vec<crate::state::track::EffectSlot>> {
     load_effects_from(
         conn,
-        "instrument_effects",
-        "instrument_effect_params",
+        "track_effects",
+        "track_effect_params",
         "effect_vst_params",
-        "instrument_id",
-        instrument_id,
+        "track_id",
+        track_id,
     )
 }
 
 fn load_sends(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
 ) -> SqlResult<std::collections::BTreeMap<BusId, crate::state::track::MixerSend>> {
     use crate::state::track::MixerSend;
 
     // Try with tap_point column first; fall back for old schemas
     let has_tap_point = conn
-        .prepare("SELECT tap_point FROM instrument_sends LIMIT 0")
+        .prepare("SELECT tap_point FROM track_sends LIMIT 0")
         .is_ok();
     let query = if has_tap_point {
-        "SELECT bus_id, level, enabled, tap_point FROM instrument_sends WHERE instrument_id = ?1 ORDER BY bus_id"
+        "SELECT bus_id, level, enabled, tap_point FROM track_sends WHERE track_id = ?1 ORDER BY bus_id"
     } else {
-        "SELECT bus_id, level, enabled FROM instrument_sends WHERE instrument_id = ?1 ORDER BY bus_id"
+        "SELECT bus_id, level, enabled FROM track_sends WHERE track_id = ?1 ORDER BY bus_id"
     };
     let mut stmt = conn.prepare(query)?;
     let sends = stmt
-        .query_map(params![instrument_id], |row| {
+        .query_map(params![track_id], |row| {
             let tap_point = if has_tap_point {
                 decode_tap_point(&row.get::<_, String>(3)?)
             } else {
@@ -462,19 +457,19 @@ fn load_sends(
     Ok(sends)
 }
 
-fn load_vst_param_values(conn: &Connection, instrument_id: u32) -> SqlResult<Vec<(u32, f32)>> {
+fn load_vst_param_values(conn: &Connection, track_id: u32) -> SqlResult<Vec<(u32, f32)>> {
     let mut stmt = conn.prepare(
-        "SELECT param_index, value FROM instrument_vst_params WHERE instrument_id = ?1 ORDER BY param_index"
+        "SELECT param_index, value FROM track_vst_params WHERE track_id = ?1 ORDER BY param_index",
     )?;
     let values: Vec<(u32, f32)> = stmt
-        .query_map(params![instrument_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .query_map(params![track_id], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<SqlResult<_>>()?;
     Ok(values)
 }
 
 fn load_modulation(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
     target_param: &str,
     mod_source: &mut Option<crate::state::track::ModSource>,
 ) -> SqlResult<()> {
@@ -484,9 +479,9 @@ fn load_modulation(
         .query_row(
             "SELECT mod_type, lfo_enabled, lfo_rate, lfo_depth, lfo_shape, lfo_target,
                 env_attack, env_decay, env_sustain, env_release,
-                source_instrument_id, source_param_name
-         FROM instrument_modulations WHERE instrument_id = ?1 AND target_param = ?2",
-            params![instrument_id, target_param],
+                source_track_id, source_param_name
+         FROM track_modulations WHERE track_id = ?1 AND target_param = ?2",
+            params![track_id, target_param],
             |row| {
                 Ok((
                     row.get::<_, String>(0)?,
@@ -552,14 +547,14 @@ fn load_modulation(
 
 fn load_sampler_config(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
 ) -> SqlResult<Option<crate::state::sampler::SamplerConfig>> {
     use crate::state::sampler::{SamplerConfig, Slice};
 
     let result = conn.query_row(
         "SELECT buffer_id, sample_name, loop_mode, pitch_tracking, next_slice_id, selected_slice
-         FROM sampler_configs WHERE instrument_id = ?1",
-        params![instrument_id],
+         FROM sampler_configs WHERE track_id = ?1",
+        params![track_id],
         |row| {
             Ok((
                 row.get::<_, Option<i64>>(0)?,
@@ -588,10 +583,10 @@ fn load_sampler_config(
 
     // Slices
     let mut stmt = conn.prepare(
-        "SELECT slice_id, start_pos, end_pos, name, root_note FROM sampler_slices WHERE instrument_id = ?1 ORDER BY position"
+        "SELECT slice_id, start_pos, end_pos, name, root_note FROM sampler_slices WHERE track_id = ?1 ORDER BY position"
     )?;
     config.slices = stmt
-        .query_map(params![instrument_id], |row| {
+        .query_map(params![track_id], |row| {
             let mut s = Slice::new(row.get::<_, u32>(0)?, row.get(1)?, row.get(2)?);
             s.name = row.get(3)?;
             s.root_note = row.get::<_, i32>(4)? as u8;
@@ -604,15 +599,15 @@ fn load_sampler_config(
 
 fn load_drum_sequencer(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
 ) -> SqlResult<Option<crate::state::drum_sequencer::DrumSequencerState>> {
     use crate::state::drum_sequencer::*;
 
     let result = conn
         .query_row(
             "SELECT current_pattern, next_buffer_id, swing_amount, chain_enabled, step_resolution
-         FROM drum_sequencer_state WHERE instrument_id = ?1",
-            params![instrument_id],
+         FROM drum_sequencer_state WHERE track_id = ?1",
+            params![track_id],
             |row| {
                 Ok((
                     row.get::<_, i32>(0)?,
@@ -640,18 +635,16 @@ fn load_drum_sequencer(
 
     // Chain
     let mut chain_stmt = conn.prepare(
-        "SELECT pattern_index FROM drum_sequencer_chain WHERE instrument_id = ?1 ORDER BY position",
+        "SELECT pattern_index FROM drum_sequencer_chain WHERE track_id = ?1 ORDER BY position",
     )?;
     seq.chain = chain_stmt
-        .query_map(params![instrument_id], |row| {
-            Ok(row.get::<_, i32>(0)? as usize)
-        })?
+        .query_map(params![track_id], |row| Ok(row.get::<_, i32>(0)? as usize))?
         .collect::<SqlResult<_>>()?;
 
     // Pads
     let mut pad_stmt = conn.prepare(
-        "SELECT pad_index, buffer_id, path, name, level, slice_start, slice_end, reverse, pitch, trigger_instrument_id, trigger_freq
-         FROM drum_pads WHERE instrument_id = ?1 ORDER BY pad_index"
+        "SELECT pad_index, buffer_id, path, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq
+         FROM drum_pads WHERE track_id = ?1 ORDER BY pad_index"
     )?;
     #[allow(clippy::type_complexity)]
     let pads: Vec<(
@@ -667,7 +660,7 @@ fn load_drum_sequencer(
         Option<i64>,
         f32,
     )> = pad_stmt
-        .query_map(params![instrument_id], |row| {
+        .query_map(params![track_id], |row| {
             Ok((
                 row.get::<_, i32>(0)? as usize,
                 row.get(1)?,
@@ -715,10 +708,10 @@ fn load_drum_sequencer(
 
     // Patterns
     let mut pat_stmt = conn.prepare(
-        "SELECT pattern_index, length FROM drum_patterns WHERE instrument_id = ?1 ORDER BY pattern_index"
+        "SELECT pattern_index, length FROM drum_patterns WHERE track_id = ?1 ORDER BY pattern_index"
     )?;
     let patterns: Vec<(usize, usize)> = pat_stmt
-        .query_map(params![instrument_id], |row| {
+        .query_map(params![track_id], |row| {
             Ok((
                 row.get::<_, i32>(0)? as usize,
                 row.get::<_, i32>(1)? as usize,
@@ -739,10 +732,10 @@ fn load_drum_sequencer(
     // Steps (only active ones were saved)
     let mut step_stmt = conn.prepare(
         "SELECT pattern_index, pad_index, step_index, velocity, probability, pitch_offset
-         FROM drum_steps WHERE instrument_id = ?1",
+         FROM drum_steps WHERE track_id = ?1",
     )?;
     let steps: Vec<(usize, usize, usize, u8, f32, i8)> = step_stmt
-        .query_map(params![instrument_id], |row| {
+        .query_map(params![track_id], |row| {
             Ok((
                 row.get::<_, i32>(0)? as usize,
                 row.get::<_, i32>(1)? as usize,
@@ -769,22 +762,22 @@ fn load_drum_sequencer(
     }
 
     // Chopper
-    seq.chopper = load_chopper(conn, instrument_id)?;
+    seq.chopper = load_chopper(conn, track_id)?;
 
     Ok(Some(seq))
 }
 
 fn load_chopper(
     conn: &Connection,
-    instrument_id: u32,
+    track_id: u32,
 ) -> SqlResult<Option<crate::state::drum_sequencer::ChopperState>> {
     use crate::state::drum_sequencer::ChopperState;
     use crate::state::sampler::Slice;
 
     let result = conn.query_row(
         "SELECT buffer_id, path, name, selected_slice, next_slice_id, duration_secs, waveform_peaks
-         FROM chopper_states WHERE instrument_id = ?1",
-        params![instrument_id],
+         FROM chopper_states WHERE track_id = ?1",
+        params![track_id],
         |row| {
             Ok((
                 row.get::<_, Option<i64>>(0)?,
@@ -814,10 +807,10 @@ fn load_chopper(
     };
 
     let mut slices_stmt = conn.prepare(
-        "SELECT slice_id, start_pos, end_pos, name, root_note FROM chopper_slices WHERE instrument_id = ?1 ORDER BY position"
+        "SELECT slice_id, start_pos, end_pos, name, root_note FROM chopper_slices WHERE track_id = ?1 ORDER BY position"
     )?;
     let slices: Vec<Slice> = slices_stmt
-        .query_map(params![instrument_id], |row| {
+        .query_map(params![track_id], |row| {
             let mut s = Slice::new(row.get::<_, u32>(0)?, row.get(1)?, row.get(2)?);
             s.name = row.get(3)?;
             s.root_note = row.get::<_, i32>(4)? as u8;

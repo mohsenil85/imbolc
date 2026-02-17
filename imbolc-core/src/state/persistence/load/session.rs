@@ -9,11 +9,11 @@ use crate::state::track_state::TrackState;
 pub(super) fn load_session(
     conn: &Connection,
     session: &mut SessionState,
-    instruments: &mut TrackState,
+    tracks: &mut TrackState,
 ) -> SqlResult<()> {
     let row = conn.query_row(
         "SELECT bpm, time_sig_num, time_sig_denom, key, scale, tuning_a4, snap,
-                next_instrument_id, next_sampler_buffer_id, selected_instrument, next_layer_group_id,
+                next_track_id, next_sampler_buffer_id, selected_track, next_layer_group_id,
                 humanize_velocity, humanize_timing,
                 click_enabled, click_volume, click_muted
          FROM session WHERE id = 1",
@@ -46,10 +46,10 @@ pub(super) fn load_session(
     session.scale = decode_scale(&row.4);
     session.tuning_a4 = row.5;
     session.snap = row.6 != 0;
-    instruments.next_id = imbolc_types::TrackId::new(row.7);
-    instruments.next_sampler_buffer_id = row.8;
-    instruments.selected = row.9.map(|v| v as usize);
-    instruments.next_layer_group_id = row.10;
+    tracks.next_id = imbolc_types::TrackId::new(row.7);
+    tracks.next_sampler_buffer_id = row.8;
+    tracks.selected = row.9.map(|v| v as usize);
+    tracks.next_layer_group_id = row.10;
     session.humanize.velocity = row.11;
     session.humanize.timing = row.12;
     session.click_track.enabled = row.13 != 0;
@@ -201,7 +201,7 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
 
     // Load tracks ordered by position
     let mut track_stmt =
-        conn.prepare("SELECT instrument_id, polyphonic FROM piano_roll_tracks ORDER BY position")?;
+        conn.prepare("SELECT track_id, polyphonic FROM piano_roll_tracks ORDER BY position")?;
     let tracks: Vec<(imbolc_types::TrackId, bool)> = track_stmt
         .query_map([], |row| {
             Ok((
@@ -220,8 +220,8 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
 
     // Load notes
     let mut note_stmt = conn.prepare(
-        "SELECT track_instrument_id, tick, duration, pitch, velocity, probability
-         FROM piano_roll_notes ORDER BY track_instrument_id, tick",
+        "SELECT track_track_id, tick, duration, pitch, velocity, probability
+         FROM piano_roll_notes ORDER BY track_track_id, tick",
     )?;
     let notes: Vec<(imbolc_types::TrackId, Note)> = note_stmt
         .query_map([], |row| {

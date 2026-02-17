@@ -96,7 +96,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     use crate::state::midi_recording::{CcMappingSource, MidiCcMapping, PitchBendConfig};
 
     let result = conn.query_row(
-        "SELECT live_input_instrument, note_passthrough, channel_filter FROM midi_recording_settings WHERE id = 1",
+        "SELECT live_input_track, note_passthrough, channel_filter FROM midi_recording_settings WHERE id = 1",
         [],
         |row| Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, i32>(1)?, row.get::<_, Option<i32>>(2)?)),
     ).optional()?;
@@ -341,9 +341,8 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
 
     // Clips
     session.arrangement.clips.clear();
-    let mut clip_stmt = conn.prepare(
-        "SELECT id, name, instrument_id, length_ticks FROM arrangement_clips ORDER BY id",
-    )?;
+    let mut clip_stmt =
+        conn.prepare("SELECT id, name, track_id, length_ticks FROM arrangement_clips ORDER BY id")?;
     let clips: Vec<(u32, String, u32, u32)> = clip_stmt
         .query_map([], |row| {
             Ok((
@@ -465,7 +464,7 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
     // Placements
     session.arrangement.placements.clear();
     let mut place_stmt = conn.prepare(
-        "SELECT id, clip_id, instrument_id, start_tick, length_override FROM arrangement_placements ORDER BY id"
+        "SELECT id, clip_id, track_id, start_tick, length_override FROM arrangement_placements ORDER BY id"
     )?;
     session.arrangement.placements = place_stmt
         .query_map([], |row| {

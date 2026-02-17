@@ -14,9 +14,9 @@ mod tracks;
 /// Load project state from relational tables.
 pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState)> {
     let mut session = SessionState::new();
-    let mut instruments = TrackState::new();
+    let mut tracks = TrackState::new();
 
-    session::load_session(conn, &mut session, &mut instruments)?;
+    session::load_session(conn, &mut session, &mut tracks)?;
     session::load_theme(conn, &mut session)?;
     mixer::load_mixer(conn, &mut session)?;
     mixer::load_layer_group_mixers(conn, &mut session)?;
@@ -24,7 +24,7 @@ pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState
     session::load_piano_roll(conn, &mut session)?;
     session::load_custom_synthdefs(conn, &mut session)?;
     session::load_vst_plugins(conn, &mut session)?;
-    tracks::load_instruments(conn, &mut instruments)?;
+    tracks::load_tracks(conn, &mut tracks)?;
     arrangement::load_automation(conn, &mut session)?;
     arrangement::load_midi_recording(conn, &mut session)?;
     arrangement::load_param_tags(conn, &mut session)?;
@@ -32,9 +32,9 @@ pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState
 
     // Recompute derived state
     session.recompute_next_bus_id();
-    instruments.rebuild_index();
+    tracks.rebuild_index();
 
-    Ok((session, instruments))
+    Ok((session, tracks))
 }
 
 pub(super) fn table_exists(conn: &Connection, name: &str) -> SqlResult<bool> {
