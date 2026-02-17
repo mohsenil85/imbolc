@@ -77,7 +77,7 @@ pub(super) fn dispatch_midi(action: &MidiAction, state: &mut AppState) -> Dispat
 mod tests {
     use super::*;
     use crate::state::AutomationTarget;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
     fn setup() -> AppState {
         AppState::new()
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn add_cc_mapping_inserts_mapping() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         let action = MidiAction::AddCcMapping {
             cc: 1,
             channel: None,
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn add_cc_mapping_with_channel() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(1));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(1));
         let action = MidiAction::AddCcMapping {
             cc: 74,
             channel: Some(3),
@@ -125,8 +125,8 @@ mod tests {
     #[test]
     fn add_cc_mapping_replaces_existing_same_cc_and_channel() {
         let mut state = setup();
-        let target_a = AutomationTarget::filter_cutoff(InstrumentId::new(0));
-        let target_b = AutomationTarget::filter_cutoff(InstrumentId::new(1));
+        let target_a = AutomationTarget::filter_cutoff(TrackId::new(0));
+        let target_b = AutomationTarget::filter_cutoff(TrackId::new(1));
 
         dispatch_midi(
             &MidiAction::AddCcMapping {
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn add_cc_mapping_different_cc_numbers_coexist() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         dispatch_midi(
             &MidiAction::AddCcMapping {
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn remove_cc_mapping_removes_existing() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         dispatch_midi(
             &MidiAction::AddCcMapping {
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn remove_cc_mapping_respects_channel() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         // Add mapping on channel 5
         dispatch_midi(
@@ -277,7 +277,7 @@ mod tests {
     #[test]
     fn set_live_input_instrument_some() {
         let mut state = setup();
-        let id = InstrumentId::new(42);
+        let id = TrackId::new(42);
 
         dispatch_midi(&MidiAction::SetLiveInputInstrument(Some(id)), &mut state);
         assert_eq!(state.session.midi_recording.live_input_instrument, Some(id));
@@ -286,7 +286,7 @@ mod tests {
     #[test]
     fn set_live_input_instrument_none_clears() {
         let mut state = setup();
-        state.session.midi_recording.live_input_instrument = Some(InstrumentId::new(7));
+        state.session.midi_recording.live_input_instrument = Some(TrackId::new(7));
 
         dispatch_midi(&MidiAction::SetLiveInputInstrument(None), &mut state);
         assert_eq!(state.session.midi_recording.live_input_instrument, None);
@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn all_actions_return_no_audio_effects() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         let actions: Vec<MidiAction> = vec![
             MidiAction::ConnectPort(0),
@@ -390,7 +390,7 @@ mod tests {
     #[test]
     fn start_learn_sets_learn_target() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         dispatch_midi(&MidiAction::StartLearn(target.clone()), &mut state);
 
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn start_learn_returns_status_message() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         let result = dispatch_midi(&MidiAction::StartLearn(target), &mut state);
         assert_eq!(result.status.len(), 1);
@@ -413,7 +413,7 @@ mod tests {
     #[test]
     fn cancel_learn_clears_learn_target() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.session.midi_recording.start_learning(target);
 
         dispatch_midi(&MidiAction::CancelLearn, &mut state);
@@ -426,7 +426,7 @@ mod tests {
     #[test]
     fn learned_cc_creates_mapping_and_clears_learn() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.session.midi_recording.start_learning(target.clone());
 
         dispatch_midi(
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn learned_cc_returns_status_message() {
         let mut state = setup();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
 
         let result = dispatch_midi(
             &MidiAction::LearnedCc {

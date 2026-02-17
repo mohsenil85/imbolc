@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// Manages audio and control bus allocation for instrument routing
 #[derive(Debug, Clone)]
 pub struct BusAllocator {
     /// Audio bus allocations: (instrument_id, port_name) -> bus_index
-    audio_buses: HashMap<(InstrumentId, String), i32>,
+    audio_buses: HashMap<(TrackId, String), i32>,
     /// Control bus allocations: (instrument_id, port_name) -> bus_index
-    control_buses: HashMap<(InstrumentId, String), i32>,
+    control_buses: HashMap<(TrackId, String), i32>,
     /// Next available audio bus (starts at 16 to avoid hardware outputs)
     pub next_audio_bus: i32,
     /// Next available control bus
@@ -32,7 +32,7 @@ impl BusAllocator {
 
     /// Get or allocate an audio bus for an instrument's output port.
     /// Returns stereo bus index (allocates 2 channels).
-    pub fn get_or_alloc_audio_bus(&mut self, instrument_id: InstrumentId, port_name: &str) -> i32 {
+    pub fn get_or_alloc_audio_bus(&mut self, instrument_id: TrackId, port_name: &str) -> i32 {
         self.get_or_alloc_audio_bus_with_channels(instrument_id, port_name, 2)
     }
 
@@ -40,7 +40,7 @@ impl BusAllocator {
     /// Returns bus index (allocates `channels` channels).
     pub fn get_or_alloc_audio_bus_with_channels(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         port_name: &str,
         channels: usize,
     ) -> i32 {
@@ -56,11 +56,7 @@ impl BusAllocator {
     }
 
     /// Get or allocate a control bus for an instrument's output port.
-    pub fn get_or_alloc_control_bus(
-        &mut self,
-        instrument_id: InstrumentId,
-        port_name: &str,
-    ) -> i32 {
+    pub fn get_or_alloc_control_bus(&mut self, instrument_id: TrackId, port_name: &str) -> i32 {
         let key = (instrument_id, port_name.to_string());
         if let Some(&bus) = self.control_buses.get(&key) {
             return bus;
@@ -73,7 +69,7 @@ impl BusAllocator {
     }
 
     /// Get an existing audio bus without allocating
-    pub fn get_audio_bus(&self, instrument_id: InstrumentId, port_name: &str) -> Option<i32> {
+    pub fn get_audio_bus(&self, instrument_id: TrackId, port_name: &str) -> Option<i32> {
         self.audio_buses
             .get(&(instrument_id, port_name.to_string()))
             .copied()
@@ -81,7 +77,7 @@ impl BusAllocator {
 
     /// Get an existing control bus without allocating
     #[allow(dead_code)]
-    pub fn get_control_bus(&self, instrument_id: InstrumentId, port_name: &str) -> Option<i32> {
+    pub fn get_control_bus(&self, instrument_id: TrackId, port_name: &str) -> Option<i32> {
         self.control_buses
             .get(&(instrument_id, port_name.to_string()))
             .copied()
@@ -89,7 +85,7 @@ impl BusAllocator {
 
     /// Free all buses allocated for an instrument
     #[allow(dead_code)]
-    pub fn free_instrument_buses(&mut self, instrument_id: InstrumentId) {
+    pub fn free_instrument_buses(&mut self, instrument_id: TrackId) {
         self.audio_buses.retain(|(id, _), _| *id != instrument_id);
         self.control_buses.retain(|(id, _), _| *id != instrument_id);
     }
@@ -113,8 +109,8 @@ impl Default for BusAllocator {
 mod tests {
     use super::*;
 
-    fn id(n: u32) -> InstrumentId {
-        InstrumentId::new(n)
+    fn id(n: u32) -> TrackId {
+        TrackId::new(n)
     }
 
     #[test]

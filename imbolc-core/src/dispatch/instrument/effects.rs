@@ -16,7 +16,7 @@ fn reduce(state: &mut AppState, action: &InstrumentAction) {
 
 pub(super) fn handle_add_effect(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_type: crate::state::EffectType,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AddEffect(id, effect_type));
@@ -30,7 +30,7 @@ pub(super) fn handle_add_effect(
 
 pub(super) fn handle_remove_effect(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::RemoveEffect(id, effect_id));
@@ -44,7 +44,7 @@ pub(super) fn handle_remove_effect(
 
 pub(super) fn handle_toggle_effect_bypass(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::ToggleEffectBypass(id, effect_id));
@@ -55,7 +55,7 @@ pub(super) fn handle_toggle_effect_bypass(
 
 pub(super) fn handle_adjust_effect_param(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
     param_idx: imbolc_types::ParamIndex,
     delta: f32,
@@ -97,7 +97,7 @@ pub(super) fn handle_adjust_effect_param(
 pub(super) fn handle_load_ir_result(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
     path: &std::path::Path,
 ) -> DispatchResult {
@@ -121,7 +121,7 @@ pub(super) fn handle_load_ir_result(
 }
 
 pub(super) fn handle_open_vst_effect_params(
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
     DispatchResult::with_nav(NavIntent::OpenVstParams(
@@ -137,7 +137,7 @@ mod tests {
     use crate::state::AppState;
     use crate::state::SourceType;
 
-    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+    fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
         let id = state.add_instrument(SourceType::Saw);
         (state, id)

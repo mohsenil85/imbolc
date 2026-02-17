@@ -25,7 +25,7 @@ use imbolc_types::AudioEffect;
 use imbolc_types::Note;
 use imbolc_types::{ArrangementState, PlayMode};
 use imbolc_types::{AutomationLane, AutomationTarget};
-use imbolc_types::{BufferId, BusId, EffectId, InstrumentId};
+use imbolc_types::{BufferId, BusId, EffectId, TrackId};
 
 /// Audio-owned read state: values that the audio thread is the authority on.
 /// UI reads these for display; audio feedback updates them.
@@ -60,7 +60,7 @@ struct ArrangementFlattenCache {
     /// Hash of arrangement state for cache invalidation
     version_hash: u64,
     /// Cached flattened notes by instrument ID
-    flattened_notes: HashMap<InstrumentId, Vec<Note>>,
+    flattened_notes: HashMap<TrackId, Vec<Note>>,
     /// Cached arrangement length in ticks
     arrangement_length: u32,
     /// Cached flattened automation lanes
@@ -124,7 +124,7 @@ impl ArrangementFlattenCache {
     fn get_or_compute(
         &mut self,
         arr: &ArrangementState,
-    ) -> (&HashMap<InstrumentId, Vec<Note>>, u32, &Vec<AutomationLane>) {
+    ) -> (&HashMap<TrackId, Vec<Note>>, u32, &Vec<AutomationLane>) {
         let current_hash = Self::compute_version_hash(arr);
 
         if current_hash != self.version_hash {
@@ -583,7 +583,7 @@ impl AudioHandle {
         l.max(r)
     }
 
-    pub fn audio_in_waveform(&self, instrument_id: InstrumentId) -> Vec<f32> {
+    pub fn audio_in_waveform(&self, instrument_id: TrackId) -> Vec<f32> {
         self.monitor.audio_in_waveform(instrument_id.get())
     }
 
@@ -865,7 +865,7 @@ impl AudioHandle {
 
     pub fn set_source_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -878,7 +878,7 @@ impl AudioHandle {
 
     pub fn set_eq_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -891,7 +891,7 @@ impl AudioHandle {
 
     pub fn set_filter_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -904,7 +904,7 @@ impl AudioHandle {
 
     pub fn set_effect_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         effect_id: EffectId,
         param: &str,
         value: f32,
@@ -919,7 +919,7 @@ impl AudioHandle {
 
     pub fn set_lfo_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -977,7 +977,7 @@ impl AudioHandle {
 
     pub fn spawn_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
@@ -992,7 +992,7 @@ impl AudioHandle {
 
     pub fn release_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         offset_secs: f64,
     ) -> Result<(), String> {
@@ -1003,12 +1003,7 @@ impl AudioHandle {
         })
     }
 
-    pub fn push_active_note(
-        &mut self,
-        instrument_id: InstrumentId,
-        pitch: u8,
-        duration_ticks: u32,
-    ) {
+    pub fn push_active_note(&mut self, instrument_id: TrackId, pitch: u8, duration_ticks: u32) {
         self.send(AudioCmd::RegisterActiveNote {
             instrument_id,
             pitch,
@@ -1029,7 +1024,7 @@ impl AudioHandle {
         &mut self,
         buffer_id: BufferId,
         amp: f32,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         slice_start: f32,
         slice_end: f32,
         rate: f32,
@@ -1050,7 +1045,7 @@ impl AudioHandle {
 
     pub fn start_instrument_render(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         path: &Path,
     ) -> Result<(), String> {
         let (reply_tx, reply_rx) = mpsc::channel();
@@ -1122,7 +1117,7 @@ impl AudioHandle {
         }
     }
 
-    pub fn start_stem_export(&mut self, stems: &[(InstrumentId, PathBuf)]) -> Result<(), String> {
+    pub fn start_stem_export(&mut self, stems: &[(TrackId, PathBuf)]) -> Result<(), String> {
         let (reply_tx, reply_rx) = mpsc::channel();
         self.send_cmd(AudioCmd::StartStemExport {
             stems: stems.to_vec(),

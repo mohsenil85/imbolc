@@ -403,9 +403,9 @@ mod tests {
     #[test]
     fn clear_capture() {
         let mut session = make_session();
-        use crate::InstrumentId;
+        use crate::TrackId;
         session.generative.captured_events.push(CapturedGenEvent {
-            instrument_id: InstrumentId::new(1),
+            instrument_id: TrackId::new(1),
             pitch: 60,
             velocity: 100,
             duration_ticks: 240,
@@ -424,7 +424,7 @@ mod tests {
             &mut session,
         );
         let id = session.generative.voices[0].id;
-        let inst_id = crate::InstrumentId::new(42);
+        let inst_id = crate::TrackId::new(42);
         reduce(
             &GenerativeAction::SetVoiceTarget(id, Some(inst_id)),
             &mut session,

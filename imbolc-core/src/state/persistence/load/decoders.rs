@@ -566,7 +566,7 @@ pub(crate) fn decode_automation_target(
         "GenMotion" => AutomationTarget::Generative(GenerativeParameter::Motion),
         _ => {
             // It's an instrument parameter target
-            let inst_id = imbolc_types::InstrumentId::new(target_inst_id.unwrap_or(0) as u32);
+            let inst_id = imbolc_types::TrackId::new(target_inst_id.unwrap_or(0) as u32);
             let param_target = decode_parameter_target(target_type);
             AutomationTarget::Instrument(inst_id, InstrumentParameter::Standard(param_target))
         }

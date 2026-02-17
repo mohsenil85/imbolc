@@ -1,6 +1,6 @@
 use crate::{
-    BusId, EqParamKind, FilterType, InstrumentAction, InstrumentId, InstrumentState, Param,
-    ParamValue, SessionState, SourceType,
+    BusId, EqParamKind, FilterType, InstrumentAction, InstrumentState, Param, ParamValue,
+    SessionState, SourceType, TrackId,
 };
 
 pub(super) fn reduce(
@@ -458,7 +458,7 @@ pub(super) fn reduce(
 /// Initialize instrument name and source_params from Custom/VST registries.
 /// Called by the reducer and by `AppState::add_instrument()` to keep them aligned.
 pub fn initialize_instrument_from_registries(
-    id: InstrumentId,
+    id: TrackId,
     source_type: SourceType,
     instruments: &mut InstrumentState,
     session: &SessionState,
@@ -502,8 +502,8 @@ pub fn initialize_instrument_from_registries(
 fn reduce_link_layer(
     instruments: &mut InstrumentState,
     session: &mut SessionState,
-    a: InstrumentId,
-    b: InstrumentId,
+    a: TrackId,
+    b: TrackId,
 ) {
     if a == b {
         return;
@@ -528,17 +528,13 @@ fn reduce_link_layer(
     }
 }
 
-fn reduce_unlink_layer(
-    instruments: &mut InstrumentState,
-    session: &mut SessionState,
-    id: InstrumentId,
-) {
+fn reduce_unlink_layer(instruments: &mut InstrumentState, session: &mut SessionState, id: TrackId) {
     let old_group = instruments.instrument(id).and_then(|i| i.layer.group);
     if let Some(inst) = instruments.instrument_mut(id) {
         inst.layer.group = None;
     }
     if let Some(g) = old_group {
-        let remaining: Vec<InstrumentId> = instruments
+        let remaining: Vec<TrackId> = instruments
             .instruments
             .iter()
             .filter(|i| i.layer.group == Some(g))

@@ -6,7 +6,7 @@ use std::any::Any;
 
 use crate::state::{
     instrument::{instrument_row_count, instrument_row_info, instrument_section_for_row},
-    AppState, EnvConfig, InstrumentId, InstrumentSection, LfoConfig, Param, SourceType,
+    AppState, EnvConfig, InstrumentSection, LfoConfig, Param, SourceType, TrackId,
 };
 use crate::ui::action_id::ActionId;
 use crate::ui::performance::PerformanceController;
@@ -16,7 +16,7 @@ use imbolc_types::{ChannelConfig, ProcessingStage};
 
 pub struct InstrumentEditPane {
     keymap: Keymap,
-    instrument_id: Option<InstrumentId>,
+    instrument_id: Option<TrackId>,
     instrument_name: String,
     source: SourceType,
     source_params: Vec<Param>,
@@ -104,7 +104,7 @@ impl InstrumentEditPane {
     }
 
     #[allow(dead_code)]
-    pub fn instrument_id(&self) -> Option<InstrumentId> {
+    pub fn instrument_id(&self) -> Option<TrackId> {
         self.instrument_id
     }
 
@@ -227,7 +227,7 @@ impl InstrumentEditPane {
     }
 
     /// Build an AutomationTarget for the currently selected row.
-    fn build_automation_target(&self, id: InstrumentId) -> Option<imbolc_types::AutomationTarget> {
+    fn build_automation_target(&self, id: TrackId) -> Option<imbolc_types::AutomationTarget> {
         use imbolc_types::{
             AutomationTarget, InstrumentParameter, ParamIndex, ParameterTarget, ProcessingStage,
         };
@@ -324,7 +324,7 @@ impl Pane for InstrumentEditPane {
             .instruments
             .selected_instrument()
             .map(|inst| inst.id)
-            .unwrap_or(InstrumentId::new(0));
+            .unwrap_or(TrackId::new(0));
         self.perf.tick_releases(instrument_id)
     }
 
@@ -379,11 +379,11 @@ mod tests {
     use crate::state::{EffectSlot, EffectType, FilterConfig, FilterType};
     use crate::ui::action_id::{ActionId, InstrumentEditActionId};
     use crate::ui::input::{InputEvent, KeyCode, Modifiers};
-    use imbolc_types::{EffectId, InstrumentId};
+    use imbolc_types::{EffectId, TrackId};
 
     fn make_pane_with_chain(chain: Vec<ProcessingStage>) -> InstrumentEditPane {
         InstrumentEditPane {
-            instrument_id: Some(InstrumentId::new(1)),
+            instrument_id: Some(TrackId::new(1)),
             source: SourceType::Saw,
             source_params: SourceType::Saw.default_params(),
             processing_chain: chain,

@@ -3,9 +3,7 @@ use std::time::Instant;
 use super::backend::{AudioBackend, BackendMessage, RawArg};
 use super::{AudioEngine, VoiceChain, GROUP_SOURCES};
 use imbolc_types::tuning;
-use imbolc_types::{
-    BufferId, InstrumentId, InstrumentState, ParamValue, ParameterTarget, SessionState,
-};
+use imbolc_types::{BufferId, InstrumentState, ParamValue, ParameterTarget, SessionState, TrackId};
 
 /// Anti-click fade time for voice stealing/freeing.
 /// Must exceed the midi control node's gate release (10ms) plus margin
@@ -21,7 +19,7 @@ impl AudioEngine {
     /// Spawn a voice for an instrument
     pub fn spawn_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
@@ -304,7 +302,7 @@ impl AudioEngine {
     /// Spawn a sampler voice (separate method for sampler-specific handling)
     fn spawn_sampler_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
@@ -594,7 +592,7 @@ impl AudioEngine {
     /// available as a steal candidate while its envelope fades out.
     pub fn release_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         offset_secs: f64,
         state: &InstrumentState,
@@ -684,7 +682,7 @@ impl AudioEngine {
     /// so the crossfade is seamless (no gap between old fade-out and new attack).
     pub(crate) fn steal_voice_if_needed(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         _velocity: f32,
         offset_secs: f64,
@@ -807,7 +805,7 @@ impl AudioEngine {
         &mut self,
         buffer_id: BufferId,
         amp: f32,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         slice_start: f32,
         slice_end: f32,
         rate: f32,
@@ -856,7 +854,7 @@ impl AudioEngine {
     /// Used by drum sequencer pads that trigger synth instruments.
     pub fn trigger_instrument_oneshot(
         &mut self,
-        target_instrument_id: InstrumentId,
+        target_instrument_id: TrackId,
         freq: f32,
         velocity: f32,
         offset_secs: f64,

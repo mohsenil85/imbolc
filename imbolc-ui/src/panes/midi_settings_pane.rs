@@ -564,7 +564,7 @@ mod tests {
         let mut state = AppState::new();
         state.add_instrument(crate::state::SourceType::Saw);
         let target = crate::state::automation::AutomationTarget::filter_cutoff(
-            imbolc_types::InstrumentId::new(0),
+            imbolc_types::TrackId::new(0),
         );
         state.session.midi_recording.start_learning(target);
 
@@ -582,7 +582,7 @@ mod tests {
         let mut state = AppState::new();
         state.add_instrument(crate::state::SourceType::Saw);
         let target = crate::state::automation::AutomationTarget::filter_cutoff(
-            imbolc_types::InstrumentId::new(0),
+            imbolc_types::TrackId::new(0),
         );
         state.session.midi_recording.start_learning(target);
 

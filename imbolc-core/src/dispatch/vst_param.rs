@@ -11,7 +11,7 @@ use imbolc_audio::AudioHandle;
 use imbolc_types::SourceExtra;
 
 /// Compute VST state file path for an instrument source
-fn vst_state_path(instrument_id: imbolc_types::InstrumentId, plugin_name: &str) -> PathBuf {
+fn vst_state_path(instrument_id: imbolc_types::TrackId, plugin_name: &str) -> PathBuf {
     let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
     let sanitized: String = plugin_name
         .chars()
@@ -32,7 +32,7 @@ fn vst_state_path(instrument_id: imbolc_types::InstrumentId, plugin_name: &str) 
 
 /// Compute VST state file path for an effect slot
 fn vst_effect_state_path(
-    instrument_id: imbolc_types::InstrumentId,
+    instrument_id: imbolc_types::TrackId,
     effect_id: imbolc_types::EffectId,
     plugin_name: &str,
 ) -> PathBuf {

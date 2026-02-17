@@ -14,5 +14,5 @@ pub use imbolc_types::{
 pub use effect::{EffectId, EffectSlot, EffectType, EffectTypeExt};
 pub use source_type::{SourceType, SourceTypeExt};
 
-// Re-export InstrumentId from imbolc-types (it's the type alias)
-pub use imbolc_types::InstrumentId;
+// Re-export TrackId from imbolc-types (it's the type alias)
+pub use imbolc_types::TrackId;

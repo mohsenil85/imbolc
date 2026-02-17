@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, ArpeggiatorActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
@@ -255,7 +255,7 @@ fn render_param_row(
     }
 }
 
-fn adjust_param(id: InstrumentId, param_idx: usize, increase: bool) -> Action {
+fn adjust_param(id: TrackId, param_idx: usize, increase: bool) -> Action {
     match param_idx {
         PARAM_ENABLED => Action::Instrument(InstrumentAction::ToggleArp(id)),
         PARAM_DIRECTION => {

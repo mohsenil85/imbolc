@@ -2,7 +2,7 @@ use super::{BusDetailSection, DetailTarget, GroupDetailSection, MixerPane, Mixer
 use super::{
     CHANNEL_WIDTH, METER_HEIGHT, NUM_VISIBLE_BUSES, NUM_VISIBLE_CHANNELS, NUM_VISIBLE_GROUPS,
 };
-use crate::state::{AppState, InstrumentId, MixerSelection};
+use crate::state::{AppState, MixerSelection, TrackId};
 use crate::ui::action_id::{ActionId, MixerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
@@ -670,7 +670,7 @@ impl MixerPane {
         }
     }
 
-    fn adjust_detail_param(&self, state: &AppState, inst_id: InstrumentId, delta: f32) -> Action {
+    fn adjust_detail_param(&self, state: &AppState, inst_id: TrackId, delta: f32) -> Action {
         match self.detail_section {
             MixerSection::Effects => {
                 if let Some((ei, Some(pi))) = self.decode_effect_cursor(state) {

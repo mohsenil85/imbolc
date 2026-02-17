@@ -9,7 +9,7 @@ use std::time::Instant;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Host, Stream, StreamConfig};
 
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// Ring buffer for audio capture
 pub struct RingBuffer {
@@ -68,7 +68,7 @@ impl RingBuffer {
 
 /// State for an active track recording
 pub struct TrackRecording {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub path: PathBuf,
     pub samples: Vec<f32>,
     pub start_tick: u32,
@@ -79,7 +79,7 @@ pub struct TrackRecording {
 
 impl TrackRecording {
     pub fn new(
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         path: PathBuf,
         start_tick: u32,
         sample_rate: u32,
@@ -220,7 +220,7 @@ impl AudioInputManager {
     /// Start recording to a track
     pub fn start_track_recording(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         path: PathBuf,
         start_tick: u32,
     ) -> Result<(), String> {
@@ -243,7 +243,7 @@ impl AudioInputManager {
     }
 
     /// Stop recording for a specific track and write to file
-    pub fn stop_track_recording(&mut self, instrument_id: InstrumentId) -> Option<PathBuf> {
+    pub fn stop_track_recording(&mut self, instrument_id: TrackId) -> Option<PathBuf> {
         let idx = self
             .active_recordings
             .iter()
@@ -305,7 +305,7 @@ impl AudioInputManager {
     }
 
     /// Check if a track is currently recording
-    pub fn is_track_recording(&self, instrument_id: InstrumentId) -> bool {
+    pub fn is_track_recording(&self, instrument_id: TrackId) -> bool {
         self.active_recordings
             .iter()
             .any(|r| r.instrument_id == instrument_id)

@@ -392,7 +392,7 @@ mod tests {
     use crate::state::SourceType;
     use imbolc_audio::AudioHandle;
     use imbolc_types::state::piano_roll::Note;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
     fn setup() -> (AppState, AudioHandle) {
         let mut state = AppState::new();
@@ -400,7 +400,7 @@ mod tests {
         (state, AudioHandle::new())
     }
 
-    fn first_instrument_id(state: &AppState) -> InstrumentId {
+    fn first_instrument_id(state: &AppState) -> TrackId {
         state.instruments.instruments[0].id
     }
 

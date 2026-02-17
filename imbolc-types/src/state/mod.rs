@@ -55,12 +55,12 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ExportKind, InstrumentId};
+use crate::{ExportKind, TrackId};
 
 /// State for a render-to-WAV operation in progress
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingRender {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub path: PathBuf,
     pub was_looping: bool,
 }
@@ -152,7 +152,7 @@ pub struct ClientDisplayInfo {
 #[derive(Debug, Clone, Default)]
 pub struct NetworkDisplayContext {
     /// Ownership status for each instrument (by ID).
-    pub ownership: std::collections::HashMap<InstrumentId, OwnershipDisplayStatus>,
+    pub ownership: std::collections::HashMap<TrackId, OwnershipDisplayStatus>,
     /// Whether this client has privileged status (can control transport, save, load).
     pub is_privileged: bool,
     /// Name of the privileged client (if any).

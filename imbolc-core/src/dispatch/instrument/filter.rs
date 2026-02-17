@@ -1,7 +1,7 @@
 use crate::action::{AudioEffect, DispatchResult, FilterParamKind};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use imbolc_types::{DomainAction, InstrumentAction};
 
 fn reduce(state: &mut AppState, action: &InstrumentAction) {
@@ -14,7 +14,7 @@ fn reduce(state: &mut AppState, action: &InstrumentAction) {
 
 pub(super) fn handle_set_filter(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     filter_type: Option<crate::state::FilterType>,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::SetFilter(id, filter_type));
@@ -26,7 +26,7 @@ pub(super) fn handle_set_filter(
     result
 }
 
-pub(super) fn handle_toggle_filter(state: &mut AppState, id: InstrumentId) -> DispatchResult {
+pub(super) fn handle_toggle_filter(state: &mut AppState, id: TrackId) -> DispatchResult {
     reduce(state, &InstrumentAction::ToggleFilter(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -36,7 +36,7 @@ pub(super) fn handle_toggle_filter(state: &mut AppState, id: InstrumentId) -> Di
     result
 }
 
-pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: InstrumentId) -> DispatchResult {
+pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: TrackId) -> DispatchResult {
     reduce(state, &InstrumentAction::CycleFilterType(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -45,7 +45,7 @@ pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: InstrumentId) -
 
 pub(super) fn handle_adjust_filter_cutoff(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustFilterCutoff(id, delta));
@@ -77,7 +77,7 @@ pub(super) fn handle_adjust_filter_cutoff(
 
 pub(super) fn handle_adjust_filter_resonance(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustFilterResonance(id, delta));
@@ -114,7 +114,7 @@ mod tests {
     use crate::state::AppState;
     use crate::state::SourceType;
 
-    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+    fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
         let id = state.add_instrument(SourceType::Saw);
         (state, id)

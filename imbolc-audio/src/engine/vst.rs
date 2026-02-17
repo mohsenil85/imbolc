@@ -1,13 +1,13 @@
 use super::backend::RawArg;
 use super::AudioEngine;
 use super::VST_UGEN_INDEX;
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 impl AudioEngine {
     /// Send MIDI note-on to a VSTi persistent source node
     pub(super) fn send_vsti_note_on(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
     ) -> Result<(), String> {
@@ -33,7 +33,7 @@ impl AudioEngine {
     /// Send MIDI note-off to a VSTi persistent source node
     pub(super) fn send_vsti_note_off(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
     ) -> Result<(), String> {
         let backend = self.backend.as_ref().ok_or("Not connected")?;

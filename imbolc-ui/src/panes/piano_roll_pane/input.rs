@@ -6,20 +6,20 @@ use crate::ui::{
     translate_key, Action, InputEvent, KeyCode, MouseButton, MouseEvent, MouseEventKind,
     PianoRollAction, Rect, SequencerAction,
 };
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 use super::{PianoRollPane, ViewMode};
 
 impl PianoRollPane {
     /// Get the instrument ID for the current track from state
-    fn current_instrument_id(&self, state: &AppState) -> InstrumentId {
+    fn current_instrument_id(&self, state: &AppState) -> TrackId {
         state
             .session
             .piano_roll
             .sequence_order
             .get(self.current_track)
             .copied()
-            .unwrap_or(InstrumentId::new(0))
+            .unwrap_or(TrackId::new(0))
     }
 
     /// Visible steps that fit in the sequencer grid (same logic as standalone sequencer pane)

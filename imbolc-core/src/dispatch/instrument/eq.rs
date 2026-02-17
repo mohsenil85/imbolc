@@ -9,7 +9,7 @@ use super::super::automation::record_automation_point;
 pub(super) fn handle_set_eq_param(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     band_idx: usize,
     param: EqParamKind,
     value: f32,
@@ -58,7 +58,7 @@ pub(super) fn handle_set_eq_param(
 
 pub(super) fn handle_toggle_eq(
     state: &mut AppState,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Instrument(InstrumentAction::ToggleEq(instrument_id)),

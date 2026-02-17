@@ -22,14 +22,14 @@ pub use param::{adjust_freq_semitone, adjust_musical_step, is_freq_param, Param,
 // Re-export all state types at crate root for convenience
 pub use state::*;
 
-/// Unique identifier for an instrument.
+/// Unique identifier for a track.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(transparent)]
-pub struct InstrumentId(u32);
+pub struct TrackId(u32);
 
-impl InstrumentId {
+impl TrackId {
     pub fn new(id: u32) -> Self {
         Self(id)
     }
@@ -38,7 +38,7 @@ impl InstrumentId {
     }
 }
 
-impl std::fmt::Display for InstrumentId {
+impl std::fmt::Display for TrackId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }

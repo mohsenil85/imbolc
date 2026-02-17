@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use super::backend::{BackendMessage, RawArg, BUNDLE_IMMEDIATE};
 use super::{AudioEngine, GROUP_RECORD};
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// State for an active disk recording session
 pub(super) struct RecordingState {
@@ -205,7 +205,7 @@ impl AudioEngine {
     /// Start stem export: one DiskOut per instrument's post-effects bus.
     pub fn start_export_stems(
         &mut self,
-        instrument_buses: &[(InstrumentId, i32, PathBuf)],
+        instrument_buses: &[(TrackId, i32, PathBuf)],
     ) -> Result<(), String> {
         if self.export_state.is_some() {
             return Err("Already exporting".to_string());

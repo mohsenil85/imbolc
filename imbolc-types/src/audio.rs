@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::action::VstTarget;
-use crate::{InstrumentId, VstPluginId};
+use crate::{TrackId, VstPluginId};
 
 /// SuperCollider server status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub enum AudioFeedback {
     BpmUpdate(f32),
     PlayingChanged(bool),
     DrumSequencerStep {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         step: usize,
     },
     ServerStatus {
@@ -46,20 +46,20 @@ pub enum AudioFeedback {
     },
     RecordingStopped(PathBuf),
     RenderComplete {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         path: PathBuf,
     },
     CompileResult(Result<String, String>),
     LoadResult(Result<String, String>),
     PendingBufferFreed,
     VstParamsDiscovered {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
         vst_plugin_id: VstPluginId,
         params: Vec<(u32, String, Option<String>, f32)>, // (index, name, label, default)
     },
     VstStateSaved {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
         path: PathBuf,
     },
@@ -77,7 +77,7 @@ pub enum AudioFeedback {
     },
     /// A generative engine event (for capture to piano roll).
     GenerativeEvent {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: u8,
         duration_ticks: u32,

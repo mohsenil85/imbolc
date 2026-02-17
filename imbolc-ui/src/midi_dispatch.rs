@@ -124,7 +124,7 @@ mod tests {
     use super::*;
     use crate::state::automation::AutomationTarget;
     use crate::state::midi_recording::MidiCcMapping;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
     fn test_state() -> AppState {
         let mut state = AppState::new();
@@ -134,7 +134,7 @@ mod tests {
             .midi_recording
             .add_cc_mapping(MidiCcMapping::new(
                 1,
-                AutomationTarget::filter_cutoff(InstrumentId::new(0)),
+                AutomationTarget::filter_cutoff(TrackId::new(0)),
             ));
         state
     }
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn test_learn_mode_intercepts_cc() {
         let mut state = test_state();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.session.midi_recording.start_learning(target.clone());
 
         let event = MidiEvent::new(
@@ -330,7 +330,7 @@ mod tests {
     fn test_learn_mode_bypasses_channel_filter() {
         let mut state = test_state();
         state.session.midi_recording.channel_filter = Some(1); // Only channel 1
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.session.midi_recording.start_learning(target);
 
         // CC on channel 0 (would normally be filtered) — learn mode ignores filter

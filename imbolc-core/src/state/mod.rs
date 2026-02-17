@@ -113,7 +113,7 @@ impl AppState {
     }
 
     /// Get the ownership status for an instrument (for UI display).
-    pub fn ownership_status(&self, instrument_id: InstrumentId) -> OwnershipDisplayStatus {
+    pub fn ownership_status(&self, instrument_id: TrackId) -> OwnershipDisplayStatus {
         match &self.network {
             Some(ctx) => ctx
                 .ownership
@@ -125,7 +125,7 @@ impl AppState {
     }
 
     /// Add an instrument, with custom synthdef param setup and piano roll sequence auto-creation.
-    pub fn add_instrument(&mut self, source: SourceType) -> InstrumentId {
+    pub fn add_instrument(&mut self, source: SourceType) -> TrackId {
         let id = self.instruments.add_instrument(source);
         imbolc_types::reduce::initialize_instrument_from_registries(
             id,
@@ -138,7 +138,7 @@ impl AppState {
     }
 
     /// Remove an instrument and its piano roll sequence.
-    pub fn remove_instrument(&mut self, id: InstrumentId) {
+    pub fn remove_instrument(&mut self, id: TrackId) {
         self.instruments.remove_instrument(id);
         self.session.piano_roll.remove_sequence(id);
         self.session.automation.remove_lanes_for_instrument(id);

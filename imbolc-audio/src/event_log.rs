@@ -12,7 +12,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use imbolc_types::DomainAction;
 
 use super::snapshot::{AutomationSnapshot, InstrumentSnapshot, PianoRollSnapshot, SessionSnapshot};
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// A single entry in the event log.
 #[derive(Debug)]
@@ -31,9 +31,9 @@ pub enum LogEntryKind {
     Action {
         action: Box<DomainAction>,
         rebuild_routing: bool,
-        rebuild_instrument_routing: [Option<InstrumentId>; 4],
-        add_instrument_routing: Option<InstrumentId>,
-        delete_instrument_routing: Option<InstrumentId>,
+        rebuild_instrument_routing: [Option<TrackId>; 4],
+        add_instrument_routing: Option<TrackId>,
+        delete_instrument_routing: Option<TrackId>,
         rebuild_bus_processing: bool,
         mixer_dirty: bool,
     },

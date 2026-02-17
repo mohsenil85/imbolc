@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::state::{AppState, EqBandType, EqConfig, InstrumentId};
+use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
@@ -211,7 +211,7 @@ fn render_centered_text(area: Rect, buf: &mut RenderBuf, text: &str, color: Colo
 }
 
 fn adjust_param(
-    instrument_id: InstrumentId,
+    instrument_id: TrackId,
     eq: Option<&EqConfig>,
     band_idx: usize,
     param_idx: usize,

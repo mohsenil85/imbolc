@@ -1,13 +1,9 @@
 use crate::action::{AudioEffect, DispatchResult};
 use crate::state::AppState;
-use crate::state::InstrumentId;
+use crate::state::TrackId;
 use imbolc_types::{DomainAction, InstrumentAction};
 
-pub(super) fn handle_link_layer(
-    state: &mut AppState,
-    a: InstrumentId,
-    b: InstrumentId,
-) -> DispatchResult {
+pub(super) fn handle_link_layer(state: &mut AppState, a: TrackId, b: TrackId) -> DispatchResult {
     if a == b {
         return DispatchResult::none();
     }
@@ -23,7 +19,7 @@ pub(super) fn handle_link_layer(
     result
 }
 
-pub(super) fn handle_unlink_layer(state: &mut AppState, id: InstrumentId) -> DispatchResult {
+pub(super) fn handle_unlink_layer(state: &mut AppState, id: TrackId) -> DispatchResult {
     let had_group = state
         .instruments
         .instrument(id)
@@ -45,7 +41,7 @@ pub(super) fn handle_unlink_layer(state: &mut AppState, id: InstrumentId) -> Dis
 
 pub(super) fn handle_adjust_layer_octave_offset(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: i8,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(

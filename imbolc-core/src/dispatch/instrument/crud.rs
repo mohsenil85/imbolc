@@ -32,7 +32,7 @@ pub(super) fn handle_add(
 pub(super) fn handle_delete(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    inst_id: crate::state::InstrumentId,
+    inst_id: crate::state::TrackId,
 ) -> DispatchResult {
     // Collect buffer IDs from the instrument before removing it
     let mut buffer_ids: Vec<BufferId> = Vec::new();
@@ -85,7 +85,7 @@ pub(super) fn handle_delete(
     result
 }
 
-pub(super) fn handle_edit(state: &mut AppState, id: crate::state::InstrumentId) -> DispatchResult {
+pub(super) fn handle_edit(state: &mut AppState, id: crate::state::TrackId) -> DispatchResult {
     reduce(state, &InstrumentAction::Edit(id));
     DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit))
 }
@@ -162,15 +162,15 @@ mod tests {
     use super::*;
     use crate::action::InstrumentUpdate;
     use crate::state::instrument::SourceType;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
-    fn setup_with_instrument() -> (AppState, InstrumentId) {
+    fn setup_with_instrument() -> (AppState, TrackId) {
         let mut state = AppState::new();
         let id = state.instruments.add_instrument(SourceType::Saw);
         (state, id)
     }
 
-    fn default_update(state: &AppState, id: InstrumentId) -> InstrumentUpdate {
+    fn default_update(state: &AppState, id: TrackId) -> InstrumentUpdate {
         let inst = state.instruments.instrument(id).unwrap();
         InstrumentUpdate {
             id,

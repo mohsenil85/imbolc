@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
@@ -17,7 +17,7 @@ pub struct InstrumentPickerPane {
     selected: usize,
     scroll_offset: usize,
     /// Cached list of (instrument_id, name) pairs
-    cached_instruments: Vec<(InstrumentId, String)>,
+    cached_instruments: Vec<(TrackId, String)>,
 }
 
 impl InstrumentPickerPane {

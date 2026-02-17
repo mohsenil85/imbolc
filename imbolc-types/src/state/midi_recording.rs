@@ -1,7 +1,7 @@
 //! MIDI recording state and CC/pitch bend mappings.
 
 use super::automation::AutomationTarget;
-use crate::InstrumentId;
+use crate::TrackId;
 use serde::{Deserialize, Serialize};
 
 /// Recording mode for MIDI automation
@@ -82,7 +82,7 @@ pub struct PitchBendConfig {
 }
 
 impl PitchBendConfig {
-    pub fn new_for_sampler(instrument_id: InstrumentId) -> Self {
+    pub fn new_for_sampler(instrument_id: TrackId) -> Self {
         Self {
             target: AutomationTarget::sample_rate(instrument_id),
             center_value: 1.0, // Normal playback speed
@@ -109,7 +109,7 @@ pub struct MidiRecordingState {
     /// Pitch bend configurations per instrument
     pub pitch_bend_configs: Vec<PitchBendConfig>,
     /// Currently selected instrument for live MIDI input
-    pub live_input_instrument: Option<InstrumentId>,
+    pub live_input_instrument: Option<TrackId>,
     /// Whether to pass-through MIDI notes to audio engine
     pub note_passthrough: bool,
     /// MIDI channel filter (None = all channels)
@@ -163,7 +163,7 @@ impl MidiRecordingState {
     }
 
     /// Find pitch bend config for an instrument
-    pub fn find_pitch_bend_config(&self, instrument_id: InstrumentId) -> Option<&PitchBendConfig> {
+    pub fn find_pitch_bend_config(&self, instrument_id: TrackId) -> Option<&PitchBendConfig> {
         self.pitch_bend_configs
             .iter()
             .find(|c| c.target.instrument_id() == Some(instrument_id))
@@ -197,7 +197,7 @@ impl MidiRecordingState {
     }
 
     /// Set the instrument for live MIDI input
-    pub fn set_live_input_instrument(&mut self, instrument_id: Option<InstrumentId>) {
+    pub fn set_live_input_instrument(&mut self, instrument_id: Option<TrackId>) {
         self.live_input_instrument = instrument_id;
     }
 
@@ -245,11 +245,11 @@ pub mod cc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::InstrumentId;
+    use crate::TrackId;
 
     #[test]
     fn test_cc_mapping() {
-        let mapping = MidiCcMapping::new(1, AutomationTarget::filter_cutoff(InstrumentId::new(0)));
+        let mapping = MidiCcMapping::new(1, AutomationTarget::filter_cutoff(TrackId::new(0)));
 
         // CC 0 -> min (20 Hz for filter cutoff)
         let val_min = mapping.map_value(0);
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_pitch_bend_config() {
-        let config = PitchBendConfig::new_for_sampler(InstrumentId::new(0));
+        let config = PitchBendConfig::new_for_sampler(TrackId::new(0));
 
         // Center = normal playback
         let val_center = config.map_value(0);
@@ -288,7 +288,7 @@ mod tests {
         // Add CC mapping
         state.add_cc_mapping(MidiCcMapping::new(
             1,
-            AutomationTarget::filter_cutoff(InstrumentId::new(0)),
+            AutomationTarget::filter_cutoff(TrackId::new(0)),
         ));
         assert!(state.find_cc_mapping(1, 0).is_some());
         assert!(state.find_cc_mapping(2, 0).is_none());
@@ -309,7 +309,7 @@ mod tests {
         assert!(!state.is_learning());
         assert_eq!(state.learn_target, None);
 
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.start_learning(target.clone());
         assert!(state.is_learning());
         assert_eq!(state.learn_target, Some(target));
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn test_learn_target_cleared_after_use() {
         let mut state = MidiRecordingState::new();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.start_learning(target);
         assert!(state.is_learning());
 

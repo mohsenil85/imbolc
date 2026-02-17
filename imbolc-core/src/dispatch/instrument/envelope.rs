@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
-use imbolc_types::{DomainAction, InstrumentAction, InstrumentId};
+use imbolc_types::{DomainAction, InstrumentAction, TrackId};
 
 // Envelope parameter ranges
 const ATTACK_MIN: f32 = 0.001;
@@ -22,7 +22,7 @@ fn reduce(state: &mut AppState, action: &InstrumentAction) {
 
 pub(super) fn handle_adjust_envelope_attack(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustEnvelopeAttack(id, delta));
@@ -41,7 +41,7 @@ pub(super) fn handle_adjust_envelope_attack(
 
 pub(super) fn handle_adjust_envelope_decay(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustEnvelopeDecay(id, delta));
@@ -60,7 +60,7 @@ pub(super) fn handle_adjust_envelope_decay(
 
 pub(super) fn handle_adjust_envelope_sustain(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustEnvelopeSustain(id, delta));
@@ -78,7 +78,7 @@ pub(super) fn handle_adjust_envelope_sustain(
 
 pub(super) fn handle_adjust_envelope_release(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustEnvelopeRelease(id, delta));
@@ -107,7 +107,7 @@ mod tests {
     use crate::state::AppState;
     use crate::state::SourceType;
 
-    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+    fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
         let id = state.add_instrument(SourceType::Saw);
         (state, id)

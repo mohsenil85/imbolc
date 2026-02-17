@@ -16,7 +16,7 @@ use std::time::Instant;
 
 use super::bus_allocator::BusAllocator;
 use backend::AudioBackend;
-use imbolc_types::{BufferId, BusId, EffectId, InstrumentId};
+use imbolc_types::{BufferId, BusId, EffectId, TrackId};
 use node_registry::NodeRegistry;
 use voice_allocator::VoiceAllocator;
 
@@ -67,7 +67,7 @@ const VST_UGEN_INDEX: i32 = 0;
 /// A polyphonic voice chain: entire signal chain spawned per note
 #[derive(Debug, Clone)]
 pub struct VoiceChain {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub pitch: u8,
     pub velocity: f32,
     pub group_id: i32,
@@ -121,7 +121,7 @@ impl InstrumentNodes {
 
 pub struct AudioEngine {
     backend: Option<Box<dyn AudioBackend>>,
-    pub(crate) node_map: HashMap<InstrumentId, InstrumentNodes>,
+    pub(crate) node_map: HashMap<TrackId, InstrumentNodes>,
     next_node_id: i32,
     pub(crate) is_running: bool,
     scsynth_process: Option<Child>,
@@ -133,7 +133,7 @@ pub struct AudioEngine {
     /// Dedicated audio bus per mixer bus (bus_id -> SC audio bus index)
     bus_audio_buses: HashMap<BusId, i32>,
     /// Send synth nodes: (instrument_id, bus_id) -> node_id
-    send_node_map: HashMap<(InstrumentId, BusId), i32>,
+    send_node_map: HashMap<(TrackId, BusId), i32>,
     /// Bus output synth nodes: bus_id -> node_id
     bus_node_map: HashMap<BusId, i32>,
     /// Layer group audio buses: group_id -> SC audio bus index
@@ -149,7 +149,7 @@ pub struct AudioEngine {
     /// Layer group EQ synth nodes: group_id -> node_id
     layer_group_eq_node_map: HashMap<u32, i32>,
     /// Instrument final buses: instrument_id -> SC audio bus index (post-effects, pre-mixer)
-    pub(crate) instrument_final_buses: HashMap<InstrumentId, i32>,
+    pub(crate) instrument_final_buses: HashMap<TrackId, i32>,
     /// Voice allocation, tracking, stealing, and control bus pooling
     pub(crate) voice_allocator: VoiceAllocator,
     /// Safety limiter synth node ID (persistent, never freed during routing rebuilds)
@@ -416,10 +416,7 @@ mod tests {
             }
         }
 
-        fn add_instrument(
-            &mut self,
-            source: imbolc_types::SourceType,
-        ) -> imbolc_types::InstrumentId {
+        fn add_instrument(&mut self, source: imbolc_types::SourceType) -> imbolc_types::TrackId {
             let id = self.instruments.add_instrument(source);
             self.session.piano_roll.add_sequence(id);
             id
@@ -657,7 +654,7 @@ mod tests {
             .expect("set_bus_mixer_params");
     }
 
-    fn make_voice(inst_id: InstrumentId, pitch: u8, velocity: f32, age_ms: u64) -> VoiceChain {
+    fn make_voice(inst_id: TrackId, pitch: u8, velocity: f32, age_ms: u64) -> VoiceChain {
         VoiceChain {
             instrument_id: inst_id,
             pitch,
@@ -673,7 +670,7 @@ mod tests {
     }
 
     fn make_released_voice(
-        inst_id: InstrumentId,
+        inst_id: TrackId,
         pitch: u8,
         velocity: f32,
         released_ago_ms: u64,
@@ -699,7 +696,7 @@ mod tests {
     #[test]
     fn test_same_pitch_retrigger() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Add a voice at pitch 60
         engine
@@ -725,7 +722,7 @@ mod tests {
     #[test]
     fn test_released_voices_stolen_first() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Fill to limit with active voices (pitches 40..40+N, all unique)
         for i in 0..MAX_VOICES_PER_INSTRUMENT {
@@ -769,7 +766,7 @@ mod tests {
     #[test]
     fn test_lowest_velocity_stolen() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Fill to limit — all same age, varying velocity (pitches 40..40+N)
         for i in 0..MAX_VOICES_PER_INSTRUMENT {
@@ -799,7 +796,7 @@ mod tests {
     #[test]
     fn test_age_tiebreaker() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Fill to limit — all same velocity, varying age (pitches 40..40+N)
         for i in 0..MAX_VOICES_PER_INSTRUMENT {
@@ -829,7 +826,7 @@ mod tests {
     #[test]
     fn test_cleanup_expired_voices() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Add a voice released long ago (should be cleaned up)
         engine
@@ -867,7 +864,7 @@ mod tests {
     #[test]
     fn test_process_node_ends_removes_voice() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
         let group_id = 5000;
         let midi_node_id = 5001;
         let source_node = 5002;
@@ -1017,7 +1014,7 @@ mod tests {
         #[test]
         fn steal_voice_forces_gate_bus_zero_on_stolen_voice() {
             let (mut engine, backend) = engine_with_test_backend();
-            let inst_id = InstrumentId::new(42);
+            let inst_id = TrackId::new(42);
 
             let group_id = 9200;
             let midi_node_id = 9201;

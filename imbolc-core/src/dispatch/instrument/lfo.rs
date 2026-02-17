@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult, LfoParamKind};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
-use imbolc_types::{DomainAction, InstrumentAction, InstrumentId, LfoShape, ParameterTarget};
+use imbolc_types::{DomainAction, InstrumentAction, LfoShape, ParameterTarget, TrackId};
 
 // LFO parameter ranges
 const LFO_RATE_MIN: f32 = 0.1;
@@ -16,7 +16,7 @@ fn reduce(state: &mut AppState, action: &InstrumentAction) {
     );
 }
 
-pub(super) fn handle_toggle_lfo(state: &mut AppState, id: InstrumentId) -> DispatchResult {
+pub(super) fn handle_toggle_lfo(state: &mut AppState, id: TrackId) -> DispatchResult {
     reduce(state, &InstrumentAction::ToggleLfo(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -28,7 +28,7 @@ pub(super) fn handle_toggle_lfo(state: &mut AppState, id: InstrumentId) -> Dispa
 
 pub(super) fn handle_adjust_lfo_rate(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustLfoRate(id, delta));
@@ -54,7 +54,7 @@ pub(super) fn handle_adjust_lfo_rate(
 
 pub(super) fn handle_adjust_lfo_depth(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::AdjustLfoDepth(id, delta));
@@ -74,7 +74,7 @@ pub(super) fn handle_adjust_lfo_depth(
 
 pub(super) fn handle_set_lfo_shape(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     shape: LfoShape,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::SetLfoShape(id, shape));
@@ -88,7 +88,7 @@ pub(super) fn handle_set_lfo_shape(
 
 pub(super) fn handle_set_lfo_target(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     target: ParameterTarget,
 ) -> DispatchResult {
     reduce(state, &InstrumentAction::SetLfoTarget(id, target));
@@ -107,7 +107,7 @@ mod tests {
     use crate::state::AppState;
     use crate::state::SourceType;
 
-    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+    fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
         let id = state.add_instrument(SourceType::Saw);
         (state, id)

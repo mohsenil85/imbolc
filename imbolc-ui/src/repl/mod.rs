@@ -271,7 +271,7 @@ fn handle_show(args: &[&str], state: &AppState) -> Result<CommandResult, String>
             let id: u32 = args[1]
                 .parse()
                 .map_err(|_| format!("invalid instrument id: {}", args[1]))?;
-            display::format_instrument_detail(state, InstrumentId::new(id))
+            display::format_instrument_detail(state, TrackId::new(id))
         }
         "transport" => display::format_transport(state),
         "mixer" => display::format_mixer(state),
@@ -291,7 +291,7 @@ fn handle_show(args: &[&str], state: &AppState) -> Result<CommandResult, String>
             let id: u32 = args[1]
                 .parse()
                 .map_err(|_| format!("invalid instrument id: {}", args[1]))?;
-            display::format_effects(state, InstrumentId::new(id))
+            display::format_effects(state, TrackId::new(id))
         }
         "buses" => display::format_buses(state),
         "arrangement" => display::format_arrangement(state),

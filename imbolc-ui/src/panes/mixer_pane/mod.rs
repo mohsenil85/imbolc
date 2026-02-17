@@ -4,7 +4,7 @@ mod rendering;
 use std::any::Any;
 
 use crate::panes::add_effect_pane::EffectTarget;
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use crate::ui::action_id::ActionId;
 use crate::ui::{Action, InputEvent, Keymap, MouseEvent, Pane, Rect, RenderBuf};
 use imbolc_types::BusId;
@@ -172,7 +172,7 @@ impl MixerPane {
         }
     }
 
-    fn detail_instrument_id(&self, state: &AppState) -> Option<InstrumentId> {
+    fn detail_instrument_id(&self, state: &AppState) -> Option<TrackId> {
         self.detail_instrument(state).map(|(_, inst)| inst.id)
     }
 

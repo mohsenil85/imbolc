@@ -46,7 +46,7 @@ pub(super) fn load_session(
     session.scale = decode_scale(&row.4);
     session.tuning_a4 = row.5;
     session.snap = row.6 != 0;
-    instruments.next_id = imbolc_types::InstrumentId::new(row.7);
+    instruments.next_id = imbolc_types::TrackId::new(row.7);
     instruments.next_sampler_buffer_id = row.8;
     instruments.selected = row.9.map(|v| v as usize);
     instruments.next_layer_group_id = row.10;
@@ -202,10 +202,10 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
     // Load tracks ordered by position
     let mut track_stmt =
         conn.prepare("SELECT instrument_id, polyphonic FROM piano_roll_tracks ORDER BY position")?;
-    let tracks: Vec<(imbolc_types::InstrumentId, bool)> = track_stmt
+    let tracks: Vec<(imbolc_types::TrackId, bool)> = track_stmt
         .query_map([], |row| {
             Ok((
-                imbolc_types::InstrumentId::new(row.get::<_, u32>(0)?),
+                imbolc_types::TrackId::new(row.get::<_, u32>(0)?),
                 row.get::<_, i32>(1)? != 0,
             ))
         })?
@@ -223,10 +223,10 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
         "SELECT track_instrument_id, tick, duration, pitch, velocity, probability
          FROM piano_roll_notes ORDER BY track_instrument_id, tick",
     )?;
-    let notes: Vec<(imbolc_types::InstrumentId, Note)> = note_stmt
+    let notes: Vec<(imbolc_types::TrackId, Note)> = note_stmt
         .query_map([], |row| {
             Ok((
-                imbolc_types::InstrumentId::new(row.get::<_, u32>(0)?),
+                imbolc_types::TrackId::new(row.get::<_, u32>(0)?),
                 Note {
                     tick: row.get::<_, u32>(1)?,
                     duration: row.get::<_, u32>(2)?,

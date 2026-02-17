@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 
 use imbolc_net::{NetworkState, RemoteDispatcher};
-use imbolc_types::{Action, DomainAction, InstrumentId, RoutedAction, UiAction};
+use imbolc_types::{Action, DomainAction, RoutedAction, TrackId, UiAction};
 
 use crate::action::{AudioEffect, IoFeedback};
 use crate::audio::AudioHandle;
@@ -243,9 +243,9 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
         .map(|h| h.to_string_lossy().to_string())
         .unwrap_or_else(|_| "unknown".to_string());
 
-    // Convert CLI instrument IDs to InstrumentId type
-    let requested_instruments: Vec<InstrumentId> =
-        own_instruments.into_iter().map(InstrumentId::new).collect();
+    // Convert CLI instrument IDs to TrackId type
+    let requested_instruments: Vec<TrackId> =
+        own_instruments.into_iter().map(TrackId::new).collect();
 
     let mut remote = RemoteDispatcher::connect(addr, &client_name, requested_instruments)?;
     log::info!(

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::InstrumentId;
+use crate::TrackId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Note {
@@ -28,7 +28,7 @@ pub struct ClipboardNote {
 /// A note sequence in the piano roll, holding notes for one instrument.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoteSequence {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub notes: Vec<Note>,
     pub polyphonic: bool,
 }
@@ -36,8 +36,8 @@ pub struct NoteSequence {
 /// Global piano roll state: per-instrument note sequences, transport, and grid settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PianoRollState {
-    pub sequences: HashMap<InstrumentId, NoteSequence>,
-    pub sequence_order: Vec<InstrumentId>,
+    pub sequences: HashMap<TrackId, NoteSequence>,
+    pub sequence_order: Vec<TrackId>,
     pub bpm: f32,
     pub time_signature: (u8, u8),
     #[serde(skip)]
@@ -73,7 +73,7 @@ impl PianoRollState {
         }
     }
 
-    pub fn add_sequence(&mut self, instrument_id: InstrumentId) {
+    pub fn add_sequence(&mut self, instrument_id: TrackId) {
         if let Entry::Vacant(e) = self.sequences.entry(instrument_id) {
             e.insert(NoteSequence {
                 instrument_id,
@@ -84,7 +84,7 @@ impl PianoRollState {
         }
     }
 
-    pub fn remove_sequence(&mut self, instrument_id: InstrumentId) {
+    pub fn remove_sequence(&mut self, instrument_id: TrackId) {
         self.sequences.remove(&instrument_id);
         self.sequence_order.retain(|&id| id != instrument_id);
     }
@@ -200,12 +200,12 @@ impl Default for PianoRollState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::InstrumentId;
+    use crate::TrackId;
 
     #[test]
     fn toggle_note_adds_and_removes() {
         let mut pr = PianoRollState::new();
-        pr.add_sequence(InstrumentId::new(1));
+        pr.add_sequence(TrackId::new(1));
         pr.toggle_note(0, 60, 0, 480, 100);
         assert_eq!(pr.sequence_at(0).unwrap().notes.len(), 1);
         pr.toggle_note(0, 60, 0, 480, 100);
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn notes_in_range_filters_by_tick() {
         let mut pr = PianoRollState::new();
-        pr.add_sequence(InstrumentId::new(1));
+        pr.add_sequence(TrackId::new(1));
         pr.toggle_note(0, 60, 0, 480, 100);
         pr.toggle_note(0, 61, 480, 480, 100);
         let notes = pr.notes_in_range(0, 0, 480);
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn notes_stay_sorted_after_toggle() {
         let mut pr = PianoRollState::new();
-        pr.add_sequence(InstrumentId::new(1));
+        pr.add_sequence(TrackId::new(1));
         pr.toggle_note(0, 60, 480, 480, 100);
         pr.toggle_note(0, 62, 0, 480, 100);
         pr.toggle_note(0, 64, 240, 480, 100);

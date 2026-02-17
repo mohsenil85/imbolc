@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 use super::VoiceChain;
 
@@ -64,7 +64,7 @@ impl VoiceAllocator {
     /// Handles:
     /// 1. Same-pitch retrigger (always steal matching pitch)
     /// 2. Over-limit stealing (steal lowest-scored candidate)
-    pub fn steal_voices(&mut self, instrument_id: InstrumentId, pitch: u8) -> Vec<VoiceChain> {
+    pub fn steal_voices(&mut self, instrument_id: TrackId, pitch: u8) -> Vec<VoiceChain> {
         let mut stolen = Vec::new();
 
         // 1. Same-pitch retrigger: steal any voice (active or released) with the same pitch
@@ -96,7 +96,7 @@ impl VoiceAllocator {
 
     /// Find the best steal candidate for a given instrument.
     /// Returns the index of the voice with the lowest score (best target).
-    fn find_steal_candidate(&self, instrument_id: InstrumentId) -> Option<usize> {
+    fn find_steal_candidate(&self, instrument_id: TrackId) -> Option<usize> {
         let now = Instant::now();
 
         self.chains
@@ -138,7 +138,7 @@ impl VoiceAllocator {
     /// can access the voice to send gate=0 via OSC.
     pub fn mark_released(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         release_time: f32,
     ) -> Option<usize> {
@@ -164,7 +164,7 @@ impl VoiceAllocator {
 
     /// Remove and return all voices for a specific instrument.
     /// Control buses of removed voices are returned to the pool.
-    pub fn drain_instrument(&mut self, instrument_id: InstrumentId) -> Vec<VoiceChain> {
+    pub fn drain_instrument(&mut self, instrument_id: TrackId) -> Vec<VoiceChain> {
         let mut drained = Vec::new();
         let mut i = 0;
         while i < self.chains.len() {
@@ -219,7 +219,7 @@ impl VoiceAllocator {
     /// Iterate over all voices for a given instrument.
     pub fn voices_for_instrument(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
     ) -> impl Iterator<Item = &VoiceChain> {
         self.chains
             .iter()
@@ -251,12 +251,12 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-    fn id(n: u32) -> InstrumentId {
-        InstrumentId::new(n)
+    fn id(n: u32) -> TrackId {
+        TrackId::new(n)
     }
 
     fn make_voice(
-        inst_id: InstrumentId,
+        inst_id: TrackId,
         pitch: u8,
         group_id: i32,
         buses: (i32, i32, i32),
@@ -276,7 +276,7 @@ mod tests {
     }
 
     fn make_expired_voice(
-        inst_id: InstrumentId,
+        inst_id: TrackId,
         pitch: u8,
         group_id: i32,
         buses: (i32, i32, i32),

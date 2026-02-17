@@ -15,7 +15,7 @@ use super::telemetry::AudioTelemetry;
 use super::ServerStatus;
 use crate::arp_state::ArpPlayState;
 use imbolc_types::VstTarget;
-use imbolc_types::{InstrumentId, InstrumentState, SessionState};
+use imbolc_types::{InstrumentState, SessionState, TrackId};
 
 /// Deferred server connection: after spawning scsynth, wait before connecting
 /// so the server has time to initialize. Avoids blocking the audio thread.
@@ -52,7 +52,7 @@ struct PendingPostConnectRebuild {
 }
 
 struct RenderState {
-    instrument_id: InstrumentId,
+    instrument_id: TrackId,
     loop_end: u32,
     tail_ticks: u32,
 }
@@ -67,7 +67,7 @@ struct ExportState {
 
 /// Tracks an in-flight VST parameter query via OSC /param_query
 struct PendingVstQuery {
-    instrument_id: InstrumentId,
+    instrument_id: TrackId,
     target: VstTarget,
     vst_plugin_id: imbolc_types::VstPluginId,
     node_id: i32,
@@ -90,14 +90,14 @@ pub(crate) struct AudioThread {
     session: SessionSnapshot,
     piano_roll: PianoRollSnapshot,
     automation_lanes: AutomationSnapshot,
-    active_notes: Vec<(InstrumentId, u8, u32)>, // (instrument_id, pitch, duration_ticks)
+    active_notes: Vec<(TrackId, u8, u32)>, // (instrument_id, pitch, duration_ticks)
     last_tick: Instant,
     last_recording_secs: u64,
     last_recording_state: bool,
     /// Simple LCG random seed for probability/humanization
     rng_state: u64,
     /// Per-instrument arpeggiator runtime state
-    arp_states: HashMap<InstrumentId, ArpPlayState>,
+    arp_states: HashMap<TrackId, ArpPlayState>,
     /// Per-voice generative engine runtime state
     generative_states: super::generative_state::GenerativePlayState,
     /// Active render-to-WAV state
@@ -576,7 +576,7 @@ impl AudioThread {
             } => {
                 // Preserve drum sequencer playback state from old instruments
                 let mut instruments = instruments.clone();
-                let old_instruments: HashMap<InstrumentId, &_> = self
+                let old_instruments: HashMap<TrackId, &_> = self
                     .instruments
                     .instruments
                     .iter()
@@ -948,7 +948,7 @@ impl AudioThread {
                 let _ = reply.send(result);
             }
             AudioCmd::StartStemExport { stems, reply } => {
-                let instrument_buses: Vec<(InstrumentId, i32, PathBuf)> = stems
+                let instrument_buses: Vec<(TrackId, i32, PathBuf)> = stems
                     .iter()
                     .filter_map(|(inst_id, path)| {
                         self.engine
@@ -1136,7 +1136,7 @@ impl AudioThread {
         }
     }
 
-    fn resolve_vst_node_id(&self, instrument_id: InstrumentId, target: VstTarget) -> Option<i32> {
+    fn resolve_vst_node_id(&self, instrument_id: TrackId, target: VstTarget) -> Option<i32> {
         let nodes = self.engine.node_map.get(&instrument_id)?;
         match target {
             VstTarget::Source => nodes.source,
@@ -1147,7 +1147,7 @@ impl AudioThread {
     /// Resolve the VstPluginId for a given instrument and target
     fn resolve_vst_plugin_id(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
     ) -> Option<imbolc_types::VstPluginId> {
         let inst = self

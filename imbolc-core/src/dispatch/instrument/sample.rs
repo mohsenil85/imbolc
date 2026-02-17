@@ -5,7 +5,7 @@ use imbolc_audio::AudioHandle;
 pub(super) fn handle_load_sample_result(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     path: &std::path::Path,
 ) -> DispatchResult {
     let path_str = path.to_string_lossy().to_string();

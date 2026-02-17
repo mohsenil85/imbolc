@@ -4,19 +4,19 @@ use std::time::Duration;
 use super::engine::AudioEngine;
 use super::snapshot::{InstrumentSnapshot, SessionSnapshot};
 use crate::arp_state::ArpPlayState;
-use imbolc_types::{ArpDirection, InstrumentId};
+use imbolc_types::{ArpDirection, TrackId};
 
 pub fn tick_arpeggiator(
     instruments: &InstrumentSnapshot,
     session: &SessionSnapshot,
     bpm: f32,
-    arp_states: &mut HashMap<InstrumentId, ArpPlayState>,
+    arp_states: &mut HashMap<TrackId, ArpPlayState>,
     engine: &mut AudioEngine,
     rng_state: &mut u64,
     elapsed: Duration,
 ) {
     // Collect instrument ids and arp configs to avoid borrow conflicts
-    let arp_instruments: Vec<(InstrumentId, imbolc_types::ArpeggiatorConfig)> = instruments
+    let arp_instruments: Vec<(TrackId, imbolc_types::ArpeggiatorConfig)> = instruments
         .instruments
         .iter()
         .filter(|inst| inst.note_input.arpeggiator.enabled)
@@ -167,7 +167,7 @@ pub fn tick_arpeggiator(
     }
 
     // Clean up arp states for instruments that no longer have arp enabled
-    let active_ids: Vec<InstrumentId> = instruments
+    let active_ids: Vec<TrackId> = instruments
         .instruments
         .iter()
         .filter(|inst| inst.note_input.arpeggiator.enabled)

@@ -10,7 +10,7 @@ use std::sync::mpsc::Sender;
 
 use imbolc_types::AutomationTarget;
 use imbolc_types::VstTarget;
-use imbolc_types::{BufferId, BusId, EffectId, InstrumentId};
+use imbolc_types::{BufferId, BusId, EffectId, TrackId};
 
 /// Commands sent from the main thread to the audio engine.
 ///
@@ -66,7 +66,7 @@ pub enum AudioCmd {
     // ── Routing & mixing ──────────────────────────────────────────
     RebuildRouting,
     RebuildInstrumentRouting {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
     },
     UpdateMixerParams,
     SetBusMixerParams {
@@ -82,31 +82,31 @@ pub enum AudioCmd {
         pan: f32,
     },
     SetSourceParam {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: String,
         value: f32,
     },
     SetEqParam {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: String,
         value: f32,
     },
     /// Targeted /n_set to filter node (no routing rebuild).
     SetFilterParam {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: String,
         value: f32,
     },
     /// Targeted /n_set to effect node (no routing rebuild).
     SetEffectParam {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         effect_id: EffectId,
         param: String,
         value: f32,
     },
     /// Targeted /n_set to LFO node (no routing rebuild).
     SetLfoParam {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: String,
         value: f32,
     },
@@ -131,7 +131,7 @@ pub enum AudioCmd {
         value: f32,
     },
     SetInstrumentMixerParams {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         level: f32,
         pan: f32,
         mute: bool,
@@ -144,18 +144,18 @@ pub enum AudioCmd {
 
     // ── Voice management ──────────────────────────────────────────
     SpawnVoice {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
     },
     ReleaseVoice {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         offset_secs: f64,
     },
     RegisterActiveNote {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         duration_ticks: u32,
     },
@@ -164,7 +164,7 @@ pub enum AudioCmd {
     PlayDrumHit {
         buffer_id: BufferId,
         amp: f32,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         slice_start: f32,
         slice_end: f32,
         rate: f32,
@@ -191,7 +191,7 @@ pub enum AudioCmd {
         reply: Sender<Option<PathBuf>>,
     },
     StartInstrumentRender {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         path: PathBuf,
         reply: Sender<Result<(), String>>,
     },
@@ -200,7 +200,7 @@ pub enum AudioCmd {
         reply: Sender<Result<(), String>>,
     },
     StartStemExport {
-        stems: Vec<(InstrumentId, PathBuf)>,
+        stems: Vec<(TrackId, PathBuf)>,
         reply: Sender<Result<(), String>>,
     },
     CancelExport,
@@ -213,22 +213,22 @@ pub enum AudioCmd {
 
     // ── VST parameter control ──────────────────────────────────
     QueryVstParams {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
     },
     SetVstParam {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
         param_index: u32,
         value: f32,
     },
     SaveVstState {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
         path: PathBuf,
     },
     LoadVstState {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         target: VstTarget,
         path: PathBuf,
     },

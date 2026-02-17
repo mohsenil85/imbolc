@@ -7,14 +7,14 @@ use crate::action::{
     BusAction, DomainAction, InstrumentAction, MixerAction, SequencerAction, SessionAction,
     VstParamAction,
 };
-use imbolc_types::InstrumentId;
 use imbolc_types::TagAction;
+use imbolc_types::TrackId;
 
 /// What scope of state an undo entry covers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UndoScope {
     /// Only one instrument changed (most common — parameter tweaks).
-    SingleInstrument(InstrumentId),
+    SingleInstrument(TrackId),
     /// The instrument collection changed (add/remove would use Full instead,
     /// but this is available as a defensive fallback).
     Instruments,
@@ -29,7 +29,7 @@ pub enum UndoScope {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CoalesceKey {
     /// Parameter tweaks on the same instrument (filter, LFO, envelope, effects, etc.)
-    InstrumentParam(InstrumentId),
+    InstrumentParam(TrackId),
     /// Session-level parameter tweaks (BPM, master level, humanize, etc.)
     SessionParam,
     /// No coalescing — structural changes always get their own snapshot.
@@ -42,7 +42,7 @@ const COALESCE_WINDOW: std::time::Duration = std::time::Duration::from_millis(50
 /// A single undo/redo entry storing only the state that was affected.
 enum UndoEntry {
     SingleInstrument {
-        id: InstrumentId,
+        id: TrackId,
         instrument: Box<Instrument>,
     },
     Instruments(Box<InstrumentState>),
@@ -328,7 +328,7 @@ pub fn undo_scope(
             }
         }
 
-        // VstParam carries InstrumentId as first field
+        // VstParam carries TrackId as first field
         DomainAction::VstParam(a) => {
             let id = match a {
                 VstParamAction::SetParam(id, _, _, _)

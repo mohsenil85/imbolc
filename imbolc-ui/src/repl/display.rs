@@ -32,7 +32,7 @@ pub fn format_instrument_list(state: &AppState) -> String {
     lines.join("\n")
 }
 
-pub fn format_instrument_detail(state: &AppState, id: InstrumentId) -> String {
+pub fn format_instrument_detail(state: &AppState, id: TrackId) -> String {
     let inst = match state.instruments.instrument(id) {
         Some(inst) => inst,
         None => return format!("Instrument {} not found", id),
@@ -225,7 +225,7 @@ pub fn format_notes(state: &AppState, track_idx: usize) -> String {
     lines.join("\n")
 }
 
-pub fn format_effects(state: &AppState, id: InstrumentId) -> String {
+pub fn format_effects(state: &AppState, id: TrackId) -> String {
     let inst = match state.instruments.instrument(id) {
         Some(inst) => inst,
         None => return format!("Instrument {} not found", id),

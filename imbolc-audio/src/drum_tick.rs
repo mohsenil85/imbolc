@@ -4,7 +4,7 @@ use std::time::Duration;
 use super::commands::AudioFeedback;
 use super::engine::AudioEngine;
 use super::snapshot::{InstrumentSnapshot, SessionSnapshot};
-use imbolc_types::{InstrumentId, SourceExtra};
+use imbolc_types::{SourceExtra, TrackId};
 
 pub fn tick_drum_sequencer(
     instruments: &mut InstrumentSnapshot,
@@ -17,7 +17,7 @@ pub fn tick_drum_sequencer(
 ) {
     // Collect instrument triggers to execute after the main loop
     // (target_instrument_id, freq, velocity, offset_secs)
-    let mut instrument_triggers: Vec<(InstrumentId, f32, f32, f64)> = Vec::new();
+    let mut instrument_triggers: Vec<(TrackId, f32, f32, f64)> = Vec::new();
 
     for instrument in &mut instruments.instruments {
         let seq = match &mut instrument.source_extra {

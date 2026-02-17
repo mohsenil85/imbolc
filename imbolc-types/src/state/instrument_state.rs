@@ -6,23 +6,23 @@ use serde::{Deserialize, Serialize};
 
 use super::drum_sequencer::DrumSequencerState;
 use super::instrument::{Instrument, SourceType};
-use crate::InstrumentId;
+use crate::TrackId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstrumentState {
     pub instruments: Vec<Instrument>,
     pub selected: Option<usize>,
-    pub next_id: InstrumentId,
+    pub next_id: TrackId,
     #[serde(default = "default_sampler_buffer_id")]
     pub next_sampler_buffer_id: u32,
     /// Set by dispatch when editing an instrument; read by InstrumentEditPane on_enter
     #[serde(skip)]
-    pub editing_instrument_id: Option<InstrumentId>,
+    pub editing_instrument_id: Option<TrackId>,
     /// Counter for allocating layer group IDs
     pub next_layer_group_id: u32,
-    /// Index from InstrumentId → Vec position for O(1) lookups.
+    /// Index from TrackId → Vec position for O(1) lookups.
     #[serde(skip)]
-    id_index: HashMap<InstrumentId, usize>,
+    id_index: HashMap<TrackId, usize>,
 }
 
 impl InstrumentState {
@@ -30,7 +30,7 @@ impl InstrumentState {
         Self {
             instruments: Vec::new(),
             selected: None,
-            next_id: InstrumentId::new(0),
+            next_id: TrackId::new(0),
             next_sampler_buffer_id: 20000,
             editing_instrument_id: None,
             next_layer_group_id: 0,
@@ -49,9 +49,9 @@ impl InstrumentState {
         }
     }
 
-    pub fn add_instrument(&mut self, source: SourceType) -> InstrumentId {
+    pub fn add_instrument(&mut self, source: SourceType) -> TrackId {
         let id = self.next_id;
-        self.next_id = InstrumentId::new(self.next_id.get() + 1);
+        self.next_id = TrackId::new(self.next_id.get() + 1);
         let instrument = Instrument::new(id, source);
         self.instruments.push(instrument);
         self.selected = Some(self.instruments.len() - 1);
@@ -60,7 +60,7 @@ impl InstrumentState {
         id
     }
 
-    pub fn remove_instrument(&mut self, id: InstrumentId) {
+    pub fn remove_instrument(&mut self, id: TrackId) {
         // Capture layer group before removal for singleton cleanup
         let old_group = self.instrument(id).and_then(|i| i.layer.group);
 
@@ -83,7 +83,7 @@ impl InstrumentState {
 
         // If old group now has only 1 member, clear it (group of 1 is meaningless)
         if let Some(g) = old_group {
-            let remaining: Vec<InstrumentId> = self
+            let remaining: Vec<TrackId> = self
                 .instruments
                 .iter()
                 .filter(|i| i.layer.group == Some(g))
@@ -97,7 +97,7 @@ impl InstrumentState {
         }
     }
 
-    pub fn instrument(&self, id: InstrumentId) -> Option<&Instrument> {
+    pub fn instrument(&self, id: TrackId) -> Option<&Instrument> {
         // Use index for O(1) lookup, fall back to linear scan if index is stale
         if let Some(&idx) = self.id_index.get(&id) {
             if let Some(inst) = self.instruments.get(idx) {
@@ -109,7 +109,7 @@ impl InstrumentState {
         self.instruments.iter().find(|s| s.id == id)
     }
 
-    pub fn instrument_mut(&mut self, id: InstrumentId) -> Option<&mut Instrument> {
+    pub fn instrument_mut(&mut self, id: TrackId) -> Option<&mut Instrument> {
         // Use index for O(1) lookup, fall back to linear scan if index is stale
         if let Some(&idx) = self.id_index.get(&id) {
             if let Some(inst) = self.instruments.get(idx) {
@@ -190,7 +190,7 @@ impl InstrumentState {
 
     /// Returns all instrument IDs in the same layer group as `id` (including `id` itself).
     /// If the instrument has no layer group, returns just `vec![id]`.
-    pub fn layer_group_members(&self, id: InstrumentId) -> Vec<InstrumentId> {
+    pub fn layer_group_members(&self, id: TrackId) -> Vec<TrackId> {
         let group = self.instrument(id).and_then(|inst| inst.layer.group);
         match group {
             Some(g) => self

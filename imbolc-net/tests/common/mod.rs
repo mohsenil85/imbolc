@@ -10,7 +10,7 @@ use imbolc_net::protocol::{
     ClientId, ClientMessage, NetworkAction, NetworkState, ServerMessage, SessionToken,
 };
 use imbolc_net::server::NetServer;
-use imbolc_types::{InstrumentId, InstrumentState, SessionState};
+use imbolc_types::{InstrumentState, SessionState, TrackId};
 
 /// Build a test NetworkState from a server.
 pub fn make_test_state(server: &NetServer) -> NetworkState {
@@ -118,7 +118,7 @@ impl RawClient {
     pub fn send_hello(
         &mut self,
         name: &str,
-        instruments: Vec<InstrumentId>,
+        instruments: Vec<TrackId>,
         privilege: bool,
     ) -> std::io::Result<()> {
         self.send(&ClientMessage::Hello {

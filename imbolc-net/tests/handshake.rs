@@ -2,7 +2,7 @@ mod common;
 
 use imbolc_net::protocol::{PrivilegeLevel, ServerMessage};
 use imbolc_net::server::NetServer;
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 use std::time::Duration;
 
 #[test]
@@ -38,11 +38,7 @@ fn test_ownership_granted_on_connect() {
 
     let mut client = common::RawClient::connect(&addr).unwrap();
     client
-        .send_hello(
-            "Alice",
-            vec![InstrumentId::new(0), InstrumentId::new(1)],
-            false,
-        )
+        .send_hello("Alice", vec![TrackId::new(0), TrackId::new(1)], false)
         .unwrap();
 
     common::drive_until_clients(&mut server, &state, 1, Duration::from_secs(2));
@@ -54,8 +50,8 @@ fn test_ownership_granted_on_connect() {
             ..
         } => {
             assert_eq!(granted_instruments.len(), 2);
-            assert!(granted_instruments.contains(&InstrumentId::new(0)));
-            assert!(granted_instruments.contains(&InstrumentId::new(1)));
+            assert!(granted_instruments.contains(&TrackId::new(0)));
+            assert!(granted_instruments.contains(&TrackId::new(1)));
         }
         other => panic!("Expected Welcome, got {:?}", other),
     }

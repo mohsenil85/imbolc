@@ -12,8 +12,8 @@ use std::time::{Duration, Instant};
 use log::{error, info, warn};
 
 use imbolc_types::{
-    AutomationAction, AutomationLaneId, BusAction, BusId, InstrumentAction, InstrumentId,
-    PianoRollAction, SessionState, VstParamAction,
+    AutomationAction, AutomationLaneId, BusAction, BusId, InstrumentAction, PianoRollAction,
+    SessionState, TrackId, VstParamAction,
 };
 
 use crate::framing::{read_message, serialize_frame, write_message};
@@ -53,7 +53,7 @@ const WRITE_TIMEOUT: Duration = Duration::from_millis(10);
 struct ClientInfo {
     name: String,
     /// Instruments this client owns (can mutate).
-    owned_instruments: HashSet<InstrumentId>,
+    owned_instruments: HashSet<TrackId>,
     /// Session token for reconnection.
     session_token: SessionToken,
     /// Last time we received any message from this client.
@@ -70,7 +70,7 @@ struct ClientWriter {
 /// A suspended session awaiting reconnection.
 struct SuspendedSession {
     client_name: String,
-    owned_instruments: HashSet<InstrumentId>,
+    owned_instruments: HashSet<TrackId>,
     was_privileged: bool,
     disconnected_at: Instant,
 }
@@ -85,7 +85,7 @@ const PATCH_BROADCAST_INTERVAL_MS: u128 = 33;
 #[derive(Debug, Default)]
 pub struct DirtyFlags {
     /// Per-track piano roll edits (e.g. ToggleNote on a specific track).
-    pub dirty_piano_roll_tracks: HashSet<InstrumentId>,
+    pub dirty_piano_roll_tracks: HashSet<TrackId>,
     /// Structural piano roll changes: metadata, loop settings, time sig, etc.
     pub piano_roll_structural: bool,
     /// Arrangement subsystem changed.
@@ -102,7 +102,7 @@ pub struct DirtyFlags {
     /// When set, sends the full SessionState (which includes all subsystems).
     pub session: bool,
     /// Per-instrument targeted edits (e.g. filter cutoff on instrument 5).
-    pub dirty_instruments: HashSet<InstrumentId>,
+    pub dirty_instruments: HashSet<TrackId>,
     /// Structural instrument changes: add, delete, select, undo/redo, mixer, etc.
     pub instruments_structural: bool,
     pub ownership: bool,
@@ -112,7 +112,7 @@ pub struct DirtyFlags {
 impl DirtyFlags {
     /// Mark dirty flags based on the action variant.
     ///
-    /// `session` is needed to resolve piano roll track indices to `InstrumentId`.
+    /// `session` is needed to resolve piano roll track indices to `TrackId`.
     /// Pass `None` in unit tests — PianoRoll actions will fall back to structural.
     pub fn mark_from_action(&mut self, action: &NetworkAction, session: Option<&SessionState>) {
         match action {
@@ -188,7 +188,7 @@ impl DirtyFlags {
         }
     }
 
-    /// Resolve a piano roll track index to an `InstrumentId` using session state.
+    /// Resolve a piano roll track index to an `TrackId` using session state.
     /// Falls back to structural if session is unavailable or index is out of bounds.
     fn resolve_track_id(&mut self, track: usize, session: Option<&SessionState>) {
         match session.and_then(|s| s.piano_roll.sequence_order.get(track).copied()) {
@@ -598,7 +598,7 @@ pub struct NetServer {
     next_client_id: u64,
     /// Tracks which instruments are owned by which client.
     /// An instrument can only be owned by one client at a time.
-    ownership: HashMap<InstrumentId, ClientId>,
+    ownership: HashMap<TrackId, ClientId>,
     /// The client with privileged status (transport/save/load control).
     privileged_client: Option<ClientId>,
     /// Suspended sessions awaiting reconnection.
@@ -830,7 +830,7 @@ impl NetServer {
                     // Normal handshake: move from pending to clients
                     if let Some(mut pending) = self.pending.remove(&client_id) {
                         // Assign ownership for requested instruments that aren't already owned
-                        let granted: Vec<InstrumentId> = requested_instruments
+                        let granted: Vec<TrackId> = requested_instruments
                             .into_iter()
                             .filter(|id| !self.ownership.contains_key(id))
                             .collect();
@@ -1171,13 +1171,13 @@ impl NetServer {
     }
 
     /// Check if a client owns an instrument.
-    fn is_owner(&self, client_id: ClientId, instrument_id: InstrumentId) -> bool {
+    fn is_owner(&self, client_id: ClientId, instrument_id: TrackId) -> bool {
         self.ownership.get(&instrument_id) == Some(&client_id)
     }
 
     /// Get the owner of an instrument, if any.
     #[allow(dead_code)]
-    fn owned_by(&self, instrument_id: InstrumentId) -> Option<ClientId> {
+    fn owned_by(&self, instrument_id: TrackId) -> Option<ClientId> {
         self.ownership.get(&instrument_id).copied()
     }
 
@@ -1458,7 +1458,7 @@ impl NetServer {
     }
 
     /// Build the ownership map for NetworkState.
-    pub fn build_ownership_map(&self) -> HashMap<InstrumentId, OwnerInfo> {
+    pub fn build_ownership_map(&self) -> HashMap<TrackId, OwnerInfo> {
         self.ownership
             .iter()
             .filter_map(|(&inst_id, &client_id)| {
@@ -1642,15 +1642,12 @@ mod tests {
         // VstParam and targeted InstrumentAction go into dirty_instruments
         let cases: Vec<NetworkAction> = vec![
             NetworkAction::VstParam(VstParamAction::SetParam(
-                InstrumentId::new(0),
+                TrackId::new(0),
                 VstTarget::Source,
                 0,
                 0.5,
             )),
-            NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(
-                InstrumentId::new(5),
-                0.1,
-            )),
+            NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(5), 0.1)),
         ];
         for action in &cases {
             let mut d = DirtyFlags::default();
@@ -1715,7 +1712,7 @@ mod tests {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
             &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Instrument(
-                InstrumentId::new(0),
+                TrackId::new(0),
                 InstrumentParameter::Standard(ParameterTarget::Level),
             ))),
             None,
@@ -1776,13 +1773,10 @@ mod tests {
     fn dirty_instrument_targeted_vs_structural() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(
-                InstrumentId::new(5),
-                0.1,
-            )),
+            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(5), 0.1)),
             None,
         );
-        assert_eq!(d.dirty_instruments, HashSet::from([InstrumentId::new(5)]));
+        assert_eq!(d.dirty_instruments, HashSet::from([TrackId::new(5)]));
         assert!(!d.instruments_structural);
     }
 
@@ -1790,7 +1784,7 @@ mod tests {
     fn dirty_instrument_delete_is_structural() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::Delete(InstrumentId::new(5))),
+            &NetworkAction::Instrument(InstrumentAction::Delete(TrackId::new(5))),
             None,
         );
         assert!(d.instruments_structural);
@@ -1820,14 +1814,14 @@ mod tests {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
             &NetworkAction::VstParam(VstParamAction::SetParam(
-                InstrumentId::new(3),
+                TrackId::new(3),
                 VstTarget::Source,
                 0,
                 0.5,
             )),
             None,
         );
-        assert_eq!(d.dirty_instruments, HashSet::from([InstrumentId::new(3)]));
+        assert_eq!(d.dirty_instruments, HashSet::from([TrackId::new(3)]));
         assert!(!d.instruments_structural);
     }
 
@@ -1842,22 +1836,16 @@ mod tests {
     fn dirty_accumulated_instruments() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(
-                InstrumentId::new(2),
-                0.1,
-            )),
+            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(2), 0.1)),
             None,
         );
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(
-                InstrumentId::new(7),
-                0.2,
-            )),
+            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(7), 0.2)),
             None,
         );
         assert_eq!(
             d.dirty_instruments,
-            HashSet::from([InstrumentId::new(2), InstrumentId::new(7)])
+            HashSet::from([TrackId::new(2), TrackId::new(7)])
         );
         assert!(!d.instruments_structural);
     }
@@ -1873,7 +1861,7 @@ mod tests {
     fn any_true_for_each_flag() {
         for setter in [
             (|d: &mut DirtyFlags| {
-                d.dirty_piano_roll_tracks.insert(InstrumentId::new(0));
+                d.dirty_piano_roll_tracks.insert(TrackId::new(0));
             }) as fn(&mut DirtyFlags),
             |d: &mut DirtyFlags| d.piano_roll_structural = true,
             |d: &mut DirtyFlags| d.arrangement = true,
@@ -1887,7 +1875,7 @@ mod tests {
             |d: &mut DirtyFlags| d.mixer_structural = true,
             |d: &mut DirtyFlags| d.session = true,
             |d: &mut DirtyFlags| {
-                d.dirty_instruments.insert(InstrumentId::new(0));
+                d.dirty_instruments.insert(TrackId::new(0));
             },
             |d: &mut DirtyFlags| d.instruments_structural = true,
             |d: &mut DirtyFlags| d.ownership = true,
@@ -1902,7 +1890,7 @@ mod tests {
     #[test]
     fn clear_resets_all() {
         let mut d = DirtyFlags {
-            dirty_piano_roll_tracks: HashSet::from([InstrumentId::new(0), InstrumentId::new(1)]),
+            dirty_piano_roll_tracks: HashSet::from([TrackId::new(0), TrackId::new(1)]),
             piano_roll_structural: true,
             arrangement: true,
             dirty_automation_lanes: HashSet::from([0, 1]),
@@ -1910,11 +1898,7 @@ mod tests {
             dirty_mixer_buses: HashSet::from([BusId::new(1), BusId::new(2)]),
             mixer_structural: true,
             session: true,
-            dirty_instruments: HashSet::from([
-                InstrumentId::new(0),
-                InstrumentId::new(1),
-                InstrumentId::new(2),
-            ]),
+            dirty_instruments: HashSet::from([TrackId::new(0), TrackId::new(1), TrackId::new(2)]),
             instruments_structural: true,
             ownership: true,
             privileged_client: true,
@@ -1987,7 +1971,7 @@ mod tests {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
             &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Instrument(
-                InstrumentId::new(0),
+                TrackId::new(0),
                 InstrumentParameter::Standard(ParameterTarget::Level),
             ))),
             None,

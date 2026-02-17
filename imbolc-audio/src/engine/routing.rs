@@ -5,9 +5,9 @@ use super::{
     VST_UGEN_INDEX,
 };
 use imbolc_types::{
-    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, Instrument, InstrumentId,
-    InstrumentState, LayerGroupMixer, MixerBus, ParamValue, ParameterTarget, SendTapPoint,
-    SessionState, SourceType, SourceTypeExt,
+    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, Instrument, InstrumentState,
+    LayerGroupMixer, MixerBus, ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType,
+    SourceTypeExt, TrackId,
 };
 use std::collections::HashMap;
 
@@ -598,7 +598,7 @@ impl AudioEngine {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let effect_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - bus.id.get() as u32),
+                TrackId::new(u32::MAX - bus.id.get() as u32),
                 &format!("bus_fx_{}_out", effect.id),
             );
 
@@ -692,7 +692,7 @@ impl AudioEngine {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let effect_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - gm.group_id),
+                TrackId::new(u32::MAX - 256 - gm.group_id),
                 &format!("group_fx_{}_out", effect.id),
             );
 
@@ -770,10 +770,9 @@ impl AudioEngine {
         if let Some(eq) = gm.eq() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
-            let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - gm.group_id),
-                "group_eq_out",
-            );
+            let eq_out_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - gm.group_id), "group_eq_out");
 
             let mut params: Vec<(String, f32)> = vec![
                 ("in".to_string(), current_bus as f32),
@@ -870,19 +869,17 @@ impl AudioEngine {
 
         // Allocate audio buses for each mixer bus first (needed by BusIn instruments)
         for bus in &session.mixer.buses {
-            let bus_audio = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - bus.id.get() as u32),
-                "bus_out",
-            );
+            let bus_audio = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - bus.id.get() as u32), "bus_out");
             self.bus_audio_buses.insert(bus.id, bus_audio);
         }
 
         // Allocate audio buses for each active layer group
         for group_id in state.active_layer_groups() {
-            let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - group_id),
-                "layer_group_out",
-            );
+            let group_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - group_id), "layer_group_out");
             self.layer_group_audio_buses.insert(group_id, group_bus);
         }
 
@@ -1010,7 +1007,7 @@ impl AudioEngine {
     /// Allocates buses and creates the signal chain + sends for just the new instrument.
     pub fn add_instrument_routing(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         state: &InstrumentState,
         session: &SessionState,
     ) -> Result<(), String> {
@@ -1040,7 +1037,7 @@ impl AudioEngine {
 
     /// Tear down routing for a deleted instrument without rebuilding other instruments.
     /// Frees nodes, voices, sends, and buses for just the removed instrument.
-    pub fn delete_instrument_routing(&mut self, instrument_id: InstrumentId) -> Result<(), String> {
+    pub fn delete_instrument_routing(&mut self, instrument_id: TrackId) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
@@ -1056,7 +1053,7 @@ impl AudioEngine {
         }
 
         // Free send nodes
-        let send_keys: Vec<(InstrumentId, BusId)> = self
+        let send_keys: Vec<(TrackId, BusId)> = self
             .send_node_map
             .keys()
             .filter(|(id, _)| *id == instrument_id)
@@ -1137,10 +1134,9 @@ impl AudioEngine {
         // Keep existing bus_audio_buses — they don't change for bus effect rebuilds
         self.layer_group_audio_buses.clear();
         for group_id in state.active_layer_groups() {
-            let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - group_id),
-                "layer_group_out",
-            );
+            let group_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - group_id), "layer_group_out");
             self.layer_group_audio_buses.insert(group_id, group_bus);
         }
 
@@ -1236,7 +1232,7 @@ impl AudioEngine {
     /// and recreates them. Other instruments remain untouched.
     pub fn rebuild_single_instrument_routing(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         state: &InstrumentState,
         session: &SessionState,
     ) -> Result<(), String> {
@@ -1261,7 +1257,7 @@ impl AudioEngine {
             }
 
             // Free this instrument's send nodes
-            let send_keys: Vec<(InstrumentId, BusId)> = self
+            let send_keys: Vec<(TrackId, BusId)> = self
                 .send_node_map
                 .keys()
                 .filter(|(id, _)| *id == instrument_id)
@@ -1377,7 +1373,7 @@ impl AudioEngine {
                 // Allocate audio buses for each mixer bus (needed by BusIn instruments)
                 for bus in &session.mixer.buses {
                     let bus_audio = self.bus_allocator.get_or_alloc_audio_bus(
-                        InstrumentId::new(u32::MAX - bus.id.get() as u32),
+                        TrackId::new(u32::MAX - bus.id.get() as u32),
                         "bus_out",
                     );
                     self.bus_audio_buses.insert(bus.id, bus_audio);
@@ -1386,7 +1382,7 @@ impl AudioEngine {
                 // Allocate audio buses for each active layer group
                 for group_id in state.active_layer_groups() {
                     let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                        InstrumentId::new(u32::MAX - 256 - group_id),
+                        TrackId::new(u32::MAX - 256 - group_id),
                         "layer_group_out",
                     );
                     self.layer_group_audio_buses.insert(group_id, group_bus);
@@ -1639,7 +1635,7 @@ impl AudioEngine {
     /// Updates the persistent source node (AudioIn) and all active voice source nodes.
     pub fn set_source_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1681,7 +1677,7 @@ impl AudioEngine {
     /// Set an EQ parameter on an instrument in real-time.
     pub fn set_eq_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1702,7 +1698,7 @@ impl AudioEngine {
     /// Set a filter parameter on an instrument in real-time (targeted /n_set, no rebuild).
     pub fn set_filter_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1723,7 +1719,7 @@ impl AudioEngine {
     /// Set an effect parameter on an instrument in real-time (targeted /n_set, no rebuild).
     pub fn set_effect_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         effect_id: EffectId,
         param: &str,
         value: f32,
@@ -1745,7 +1741,7 @@ impl AudioEngine {
     /// Set an LFO parameter on an instrument in real-time (targeted /n_set, no rebuild).
     pub fn set_lfo_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {

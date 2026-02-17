@@ -172,12 +172,12 @@ impl ReplParseable for PathBuf {
 // Newtype ID impls
 // ============================================================================
 
-impl ReplParseable for InstrumentId {
+impl ReplParseable for TrackId {
     fn parse_repl(s: &str) -> Result<Self, String> {
         let id: u32 = s
             .parse()
             .map_err(|_| format!("invalid instrument id: {s}"))?;
-        Ok(InstrumentId::new(id))
+        Ok(TrackId::new(id))
     }
     fn type_hint() -> &'static str {
         "<instrument_id>"
@@ -439,7 +439,7 @@ mod tests {
 
     #[test]
     fn parse_ids() {
-        assert_eq!(InstrumentId::parse_repl("7").unwrap(), InstrumentId::new(7));
+        assert_eq!(TrackId::parse_repl("7").unwrap(), TrackId::new(7));
         assert_eq!(EffectId::parse_repl("3").unwrap(), EffectId::new(3));
         assert_eq!(BusId::parse_repl("1").unwrap(), BusId::new(1));
         assert!(BusId::parse_repl("0").is_err());

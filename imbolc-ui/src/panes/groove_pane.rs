@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::state::{AppState, InstrumentId, SwingGrid};
+use crate::state::{AppState, SwingGrid, TrackId};
 use crate::ui::action_id::{ActionId, GrooveActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
@@ -279,7 +279,7 @@ fn render_param_row(
 }
 
 fn adjust_param(
-    instrument_id: InstrumentId,
+    instrument_id: TrackId,
     groove: &crate::state::GrooveConfig,
     param_idx: usize,
     increase: bool,

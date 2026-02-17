@@ -11,7 +11,7 @@ use crate::ui::{
     Action, InputEvent, Keymap, MouseEvent, Pane, PianoKeyboard, PianoRollAction, Rect, RenderBuf,
     ToggleResult,
 };
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// View mode for the piano roll pane: note editor (default) or step sequencer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -240,7 +240,7 @@ impl Pane for PianoRollPane {
             .sequence_order
             .get(self.current_track)
             .copied()
-            .unwrap_or(InstrumentId::new(0));
+            .unwrap_or(TrackId::new(0));
         // Flatten all released pitches (handles chords)
         released
             .into_iter()

@@ -146,7 +146,7 @@ pub(super) fn dispatch_instrument(
 
 fn handle_move_stage(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     stage_idx: usize,
     direction: i8,
 ) -> DispatchResult {
@@ -165,10 +165,7 @@ fn handle_move_stage(
     result
 }
 
-fn handle_toggle_channel_config(
-    state: &mut AppState,
-    id: crate::state::InstrumentId,
-) -> DispatchResult {
+fn handle_toggle_channel_config(state: &mut AppState, id: crate::state::TrackId) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Instrument(InstrumentAction::ToggleChannelConfig(id)),
         &mut state.instruments,

@@ -10,7 +10,7 @@ use crate::ui::{
     MouseEvent, MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf, SessionAction, Style,
     ToggleResult,
 };
-use imbolc_types::{InstrumentId, LayerGroupAction};
+use imbolc_types::{LayerGroupAction, TrackId};
 
 fn source_color(source: SourceType) -> Color {
     match source {
@@ -48,7 +48,7 @@ pub struct InstrumentPane {
     keymap: Keymap,
     perf: PerformanceController,
     /// When Some, we're waiting for the user to select a target instrument to link with
-    linking_from: Option<crate::state::InstrumentId>,
+    linking_from: Option<crate::state::TrackId>,
     /// Text input for renaming layer groups
     edit_input: TextInput,
     /// Layer group being renamed (None = not editing)
@@ -596,7 +596,7 @@ impl Pane for InstrumentPane {
             .instruments
             .selected_instrument()
             .map(|inst| inst.id)
-            .unwrap_or(InstrumentId::new(0));
+            .unwrap_or(TrackId::new(0));
         self.perf.tick_releases(instrument_id)
     }
 
