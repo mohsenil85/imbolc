@@ -42,7 +42,7 @@ bindings = [
   { key = "/", action = "toggle_piano_mode", description = "Toggle piano keyboard" },
   { key = "Ctrl+r", action = "record_master", description = "Toggle master recording" },
   { key = "Escape", action = "escape", description = "Escape" },
-  { key = "Ctrl+g", action = "switch:instrument_list", description = "Instrument list" },
+  { key = "Ctrl+g", action = "switch:track_list", description = "Track list" },
   { key = "Ctrl+d", action = "delete_instrument", description = "Delete instrument" },
   { key = "Ctrl+c", action = "copy", description = "Copy" },
   { key = "Ctrl+x", action = "cut", description = "Cut" },
