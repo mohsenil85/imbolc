@@ -719,10 +719,10 @@ impl AudioThread {
                     .iter_mut()
                     .find(|i| i.id == instrument_id)
                 {
-                    inst.mixer.level = level;
-                    inst.mixer.pan = pan;
-                    inst.mixer.mute = mute;
-                    inst.mixer.solo = solo;
+                    inst.channel_strip.level = level;
+                    inst.channel_strip.pan = pan;
+                    inst.channel_strip.mute = mute;
+                    inst.channel_strip.solo = solo;
                 }
             }
             AudioCmd::SetBusMixerParams {

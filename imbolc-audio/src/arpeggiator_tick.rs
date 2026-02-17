@@ -140,11 +140,11 @@ pub fn tick_arpeggiator(
                 for &target_id in &targets {
                     let inst = instruments.instrument(target_id);
                     let skip = inst.is_none_or(|inst| {
-                        !inst.mixer.active
+                        !inst.channel_strip.active
                             || if any_solo {
-                                !inst.mixer.solo
+                                !inst.channel_strip.solo
                             } else {
-                                inst.mixer.mute
+                                inst.channel_strip.mute
                             }
                     });
                     if skip {

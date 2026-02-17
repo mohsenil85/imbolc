@@ -78,7 +78,7 @@ impl AutomationPane {
                     );
                     // Add send targets
                     let id = inst.id;
-                    for &bus_id in inst.mixer.sends.keys() {
+                    for &bus_id in inst.channel_strip.sends.keys() {
                         options.push(AutomationTarget::send_level(id, bus_id));
                     }
                 }

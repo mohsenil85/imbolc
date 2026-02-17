@@ -176,11 +176,11 @@ mod tests {
             id,
             source: inst.source,
             source_params: inst.source_params.clone(),
-            processing_chain: inst.processing_chain.clone(),
+            processing_chain: inst.channel_strip.processing_chain.clone(),
             lfo: inst.modulation.lfo.clone(),
             amp_envelope: inst.modulation.amp_envelope.clone(),
             polyphonic: inst.polyphonic,
-            active: inst.mixer.active,
+            active: inst.channel_strip.active,
         }
     }
 

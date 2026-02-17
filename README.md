@@ -123,7 +123,7 @@ The audio thread is the **timing authority** for transport state (`playing`, `pl
 
 ### Dispatch & side effects
 
-Dispatch functions are **pure state mutations** that return typed `AudioSideEffect` variants (~30 covering voice management, transport, samples, mixer, click track, tuner, drums, automation, EQ, server lifecycle, recording, VST). The top-level `dispatch_with_audio()` collects effects and applies them after dispatch returns — dispatchers never call audio methods directly.
+Dispatch functions are **pure state mutations** that return a `DispatchResult` containing typed `AudioEffect` variants (~30 covering voice management, transport, samples, mixer, click track, tuner, drums, automation, EQ, server lifecycle, recording, VST). The top-level `dispatch_with_audio()` collects effects and applies them after dispatch returns — dispatchers never call audio methods directly.
 
 Actions forwarded to the audio thread are applied as **incremental projections** (`imbolc_types::reduce::reduce_action()`) rather than full-state clones.
 

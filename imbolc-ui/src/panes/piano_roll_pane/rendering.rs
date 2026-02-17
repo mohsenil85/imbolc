@@ -177,7 +177,7 @@ impl PianoRollPane {
             let mode = if track.polyphonic { "POLY" } else { "MONO" };
             format!(
                 " Piano Roll: midi-{} [{}/{}] {} ",
-                track.module_id,
+                track.instrument_id,
                 self.current_track + 1,
                 piano_roll.track_order.len(),
                 mode,

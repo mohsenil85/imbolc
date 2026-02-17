@@ -97,7 +97,7 @@ pub fn tick_drum_sequencer(
 
         // Play each step with its precise offset
         for &(step, pattern_idx, offset_secs) in &steps_to_play {
-            if engine.is_running() && !instrument.mixer.mute {
+            if engine.is_running() && !instrument.channel_strip.mute {
                 let pattern = &seq.patterns[pattern_idx];
                 for (pad_idx, pad) in seq.pads.iter().enumerate() {
                     if let Some(step_data) = pattern.steps.get(pad_idx).and_then(|s| s.get(step)) {

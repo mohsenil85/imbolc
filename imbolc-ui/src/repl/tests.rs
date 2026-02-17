@@ -117,13 +117,13 @@ fn test_mixer_operations() {
     // Mixer selection starts at channel 0 (first instrument)
     exec("mixer toggle-mute", &mut d, &mut a).unwrap();
     assert!(
-        d.state().instruments.instruments[0].mixer.mute,
+        d.state().instruments.instruments[0].channel_strip.mute,
         "instrument should be muted"
     );
 
     exec("mixer toggle-mute", &mut d, &mut a).unwrap();
     assert!(
-        !d.state().instruments.instruments[0].mixer.mute,
+        !d.state().instruments.instruments[0].channel_strip.mute,
         "instrument should be unmuted"
     );
 }

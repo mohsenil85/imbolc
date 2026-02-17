@@ -219,16 +219,16 @@ pub(super) fn load_instruments(
         inst.modulation.lfo = lfo;
         inst.modulation.amp_envelope = amp_envelope;
         inst.polyphonic = r.polyphonic != 0;
-        inst.mixer.level = r.level;
-        inst.mixer.pan = r.pan;
-        inst.mixer.mute = r.mute != 0;
-        inst.mixer.solo = r.solo != 0;
-        inst.mixer.active = r.active != 0;
-        inst.mixer.output_target = decode_output_target(&r.output_target);
-        inst.mixer.channel_config = decode_channel_config(&r.channel_config);
+        inst.channel_strip.level = r.level;
+        inst.channel_strip.pan = r.pan;
+        inst.channel_strip.mute = r.mute != 0;
+        inst.channel_strip.solo = r.solo != 0;
+        inst.channel_strip.active = r.active != 0;
+        inst.channel_strip.output_target = decode_output_target(&r.output_target);
+        inst.channel_strip.channel_config = decode_channel_config(&r.channel_config);
         inst.convolution_ir_path = r.convolution_ir_path;
         inst.layer.group = r.layer_group;
-        inst.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
+        inst.channel_strip.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
         inst.note_input.arpeggiator = arpeggiator;
         inst.note_input.chord_shape = chord_shape;
         if let SourceExtra::Vst {
@@ -260,7 +260,7 @@ pub(super) fn load_instruments(
         let mut eq = eq;
 
         // Build processing_chain: use persisted ordering if available, else legacy fallback
-        inst.processing_chain.clear();
+        inst.channel_strip.processing_chain.clear();
         if table_exists(conn, "instrument_processing_chain")? {
             let mut ord_stmt = conn.prepare(
                 "SELECT stage_type, effect_id FROM instrument_processing_chain \
@@ -275,22 +275,30 @@ pub(super) fn load_instruments(
             if ordering.is_empty() {
                 // No chain rows — use legacy order (filter → eq → effects)
                 if let Some(f) = filter.take() {
-                    inst.processing_chain.push(ProcessingStage::Filter(f));
+                    inst.channel_strip
+                        .processing_chain
+                        .push(ProcessingStage::Filter(f));
                 }
                 if let Some(e) = eq.take() {
-                    inst.processing_chain.push(ProcessingStage::Eq(e));
+                    inst.channel_strip
+                        .processing_chain
+                        .push(ProcessingStage::Eq(e));
                 }
             } else {
                 for (stage_type, eff_id) in &ordering {
                     match stage_type.as_str() {
                         "filter" => {
                             if let Some(f) = filter.take() {
-                                inst.processing_chain.push(ProcessingStage::Filter(f));
+                                inst.channel_strip
+                                    .processing_chain
+                                    .push(ProcessingStage::Filter(f));
                             }
                         }
                         "eq" => {
                             if let Some(e) = eq.take() {
-                                inst.processing_chain.push(ProcessingStage::Eq(e));
+                                inst.channel_strip
+                                    .processing_chain
+                                    .push(ProcessingStage::Eq(e));
                             }
                         }
                         "effect" => {
@@ -299,7 +307,8 @@ pub(super) fn load_instruments(
                                     .iter()
                                     .position(|e| e.id == imbolc_types::EffectId::new(*eid))
                                 {
-                                    inst.processing_chain
+                                    inst.channel_strip
+                                        .processing_chain
                                         .push(ProcessingStage::Effect(effects.remove(idx)));
                                 }
                             }
@@ -311,19 +320,25 @@ pub(super) fn load_instruments(
         } else {
             // Legacy fallback: filter → eq → effects
             if let Some(f) = filter.take() {
-                inst.processing_chain.push(ProcessingStage::Filter(f));
+                inst.channel_strip
+                    .processing_chain
+                    .push(ProcessingStage::Filter(f));
             }
             if let Some(e) = eq.take() {
-                inst.processing_chain.push(ProcessingStage::Eq(e));
+                inst.channel_strip
+                    .processing_chain
+                    .push(ProcessingStage::Eq(e));
             }
         }
         // Append any effects not covered by ordering (defensive)
         for effect in effects {
-            inst.processing_chain.push(ProcessingStage::Effect(effect));
+            inst.channel_strip
+                .processing_chain
+                .push(ProcessingStage::Effect(effect));
         }
 
         // Sends
-        inst.mixer.sends = load_sends(conn, r.id)?;
+        inst.channel_strip.sends = load_sends(conn, r.id)?;
 
         // VST param values
         if let SourceExtra::Vst {

@@ -327,14 +327,14 @@ mod tests {
         assert!(!session.effective_bus_mute(bus));
 
         let mut bus_copy = bus.clone();
-        bus_copy.mute = true;
+        bus_copy.channel_strip.mute = true;
         assert!(session.effective_bus_mute(&bus_copy));
     }
 
     #[test]
     fn effective_bus_mute_with_solo() {
         let mut session = SessionState::new();
-        session.bus_mut(BusId::new(1)).unwrap().solo = true;
+        session.bus_mut(BusId::new(1)).unwrap().channel_strip.solo = true;
         // Bus 1 is soloed — should not be muted
         assert!(!session.effective_bus_mute(session.bus(BusId::new(1)).unwrap()));
         // Bus 2 is not soloed — should be muted
@@ -387,7 +387,7 @@ mod tests {
     fn any_bus_solo() {
         let mut session = SessionState::new();
         assert!(!session.any_bus_solo());
-        session.bus_mut(BusId::new(3)).unwrap().solo = true;
+        session.bus_mut(BusId::new(3)).unwrap().channel_strip.solo = true;
         assert!(session.any_bus_solo());
     }
 }

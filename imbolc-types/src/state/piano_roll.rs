@@ -25,13 +25,15 @@ pub struct ClipboardNote {
     pub probability: f32,
 }
 
+/// A single track in the piano roll, holding notes for one instrument.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Track {
-    pub module_id: InstrumentId,
+    pub instrument_id: InstrumentId,
     pub notes: Vec<Note>,
     pub polyphonic: bool,
 }
 
+/// Global piano roll state: per-instrument note tracks, transport, and grid settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PianoRollState {
     pub tracks: HashMap<InstrumentId, Track>,
@@ -74,7 +76,7 @@ impl PianoRollState {
     pub fn add_track(&mut self, instrument_id: InstrumentId) {
         if let Entry::Vacant(e) = self.tracks.entry(instrument_id) {
             e.insert(Track {
-                module_id: instrument_id,
+                instrument_id,
                 notes: Vec::new(),
                 polyphonic: true,
             });

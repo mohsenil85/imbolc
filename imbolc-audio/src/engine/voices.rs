@@ -126,7 +126,7 @@ impl AudioEngine {
         // 3. Source synth
         let source_node_id = self.next_node_id;
         self.next_node_id += 1;
-        let is_mono = instrument.mixer.channel_config.is_mono();
+        let is_mono = instrument.channel_strip.channel_config.is_mono();
         {
             let mut args: Vec<RawArg> = vec![
                 RawArg::Str(Self::source_synth_def(
@@ -952,7 +952,7 @@ impl AudioEngine {
         // 3. Source synth
         let source_node_id = self.next_node_id;
         self.next_node_id += 1;
-        let is_mono = instrument.mixer.channel_config.is_mono();
+        let is_mono = instrument.channel_strip.channel_config.is_mono();
         {
             let mut args: Vec<RawArg> = vec![
                 RawArg::Str(Self::source_synth_def(

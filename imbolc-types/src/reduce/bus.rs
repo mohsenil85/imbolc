@@ -19,14 +19,14 @@ pub(super) fn reduce_bus(
                 return true;
             }
             for inst in &mut instruments.instruments {
-                if inst.mixer.output_target == OutputTarget::Bus(bus_id) {
-                    inst.mixer.output_target = OutputTarget::Master;
+                if inst.channel_strip.output_target == OutputTarget::Bus(bus_id) {
+                    inst.channel_strip.output_target = OutputTarget::Master;
                 }
                 inst.disable_send_for_bus(bus_id);
             }
             for gm in &mut session.mixer.layer_group_mixers {
-                if gm.output_target == OutputTarget::Bus(bus_id) {
-                    gm.output_target = OutputTarget::Master;
+                if gm.channel_strip.output_target == OutputTarget::Bus(bus_id) {
+                    gm.channel_strip.output_target = OutputTarget::Master;
                 }
                 gm.disable_send_for_bus(bus_id);
             }
@@ -50,25 +50,25 @@ pub(super) fn reduce_bus(
         }
         BusAction::AddEffect(bus_id, effect_type) => {
             if let Some(bus) = session.bus_mut(*bus_id) {
-                bus.effect_chain.add_effect(*effect_type);
+                bus.channel_strip.add_effect(*effect_type);
             }
             true
         }
         BusAction::RemoveEffect(bus_id, effect_id) => {
             if let Some(bus) = session.bus_mut(*bus_id) {
-                bus.effect_chain.remove_effect(*effect_id);
+                bus.channel_strip.remove_effect(*effect_id);
             }
             true
         }
         BusAction::MoveEffect(bus_id, effect_id, direction) => {
             if let Some(bus) = session.bus_mut(*bus_id) {
-                bus.effect_chain.move_effect(*effect_id, *direction);
+                bus.channel_strip.move_effect(*effect_id, *direction);
             }
             true
         }
         BusAction::ToggleEffectBypass(bus_id, effect_id) => {
             if let Some(bus) = session.bus_mut(*bus_id) {
-                if let Some(effect) = bus.effect_chain.effect_by_id_mut(*effect_id) {
+                if let Some(effect) = bus.channel_strip.effect_by_id_mut(*effect_id) {
                     effect.enabled = !effect.enabled;
                 }
             }
@@ -76,7 +76,7 @@ pub(super) fn reduce_bus(
         }
         BusAction::AdjustEffectParam(bus_id, effect_id, param_idx, delta) => {
             if let Some(bus) = session.bus_mut(*bus_id) {
-                if let Some(effect) = bus.effect_chain.effect_by_id_mut(*effect_id) {
+                if let Some(effect) = bus.channel_strip.effect_by_id_mut(*effect_id) {
                     if let Some(param) = effect.params.get_mut(param_idx.get()) {
                         param.adjust_delta(*delta);
                     }
@@ -91,25 +91,25 @@ pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut Sessio
     match action {
         LayerGroupAction::AddEffect(group_id, effect_type) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                gm.effect_chain.add_effect(*effect_type);
+                gm.channel_strip.add_effect(*effect_type);
             }
             true
         }
         LayerGroupAction::RemoveEffect(group_id, effect_id) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                gm.effect_chain.remove_effect(*effect_id);
+                gm.channel_strip.remove_effect(*effect_id);
             }
             true
         }
         LayerGroupAction::MoveEffect(group_id, effect_id, direction) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                gm.effect_chain.move_effect(*effect_id, *direction);
+                gm.channel_strip.move_effect(*effect_id, *direction);
             }
             true
         }
         LayerGroupAction::ToggleEffectBypass(group_id, effect_id) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                if let Some(effect) = gm.effect_chain.effect_by_id_mut(*effect_id) {
+                if let Some(effect) = gm.channel_strip.effect_by_id_mut(*effect_id) {
                     effect.enabled = !effect.enabled;
                 }
             }
@@ -117,7 +117,7 @@ pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut Sessio
         }
         LayerGroupAction::AdjustEffectParam(group_id, effect_id, param_idx, delta) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                if let Some(effect) = gm.effect_chain.effect_by_id_mut(*effect_id) {
+                if let Some(effect) = gm.channel_strip.effect_by_id_mut(*effect_id) {
                     if let Some(param) = effect.params.get_mut(param_idx.get()) {
                         param.adjust_delta(*delta);
                     }
@@ -133,7 +133,7 @@ pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut Sessio
         }
         LayerGroupAction::SetEqParam(group_id, band_idx, param, value) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                if let Some(ref mut eq) = gm.eq {
+                if let Some(eq) = gm.eq_mut() {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
                         match param {
                             EqParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),

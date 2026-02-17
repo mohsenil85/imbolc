@@ -22,9 +22,6 @@ use voice_allocator::VoiceAllocator;
 
 use recording::{ExportRecordingState, RecordingState};
 
-#[allow(dead_code)]
-pub type ModuleId = u32;
-
 // SuperCollider group IDs for execution ordering
 pub const GROUP_SOURCES: i32 = 100;
 pub const GROUP_PROCESSING: i32 = 200;
@@ -447,7 +444,7 @@ mod tests {
             inst.set_filter(Some(FilterType::Lpf));
             inst.modulation.lfo.enabled = true;
             inst.add_effect(EffectType::Delay);
-            inst.mixer.sends.insert(
+            inst.channel_strip.sends.insert(
                 BusId::new(1),
                 imbolc_types::MixerSend {
                     bus_id: BusId::new(1),
@@ -1131,7 +1128,7 @@ mod tests {
             let mut state = AppState::new();
             let inst_id = state.add_instrument(SourceType::AudioIn);
             if let Some(inst) = state.instruments.instrument_mut(inst_id) {
-                inst.mixer.sends.insert(
+                inst.channel_strip.sends.insert(
                     BusId::new(1),
                     imbolc_types::MixerSend {
                         bus_id: BusId::new(1),
@@ -1369,7 +1366,7 @@ mod tests {
             let mut state = AppState::new();
             let inst_id = state.add_instrument(SourceType::Saw);
             if let Some(inst) = state.instruments.instrument_mut(inst_id) {
-                inst.mixer.mute = true;
+                inst.channel_strip.mute = true;
             }
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
@@ -1424,7 +1421,7 @@ mod tests {
             let mut state = AppState::new();
             let inst_id = state.add_instrument(SourceType::Saw);
             if let Some(inst) = state.instruments.instrument_mut(inst_id) {
-                inst.mixer.output_target = OutputTarget::Bus(BusId::new(1));
+                inst.channel_strip.output_target = OutputTarget::Bus(BusId::new(1));
             }
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
@@ -1466,7 +1463,7 @@ mod tests {
                     .instruments
                     .instrument(inst_id)
                     .unwrap()
-                    .mixer
+                    .channel_strip
                     .output_target,
                 OutputTarget::Master
             );
@@ -1502,7 +1499,7 @@ mod tests {
             if let Some(inst) = state.instruments.instrument_mut(inst_id) {
                 inst.set_filter(Some(FilterType::Lpf));
                 inst.add_effect(EffectType::Delay);
-                inst.mixer.sends.insert(
+                inst.channel_strip.sends.insert(
                     BusId::new(1),
                     imbolc_types::MixerSend {
                         bus_id: BusId::new(1),
@@ -1560,8 +1557,8 @@ mod tests {
             // Add reverb + delay to bus 1
             let bus = &mut state.session.mixer.buses[0];
             assert_eq!(bus.id, BusId::new(1));
-            let reverb_id = bus.effect_chain.add_effect(EffectType::Reverb);
-            let delay_id = bus.effect_chain.add_effect(EffectType::Delay);
+            let reverb_id = bus.channel_strip.add_effect(EffectType::Reverb);
+            let delay_id = bus.channel_strip.add_effect(EffectType::Delay);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("rebuild");
@@ -1598,7 +1595,7 @@ mod tests {
             let mut state = AppState::new();
             state.add_instrument(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
-            bus.effect_chain.add_effect(EffectType::Reverb);
+            bus.channel_strip.add_effect(EffectType::Reverb);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("rebuild");
@@ -1724,7 +1721,7 @@ mod tests {
                 .mixer
                 .add_layer_group_mixer(1, &[BusId::new(1)]);
             let gm = state.session.mixer.layer_group_mixer_mut(1).unwrap();
-            let effect_id = gm.effect_chain.add_effect(EffectType::Reverb);
+            let effect_id = gm.channel_strip.add_effect(EffectType::Reverb);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("rebuild");
@@ -1748,7 +1745,7 @@ mod tests {
             let mut state = AppState::new();
             state.add_instrument(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
-            let effect_id = bus.effect_chain.add_effect(EffectType::Reverb);
+            let effect_id = bus.channel_strip.add_effect(EffectType::Reverb);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("rebuild");
@@ -1776,7 +1773,7 @@ mod tests {
                 .mixer
                 .add_layer_group_mixer(1, &[BusId::new(1)]);
             let gm = state.session.mixer.layer_group_mixer_mut(1).unwrap();
-            let effect_id = gm.effect_chain.add_effect(EffectType::Delay);
+            let effect_id = gm.channel_strip.add_effect(EffectType::Delay);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("rebuild");
@@ -1797,7 +1794,7 @@ mod tests {
             let mut state = AppState::new();
             state.add_instrument(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
-            bus.effect_chain.add_effect(EffectType::Reverb);
+            bus.channel_strip.add_effect(EffectType::Reverb);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("first build");
@@ -1832,11 +1829,11 @@ mod tests {
             let mut state = AppState::new();
             state.add_instrument(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
-            let delay_id = bus.effect_chain.add_effect(EffectType::Delay);
-            if let Some(effect) = bus.effect_chain.effect_by_id_mut(delay_id) {
+            let delay_id = bus.channel_strip.add_effect(EffectType::Delay);
+            if let Some(effect) = bus.channel_strip.effect_by_id_mut(delay_id) {
                 effect.enabled = false;
             }
-            bus.effect_chain.add_effect(EffectType::Reverb);
+            bus.channel_strip.add_effect(EffectType::Reverb);
             engine
                 .rebuild_instrument_routing(&state.instruments, &state.session)
                 .expect("rebuild");
@@ -1861,7 +1858,7 @@ mod tests {
             if let Some(inst) = state.instruments.instrument_mut(inst_id) {
                 inst.set_filter(Some(FilterType::Lpf));
                 inst.add_effect(EffectType::Delay);
-                inst.mixer.sends.insert(
+                inst.channel_strip.sends.insert(
                     BusId::new(1),
                     imbolc_types::MixerSend {
                         bus_id: BusId::new(1),

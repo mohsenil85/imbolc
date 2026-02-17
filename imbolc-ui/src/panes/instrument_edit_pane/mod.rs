@@ -71,12 +71,12 @@ impl InstrumentEditPane {
         self.sample_name = instrument
             .sampler_config()
             .and_then(|c| c.sample_name.clone());
-        self.processing_chain = instrument.processing_chain.clone();
+        self.processing_chain = instrument.channel_strip.processing_chain.clone();
         self.lfo = instrument.modulation.lfo.clone();
         self.amp_envelope = instrument.modulation.amp_envelope.clone();
         self.polyphonic = instrument.polyphonic;
-        self.active = instrument.mixer.active;
-        self.channel_config = instrument.mixer.channel_config;
+        self.active = instrument.channel_strip.active;
+        self.channel_config = instrument.channel_strip.channel_config;
         self.selected_row = 0;
         self.scroll_offset = 0;
     }
@@ -92,12 +92,12 @@ impl InstrumentEditPane {
         self.sample_name = instrument
             .sampler_config()
             .and_then(|c| c.sample_name.clone());
-        self.processing_chain = instrument.processing_chain.clone();
+        self.processing_chain = instrument.channel_strip.processing_chain.clone();
         self.lfo = instrument.modulation.lfo.clone();
         self.amp_envelope = instrument.modulation.amp_envelope.clone();
         self.polyphonic = instrument.polyphonic;
-        self.active = instrument.mixer.active;
-        self.channel_config = instrument.mixer.channel_config;
+        self.active = instrument.channel_strip.active;
+        self.channel_config = instrument.channel_strip.channel_config;
         // Clamp selected_row to valid range (chain may have changed)
         let max = self.total_rows().saturating_sub(1);
         self.selected_row = self.selected_row.min(max);
@@ -146,11 +146,11 @@ impl InstrumentEditPane {
     pub fn apply_to(&self, instrument: &mut crate::state::Instrument) {
         instrument.source = self.source;
         instrument.source_params = self.source_params.clone();
-        instrument.processing_chain = self.processing_chain.clone();
+        instrument.channel_strip.processing_chain = self.processing_chain.clone();
         instrument.modulation.lfo = self.lfo.clone();
         instrument.modulation.amp_envelope = self.amp_envelope.clone();
         instrument.polyphonic = self.polyphonic;
-        instrument.mixer.active = self.active;
+        instrument.channel_strip.active = self.active;
     }
 
     /// Total number of selectable rows across all sections

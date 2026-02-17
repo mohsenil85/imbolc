@@ -363,7 +363,7 @@ impl MixerPane {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
                         if let Some(inst) = state.instruments.instrument(inst_id) {
                             if let Some(chain_idx) = inst.effect_chain_index(ei) {
-                                if chain_idx + 1 < inst.processing_chain.len() {
+                                if chain_idx + 1 < inst.channel_strip.processing_chain.len() {
                                     return Action::Instrument(InstrumentAction::MoveStage(
                                         inst_id, chain_idx, 1,
                                     ));
@@ -398,7 +398,9 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::SendToggle) => {
                 if self.detail_section == MixerSection::Sends {
                     if let Some((_, inst)) = self.detail_instrument(state) {
-                        if let Some(send) = inst.mixer.sends.values().nth(self.detail_cursor) {
+                        if let Some(send) =
+                            inst.channel_strip.sends.values().nth(self.detail_cursor)
+                        {
                             return Action::Mixer(MixerAction::ToggleSend(send.bus_id));
                         }
                     }
@@ -656,7 +658,8 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::SendToggle) => {
                 if self.group_detail_section == GroupDetailSection::Sends {
                     if let Some(gm) = state.session.mixer.layer_group_mixer(gid) {
-                        if let Some(send) = gm.sends.values().nth(self.detail_cursor) {
+                        if let Some(send) = gm.channel_strip.sends.values().nth(self.detail_cursor)
+                        {
                             return Action::Mixer(MixerAction::ToggleSend(send.bus_id));
                         }
                     }
@@ -679,7 +682,7 @@ impl MixerPane {
             }
             MixerSection::Sends => {
                 if let Some((_, inst)) = self.detail_instrument(state) {
-                    if let Some(send) = inst.mixer.sends.values().nth(self.detail_cursor) {
+                    if let Some(send) = inst.channel_strip.sends.values().nth(self.detail_cursor) {
                         return Action::Mixer(MixerAction::AdjustSend(send.bus_id, delta * 0.01));
                     }
                 }
@@ -735,7 +738,7 @@ impl MixerPane {
             }
             GroupDetailSection::Sends => {
                 if let Some(gm) = state.session.mixer.layer_group_mixer(gid) {
-                    if let Some(send) = gm.sends.values().nth(self.detail_cursor) {
+                    if let Some(send) = gm.channel_strip.sends.values().nth(self.detail_cursor) {
                         return Action::Mixer(MixerAction::AdjustSend(send.bus_id, delta * 0.01));
                     }
                 }

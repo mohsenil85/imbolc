@@ -389,8 +389,8 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
         AutomationTarget::Instrument(id, InstrumentParameter::Standard(param)) => {
             let inst = state.instruments.instrument(*id)?;
             match param {
-                ParameterTarget::Level => inst.mixer.level,
-                ParameterTarget::Pan => inst.mixer.pan,
+                ParameterTarget::Level => inst.channel_strip.level,
+                ParameterTarget::Pan => inst.channel_strip.pan,
                 ParameterTarget::FilterCutoff => inst.filter()?.cutoff.value,
                 ParameterTarget::FilterResonance => inst.filter()?.resonance.value,
                 ParameterTarget::Attack => inst.modulation.amp_envelope.attack,
@@ -410,7 +410,7 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
                     p.value.to_f32()
                 }
                 ParameterTarget::SendLevel(bus_id) => {
-                    inst.mixer.sends.get(bus_id).map(|s| s.level)?
+                    inst.channel_strip.sends.get(bus_id).map(|s| s.level)?
                 }
                 ParameterTarget::VstParam(idx) => inst
                     .vst_source_params()
@@ -424,7 +424,9 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
                 _ => return None,
             }
         }
-        AutomationTarget::Bus(id, BusParameter::Level) => state.session.mixer.bus(*id)?.level,
+        AutomationTarget::Bus(id, BusParameter::Level) => {
+            state.session.mixer.bus(*id)?.channel_strip.level
+        }
         AutomationTarget::Global(GlobalParameter::Bpm) => state.session.bpm as f32,
         AutomationTarget::Global(GlobalParameter::TimeSignature) => return None,
         AutomationTarget::Generative(_) => return None,

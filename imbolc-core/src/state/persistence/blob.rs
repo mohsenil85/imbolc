@@ -82,10 +82,10 @@ mod tests {
                     target: ParameterTarget::FilterCutoff,
                 }));
             }
-            inst.mixer.output_target = OutputTarget::Bus(BusId::new(2));
-            inst.mixer.level = 0.55;
-            inst.mixer.pan = 0.25;
-            inst.mixer.sends.insert(
+            inst.channel_strip.output_target = OutputTarget::Bus(BusId::new(2));
+            inst.channel_strip.level = 0.55;
+            inst.channel_strip.pan = 0.25;
+            inst.channel_strip.sends.insert(
                 BusId::new(1),
                 imbolc_types::MixerSend {
                     bus_id: BusId::new(1),
@@ -278,13 +278,13 @@ mod tests {
             .unwrap();
         assert!(matches!(loaded_saw.source, SourceType::Saw));
         assert_eq!(
-            loaded_saw.mixer.output_target,
+            loaded_saw.channel_strip.output_target,
             OutputTarget::Bus(BusId::new(2))
         );
-        assert!((loaded_saw.mixer.level - 0.55).abs() < 0.001);
-        assert!((loaded_saw.mixer.pan - 0.25).abs() < 0.001);
+        assert!((loaded_saw.channel_strip.level - 0.55).abs() < 0.001);
+        assert!((loaded_saw.channel_strip.pan - 0.25).abs() < 0.001);
         let send = loaded_saw
-            .mixer
+            .channel_strip
             .sends
             .get(&BusId::new(1))
             .expect("send for bus 1");

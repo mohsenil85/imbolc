@@ -1,6 +1,7 @@
 pub mod arpeggiator;
 pub mod arrangement;
 pub mod automation;
+pub mod channel_strip;
 pub mod clipboard;
 pub mod custom_synthdef;
 pub mod drum_sequencer;
@@ -26,6 +27,7 @@ pub mod vst;
 pub use arpeggiator::*;
 pub use arrangement::*;
 pub use automation::*;
+pub use channel_strip::*;
 pub use clipboard::{Clipboard, ClipboardContents};
 pub use custom_synthdef::*;
 pub use drum_sequencer::*;

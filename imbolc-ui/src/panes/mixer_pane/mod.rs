@@ -208,7 +208,7 @@ impl MixerPane {
                     count.saturating_sub(1)
                 }
             }
-            MixerSection::Sends => inst.mixer.sends.len().saturating_sub(1),
+            MixerSection::Sends => inst.channel_strip.sends.len().saturating_sub(1),
             MixerSection::Filter => {
                 if inst.filter().is_some() {
                     2
@@ -239,9 +239,7 @@ impl MixerPane {
             return 0;
         };
         match self.bus_detail_section {
-            BusDetailSection::Effects => {
-                crate::state::effects_max_cursor(&bus.effect_chain.effects)
-            }
+            BusDetailSection::Effects => bus.channel_strip.effects_max_cursor(),
             BusDetailSection::Output => 1, // pan, level
         }
     }
@@ -255,10 +253,8 @@ impl MixerPane {
             return 0;
         };
         match self.group_detail_section {
-            GroupDetailSection::Effects => {
-                crate::state::effects_max_cursor(&gm.effect_chain.effects)
-            }
-            GroupDetailSection::Sends => gm.sends.len().saturating_sub(1),
+            GroupDetailSection::Effects => gm.channel_strip.effects_max_cursor(),
+            GroupDetailSection::Sends => gm.channel_strip.sends.len().saturating_sub(1),
             GroupDetailSection::Output => 1, // pan, level
         }
     }
@@ -270,7 +266,7 @@ impl MixerPane {
     ) -> Option<(crate::state::EffectId, Option<imbolc_types::ParamIndex>)> {
         let bus_id = self.detail_bus_id()?;
         let bus = state.session.bus(bus_id)?;
-        crate::state::decode_effect_cursor_from_slice(&bus.effect_chain.effects, self.detail_cursor)
+        bus.channel_strip.decode_effect_cursor(self.detail_cursor)
     }
 
     /// Decode group effect cursor into (effect_id, param_index) where None = header
@@ -280,7 +276,7 @@ impl MixerPane {
     ) -> Option<(crate::state::EffectId, Option<imbolc_types::ParamIndex>)> {
         let gid = self.detail_group_id()?;
         let gm = state.session.mixer.layer_group_mixer(gid)?;
-        crate::state::decode_effect_cursor_from_slice(&gm.effect_chain.effects, self.detail_cursor)
+        gm.channel_strip.decode_effect_cursor(self.detail_cursor)
     }
 
     /// Get the current effect target based on detail mode (for add_effect pane bridging)
@@ -513,14 +509,14 @@ mod tests {
             .session
             .bus_mut(BusId::new(1))
             .unwrap()
-            .effect_chain
+            .channel_strip
             .add_effect(crate::state::EffectType::Reverb);
         let effect_id = state
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
 
         state.session.mixer.selection = MixerSelection::Bus(BusId::new(1));
@@ -586,15 +582,15 @@ mod tests {
             .mixer
             .layer_group_mixer_mut(1)
             .unwrap()
-            .effect_chain
+            .channel_strip
             .add_effect(crate::state::EffectType::Delay);
         let effect_id = state
             .session
             .mixer
             .layer_group_mixer(1)
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
 
         state.session.mixer.selection = MixerSelection::LayerGroup(1);

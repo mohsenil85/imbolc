@@ -224,8 +224,8 @@ fn save_instruments(conn: &Connection, instruments: &InstrumentState) -> SqlResu
 
     for (pos, inst) in instruments.instruments.iter().enumerate() {
         let source_type = encode_source_type(&inst.source);
-        let output_target = encode_output_target(&inst.mixer.output_target);
-        let channel_config = format!("{:?}", inst.mixer.channel_config);
+        let output_target = encode_output_target(&inst.channel_strip.output_target);
+        let channel_config = format!("{:?}", inst.channel_strip.channel_config);
 
         let (
             filter_type,
@@ -291,16 +291,16 @@ fn save_instruments(conn: &Connection, instruments: &InstrumentState) -> SqlResu
             inst.modulation.amp_envelope.sustain,
             inst.modulation.amp_envelope.release,
             inst.polyphonic as i32,
-            inst.mixer.level,
-            inst.mixer.pan,
-            inst.mixer.mute as i32,
-            inst.mixer.solo as i32,
-            inst.mixer.active as i32,
+            inst.channel_strip.level,
+            inst.channel_strip.pan,
+            inst.channel_strip.mute as i32,
+            inst.channel_strip.solo as i32,
+            inst.channel_strip.active as i32,
             output_target,
             channel_config,
             inst.convolution_ir_path.as_deref(),
             inst.layer.group,
-            inst.next_effect_id.get(),
+            inst.channel_strip.next_effect_id.get(),
             eq_enabled,
             inst.note_input.arpeggiator.enabled as i32,
             format!("{:?}", inst.note_input.arpeggiator.direction),
@@ -333,7 +333,7 @@ fn save_instruments(conn: &Connection, instruments: &InstrumentState) -> SqlResu
         save_effects(conn, inst.id.get(), &effects)?;
 
         // Sends
-        for send in inst.mixer.sends.values() {
+        for send in inst.channel_strip.sends.values() {
             conn.execute(
                 "INSERT INTO instrument_sends (instrument_id, bus_id, level, enabled, tap_point)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -377,7 +377,7 @@ fn save_instruments(conn: &Connection, instruments: &InstrumentState) -> SqlResu
         }
 
         // Processing chain order
-        save_processing_chain(conn, inst.id.get(), &inst.processing_chain)?;
+        save_processing_chain(conn, inst.id.get(), &inst.channel_strip.processing_chain)?;
 
         // VST param values
         for (param_idx, value) in inst.vst_source_params() {
@@ -748,13 +748,14 @@ fn save_mixer(conn: &Connection, session: &SessionState) -> SqlResult<()> {
             params![
                 bus.id.get() as i32,
                 bus.name,
-                bus.level,
-                bus.pan,
-                bus.mute as i32,
-                bus.solo as i32
+                bus.channel_strip.level,
+                bus.channel_strip.pan,
+                bus.channel_strip.mute as i32,
+                bus.channel_strip.solo as i32
             ],
         )?;
 
+        let bus_effects: Vec<_> = bus.channel_strip.effects().cloned().collect();
         save_effects_to(
             conn,
             "bus_effects",
@@ -762,7 +763,7 @@ fn save_mixer(conn: &Connection, session: &SessionState) -> SqlResult<()> {
             "bus_effect_vst_params",
             "bus_id",
             bus.id.get() as u32,
-            &bus.effect_chain.effects,
+            &bus_effects,
         )?;
     }
 
@@ -775,18 +776,18 @@ fn save_mixer(conn: &Connection, session: &SessionState) -> SqlResult<()> {
 
 fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResult<()> {
     for gm in &session.mixer.layer_group_mixers {
-        let output_target = encode_output_target(&gm.output_target);
-        let eq_enabled = if gm.eq.is_some() { 1i32 } else { 0i32 };
+        let output_target = encode_output_target(&gm.channel_strip.output_target);
+        let eq_enabled = if gm.eq().is_some() { 1i32 } else { 0i32 };
         conn.execute(
             "INSERT INTO layer_group_mixers (group_id, name, level, pan, mute, solo, output_target, eq_enabled)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                gm.group_id as i32, gm.name, gm.level, gm.pan,
-                gm.mute as i32, gm.solo as i32, output_target, eq_enabled,
+                gm.group_id as i32, gm.name, gm.channel_strip.level, gm.channel_strip.pan,
+                gm.channel_strip.mute as i32, gm.channel_strip.solo as i32, output_target, eq_enabled,
             ],
         )?;
 
-        for send in gm.sends.values() {
+        for send in gm.channel_strip.sends.values() {
             conn.execute(
                 "INSERT INTO layer_group_sends (group_id, bus_id, level, enabled, tap_point)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -801,7 +802,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
         }
 
         // Save EQ bands
-        if let Some(ref eq) = gm.eq {
+        if let Some(eq) = gm.eq() {
             for (i, band) in eq.bands.iter().enumerate() {
                 conn.execute(
                     "INSERT INTO layer_group_eq_bands (group_id, band_index, freq, gain, q, enabled)
@@ -814,6 +815,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
             }
         }
 
+        let gm_effects: Vec<_> = gm.channel_strip.effects().cloned().collect();
         save_effects_to(
             conn,
             "layer_group_effects",
@@ -821,7 +823,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
             "layer_group_effect_vst_params",
             "group_id",
             gm.group_id,
-            &gm.effect_chain.effects,
+            &gm_effects,
         )?;
     }
     Ok(())

@@ -489,7 +489,7 @@ impl AudioHandle {
                 AudioEffect::SetBusEffectParam(bus_id, effect_id, param_idx, value) => {
                     if let Some(bus) = state.session().mixer.buses.iter().find(|b| b.id == *bus_id)
                     {
-                        if let Some(effect) = bus.effect_chain.effect_by_id(*effect_id) {
+                        if let Some(effect) = bus.channel_strip.effect_by_id(*effect_id) {
                             if let Some(param) = effect.params.get(param_idx.get()) {
                                 if let Err(e) = self.set_bus_effect_param(
                                     *bus_id,
@@ -505,7 +505,7 @@ impl AudioHandle {
                 }
                 AudioEffect::SetLayerGroupEffectParam(group_id, effect_id, param_idx, value) => {
                     if let Some(gm) = state.session().mixer.layer_group_mixer(*group_id) {
-                        if let Some(effect) = gm.effect_chain.effect_by_id(*effect_id) {
+                        if let Some(effect) = gm.channel_strip.effect_by_id(*effect_id) {
                             if let Some(param) = effect.params.get(param_idx.get()) {
                                 if let Err(e) = self.set_layer_group_effect_param(
                                     *group_id,

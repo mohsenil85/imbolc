@@ -10,21 +10,21 @@ pub fn format_instrument_list(state: &AppState) -> String {
     let mut lines = Vec::new();
     for (i, inst) in state.instruments.instruments.iter().enumerate() {
         let marker = if Some(i) == selected { '*' } else { ' ' };
-        let mute_str = if inst.mixer.mute {
+        let mute_str = if inst.channel_strip.mute {
             " muted"
-        } else if inst.mixer.solo {
+        } else if inst.channel_strip.solo {
             " solo"
         } else {
             ""
         };
-        let pan_str = format_pan(inst.mixer.pan);
+        let pan_str = format_pan(inst.channel_strip.pan);
         lines.push(format!(
             "{}{:>2}. {:<20} [{:<12}] vol:{:.2}  pan:{}{}",
             marker,
             i + 1,
             inst.name,
             inst.source.short_name(),
-            inst.mixer.level,
+            inst.channel_strip.level,
             pan_str,
             mute_str,
         ));
@@ -47,11 +47,14 @@ pub fn format_instrument_detail(state: &AppState, id: InstrumentId) -> String {
         ),
         format!(
             "  Level: {:.2}  Pan: {}  Active: {}",
-            inst.mixer.level,
-            format_pan(inst.mixer.pan),
-            inst.mixer.active
+            inst.channel_strip.level,
+            format_pan(inst.channel_strip.pan),
+            inst.channel_strip.active
         ),
-        format!("  Mute: {}  Solo: {}", inst.mixer.mute, inst.mixer.solo),
+        format!(
+            "  Mute: {}  Solo: {}",
+            inst.channel_strip.mute, inst.channel_strip.solo
+        ),
     ];
 
     // Filter
@@ -151,14 +154,14 @@ pub fn format_mixer(state: &AppState) -> String {
 
     // Instruments
     for (i, inst) in state.instruments.instruments.iter().enumerate() {
-        let mute = if inst.mixer.mute { " M" } else { "" };
-        let solo = if inst.mixer.solo { " S" } else { "" };
+        let mute = if inst.channel_strip.mute { " M" } else { "" };
+        let solo = if inst.channel_strip.solo { " S" } else { "" };
         lines.push(format!(
             "  [{:>2}] {:<16} vol:{:.2}  pan:{}{}{}",
             i,
             inst.name,
-            inst.mixer.level,
-            format_pan(inst.mixer.pan),
+            inst.channel_strip.level,
+            format_pan(inst.channel_strip.pan),
             mute,
             solo,
         ));
@@ -166,14 +169,14 @@ pub fn format_mixer(state: &AppState) -> String {
 
     // Buses
     for bus in &state.session.mixer.buses {
-        let mute = if bus.mute { " M" } else { "" };
-        let solo = if bus.solo { " S" } else { "" };
+        let mute = if bus.channel_strip.mute { " M" } else { "" };
+        let solo = if bus.channel_strip.solo { " S" } else { "" };
         lines.push(format!(
             "  [B{}] {:<16} vol:{:.2}  pan:{}{}{}",
             bus.id,
             bus.name,
-            bus.level,
-            format_pan(bus.pan),
+            bus.channel_strip.level,
+            format_pan(bus.channel_strip.pan),
             mute,
             solo,
         ));
@@ -256,16 +259,16 @@ pub fn format_buses(state: &AppState) -> String {
 
     let mut lines = vec!["Buses:".to_string()];
     for bus in &state.session.mixer.buses {
-        let mute = if bus.mute { " M" } else { "" };
+        let mute = if bus.channel_strip.mute { " M" } else { "" };
         lines.push(format!(
             "  [{}] {} vol:{:.2} pan:{}{}",
             bus.id,
             bus.name,
-            bus.level,
-            format_pan(bus.pan),
+            bus.channel_strip.level,
+            format_pan(bus.channel_strip.pan),
             mute,
         ));
-        for fx in &bus.effect_chain.effects {
+        for fx in bus.channel_strip.effects() {
             let bypass = if fx.enabled { "" } else { " [bypassed]" };
             lines.push(format!(
                 "    - {} (id:{}){}",

@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use super::arpeggiator::{ArpeggiatorConfig, ChordShape};
+use super::channel_strip::ChannelStrip;
 use super::drum_sequencer::DrumSequencerState;
 use super::groove::GrooveConfig;
 use super::sampler::SamplerConfig;
@@ -60,43 +61,6 @@ impl LayerConfig {
     /// Apply layer octave offset to a pitch, clamping to MIDI range 0..=127.
     pub fn offset_pitch(&self, pitch: u8) -> u8 {
         ((pitch as i16) + (self.octave_offset as i16 * 12)).clamp(0, 127) as u8
-    }
-}
-
-/// Mixer settings for an instrument: level, pan, mute, solo, routing, and sends.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstrumentMixer {
-    pub level: f32,
-    pub pan: f32,
-    pub mute: bool,
-    pub solo: bool,
-    pub active: bool,
-    pub output_target: OutputTarget,
-    #[serde(default)]
-    pub channel_config: ChannelConfig,
-    #[serde(deserialize_with = "deserialize_sends")]
-    pub sends: BTreeMap<BusId, MixerSend>,
-}
-
-impl InstrumentMixer {
-    pub fn new(active: bool) -> Self {
-        Self {
-            level: 0.8,
-            pan: 0.0,
-            mute: false,
-            solo: false,
-            active,
-            output_target: OutputTarget::Master,
-            channel_config: ChannelConfig::default(),
-            sends: BTreeMap::new(),
-        }
-    }
-
-    /// Disable sends for a removed bus (keeps the entry for undo support)
-    pub fn disable_send_for_bus(&mut self, bus_id: BusId) {
-        if let Some(send) = self.sends.get_mut(&bus_id) {
-            send.enabled = false;
-        }
     }
 }
 
@@ -197,12 +161,7 @@ impl MixerSend {
 pub struct MixerBus {
     pub id: BusId,
     pub name: String,
-    pub level: f32,
-    pub pan: f32,
-    pub mute: bool,
-    pub solo: bool,
-    #[serde(default)]
-    pub effect_chain: EffectChain,
+    pub channel_strip: ChannelStrip,
 }
 
 impl MixerBus {
@@ -210,11 +169,7 @@ impl MixerBus {
         Self {
             id,
             name: format!("Bus {}", id),
-            level: 0.8,
-            pan: 0.0,
-            mute: false,
-            solo: false,
-            effect_chain: EffectChain::default(),
+            channel_strip: ChannelStrip::new_bus(),
         }
     }
 }
@@ -223,17 +178,7 @@ impl MixerBus {
 pub struct LayerGroupMixer {
     pub group_id: u32,
     pub name: String,
-    pub level: f32,
-    pub pan: f32,
-    pub mute: bool,
-    pub solo: bool,
-    pub output_target: OutputTarget,
-    #[serde(deserialize_with = "deserialize_sends")]
-    pub sends: BTreeMap<BusId, MixerSend>,
-    #[serde(default)]
-    pub effect_chain: EffectChain,
-    #[serde(default)]
-    pub eq: Option<EqConfig>,
+    pub channel_strip: ChannelStrip,
 }
 
 impl LayerGroupMixer {
@@ -241,37 +186,28 @@ impl LayerGroupMixer {
         Self {
             group_id,
             name: format!("Group {}", group_id),
-            level: 0.8,
-            pan: 0.0,
-            mute: false,
-            solo: false,
-            output_target: OutputTarget::Master,
-            sends: BTreeMap::new(),
-            effect_chain: EffectChain::default(),
-            eq: Some(EqConfig::default()),
+            channel_strip: ChannelStrip::new_layer_group(),
         }
     }
 
+    /// Delegate toggle_eq to channel_strip.
     pub fn toggle_eq(&mut self) {
-        if self.eq.is_some() {
-            self.eq = None;
-        } else {
-            self.eq = Some(EqConfig::default());
-        }
+        self.channel_strip.toggle_eq();
     }
 
+    /// Delegate eq() to channel_strip.
     pub fn eq(&self) -> Option<&EqConfig> {
-        self.eq.as_ref()
+        self.channel_strip.eq()
     }
 
+    /// Delegate eq_mut() to channel_strip.
     pub fn eq_mut(&mut self) -> Option<&mut EqConfig> {
-        self.eq.as_mut()
+        self.channel_strip.eq_mut()
     }
 
+    /// Delegate disable_send_for_bus to channel_strip.
     pub fn disable_send_for_bus(&mut self, bus_id: BusId) {
-        if let Some(send) = self.sends.get_mut(&bus_id) {
-            send.enabled = false;
-        }
+        self.channel_strip.disable_send_for_bus(bus_id);
     }
 }
 
@@ -455,13 +391,11 @@ pub struct Instrument {
     pub name: String,
     pub source: SourceType,
     pub source_params: Vec<Param>,
-    #[serde(default)]
-    pub processing_chain: Vec<ProcessingStage>,
     /// LFO + amp envelope
     pub modulation: ModulationConfig,
     pub polyphonic: bool,
-    /// Mixer: level, pan, mute, solo, routing, sends
-    pub mixer: InstrumentMixer,
+    /// Channel strip: level, pan, mute, solo, routing, processing chain, sends
+    pub channel_strip: ChannelStrip,
     /// Source-type-specific config (sampler, kit sequencer, or VST params)
     pub source_extra: SourceExtra,
     /// Arpeggiator and chord input configuration
@@ -470,8 +404,6 @@ pub struct Instrument {
     pub convolution_ir_path: Option<String>,
     /// Layer group membership and octave offset
     pub layer: LayerConfig,
-    /// Counter for allocating unique EffectIds
-    pub next_effect_id: EffectId,
     /// Per-track groove settings (swing, humanization, timing offset)
     pub groove: GrooveConfig,
 }
@@ -495,216 +427,103 @@ impl Instrument {
             name: format!("{}-{}", source.short_name(), id),
             source,
             source_params: source.default_params(),
-            processing_chain: Vec::new(),
             modulation: ModulationConfig {
                 lfo: LfoConfig::default(),
                 amp_envelope: source.default_envelope(),
             },
             polyphonic: true,
-            mixer: InstrumentMixer::new(!source.is_audio_input()),
+            channel_strip: ChannelStrip::new_instrument(!source.is_audio_input()),
             source_extra,
             note_input: NoteInputConfig::default(),
             convolution_ir_path: None,
             layer: LayerConfig::default(),
-            next_effect_id: EffectId::new(0),
             groove: GrooveConfig::default(),
         }
     }
 
-    // --- Processing chain read accessors ---
+    // --- Processing chain delegators (forward to channel_strip) ---
 
-    /// Get the first filter in the processing chain.
     pub fn filter(&self) -> Option<&FilterConfig> {
-        self.processing_chain.iter().find_map(|s| match s {
-            ProcessingStage::Filter(f) => Some(f),
-            _ => None,
-        })
+        self.channel_strip.filter()
     }
-
-    /// Get the first filter mutably.
     pub fn filter_mut(&mut self) -> Option<&mut FilterConfig> {
-        self.processing_chain.iter_mut().find_map(|s| match s {
-            ProcessingStage::Filter(f) => Some(f),
-            _ => None,
-        })
+        self.channel_strip.filter_mut()
     }
-
-    /// Get all filters in the processing chain.
     pub fn filters(&self) -> impl Iterator<Item = &FilterConfig> {
-        self.processing_chain.iter().filter_map(|s| match s {
-            ProcessingStage::Filter(f) => Some(f),
-            _ => None,
-        })
+        self.channel_strip.filters()
     }
-
-    /// Get all filters mutably.
     pub fn filters_mut(&mut self) -> impl Iterator<Item = &mut FilterConfig> {
-        self.processing_chain.iter_mut().filter_map(|s| match s {
-            ProcessingStage::Filter(f) => Some(f),
-            _ => None,
-        })
+        self.channel_strip.filters_mut()
     }
-
-    /// Get the EQ config (single instance).
     pub fn eq(&self) -> Option<&EqConfig> {
-        self.processing_chain.iter().find_map(|s| match s {
-            ProcessingStage::Eq(eq) => Some(eq),
-            _ => None,
-        })
+        self.channel_strip.eq()
     }
-
-    /// Get the EQ config mutably.
     pub fn eq_mut(&mut self) -> Option<&mut EqConfig> {
-        self.processing_chain.iter_mut().find_map(|s| match s {
-            ProcessingStage::Eq(eq) => Some(eq),
-            _ => None,
-        })
+        self.channel_strip.eq_mut()
     }
-
-    /// Check whether an EQ is present.
     pub fn has_eq(&self) -> bool {
-        self.processing_chain.iter().any(|s| s.is_eq())
+        self.channel_strip.has_eq()
     }
-
-    /// Get all effects in the processing chain.
     pub fn effects(&self) -> impl Iterator<Item = &EffectSlot> {
-        self.processing_chain.iter().filter_map(|s| match s {
-            ProcessingStage::Effect(e) => Some(e),
-            _ => None,
-        })
+        self.channel_strip.effects()
     }
-
-    /// Get all effects mutably.
     pub fn effects_mut(&mut self) -> impl Iterator<Item = &mut EffectSlot> {
-        self.processing_chain.iter_mut().filter_map(|s| match s {
-            ProcessingStage::Effect(e) => Some(e),
-            _ => None,
-        })
+        self.channel_strip.effects_mut()
     }
-
-    /// Collect effects into a Vec (convenience for code that needs a slice).
     pub fn effects_vec(&self) -> Vec<&EffectSlot> {
-        self.effects().collect()
+        self.channel_strip.effects_vec()
     }
-
-    /// Find an effect by its stable EffectId.
     pub fn effect_by_id(&self, id: EffectId) -> Option<&EffectSlot> {
-        self.effects().find(|e| e.id == id)
+        self.channel_strip.effect_by_id(id)
     }
-
-    /// Find a mutable effect by its stable EffectId.
     pub fn effect_by_id_mut(&mut self, id: EffectId) -> Option<&mut EffectSlot> {
-        self.effects_mut().find(|e| e.id == id)
+        self.channel_strip.effect_by_id_mut(id)
     }
-
-    /// Get the position of an effect among effects only (not chain index).
     pub fn effect_position(&self, id: EffectId) -> Option<usize> {
-        self.effects().position(|e| e.id == id)
+        self.channel_strip.effect_position(id)
     }
-
-    // --- Index queries into the full chain ---
-
-    /// Chain index of the first filter.
     pub fn filter_chain_index(&self) -> Option<usize> {
-        self.processing_chain.iter().position(|s| s.is_filter())
+        self.channel_strip.filter_chain_index()
     }
-
-    /// Chain index of the EQ.
     pub fn eq_chain_index(&self) -> Option<usize> {
-        self.processing_chain.iter().position(|s| s.is_eq())
+        self.channel_strip.eq_chain_index()
     }
-
-    /// Chain index of an effect by its EffectId.
     pub fn effect_chain_index(&self, id: EffectId) -> Option<usize> {
-        self.processing_chain
-            .iter()
-            .position(|s| matches!(s, ProcessingStage::Effect(e) if e.id == id))
+        self.channel_strip.effect_chain_index(id)
     }
-
-    // --- Mutation helpers ---
-
-    /// Toggle filter: remove first filter if present, or insert Lpf at index 0.
     pub fn toggle_filter(&mut self) {
-        if let Some(idx) = self.filter_chain_index() {
-            self.processing_chain.remove(idx);
-        } else {
-            self.processing_chain.insert(
-                0,
-                ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)),
-            );
-        }
+        self.channel_strip.toggle_filter();
     }
-
-    /// Set filter type. None removes; Some replaces or inserts at index 0.
     pub fn set_filter(&mut self, filter_type: Option<FilterType>) {
-        match filter_type {
-            None => {
-                if let Some(idx) = self.filter_chain_index() {
-                    self.processing_chain.remove(idx);
-                }
-            }
-            Some(ft) => {
-                if let Some(idx) = self.filter_chain_index() {
-                    self.processing_chain[idx] = ProcessingStage::Filter(FilterConfig::new(ft));
-                } else {
-                    self.processing_chain
-                        .insert(0, ProcessingStage::Filter(FilterConfig::new(ft)));
-                }
-            }
-        }
+        self.channel_strip.set_filter(filter_type);
     }
-
-    /// Toggle EQ: remove if present, or insert after last filter (single instance enforced).
     pub fn toggle_eq(&mut self) {
-        if let Some(idx) = self.eq_chain_index() {
-            self.processing_chain.remove(idx);
-        } else {
-            // Insert after the last filter, or at index 0 if no filters
-            let insert_at = self
-                .processing_chain
-                .iter()
-                .rposition(|s| s.is_filter())
-                .map(|i| i + 1)
-                .unwrap_or(0);
-            self.processing_chain
-                .insert(insert_at, ProcessingStage::Eq(EqConfig::default()));
-        }
+        self.channel_strip.toggle_eq();
     }
-
-    /// Add an effect to the end of the chain. Returns its stable EffectId.
     pub fn add_effect(&mut self, effect_type: EffectType) -> EffectId {
-        let id = self.next_effect_id;
-        self.next_effect_id = EffectId::new(self.next_effect_id.get() + 1);
-        self.processing_chain
-            .push(ProcessingStage::Effect(EffectSlot::new(id, effect_type)));
-        id
+        self.channel_strip.add_effect(effect_type)
     }
 
     /// Remove an effect by its EffectId. Returns true if removed.
+    /// Also clears convolution_ir_path if removing a ConvolutionReverb.
     pub fn remove_effect(&mut self, id: EffectId) -> bool {
-        if let Some(idx) = self.effect_chain_index(id) {
-            if matches!(&self.processing_chain[idx], ProcessingStage::Effect(e) if e.effect_type == EffectType::ConvolutionReverb)
-            {
+        // Check if it's a convolution reverb before removing
+        let is_conv = self
+            .channel_strip
+            .effect_by_id(id)
+            .is_some_and(|e| e.effect_type == EffectType::ConvolutionReverb);
+        if self.channel_strip.remove_effect(id) {
+            if is_conv {
                 self.convolution_ir_path = None;
             }
-            self.processing_chain.remove(idx);
             true
         } else {
             false
         }
     }
 
-    /// Move any stage within the processing chain by chain index.
     pub fn move_stage(&mut self, idx: usize, direction: i8) -> bool {
-        if idx >= self.processing_chain.len() {
-            return false;
-        }
-        let new_idx = (idx as i64 + direction as i64).max(0) as usize;
-        if new_idx >= self.processing_chain.len() || new_idx == idx {
-            return false;
-        }
-        self.processing_chain.swap(idx, new_idx);
-        true
+        self.channel_strip.move_stage(idx, direction)
     }
 
     /// Apply layer octave offset to a pitch, clamping to MIDI range 0..=127.
@@ -714,23 +533,23 @@ impl Instrument {
 
     /// Recalculate next_effect_id from existing effects in the chain (used after loading).
     pub fn recalculate_next_effect_id(&mut self) {
-        self.next_effect_id = self
-            .effects()
-            .map(|e| e.id.get())
-            .max()
-            .map_or(EffectId::new(0), |m| EffectId::new(m + 1));
+        self.channel_strip.recalculate_next_effect_id();
     }
 
     /// Disable sends for a removed bus (keeps the entry for undo support)
     pub fn disable_send_for_bus(&mut self, bus_id: BusId) {
-        self.mixer.disable_send_for_bus(bus_id);
+        self.channel_strip.disable_send_for_bus(bus_id);
     }
 
     // --- Structure navigation convenience methods ---
 
     /// Total number of selectable rows for instrument editing.
     pub fn total_editable_rows(&self) -> usize {
-        instrument_row_count(self.source, &self.source_params, &self.processing_chain)
+        instrument_row_count(
+            self.source,
+            &self.source_params,
+            &self.channel_strip.processing_chain,
+        )
     }
 
     /// Which section a given row belongs to.
@@ -739,7 +558,7 @@ impl Instrument {
             row,
             self.source,
             &self.source_params,
-            &self.processing_chain,
+            &self.channel_strip.processing_chain,
         )
     }
 
@@ -749,15 +568,13 @@ impl Instrument {
             row,
             self.source,
             &self.source_params,
-            &self.processing_chain,
+            &self.channel_strip.processing_chain,
         )
     }
 
-    /// Decode a flat cursor position over just the effects in the chain into (EffectId, Option<param_index>).
-    /// Returns None if cursor is out of range. None param_index means the effect header row.
+    /// Decode a flat cursor position over just the effects in the chain.
     pub fn decode_effect_cursor(&self, cursor: usize) -> Option<(EffectId, Option<ParamIndex>)> {
-        let effects: Vec<_> = self.effects().cloned().collect();
-        decode_effect_cursor_from_slice(&effects, cursor)
+        self.channel_strip.decode_effect_cursor(cursor)
     }
 
     // --- Source-type-gated accessors ---
@@ -828,7 +645,7 @@ impl Instrument {
 /// Serde deserializer that accepts either a Vec<MixerSend> (legacy) or BTreeMap<BusId, MixerSend> (new).
 /// Uses a manual Visitor instead of `#[serde(untagged)]` because untagged enums require
 /// `deserialize_any`, which bincode does not support.
-fn deserialize_sends<'de, D>(deserializer: D) -> Result<BTreeMap<BusId, MixerSend>, D::Error>
+pub fn deserialize_sends<'de, D>(deserializer: D) -> Result<BTreeMap<BusId, MixerSend>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -1101,7 +918,7 @@ mod tests {
     #[test]
     fn layer_group_mixer_new_has_eq() {
         let gm = LayerGroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
-        assert!(gm.eq.is_some());
+        assert!(gm.eq().is_some());
         let eq = gm.eq().unwrap();
         assert!(eq.enabled);
         assert_eq!(eq.bands.len(), EQ_BAND_COUNT);
@@ -1178,7 +995,8 @@ mod tests {
         assert!(inst.filter().is_none());
         assert_eq!(inst.filters().count(), 0);
 
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Filter(FilterConfig::new(FilterType::Hpf)));
         assert_eq!(inst.filter().unwrap().filter_type, FilterType::Hpf);
         assert_eq!(inst.filters().count(), 1);
@@ -1193,7 +1011,8 @@ mod tests {
         assert!(inst.eq().is_none());
         assert!(!inst.has_eq());
 
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Eq(EqConfig::default()));
         assert!(inst.eq().is_some());
         assert!(inst.has_eq());
@@ -1219,10 +1038,12 @@ mod tests {
     #[test]
     fn effect_by_id_through_mixed_chain() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)));
         let id = inst.add_effect(EffectType::Delay);
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Eq(EqConfig::default()));
         assert!(inst.effect_by_id(id).is_some());
         assert_eq!(
@@ -1259,7 +1080,8 @@ mod tests {
     #[test]
     fn toggle_eq_single_instance_and_position() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)));
         inst.add_effect(EffectType::Delay);
         inst.toggle_eq();
@@ -1272,13 +1094,14 @@ mod tests {
     #[test]
     fn add_remove_effect_chain_integrity() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)));
         let id1 = inst.add_effect(EffectType::Delay);
         let id2 = inst.add_effect(EffectType::Reverb);
-        assert_eq!(inst.processing_chain.len(), 3);
+        assert_eq!(inst.channel_strip.processing_chain.len(), 3);
         assert!(inst.remove_effect(id1));
-        assert_eq!(inst.processing_chain.len(), 2);
+        assert_eq!(inst.channel_strip.processing_chain.len(), 2);
         assert!(inst.effect_by_id(id2).is_some());
         assert!(inst.filter().is_some());
     }
@@ -1289,14 +1112,14 @@ mod tests {
     fn move_stage_reorder() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
         let id = inst.add_effect(EffectType::Delay);
-        inst.processing_chain.insert(
+        inst.channel_strip.processing_chain.insert(
             0,
             ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)),
         );
-        assert!(inst.processing_chain[0].is_filter());
+        assert!(inst.channel_strip.processing_chain[0].is_filter());
         assert!(inst.move_stage(0, 1));
-        assert!(inst.processing_chain[0].is_effect());
-        assert!(inst.processing_chain[1].is_filter());
+        assert!(inst.channel_strip.processing_chain[0].is_effect());
+        assert!(inst.channel_strip.processing_chain[1].is_filter());
         assert!(inst.effect_by_id(id).is_some());
     }
 
@@ -1351,9 +1174,11 @@ mod tests {
     fn nav_mixed_order_effect_filter_eq() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
         inst.add_effect(EffectType::Delay);
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)));
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Eq(EqConfig::default()));
 
         let source_rows = inst.source_params.len().max(1);
@@ -1374,11 +1199,13 @@ mod tests {
     #[test]
     fn nav_different_stage_sizes() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Filter(FilterConfig::new(
                 FilterType::Vowel,
             )));
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .push(ProcessingStage::Effect(EffectSlot::new(
                 EffectId::new(0),
                 EffectType::Vst(VstPluginId::new(0)),
@@ -1439,11 +1266,12 @@ mod tests {
     fn chain_index_queries() {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
         let id = inst.add_effect(EffectType::Delay);
-        inst.processing_chain.insert(
+        inst.channel_strip.processing_chain.insert(
             0,
             ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)),
         );
-        inst.processing_chain
+        inst.channel_strip
+            .processing_chain
             .insert(1, ProcessingStage::Eq(EqConfig::default()));
         assert_eq!(inst.filter_chain_index(), Some(0));
         assert_eq!(inst.eq_chain_index(), Some(1));
@@ -1455,9 +1283,9 @@ mod tests {
         let mut inst = Instrument::new(InstrumentId::new(1), SourceType::Saw);
         inst.add_effect(EffectType::Delay);
         inst.add_effect(EffectType::Reverb);
-        inst.next_effect_id = EffectId::new(0);
+        inst.channel_strip.next_effect_id = EffectId::new(0);
         inst.recalculate_next_effect_id();
-        assert_eq!(inst.next_effect_id, EffectId::new(2));
+        assert_eq!(inst.channel_strip.next_effect_id, EffectId::new(2));
     }
 
     // --- Source-type-gated accessor tests ---

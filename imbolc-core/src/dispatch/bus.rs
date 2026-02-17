@@ -69,7 +69,7 @@ pub fn dispatch_bus(action: &BusAction, state: &mut AppState) -> DispatchResult 
             let targeted_value = state
                 .session
                 .bus(*bus_id)
-                .and_then(|bus| bus.effect_chain.effect_by_id(*effect_id))
+                .and_then(|bus| bus.channel_strip.effect_by_id(*effect_id))
                 .and_then(|effect| effect.params.get(param_idx.get()))
                 .map(|param| param.value.to_f32());
             if let Some(value) = targeted_value {
@@ -132,7 +132,7 @@ pub fn dispatch_layer_group(
                 .session
                 .mixer
                 .layer_group_mixer(*group_id)
-                .and_then(|gm| gm.effect_chain.effect_by_id(*effect_id))
+                .and_then(|gm| gm.channel_strip.effect_by_id(*effect_id))
                 .and_then(|effect| effect.params.get(param_idx.get()))
                 .map(|param| param.value.to_f32());
             if let Some(value) = targeted_value {
@@ -201,19 +201,23 @@ mod tests {
 
         assert_eq!(state.session.mixer.buses.len(), initial_bus_count + 1);
         // Sends are lazily created now, so instrument sends remain empty
-        assert!(state.instruments.instruments[0].mixer.sends.is_empty());
+        assert!(state.instruments.instruments[0]
+            .channel_strip
+            .sends
+            .is_empty());
     }
 
     #[test]
     fn remove_bus_resets_instrument_output() {
         let mut state = setup();
         state.add_instrument(SourceType::Saw);
-        state.instruments.instruments[0].mixer.output_target = OutputTarget::Bus(BusId::new(3));
+        state.instruments.instruments[0].channel_strip.output_target =
+            OutputTarget::Bus(BusId::new(3));
 
         dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state);
 
         assert_eq!(
-            state.instruments.instruments[0].mixer.output_target,
+            state.instruments.instruments[0].channel_strip.output_target,
             OutputTarget::Master
         );
     }
@@ -224,7 +228,7 @@ mod tests {
         let mut state = setup();
         state.add_instrument(SourceType::Saw);
         // Insert and enable a send to bus 3
-        state.instruments.instruments[0].mixer.sends.insert(
+        state.instruments.instruments[0].channel_strip.sends.insert(
             BusId::new(3),
             MixerSend {
                 bus_id: BusId::new(3),
@@ -238,7 +242,7 @@ mod tests {
 
         // Send should be disabled but still exist
         let send = state.instruments.instruments[0]
-            .mixer
+            .channel_strip
             .sends
             .get(&BusId::new(3));
         assert!(send.is_some());
@@ -284,8 +288,11 @@ mod tests {
             &mut state,
         );
         let bus = state.session.bus(BusId::new(1)).unwrap();
-        assert_eq!(bus.effect_chain.effects.len(), 1);
-        assert_eq!(bus.effect_chain.effects[0].effect_type, EffectType::Reverb);
+        assert_eq!(bus.channel_strip.effects_vec().len(), 1);
+        assert_eq!(
+            bus.channel_strip.effects_vec()[0].effect_type,
+            EffectType::Reverb
+        );
         assert!(result
             .audio_effects
             .contains(&AudioEffect::RebuildBusProcessing));
@@ -303,8 +310,8 @@ mod tests {
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
 
         let result = dispatch_bus(
@@ -315,8 +322,8 @@ mod tests {
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects
+            .channel_strip
+            .effects_vec()
             .is_empty());
         assert!(result
             .audio_effects
@@ -339,13 +346,13 @@ mod tests {
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
 
         dispatch_bus(&BusAction::MoveEffect(BusId::new(1), id0, 1), &mut state);
         let bus = state.session.bus(BusId::new(1)).unwrap();
-        assert_eq!(bus.effect_chain.effects[1].id, id0);
+        assert_eq!(bus.channel_strip.effects_vec()[1].id, id0);
     }
 
     #[test]
@@ -360,16 +367,16 @@ mod tests {
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
         assert!(
             state
                 .session
                 .bus(BusId::new(1))
                 .unwrap()
-                .effect_chain
-                .effects[0]
+                .channel_strip
+                .effects_vec()[0]
                 .enabled
         );
 
@@ -382,8 +389,8 @@ mod tests {
                 .session
                 .bus(BusId::new(1))
                 .unwrap()
-                .effect_chain
-                .effects[0]
+                .channel_strip
+                .effects_vec()[0]
                 .enabled
         );
     }
@@ -400,15 +407,15 @@ mod tests {
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
         let initial_val = match &state
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .params[0]
             .value
         {
@@ -424,8 +431,8 @@ mod tests {
             .session
             .bus(BusId::new(1))
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .params[0]
             .value
         {
@@ -464,8 +471,11 @@ mod tests {
             &mut audio,
         );
         let gm = state.session.mixer.layer_group_mixer(1).unwrap();
-        assert_eq!(gm.effect_chain.effects.len(), 1);
-        assert_eq!(gm.effect_chain.effects[0].effect_type, EffectType::TapeComp);
+        assert_eq!(gm.channel_strip.effects_vec().len(), 1);
+        assert_eq!(
+            gm.channel_strip.effects_vec()[0].effect_type,
+            EffectType::TapeComp
+        );
         assert!(result
             .audio_effects
             .contains(&AudioEffect::RebuildBusProcessing));
@@ -481,15 +491,15 @@ mod tests {
             .mixer
             .layer_group_mixer_mut(1)
             .unwrap()
-            .effect_chain
+            .channel_strip
             .add_effect(EffectType::Limiter);
         let effect_id = state
             .session
             .mixer
             .layer_group_mixer(1)
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
 
         dispatch_layer_group(
@@ -502,8 +512,8 @@ mod tests {
             .mixer
             .layer_group_mixer(1)
             .unwrap()
-            .effect_chain
-            .effects
+            .channel_strip
+            .effects_vec()
             .is_empty());
     }
 
@@ -517,15 +527,15 @@ mod tests {
             .mixer
             .layer_group_mixer_mut(1)
             .unwrap()
-            .effect_chain
+            .channel_strip
             .add_effect(EffectType::Reverb);
         let effect_id = state
             .session
             .mixer
             .layer_group_mixer(1)
             .unwrap()
-            .effect_chain
-            .effects[0]
+            .channel_strip
+            .effects_vec()[0]
             .id;
 
         dispatch_layer_group(
@@ -539,8 +549,8 @@ mod tests {
                 .mixer
                 .layer_group_mixer(1)
                 .unwrap()
-                .effect_chain
-                .effects[0]
+                .channel_strip
+                .effects_vec()[0]
                 .enabled
         );
     }

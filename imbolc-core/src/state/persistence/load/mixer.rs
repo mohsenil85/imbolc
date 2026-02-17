@@ -3,6 +3,7 @@ use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 use super::decoders::*;
 use super::{load_effects_from, table_exists};
 use crate::state::session::SessionState;
+use imbolc_types::state::channel_strip::ChannelStrip;
 use imbolc_types::BusId;
 
 pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlResult<()> {
@@ -18,18 +19,20 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
         Ok(MixerBus {
             id: BusId::new(row.get::<_, i32>(0)? as u8),
             name: row.get(1)?,
-            level: row.get(2)?,
-            pan: row.get(3)?,
-            mute: row.get::<_, i32>(4)? != 0,
-            solo: row.get::<_, i32>(5)? != 0,
-            effect_chain: imbolc_types::EffectChain::default(),
+            channel_strip: ChannelStrip {
+                level: row.get(2)?,
+                pan: row.get(3)?,
+                mute: row.get::<_, i32>(4)? != 0,
+                solo: row.get::<_, i32>(5)? != 0,
+                ..ChannelStrip::new_bus()
+            },
         })
     })?;
 
     for bus in buses {
         let mut bus = bus?;
         if has_bus_effects {
-            bus.effect_chain.effects = load_effects_from(
+            let effects = load_effects_from(
                 conn,
                 "bus_effects",
                 "bus_effect_params",
@@ -37,7 +40,12 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
                 "bus_id",
                 bus.id.get() as u32,
             )?;
-            bus.effect_chain.recalculate_next_effect_id();
+            for effect in effects {
+                bus.channel_strip
+                    .processing_chain
+                    .push(imbolc_types::ProcessingStage::Effect(effect));
+            }
+            bus.channel_strip.recalculate_next_effect_id();
         }
         session.mixer.buses.push(bus);
     }
@@ -120,18 +128,22 @@ pub(super) fn load_layer_group_mixers(
         let mut gm = LayerGroupMixer {
             group_id,
             name,
-            level,
-            pan,
-            mute: mute != 0,
-            solo: solo != 0,
-            output_target,
-            sends,
-            effect_chain: imbolc_types::EffectChain::default(),
-            eq: None,
+            channel_strip: ChannelStrip {
+                level,
+                pan,
+                mute: mute != 0,
+                solo: solo != 0,
+                output_target,
+                sends,
+                processing_chain: Vec::new(),
+                ..ChannelStrip::new_layer_group()
+            },
         };
+        // Clear the default EQ from the processing chain — we'll load it explicitly below
+        gm.channel_strip.processing_chain.clear();
 
         if has_group_effects {
-            gm.effect_chain.effects = load_effects_from(
+            let effects = load_effects_from(
                 conn,
                 "layer_group_effects",
                 "layer_group_effect_params",
@@ -139,7 +151,12 @@ pub(super) fn load_layer_group_mixers(
                 "group_id",
                 group_id,
             )?;
-            gm.effect_chain.recalculate_next_effect_id();
+            for effect in effects {
+                gm.channel_strip
+                    .processing_chain
+                    .push(imbolc_types::ProcessingStage::Effect(effect));
+            }
+            gm.channel_strip.recalculate_next_effect_id();
         }
 
         // Load EQ if the table exists
@@ -174,7 +191,10 @@ pub(super) fn load_layer_group_mixers(
                         eq.bands[band_index].enabled = enabled;
                     }
                 }
-                gm.eq = Some(eq);
+                // Insert EQ at beginning of processing chain (before effects)
+                gm.channel_strip
+                    .processing_chain
+                    .insert(0, imbolc_types::ProcessingStage::Eq(eq));
             }
         }
 

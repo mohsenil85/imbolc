@@ -148,9 +148,9 @@ impl AppState {
     /// Compute effective mute for an instrument, considering solo state and master mute.
     pub fn effective_instrument_mute(&self, inst: &Instrument) -> bool {
         if self.instruments.any_instrument_solo() {
-            !inst.mixer.solo
+            !inst.channel_strip.solo
         } else {
-            inst.mixer.mute || self.session.mixer.master_mute
+            inst.channel_strip.mute || self.session.mixer.master_mute
         }
     }
 }
@@ -213,12 +213,12 @@ mod tests {
         assert!(!state.effective_instrument_mute(inst));
 
         // Mute the instrument
-        state.instruments.instruments[0].mixer.mute = true;
+        state.instruments.instruments[0].channel_strip.mute = true;
         let inst = &state.instruments.instruments[0];
         assert!(state.effective_instrument_mute(inst));
 
         // Unmute instrument but mute master
-        state.instruments.instruments[0].mixer.mute = false;
+        state.instruments.instruments[0].channel_strip.mute = false;
         state.session.mixer.master_mute = true;
         let inst = &state.instruments.instruments[0];
         assert!(state.effective_instrument_mute(inst));
@@ -229,7 +229,7 @@ mod tests {
         let mut state = AppState::new();
         state.add_instrument(SourceType::Saw);
         state.add_instrument(SourceType::Sin);
-        state.instruments.instruments[0].mixer.solo = true;
+        state.instruments.instruments[0].channel_strip.solo = true;
 
         let inst0 = &state.instruments.instruments[0];
         assert!(!state.effective_instrument_mute(inst0)); // soloed — not muted

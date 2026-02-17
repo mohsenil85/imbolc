@@ -70,8 +70,8 @@ pub(super) fn dispatch_server(
 
                 // Auto-deactivate AudioIn instrument on stop
                 if let Some(inst) = state.instruments.selected_instrument_mut() {
-                    if inst.source.is_audio_input() && inst.mixer.active {
-                        inst.mixer.active = false;
+                    if inst.source.is_audio_input() && inst.channel_strip.active {
+                        inst.channel_strip.active = false;
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
                         result.audio_effects.push(AudioEffect::RebuildRouting);
                     }
@@ -81,8 +81,8 @@ pub(super) fn dispatch_server(
             } else if audio.is_running() {
                 // Auto-activate AudioIn instrument on start
                 if let Some(inst) = state.instruments.selected_instrument_mut() {
-                    if inst.source.is_audio_input() && !inst.mixer.active {
-                        inst.mixer.active = true;
+                    if inst.source.is_audio_input() && !inst.channel_strip.active {
+                        inst.channel_strip.active = true;
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
                         result.audio_effects.push(AudioEffect::RebuildRouting);
                     }
@@ -104,8 +104,8 @@ pub(super) fn dispatch_server(
 
                 // Auto-deactivate AudioIn instrument on stop
                 if let Some(inst) = state.instruments.selected_instrument_mut() {
-                    if inst.source.is_audio_input() && inst.mixer.active {
-                        inst.mixer.active = false;
+                    if inst.source.is_audio_input() && inst.channel_strip.active {
+                        inst.channel_strip.active = false;
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
                         result.audio_effects.push(AudioEffect::RebuildRouting);
                     }
@@ -117,9 +117,9 @@ pub(super) fn dispatch_server(
                 if let Some(inst) = state.instruments.selected_instrument() {
                     let inst_id = inst.id;
                     // Auto-activate AudioIn instrument on start
-                    if inst.source.is_audio_input() && !inst.mixer.active {
+                    if inst.source.is_audio_input() && !inst.channel_strip.active {
                         if let Some(inst_mut) = state.instruments.instrument_mut(inst_id) {
-                            inst_mut.mixer.active = true;
+                            inst_mut.channel_strip.active = true;
                         }
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
                         result.audio_effects.push(AudioEffect::RebuildRouting);

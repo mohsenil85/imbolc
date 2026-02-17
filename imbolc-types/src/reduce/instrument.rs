@@ -30,11 +30,11 @@ pub(super) fn reduce(
             if let Some(instrument) = instruments.instrument_mut(update.id) {
                 instrument.source = update.source;
                 instrument.source_params = update.source_params.clone();
-                instrument.processing_chain = update.processing_chain.clone();
+                instrument.channel_strip.processing_chain = update.processing_chain.clone();
                 instrument.modulation.lfo = update.lfo.clone();
                 instrument.modulation.amp_envelope = update.amp_envelope.clone();
                 instrument.polyphonic = update.polyphonic;
-                instrument.mixer.active = update.active;
+                instrument.channel_strip.active = update.active;
             }
             true
         }
@@ -448,7 +448,7 @@ pub(super) fn reduce(
         // Channel config
         InstrumentAction::ToggleChannelConfig(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
-                inst.mixer.channel_config = inst.mixer.channel_config.toggle();
+                inst.channel_strip.channel_config = inst.channel_strip.channel_config.toggle();
             }
             true
         }

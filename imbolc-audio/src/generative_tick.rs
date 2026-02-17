@@ -96,11 +96,11 @@ pub fn tick_generative(
             Some(inst) => inst,
             None => continue,
         };
-        let skip = !target_inst.mixer.active
+        let skip = !target_inst.channel_strip.active
             || if any_solo {
-                !target_inst.mixer.solo
+                !target_inst.channel_strip.solo
             } else {
-                target_inst.mixer.mute
+                target_inst.channel_strip.mute
             };
         if skip {
             continue;
