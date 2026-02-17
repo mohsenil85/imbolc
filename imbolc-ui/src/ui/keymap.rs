@@ -63,6 +63,28 @@ impl KeyPattern {
             KeyPattern::ShiftKey(code) => format!("Shift+{:?}", code),
         }
     }
+
+    /// Get a compact display string for the hint bar (short symbols)
+    pub fn compact_display(&self) -> String {
+        match self {
+            KeyPattern::Char(' ') => "\u{2423}".to_string(), // ␣
+            KeyPattern::Char(ch) => ch.to_string(),
+            KeyPattern::Key(KeyCode::Up) => "\u{2191}".to_string(),    // ↑
+            KeyPattern::Key(KeyCode::Down) => "\u{2193}".to_string(),  // ↓
+            KeyPattern::Key(KeyCode::Left) => "\u{2190}".to_string(),  // ←
+            KeyPattern::Key(KeyCode::Right) => "\u{2192}".to_string(), // →
+            KeyPattern::Key(KeyCode::Enter) => "\u{23ce}".to_string(), // ⏎
+            KeyPattern::Key(KeyCode::Escape) => "Esc".to_string(),
+            KeyPattern::Key(KeyCode::Tab) => "Tab".to_string(),
+            KeyPattern::Key(KeyCode::Backspace) => "\u{232b}".to_string(), // ⌫
+            KeyPattern::Key(KeyCode::Delete) => "Del".to_string(),
+            KeyPattern::Key(KeyCode::Home) => "Home".to_string(),
+            KeyPattern::Key(KeyCode::End) => "End".to_string(),
+            KeyPattern::Key(KeyCode::PageUp) => "PgUp".to_string(),
+            KeyPattern::Key(KeyCode::PageDown) => "PgDn".to_string(),
+            _ => self.display(),
+        }
+    }
 }
 
 /// A single key binding
@@ -71,6 +93,7 @@ pub struct KeyBinding {
     pub pattern: KeyPattern,
     pub action: ActionId,
     pub description: &'static str,
+    pub hint: Option<&'static str>,
 }
 
 /// A collection of key bindings for a pane.
@@ -108,6 +131,7 @@ impl Keymap {
             pattern: KeyPattern::Char(ch),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -119,6 +143,7 @@ impl Keymap {
             pattern: KeyPattern::Key(key),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -130,6 +155,7 @@ impl Keymap {
             pattern: KeyPattern::Ctrl(ch),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -141,6 +167,7 @@ impl Keymap {
             pattern: KeyPattern::Alt(ch),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -157,6 +184,7 @@ impl Keymap {
             pattern: KeyPattern::AltKey(key),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -173,6 +201,7 @@ impl Keymap {
             pattern: KeyPattern::CtrlKey(key),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -189,6 +218,7 @@ impl Keymap {
             pattern: KeyPattern::ShiftKey(key),
             action,
             description,
+            hint: None,
         });
         self
     }
@@ -209,6 +239,26 @@ impl Keymap {
     /// Get all bindings (for help screens)
     pub fn bindings(&self) -> &[KeyBinding] {
         &self.bindings
+    }
+
+    /// Get hint bindings for the hint bar, grouped by hint label.
+    /// Returns `(combined_key_display, hint_label)` pairs preserving TOML order.
+    /// Bindings sharing the same `hint` value are grouped (e.g., Up/Down → "↑/↓ navigate").
+    pub fn hint_bindings(&self) -> Vec<(String, &'static str)> {
+        let mut groups: Vec<(Vec<String>, &'static str)> = Vec::new();
+        for binding in &self.bindings {
+            if let Some(hint) = binding.hint {
+                if let Some(entry) = groups.iter_mut().find(|(_, h)| *h == hint) {
+                    entry.0.push(binding.pattern.compact_display());
+                } else {
+                    groups.push((vec![binding.pattern.compact_display()], hint));
+                }
+            }
+        }
+        groups
+            .into_iter()
+            .map(|(keys, hint)| (keys.join("/"), hint))
+            .collect()
     }
 }
 

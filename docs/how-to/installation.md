@@ -2,8 +2,6 @@
 
 _Last verified: 2026-02-11_
 
-This guide targets the public alpha baseline for Imbolc.
-
 ## Support Scope (Alpha)
 
 - macOS: supported
@@ -93,7 +91,7 @@ imbolc-core/bin/compile-vst-synthdefs
 After launch, confirm:
 
 - Server pane can start/connect `scsynth`
-- You can add an instrument and play notes
+- You can add a track and play notes
 - You can save/load a project
 - You can export audio (`B` for bounce or `Ctrl+b` for stems in piano roll)
 
@@ -127,4 +125,3 @@ imbolc-core/bin/compile-synthdefs
 ```
 
 - Confirm `imbolc-core/synthdefs/` contains `.scsyndef` files.
-

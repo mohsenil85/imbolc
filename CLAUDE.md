@@ -127,8 +127,8 @@ All tools are prefixed `mcp__cclsp__` when invoking. Configuration: `.mcp.json` 
 
 ## Documentation
 
-All docs live at workspace root in `./docs/`:
-- [docs/architecture-deep-dive.md](docs/architecture-deep-dive.md) — threading model, latency, OSC timetags, voice allocation
+All docs live at workspace root in `./docs/`. See [docs/README.md](docs/README.md) for the full index.
+- [docs/dev/architecture.md](docs/dev/architecture.md) — threading model, latency, OSC timetags, voice allocation
 
 ## Scratch Space
 

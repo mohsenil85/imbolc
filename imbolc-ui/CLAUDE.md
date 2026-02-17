@@ -130,7 +130,7 @@ The `Pane` trait (`src/ui/pane.rs`) defines the pane contract:
 
 ## Critical Patterns
 
-See [../docs/architecture.md](../docs/architecture.md) for detailed architecture, state ownership, borrow patterns, and persistence.
+See [../docs/dev/architecture.md](../docs/dev/architecture.md) for detailed architecture, state ownership, borrow patterns, and persistence.
 
 ### Action Dispatch
 
@@ -213,10 +213,10 @@ Configured as MCP server at workspace root (`.mcp.json` + `cclsp.json`). Provide
 
 ## Detailed Documentation
 
-See `../docs/` for all documentation:
-- [../docs/architecture.md](../docs/architecture.md) — state ownership, track model, pane rendering, action dispatch
-- [../docs/audio-routing.md](../docs/audio-routing.md) — bus model, insert vs send, node ordering
-- [../docs/keybindings.md](../docs/keybindings.md) — keybinding philosophy and conventions
+See `../docs/` for all documentation ([../docs/README.md](../docs/README.md) for index):
+- [../docs/dev/architecture.md](../docs/dev/architecture.md) — state ownership, track model, pane rendering, action dispatch
+- [../docs/explanation/the-mixer.md](../docs/explanation/the-mixer.md) — bus model, sends, routing concepts
+- [../docs/reference/keybindings.md](../docs/reference/keybindings.md) — complete keybinding reference
 
 ## Plans
 

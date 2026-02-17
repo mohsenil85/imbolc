@@ -1,6 +1,7 @@
 use std::any::Any;
 
 use super::action_id::ActionId;
+use super::style::{Color, Style};
 use super::{InputEvent, Keymap, MouseEvent, Rect, RenderBuf};
 use crate::state::AppState;
 
@@ -193,9 +194,47 @@ impl PaneManager {
         }
     }
 
-    /// Render the active pane to the buffer.
+    /// Render the active pane to the buffer, with hint bar if applicable.
     pub fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
-        self.panes[self.active_index].render(area, buf, state);
+        let hints = self.panes[self.active_index].keymap().hint_bindings();
+        if !hints.is_empty() && area.height > 2 {
+            let pane_area = Rect {
+                x: area.x,
+                y: area.y,
+                width: area.width,
+                height: area.height - 1,
+            };
+            self.panes[self.active_index].render(pane_area, buf, state);
+            Self::render_hint_line(&hints, area, buf);
+        } else {
+            self.panes[self.active_index].render(area, buf, state);
+        }
+    }
+
+    /// Render the hint bar at the bottom row of the given area.
+    fn render_hint_line(hints: &[(String, &str)], area: Rect, buf: &mut RenderBuf) {
+        let y = area.y + area.height - 1;
+        let max_x = area.x + area.width;
+        let mut x = area.x + 1;
+
+        let key_style = Style::new().fg(Color::CYAN);
+        let label_style = Style::new().fg(Color::DARK_GRAY);
+
+        for (i, (key, label)) in hints.iter().enumerate() {
+            if i > 0 {
+                x += 2; // double-space separator
+            }
+            let key_len = key.chars().count() as u16;
+            let label_len = label.chars().count() as u16;
+            let total = key_len + 1 + label_len; // key + space + label
+            if x + total > max_x {
+                break;
+            }
+            buf.draw_str(x, y, key, key_style);
+            x += key_len + 1;
+            buf.draw_str(x, y, label, label_style);
+            x += label_len;
+        }
     }
 
     /// Get the keymap of the active pane

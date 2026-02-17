@@ -1,3 +1,6 @@
+> **Audience:** This document is for developers working on the Imbolc codebase.
+> For musician-facing documentation, see the [docs index](../README.md).
+
 # Imbolc Architecture Deep Dive
 
 This is a code-verified architecture map of the current workspace, centered on realtime audio behavior, state/dispatch design, and optional collaboration mode.
@@ -258,7 +261,7 @@ OSC timetags are generated with a monotonic anchor (`osc_time_from_now`) to avoi
 
 ### Send Path
 
-Timed bundles are encoded and queued to dedicated sender thread (`osc_sender.rs`, bounded queue size 512).  
+Timed bundles are encoded and queued to dedicated sender thread (`osc_sender.rs`, bounded queue size 512).
 If queue is full/unavailable, engine falls back to direct send.
 
 ### Receive/Monitor Path

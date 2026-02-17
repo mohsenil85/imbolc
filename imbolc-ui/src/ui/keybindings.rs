@@ -33,6 +33,7 @@ struct RawBinding {
     key: String,
     action: String,
     description: String,
+    hint: Option<String>,
 }
 
 /// Intern a String into a &'static str.
@@ -164,6 +165,7 @@ fn build_bindings(layer_name: &str, raw: &[RawBinding]) -> Vec<KeyBinding> {
                     pattern,
                     action: action_id,
                     description: intern(b.description.clone()),
+                    hint: b.hint.as_ref().map(|h| intern(h.clone())),
                 }),
                 None => {
                     log::warn!(target: "ui::keybindings", "ignoring unknown action '{}' in layer '{}'", b.action, layer_name);
