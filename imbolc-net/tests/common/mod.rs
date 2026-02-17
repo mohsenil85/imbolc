@@ -10,28 +10,28 @@ use imbolc_net::protocol::{
     ClientId, ClientMessage, NetworkAction, NetworkState, ServerMessage, SessionToken,
 };
 use imbolc_net::server::NetServer;
-use imbolc_types::{InstrumentId, InstrumentState, SessionState};
+use imbolc_types::{SessionState, TrackId, TrackState};
 
 /// Build a test NetworkState from a server.
 pub fn make_test_state(server: &NetServer) -> NetworkState {
     NetworkState {
         session: SessionState::new(),
-        instruments: InstrumentState::new(),
+        tracks: TrackState::new(),
         ownership: server.build_ownership_map(),
         privileged_client: server.privileged_client_info(),
     }
 }
 
-/// Build a test NetworkState with N instruments.
+/// Build a test NetworkState with N tracks.
 pub fn make_test_state_with_instruments(server: &NetServer, count: u32) -> NetworkState {
     use imbolc_types::SourceType;
-    let mut instruments = InstrumentState::new();
+    let mut tracks = TrackState::new();
     for _i in 0..count {
-        instruments.add_instrument(SourceType::Saw);
+        tracks.add_track(SourceType::Saw);
     }
     NetworkState {
         session: SessionState::new(),
-        instruments,
+        tracks,
         ownership: server.build_ownership_map(),
         privileged_client: server.privileged_client_info(),
     }
@@ -48,7 +48,7 @@ pub fn drive_until_clients(
     while Instant::now().duration_since(start) < timeout {
         server.process_writer_feedback();
         server.accept_connections();
-        server.poll_actions(&state.session, &state.instruments);
+        server.poll_actions(&state.session, &state.tracks);
         if server.client_count() >= expected {
             return;
         }
@@ -71,7 +71,7 @@ pub fn drive_and_collect_actions(
     let mut all_actions = Vec::new();
     while Instant::now().duration_since(start) < timeout {
         server.accept_connections();
-        let actions = server.poll_actions(&state.session, &state.instruments);
+        let actions = server.poll_actions(&state.session, &state.tracks);
         all_actions.extend(actions);
         if !all_actions.is_empty() {
             return all_actions;
@@ -118,7 +118,7 @@ impl RawClient {
     pub fn send_hello(
         &mut self,
         name: &str,
-        instruments: Vec<InstrumentId>,
+        instruments: Vec<TrackId>,
         privilege: bool,
     ) -> std::io::Result<()> {
         self.send(&ClientMessage::Hello {

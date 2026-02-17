@@ -1,11 +1,11 @@
-use crate::action::{Action, AutomationAction, InstrumentAction, MidiAction};
+use crate::action::{Action, AutomationAction, MidiAction, TrackAction};
 use crate::midi::{MidiEvent, MidiEventKind};
 use crate::state::AppState;
 use imbolc_types::state::drum_sequencer::NUM_PADS;
 
 /// Process a MIDI event and return an Action if one should be dispatched.
 /// The timestamp in MidiEvent can be used for sample-accurate scheduling
-/// (passed through InstrumentAction::PlayNoteWithOffset if needed).
+/// (passed through TrackAction::PlayNoteWithOffset if needed).
 pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action> {
     let midi_rec = &state.session.midi_recording;
 
@@ -62,8 +62,8 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             // Check if the target instrument is a Kit — route to PlayDrumPad
             let instrument = midi_rec
                 .live_input_instrument
-                .and_then(|id| state.instruments.instrument(id))
-                .or_else(|| state.instruments.selected_instrument());
+                .and_then(|id| state.tracks.track(id))
+                .or_else(|| state.tracks.selected_track());
 
             if let Some(inst) = instrument {
                 if let Some(seq) = inst.drum_sequencer() {
@@ -71,7 +71,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
                     if *note >= base {
                         let pad_idx = (*note - base) as usize;
                         if pad_idx < NUM_PADS {
-                            return Some(Action::Instrument(InstrumentAction::PlayDrumPad(
+                            return Some(Action::Track(TrackAction::PlayDrumPad(
                                 pad_idx, *velocity,
                             )));
                         }
@@ -82,9 +82,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             }
 
             // Non-Kit: PlayNote uses the selected instrument
-            Some(Action::Instrument(InstrumentAction::PlayNote(
-                *note, *velocity,
-            )))
+            Some(Action::Track(TrackAction::PlayNote(*note, *velocity)))
         }
 
         MidiEventKind::NoteOff { channel, .. } => {
@@ -103,7 +101,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             // Look up pitch bend config for the target instrument
             let instrument_id = midi_rec
                 .live_input_instrument
-                .or_else(|| state.instruments.selected_instrument().map(|i| i.id))?;
+                .or_else(|| state.tracks.selected_track().map(|i| i.id))?;
 
             let config = midi_rec.find_pitch_bend_config(instrument_id)?;
             let target = config.target.clone();
@@ -124,7 +122,7 @@ mod tests {
     use super::*;
     use crate::state::automation::AutomationTarget;
     use crate::state::midi_recording::MidiCcMapping;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
     fn test_state() -> AppState {
         let mut state = AppState::new();
@@ -134,7 +132,7 @@ mod tests {
             .midi_recording
             .add_cc_mapping(MidiCcMapping::new(
                 1,
-                AutomationTarget::filter_cutoff(InstrumentId::new(0)),
+                AutomationTarget::filter_cutoff(TrackId::new(0)),
             ));
         state
     }
@@ -221,7 +219,7 @@ mod tests {
     #[test]
     fn test_kit_instrument_routes_to_play_drum_pad() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Kit);
+        state.add_track(crate::state::SourceType::Kit);
         // midi_base_note defaults to 36
         let event = MidiEvent::new(
             0,
@@ -233,7 +231,7 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         match action {
-            Some(Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, vel))) => {
+            Some(Action::Track(TrackAction::PlayDrumPad(pad_idx, vel))) => {
                 assert_eq!(pad_idx, 2);
                 assert_eq!(vel, 90);
             }
@@ -244,7 +242,7 @@ mod tests {
     #[test]
     fn test_kit_instrument_note_outside_pad_range_returns_none() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Kit);
+        state.add_track(crate::state::SourceType::Kit);
         // base_note=36, NUM_PADS=12, so note 48 (36+12) is out of range
         let event = MidiEvent::new(
             0,
@@ -261,7 +259,7 @@ mod tests {
     #[test]
     fn test_kit_instrument_note_below_base_returns_none() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Kit);
+        state.add_track(crate::state::SourceType::Kit);
         // note 35 is below base_note 36
         let event = MidiEvent::new(
             0,
@@ -278,7 +276,7 @@ mod tests {
     #[test]
     fn test_non_kit_instrument_still_gets_play_note() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         let event = MidiEvent::new(
             0,
             MidiEventKind::NoteOn {
@@ -289,7 +287,7 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         match action {
-            Some(Action::Instrument(InstrumentAction::PlayNote(note, vel))) => {
+            Some(Action::Track(TrackAction::PlayNote(note, vel))) => {
                 assert_eq!(note, 60);
                 assert_eq!(vel, 100);
             }
@@ -300,7 +298,7 @@ mod tests {
     #[test]
     fn test_learn_mode_intercepts_cc() {
         let mut state = test_state();
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.session.midi_recording.start_learning(target.clone());
 
         let event = MidiEvent::new(
@@ -330,7 +328,7 @@ mod tests {
     fn test_learn_mode_bypasses_channel_filter() {
         let mut state = test_state();
         state.session.midi_recording.channel_filter = Some(1); // Only channel 1
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(0));
         state.session.midi_recording.start_learning(target);
 
         // CC on channel 0 (would normally be filtered) — learn mode ignores filter

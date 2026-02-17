@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
 use super::{load_project, save_project, temp_db_path};
-use crate::state::instrument::{EffectType, FilterType, SourceType};
-use crate::state::instrument_state::InstrumentState;
 use crate::state::param::ParamValue;
 use crate::state::session::SessionState;
+use crate::state::track::{EffectType, FilterType, SourceType};
+use crate::state::track_state::TrackState;
 use imbolc_types::BusId;
 
 #[test]
 fn round_trip_bus_effects() {
     let mut session = SessionState::new();
-    let instruments = InstrumentState::new();
+    let tracks = TrackState::new();
 
     // session.mixer.buses should already have default buses (1 and 2)
     assert!(
@@ -38,7 +38,7 @@ fn round_trip_bus_effects() {
     }
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (loaded_session, _) = load_project(&path).expect("load");
 
     // Bus 1 should have 2 effects
@@ -96,11 +96,11 @@ fn round_trip_bus_effects() {
 #[test]
 fn round_trip_layer_group_effects() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
 
     // Assign instrument to group 1
-    if let Some(inst) = instruments.instrument_mut(inst_id) {
+    if let Some(inst) = tracks.track_mut(inst_id) {
         inst.layer.group = Some(1);
     }
 
@@ -120,10 +120,10 @@ fn round_trip_layer_group_effects() {
         }
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (loaded_session, _) = load_project(&path).expect("load");
 
     let loaded_gm = loaded_session
@@ -154,11 +154,11 @@ fn round_trip_layer_group_effects() {
 #[test]
 fn round_trip_layer_group_eq() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
 
     // Assign instrument to group 1
-    if let Some(inst) = instruments.instrument_mut(inst_id) {
+    if let Some(inst) = tracks.track_mut(inst_id) {
         inst.layer.group = Some(1);
     }
 
@@ -181,10 +181,10 @@ fn round_trip_layer_group_eq() {
         eq.bands[11].gain = -6.0;
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (loaded_session, _) = load_project(&path).expect("load");
 
     let loaded_gm = loaded_session
@@ -217,10 +217,10 @@ fn round_trip_layer_group_eq() {
 #[test]
 fn round_trip_layer_group_eq_disabled() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
 
-    if let Some(inst) = instruments.instrument_mut(inst_id) {
+    if let Some(inst) = tracks.track_mut(inst_id) {
         inst.layer.group = Some(1);
     }
 
@@ -232,10 +232,10 @@ fn round_trip_layer_group_eq_disabled() {
     gm.toggle_eq(); // was Some → now None
     assert!(gm.eq().is_none());
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (loaded_session, _) = load_project(&path).expect("load");
 
     let loaded_gm = loaded_session
@@ -257,10 +257,10 @@ fn round_trip_processing_chain_order() {
     use imbolc_types::ProcessingStage;
 
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
 
-    if let Some(inst) = instruments.instrument_mut(inst_id) {
+    if let Some(inst) = tracks.track_mut(inst_id) {
         // Add effect, filter, EQ → default order is Filter(0), EQ(1), Effect(2)
         let effect_id = inst.add_effect(EffectType::Delay);
         inst.set_filter(Some(FilterType::Hpf));
@@ -273,31 +273,25 @@ fn round_trip_processing_chain_order() {
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(
-                crate::state::instrument::EffectSlot::new(effect_id, EffectType::Delay),
+                crate::state::track::EffectSlot::new(effect_id, EffectType::Delay),
             ));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Filter(
-                crate::state::instrument::FilterConfig::new(FilterType::Hpf),
+                crate::state::track::FilterConfig::new(FilterType::Hpf),
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(
-                crate::state::instrument::EqConfig::default(),
-            ));
+            .push(ProcessingStage::Eq(crate::state::track::EqConfig::default()));
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (_, loaded_inst) = load_project(&path).expect("load");
 
-    let loaded = loaded_inst
-        .instruments
-        .iter()
-        .find(|i| i.id == inst_id)
-        .unwrap();
+    let loaded = loaded_inst.tracks.iter().find(|i| i.id == inst_id).unwrap();
     assert_eq!(loaded.channel_strip.processing_chain.len(), 3);
     assert!(
         loaded.channel_strip.processing_chain[0].is_effect(),
@@ -329,10 +323,10 @@ fn round_trip_processing_chain_interleaved() {
     use imbolc_types::ProcessingStage;
 
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
 
-    if let Some(inst) = instruments.instrument_mut(inst_id) {
+    if let Some(inst) = tracks.track_mut(inst_id) {
         // Build chain: Filter → Effect(Delay) → EQ → Effect(Reverb)
         let delay_id = inst.add_effect(EffectType::Delay);
         let reverb_id = inst.add_effect(EffectType::Reverb);
@@ -341,36 +335,30 @@ fn round_trip_processing_chain_interleaved() {
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Filter(
-                crate::state::instrument::FilterConfig::new(FilterType::Lpf),
+                crate::state::track::FilterConfig::new(FilterType::Lpf),
             ));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(
-                crate::state::instrument::EffectSlot::new(delay_id, EffectType::Delay),
+                crate::state::track::EffectSlot::new(delay_id, EffectType::Delay),
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(
-                crate::state::instrument::EqConfig::default(),
-            ));
+            .push(ProcessingStage::Eq(crate::state::track::EqConfig::default()));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(
-                crate::state::instrument::EffectSlot::new(reverb_id, EffectType::Reverb),
+                crate::state::track::EffectSlot::new(reverb_id, EffectType::Reverb),
             ));
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (_, loaded_inst) = load_project(&path).expect("load");
 
-    let loaded = loaded_inst
-        .instruments
-        .iter()
-        .find(|i| i.id == inst_id)
-        .unwrap();
+    let loaded = loaded_inst.tracks.iter().find(|i| i.id == inst_id).unwrap();
     assert_eq!(loaded.channel_strip.processing_chain.len(), 4);
     assert!(
         loaded.channel_strip.processing_chain[0].is_filter(),

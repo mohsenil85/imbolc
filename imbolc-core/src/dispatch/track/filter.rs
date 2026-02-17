@@ -1,23 +1,23 @@
 use crate::action::{AudioEffect, DispatchResult, FilterParamKind};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
-use crate::state::{AppState, InstrumentId};
-use imbolc_types::{DomainAction, InstrumentAction};
+use crate::state::{AppState, TrackId};
+use imbolc_types::{DomainAction, TrackAction};
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(action.clone()),
-        &mut state.instruments,
+        &DomainAction::Track(action.clone()),
+        &mut state.tracks,
         &mut state.session,
     );
 }
 
 pub(super) fn handle_set_filter(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     filter_type: Option<crate::state::FilterType>,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::SetFilter(id, filter_type));
+    reduce(state, &TrackAction::SetFilter(id, filter_type));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -26,8 +26,8 @@ pub(super) fn handle_set_filter(
     result
 }
 
-pub(super) fn handle_toggle_filter(state: &mut AppState, id: InstrumentId) -> DispatchResult {
-    reduce(state, &InstrumentAction::ToggleFilter(id));
+pub(super) fn handle_toggle_filter(state: &mut AppState, id: TrackId) -> DispatchResult {
+    reduce(state, &TrackAction::ToggleFilter(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -36,8 +36,8 @@ pub(super) fn handle_toggle_filter(state: &mut AppState, id: InstrumentId) -> Di
     result
 }
 
-pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: InstrumentId) -> DispatchResult {
-    reduce(state, &InstrumentAction::NextFilterType(id));
+pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: TrackId) -> DispatchResult {
+    reduce(state, &TrackAction::NextFilterType(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -45,14 +45,14 @@ pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: InstrumentId) -
 
 pub(super) fn handle_adjust_filter_cutoff(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustFilterCutoff(id, delta));
+    reduce(state, &TrackAction::AdjustFilterCutoff(id, delta));
 
     let mut result = DispatchResult::none();
     // Read post-mutation value for automation recording and targeted param
-    if let Some(instrument) = state.instruments.instrument(id) {
+    if let Some(instrument) = state.tracks.track(id) {
         if let Some(filter) = instrument.filter() {
             let cutoff = filter.cutoff.value;
             let target = AutomationTarget::filter_cutoff(id);
@@ -77,14 +77,14 @@ pub(super) fn handle_adjust_filter_cutoff(
 
 pub(super) fn handle_adjust_filter_resonance(
     state: &mut AppState,
-    id: InstrumentId,
+    id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustFilterResonance(id, delta));
+    reduce(state, &TrackAction::AdjustFilterResonance(id, delta));
 
     let mut result = DispatchResult::none();
     // Read post-mutation value for automation recording and targeted param
-    if let Some(instrument) = state.instruments.instrument(id) {
+    if let Some(instrument) = state.tracks.track(id) {
         if let Some(filter) = instrument.filter() {
             let resonance = filter.resonance.value;
             let target = AutomationTarget::filter_resonance(id);
@@ -114,9 +114,9 @@ mod tests {
     use crate::state::AppState;
     use crate::state::SourceType;
 
-    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+    fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         (state, id)
     }
 
@@ -125,12 +125,12 @@ mod tests {
         let (mut state, id) = setup();
 
         // No filter initially
-        assert!(state.instruments.instrument(id).unwrap().filter().is_none());
+        assert!(state.tracks.track(id).unwrap().filter().is_none());
 
         let result = handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Lpf));
 
         // Filter should now be set
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         let filter = inst.filter().expect("filter should be present");
         assert_eq!(filter.filter_type, imbolc_types::FilterType::Lpf);
 
@@ -149,12 +149,12 @@ mod tests {
 
         // Set a filter first
         handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Hpf));
-        assert!(state.instruments.instrument(id).unwrap().filter().is_some());
+        assert!(state.tracks.track(id).unwrap().filter().is_some());
 
         // Toggle removes the filter from the processing chain
         let result = handle_toggle_filter(&mut state, id);
 
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert!(inst.filter().is_none());
 
         // Verify audio effects
@@ -167,7 +167,7 @@ mod tests {
 
         // Toggle again re-adds a default filter
         handle_toggle_filter(&mut state, id);
-        assert!(state.instruments.instrument(id).unwrap().filter().is_some());
+        assert!(state.tracks.track(id).unwrap().filter().is_some());
     }
 
     #[test]
@@ -180,7 +180,7 @@ mod tests {
         let result = handle_cycle_filter_type(&mut state, id);
 
         // Filter type should have changed from Lpf
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         let filter = inst.filter().unwrap();
         assert_ne!(filter.filter_type, imbolc_types::FilterType::Lpf);
 
@@ -198,8 +198,8 @@ mod tests {
         handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Lpf));
 
         let original_cutoff = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()
@@ -209,8 +209,8 @@ mod tests {
         let result = handle_adjust_filter_cutoff(&mut state, id, 100.0);
 
         let new_cutoff = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()
@@ -236,8 +236,8 @@ mod tests {
         handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Lpf));
 
         let original_resonance = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()
@@ -247,8 +247,8 @@ mod tests {
         let result = handle_adjust_filter_resonance(&mut state, id, 0.1);
 
         let new_resonance = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()

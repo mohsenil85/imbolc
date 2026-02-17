@@ -115,7 +115,7 @@ impl GlobalActionId {
             GlobalActionId::OpenCheckpointList => "open_checkpoint_list",
             GlobalActionId::SwitchPane(pane) => match pane {
                 PaneId::InstrumentEdit => "switch:instrument",
-                PaneId::Instrument => "switch:instrument_list",
+                PaneId::TrackList => "switch:track_list",
                 PaneId::Track => "switch:track",
                 PaneId::Mixer => "switch:mixer",
                 PaneId::Server => "switch:server",
@@ -184,7 +184,7 @@ impl GlobalActionId {
             "request_privilege" => Some(GlobalActionId::RequestPrivilege),
             "open_checkpoint_list" => Some(GlobalActionId::OpenCheckpointList),
             "switch:instrument" => Some(GlobalActionId::SwitchPane(PaneId::InstrumentEdit)),
-            "switch:instrument_list" => Some(GlobalActionId::SwitchPane(PaneId::Instrument)),
+            "switch:track_list" => Some(GlobalActionId::SwitchPane(PaneId::TrackList)),
             "switch:piano_roll_or_sequencer" => Some(GlobalActionId::SwitchPianoRollOrSequencer),
             "switch:track" => Some(GlobalActionId::SwitchPane(PaneId::Track)),
             "switch:mixer" => Some(GlobalActionId::SwitchPane(PaneId::Mixer)),
@@ -214,8 +214,8 @@ impl GlobalActionId {
 }
 
 define_action_enum! {
-    /// Instrument list layer actions
-    pub enum InstrumentListActionId {
+    /// Track list layer actions
+    pub enum TrackListActionId {
         Quit => "quit",
         Next => "next",
         Prev => "prev",
@@ -235,8 +235,8 @@ define_action_enum! {
 }
 
 define_action_enum! {
-    /// Instrument edit layer actions
-    pub enum InstrumentEditActionId {
+    /// Track edit layer actions
+    pub enum TrackEditActionId {
         Next => "next",
         Prev => "prev",
         NextSection => "next_section",
@@ -363,7 +363,7 @@ define_action_enum! {
         Toggle => "toggle",
         TogglePlayback => "play_stop",
         LoadSample => "load_sample",
-        Chopper => "chopper",
+        Chopper => "slicer",
         ClearPad => "clear_pad",
         ClearPattern => "clear_pattern",
         PrevPattern => "prev_pattern",
@@ -482,7 +482,7 @@ define_action_enum! {
     }
 }
 
-/// Sample slicer layer actions
+/// Sample chopper layer actions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SampleSlicerActionId {
     MoveLeft,
@@ -840,8 +840,8 @@ define_action_enum! {
 pub enum ActionId {
     Global(GlobalActionId),
     Mode(ModeActionId),
-    InstrumentList(InstrumentListActionId),
-    InstrumentEdit(InstrumentEditActionId),
+    TrackList(TrackListActionId),
+    TrackEdit(TrackEditActionId),
     Mixer(MixerActionId),
     PianoRoll(PianoRollActionId),
     Sequencer(SequencerActionId),
@@ -874,8 +874,8 @@ impl ActionId {
         match self {
             ActionId::Global(a) => a.as_str(),
             ActionId::Mode(a) => a.as_str(),
-            ActionId::InstrumentList(a) => a.as_str(),
-            ActionId::InstrumentEdit(a) => a.as_str(),
+            ActionId::TrackList(a) => a.as_str(),
+            ActionId::TrackEdit(a) => a.as_str(),
             ActionId::Mixer(a) => a.as_str(),
             ActionId::PianoRoll(a) => a.as_str(),
             ActionId::Sequencer(a) => a.as_str(),
@@ -909,8 +909,8 @@ impl ActionId {
 pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
     match layer {
         "global" => GlobalActionId::from_str(action).map(ActionId::Global),
-        "instrument" => InstrumentListActionId::from_str(action).map(ActionId::InstrumentList),
-        "instrument_edit" => InstrumentEditActionId::from_str(action).map(ActionId::InstrumentEdit),
+        "instrument" => TrackListActionId::from_str(action).map(ActionId::TrackList),
+        "instrument_edit" => TrackEditActionId::from_str(action).map(ActionId::TrackEdit),
         "mixer" => MixerActionId::from_str(action).map(ActionId::Mixer),
         "piano_roll" => PianoRollActionId::from_str(action).map(ActionId::PianoRoll),
         "sequencer" => SequencerActionId::from_str(action).map(ActionId::Sequencer),
@@ -980,7 +980,7 @@ mod tests {
             GlobalActionId::SelectNextInstrument,
             GlobalActionId::SelectTwoDigit,
             GlobalActionId::SwitchPane(PaneId::InstrumentEdit),
-            GlobalActionId::SwitchPane(PaneId::Instrument),
+            GlobalActionId::SwitchPane(PaneId::TrackList),
             GlobalActionId::SwitchPianoRollOrSequencer,
             GlobalActionId::SwitchPane(PaneId::Track),
             GlobalActionId::SwitchPane(PaneId::Mixer),
@@ -1012,26 +1012,26 @@ mod tests {
     #[test]
     fn test_instrument_list_round_trip() {
         let actions = vec![
-            InstrumentListActionId::Quit,
-            InstrumentListActionId::Next,
-            InstrumentListActionId::Prev,
-            InstrumentListActionId::GotoTop,
-            InstrumentListActionId::GotoBottom,
-            InstrumentListActionId::Add,
-            InstrumentListActionId::Delete,
-            InstrumentListActionId::Edit,
-            InstrumentListActionId::Save,
-            InstrumentListActionId::Load,
-            InstrumentListActionId::LinkLayer,
-            InstrumentListActionId::UnlinkLayer,
-            InstrumentListActionId::LayerOctaveUp,
-            InstrumentListActionId::LayerOctaveDown,
-            InstrumentListActionId::RenameLayerGroup,
+            TrackListActionId::Quit,
+            TrackListActionId::Next,
+            TrackListActionId::Prev,
+            TrackListActionId::GotoTop,
+            TrackListActionId::GotoBottom,
+            TrackListActionId::Add,
+            TrackListActionId::Delete,
+            TrackListActionId::Edit,
+            TrackListActionId::Save,
+            TrackListActionId::Load,
+            TrackListActionId::LinkLayer,
+            TrackListActionId::UnlinkLayer,
+            TrackListActionId::LayerOctaveUp,
+            TrackListActionId::LayerOctaveDown,
+            TrackListActionId::RenameLayerGroup,
         ];
 
         for action in actions {
             let s = action.as_str();
-            let parsed = InstrumentListActionId::from_str(s);
+            let parsed = TrackListActionId::from_str(s);
             assert_eq!(Some(action), parsed, "Failed round-trip for {}", s);
         }
     }
@@ -1039,44 +1039,44 @@ mod tests {
     #[test]
     fn test_instrument_edit_round_trip() {
         let actions = vec![
-            InstrumentEditActionId::Next,
-            InstrumentEditActionId::Prev,
-            InstrumentEditActionId::NextSection,
-            InstrumentEditActionId::PrevSection,
-            InstrumentEditActionId::Decrease,
-            InstrumentEditActionId::Increase,
-            InstrumentEditActionId::IncreaseBig,
-            InstrumentEditActionId::DecreaseBig,
-            InstrumentEditActionId::IncreaseTiny,
-            InstrumentEditActionId::DecreaseTiny,
-            InstrumentEditActionId::IncreaseMusical,
-            InstrumentEditActionId::DecreaseMusical,
-            InstrumentEditActionId::EnterEdit,
-            InstrumentEditActionId::ToggleFilter,
-            InstrumentEditActionId::NextFilterType,
-            InstrumentEditActionId::AddEffect,
-            InstrumentEditActionId::RemoveEffect,
-            InstrumentEditActionId::TogglePoly,
-            InstrumentEditActionId::ZeroParam,
-            InstrumentEditActionId::ZeroSection,
-            InstrumentEditActionId::ResetParam,
-            InstrumentEditActionId::ToggleEq,
-            InstrumentEditActionId::ToggleLfo,
-            InstrumentEditActionId::CycleLfoShape,
-            InstrumentEditActionId::CycleLfoTarget,
-            InstrumentEditActionId::ToggleActive,
-            InstrumentEditActionId::LoadSample,
-            InstrumentEditActionId::VstParams,
-            InstrumentEditActionId::MoveStageUp,
-            InstrumentEditActionId::MoveStageDown,
-            InstrumentEditActionId::ToggleEffectBypass,
-            InstrumentEditActionId::Done,
-            InstrumentEditActionId::TagParam,
+            TrackEditActionId::Next,
+            TrackEditActionId::Prev,
+            TrackEditActionId::NextSection,
+            TrackEditActionId::PrevSection,
+            TrackEditActionId::Decrease,
+            TrackEditActionId::Increase,
+            TrackEditActionId::IncreaseBig,
+            TrackEditActionId::DecreaseBig,
+            TrackEditActionId::IncreaseTiny,
+            TrackEditActionId::DecreaseTiny,
+            TrackEditActionId::IncreaseMusical,
+            TrackEditActionId::DecreaseMusical,
+            TrackEditActionId::EnterEdit,
+            TrackEditActionId::ToggleFilter,
+            TrackEditActionId::NextFilterType,
+            TrackEditActionId::AddEffect,
+            TrackEditActionId::RemoveEffect,
+            TrackEditActionId::TogglePoly,
+            TrackEditActionId::ZeroParam,
+            TrackEditActionId::ZeroSection,
+            TrackEditActionId::ResetParam,
+            TrackEditActionId::ToggleEq,
+            TrackEditActionId::ToggleLfo,
+            TrackEditActionId::CycleLfoShape,
+            TrackEditActionId::CycleLfoTarget,
+            TrackEditActionId::ToggleActive,
+            TrackEditActionId::LoadSample,
+            TrackEditActionId::VstParams,
+            TrackEditActionId::MoveStageUp,
+            TrackEditActionId::MoveStageDown,
+            TrackEditActionId::ToggleEffectBypass,
+            TrackEditActionId::Done,
+            TrackEditActionId::TagParam,
         ];
 
         for action in actions {
             let s = action.as_str();
-            let parsed = InstrumentEditActionId::from_str(s);
+            let parsed = TrackEditActionId::from_str(s);
             assert_eq!(Some(action), parsed, "Failed round-trip for {}", s);
         }
     }
@@ -1127,7 +1127,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sample_slicer_round_trip() {
+    fn test_sample_chopper_round_trip() {
         let actions = vec![
             SampleSlicerActionId::MoveLeft,
             SampleSlicerActionId::MoveRight,
@@ -1210,7 +1210,7 @@ mod tests {
 
         assert_eq!(
             parse_action_id("instrument", "next"),
-            Some(ActionId::InstrumentList(InstrumentListActionId::Next))
+            Some(ActionId::TrackList(TrackListActionId::Next))
         );
 
         assert_eq!(

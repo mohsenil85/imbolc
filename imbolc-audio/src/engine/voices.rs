@@ -3,9 +3,7 @@ use std::time::Instant;
 use super::backend::{AudioBackend, BackendMessage, RawArg};
 use super::{AudioEngine, VoiceChain, GROUP_SOURCES};
 use imbolc_types::tuning;
-use imbolc_types::{
-    BufferId, InstrumentId, InstrumentState, ParamValue, ParameterTarget, SessionState,
-};
+use imbolc_types::{BufferId, ParamValue, ParameterTarget, SessionState, TrackId, TrackState};
 
 /// Anti-click fade time for voice stealing/freeing.
 /// Must exceed the midi control node's gate release (10ms) plus margin
@@ -21,18 +19,18 @@ impl AudioEngine {
     /// Spawn a voice for an instrument
     pub fn spawn_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .instrument(instrument_id)
-            .ok_or_else(|| format!("No instrument with id {}", instrument_id))?;
+            .track(instrument_id)
+            .ok_or_else(|| format!("No track with id {}", instrument_id))?;
 
-        // AudioIn, BusIn, and VSTi instruments don't use voice spawning - they have persistent synths
+        // AudioIn, BusIn, and VSTi tracks don't use voice spawning - they have persistent synths
         if instrument.source.is_audio_input() || instrument.source.is_bus_in() {
             return Ok(());
         }
@@ -304,20 +302,20 @@ impl AudioEngine {
     /// Spawn a sampler voice (separate method for sampler-specific handling)
     fn spawn_sampler_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .instrument(instrument_id)
-            .ok_or_else(|| format!("No instrument with id {}", instrument_id))?;
+            .track(instrument_id)
+            .ok_or_else(|| format!("No track with id {}", instrument_id))?;
 
         let sampler_config = instrument
             .sampler_config()
-            .ok_or("Sampler instrument has no sampler config")?;
+            .ok_or("Sampler track has no sampler config")?;
 
         let buffer_id = sampler_config
             .buffer_id
@@ -594,13 +592,13 @@ impl AudioEngine {
     /// available as a steal candidate while its envelope fades out.
     pub fn release_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
     ) -> Result<(), String> {
         // VSTi instruments: send MIDI note-off via /u_cmd
-        if let Some(instrument) = state.instrument(instrument_id) {
+        if let Some(instrument) = state.track(instrument_id) {
             if instrument.source.is_vst() {
                 return self.send_vsti_note_off(instrument_id, pitch);
             }
@@ -612,7 +610,7 @@ impl AudioEngine {
 
         // Find and mark an active voice as released via the allocator
         let release_time = state
-            .instrument(instrument_id)
+            .track(instrument_id)
             .map(|s| s.modulation.amp_envelope.release)
             .unwrap_or(1.0);
 
@@ -684,7 +682,7 @@ impl AudioEngine {
     /// so the crossfade is seamless (no gap between old fade-out and new attack).
     pub(crate) fn steal_voice_if_needed(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         _velocity: f32,
         offset_secs: f64,
@@ -807,7 +805,7 @@ impl AudioEngine {
         &mut self,
         buffer_id: BufferId,
         amp: f32,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         slice_start: f32,
         slice_end: f32,
         rate: f32,
@@ -856,18 +854,18 @@ impl AudioEngine {
     /// Used by drum sequencer pads that trigger synth instruments.
     pub fn trigger_instrument_oneshot(
         &mut self,
-        target_instrument_id: InstrumentId,
+        target_track_id: TrackId,
         freq: f32,
         velocity: f32,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .instrument(target_instrument_id)
-            .ok_or_else(|| format!("No instrument with id {}", target_instrument_id))?;
+            .track(target_track_id)
+            .ok_or_else(|| format!("No track with id {}", target_track_id))?;
 
-        // Skip unsupported instrument types
+        // Skip unsupported track types
         if instrument.source.is_audio_input()
             || instrument.source.is_bus_in()
             || instrument.source.is_vst()
@@ -892,7 +890,7 @@ impl AudioEngine {
         // Get the audio bus where voices should write their output
         let source_out_bus = self
             .bus_allocator
-            .get_audio_bus(target_instrument_id, "source_out")
+            .get_audio_bus(target_track_id, "source_out")
             .unwrap_or(16);
 
         // Create a group for this one-shot voice chain
@@ -1003,7 +1001,7 @@ impl AudioEngine {
             if instrument.modulation.lfo.enabled {
                 if let Some(lfo_bus) = self
                     .bus_allocator
-                    .get_control_bus(target_instrument_id, "lfo_out")
+                    .get_control_bus(target_track_id, "lfo_out")
                 {
                     match instrument.modulation.lfo.target {
                         ParameterTarget::Level => {

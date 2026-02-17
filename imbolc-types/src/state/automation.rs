@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BusId, EffectId, InstrumentId, ParamIndex, ParameterTarget};
+use crate::{BusId, EffectId, ParamIndex, ParameterTarget, TrackId};
 
 /// Whether target uses continuous interpolation or discrete steps.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -94,7 +94,7 @@ impl AutomationPoint {
 
 /// Per-instrument parameter automation target.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum InstrumentParameter {
+pub enum TrackParameter {
     /// Standard modulatable parameter (reuses ParameterTarget)
     Standard(ParameterTarget),
 }
@@ -135,7 +135,7 @@ pub enum GenerativeParameter {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AutomationTarget {
     /// Per-instrument parameter automation
-    Instrument(InstrumentId, InstrumentParameter),
+    Track(TrackId, TrackParameter),
     /// Bus output level
     Bus(BusId, BusParameter),
     /// Global session parameters
@@ -151,8 +151,8 @@ impl AutomationTarget {
 
     /// Create an instrument target with a standard parameter.
     #[inline]
-    pub fn instrument(id: InstrumentId, param: ParameterTarget) -> Self {
-        Self::Instrument(id, InstrumentParameter::Standard(param))
+    pub fn instrument(id: TrackId, param: ParameterTarget) -> Self {
+        Self::Track(id, TrackParameter::Standard(param))
     }
 
     /// Create a bus level target.
@@ -202,127 +202,127 @@ impl AutomationTarget {
     // ========================================================================
 
     #[inline]
-    pub fn level(id: InstrumentId) -> Self {
+    pub fn level(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Level)
     }
 
     #[inline]
-    pub fn pan(id: InstrumentId) -> Self {
+    pub fn pan(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Pan)
     }
 
     #[inline]
-    pub fn filter_cutoff(id: InstrumentId) -> Self {
+    pub fn filter_cutoff(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::FilterCutoff)
     }
 
     #[inline]
-    pub fn filter_resonance(id: InstrumentId) -> Self {
+    pub fn filter_resonance(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::FilterResonance)
     }
 
     #[inline]
-    pub fn filter_bypass(id: InstrumentId) -> Self {
+    pub fn filter_bypass(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::FilterBypass)
     }
 
     #[inline]
-    pub fn attack(id: InstrumentId) -> Self {
+    pub fn attack(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Attack)
     }
 
     #[inline]
-    pub fn decay(id: InstrumentId) -> Self {
+    pub fn decay(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Decay)
     }
 
     #[inline]
-    pub fn sustain(id: InstrumentId) -> Self {
+    pub fn sustain(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Sustain)
     }
 
     #[inline]
-    pub fn release(id: InstrumentId) -> Self {
+    pub fn release(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Release)
     }
 
     #[inline]
-    pub fn lfo_rate(id: InstrumentId) -> Self {
+    pub fn lfo_rate(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::LfoRate)
     }
 
     #[inline]
-    pub fn lfo_depth(id: InstrumentId) -> Self {
+    pub fn lfo_depth(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::LfoDepth)
     }
 
     #[inline]
-    pub fn send_level(id: InstrumentId, bus_id: BusId) -> Self {
+    pub fn send_level(id: TrackId, bus_id: BusId) -> Self {
         Self::instrument(id, ParameterTarget::SendLevel(bus_id))
     }
 
     #[inline]
-    pub fn sample_rate(id: InstrumentId) -> Self {
+    pub fn sample_rate(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::SampleRate)
     }
 
     #[inline]
-    pub fn sample_amp(id: InstrumentId) -> Self {
+    pub fn sample_amp(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::SampleAmp)
     }
 
     #[inline]
-    pub fn vst_param(id: InstrumentId, param_idx: u32) -> Self {
+    pub fn vst_param(id: TrackId, param_idx: u32) -> Self {
         Self::instrument(id, ParameterTarget::VstParam(param_idx))
     }
 
     #[inline]
-    pub fn effect_param(id: InstrumentId, effect_id: EffectId, param_idx: ParamIndex) -> Self {
+    pub fn effect_param(id: TrackId, effect_id: EffectId, param_idx: ParamIndex) -> Self {
         Self::instrument(id, ParameterTarget::EffectParam(effect_id, param_idx))
     }
 
     #[inline]
-    pub fn effect_bypass(id: InstrumentId, effect_id: EffectId) -> Self {
+    pub fn effect_bypass(id: TrackId, effect_id: EffectId) -> Self {
         Self::instrument(id, ParameterTarget::EffectBypass(effect_id))
     }
 
     #[inline]
-    pub fn eq_band_freq(id: InstrumentId, band: usize) -> Self {
+    pub fn eq_band_freq(id: TrackId, band: usize) -> Self {
         Self::instrument(id, ParameterTarget::EqBandFreq(band))
     }
 
     #[inline]
-    pub fn eq_band_gain(id: InstrumentId, band: usize) -> Self {
+    pub fn eq_band_gain(id: TrackId, band: usize) -> Self {
         Self::instrument(id, ParameterTarget::EqBandGain(band))
     }
 
     #[inline]
-    pub fn eq_band_q(id: InstrumentId, band: usize) -> Self {
+    pub fn eq_band_q(id: TrackId, band: usize) -> Self {
         Self::instrument(id, ParameterTarget::EqBandQ(band))
     }
 
     #[inline]
-    pub fn swing(id: InstrumentId) -> Self {
+    pub fn swing(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Swing)
     }
 
     #[inline]
-    pub fn humanize_velocity(id: InstrumentId) -> Self {
+    pub fn humanize_velocity(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::HumanizeVelocity)
     }
 
     #[inline]
-    pub fn humanize_timing(id: InstrumentId) -> Self {
+    pub fn humanize_timing(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::HumanizeTiming)
     }
 
     #[inline]
-    pub fn timing_offset(id: InstrumentId) -> Self {
+    pub fn timing_offset(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::TimingOffset)
     }
 
     #[inline]
-    pub fn track_time_signature(id: InstrumentId) -> Self {
+    pub fn track_time_signature(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::TimeSignature)
     }
 
@@ -331,9 +331,9 @@ impl AutomationTarget {
     // ========================================================================
 
     /// Get the instrument ID associated with this target (None for global/bus/generative targets).
-    pub fn instrument_id(&self) -> Option<InstrumentId> {
+    pub fn instrument_id(&self) -> Option<TrackId> {
         match self {
-            AutomationTarget::Instrument(id, _) => Some(*id),
+            AutomationTarget::Track(id, _) => Some(*id),
             AutomationTarget::Bus(_, _)
             | AutomationTarget::Global(_)
             | AutomationTarget::Generative(_) => None,
@@ -343,7 +343,7 @@ impl AutomationTarget {
     /// Get the underlying ParameterTarget if this is an instrument target with a standard param.
     pub fn parameter_target(&self) -> Option<&ParameterTarget> {
         match self {
-            AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => Some(param),
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => Some(param),
             _ => None,
         }
     }
@@ -351,7 +351,7 @@ impl AutomationTarget {
     /// Get a human-readable name for this target.
     pub fn name(&self) -> String {
         match self {
-            AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => param.name(),
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.name(),
             AutomationTarget::Bus(bus_id, BusParameter::Level) => format!("Bus {} Level", bus_id),
             AutomationTarget::Global(GlobalParameter::Bpm) => "BPM".to_string(),
             AutomationTarget::Global(GlobalParameter::TimeSignature) => {
@@ -369,9 +369,7 @@ impl AutomationTarget {
     /// Get a short name for compact display.
     pub fn short_name(&self) -> &'static str {
         match self {
-            AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => {
-                param.short_name()
-            }
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.short_name(),
             AutomationTarget::Bus(_, BusParameter::Level) => "BusLv",
             AutomationTarget::Global(GlobalParameter::Bpm) => "BPM",
             AutomationTarget::Global(GlobalParameter::TimeSignature) => "TSig",
@@ -395,7 +393,7 @@ impl AutomationTarget {
     }
 
     /// Get all possible automation targets for an instrument (static set).
-    pub fn targets_for_instrument(id: InstrumentId) -> Vec<AutomationTarget> {
+    pub fn targets_for_instrument(id: TrackId) -> Vec<AutomationTarget> {
         vec![
             Self::level(id),
             Self::pan(id),
@@ -429,9 +427,7 @@ impl AutomationTarget {
     /// Get the default min/max range for this target type.
     pub fn default_range(&self) -> (f32, f32) {
         match self {
-            AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => {
-                param.default_range()
-            }
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.default_range(),
             AutomationTarget::Bus(_, BusParameter::Level) => (0.0, 1.0),
             AutomationTarget::Global(GlobalParameter::Bpm) => (30.0, 300.0),
             AutomationTarget::Global(GlobalParameter::TimeSignature) => (0.0, 1.0),
@@ -442,7 +438,7 @@ impl AutomationTarget {
     /// Get the value kind for this target (continuous or discrete).
     pub fn value_kind(&self) -> ValueKind {
         match self {
-            AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => match param {
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => match param {
                 ParameterTarget::FilterBypass
                 | ParameterTarget::EffectBypass(_)
                 | ParameterTarget::TimeSignature => ValueKind::Discrete,
@@ -461,7 +457,7 @@ impl AutomationTarget {
             AutomationTarget::Global(GlobalParameter::TimeSignature) => {
                 Some(DiscreteValueKind::TimeSignature)
             }
-            AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => match param {
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => match param {
                 ParameterTarget::TimeSignature => Some(DiscreteValueKind::TimeSignature),
                 ParameterTarget::FilterBypass | ParameterTarget::EffectBypass(_) => {
                     Some(DiscreteValueKind::Bool)
@@ -741,7 +737,7 @@ impl AutomationState {
     }
 
     /// Get all lanes for a specific instrument
-    pub fn lanes_for_instrument(&self, instrument_id: InstrumentId) -> Vec<&AutomationLane> {
+    pub fn lanes_for_instrument(&self, instrument_id: TrackId) -> Vec<&AutomationLane> {
         self.lanes
             .iter()
             .filter(|l| l.target.instrument_id() == Some(instrument_id))
@@ -785,7 +781,7 @@ impl AutomationState {
     }
 
     /// Remove all lanes for an instrument (when instrument is deleted)
-    pub fn remove_lanes_for_instrument(&mut self, instrument_id: InstrumentId) {
+    pub fn remove_lanes_for_instrument(&mut self, instrument_id: TrackId) {
         self.lanes
             .retain(|l| l.target.instrument_id() != Some(instrument_id));
         // Adjust selection

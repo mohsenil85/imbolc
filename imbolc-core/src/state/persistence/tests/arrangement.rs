@@ -1,7 +1,7 @@
 use super::{load_project, save_project, temp_db_path};
-use crate::state::instrument::SourceType;
-use crate::state::instrument_state::InstrumentState;
 use crate::state::session::SessionState;
+use crate::state::track::SourceType;
+use crate::state::track_state::TrackState;
 use crate::state::AutomationTarget;
 
 #[test]
@@ -10,8 +10,8 @@ fn save_and_load_round_trip_arrangement() {
     use crate::state::piano_roll::Note;
 
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
 
     // Create clips with notes
     let clip_id = session
@@ -64,10 +64,10 @@ fn save_and_load_round_trip_arrangement() {
     session.arrangement.selected_placement = Some(1);
 
     // Add piano roll track (required for persistence)
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save_project");
+    save_project(&path, &session, &tracks).expect("save_project");
     let (loaded_session, _loaded_instruments) = load_project(&path).expect("load_project");
 
     let arr = &loaded_session.arrangement;
@@ -131,9 +131,9 @@ fn round_trip_arrangement_clips() {
     use crate::state::piano_roll::Note;
 
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
-    session.piano_roll.add_track(inst_id);
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
+    session.piano_roll.add_sequence(inst_id);
 
     let clip_id = session
         .arrangement
@@ -161,7 +161,7 @@ fn round_trip_arrangement_clips() {
     session.arrangement.play_mode = PlayMode::Song;
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (loaded, _) = load_project(&path).expect("load");
 
     let arr = &loaded.arrangement;
@@ -179,7 +179,7 @@ fn round_trip_arrangement_clips() {
 #[test]
 fn round_trip_automation_with_curves() {
     let mut session = SessionState::new();
-    let instruments = InstrumentState::new();
+    let tracks = TrackState::new();
 
     let lane_id = session.automation.add_lane(AutomationTarget::bpm());
     let lane = session.automation.lane_mut(lane_id).unwrap();
@@ -194,7 +194,7 @@ fn round_trip_automation_with_curves() {
     lane.add_point(960, 1.0);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save");
+    save_project(&path, &session, &tracks).expect("save");
     let (loaded, _) = load_project(&path).expect("load");
 
     let loaded_lane = loaded.automation.lane(lane_id).expect("lane missing");

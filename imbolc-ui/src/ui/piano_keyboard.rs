@@ -76,7 +76,7 @@ enum StradellaRow {
 
 /// Shared piano keyboard state and key-to-pitch mapping.
 ///
-/// Used by InstrumentPane, PianoRollPane, and InstrumentEditPane.
+/// Used by TrackListPane, PianoRollPane, and TrackEditPane.
 ///
 /// Available methods:
 /// - `activate()` / `deactivate()` / `is_active()` — toggle piano mode

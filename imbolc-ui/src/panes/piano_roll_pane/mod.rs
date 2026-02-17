@@ -11,7 +11,7 @@ use crate::ui::{
     Action, InputEvent, Keymap, MouseEvent, Pane, PianoKeyboard, PianoRollAction, Rect, RenderBuf,
     ToggleResult,
 };
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// View mode for the piano roll pane: note editor (default) or step sequencer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -204,12 +204,12 @@ impl Pane for PianoRollPane {
         self.selection_anchor = None;
         self.seq_selection_anchor = None;
         // Sync current_track to the globally selected instrument
-        if let Some(selected_idx) = state.instruments.selected {
-            if let Some(inst) = state.instruments.instruments.get(selected_idx) {
+        if let Some(selected_idx) = state.tracks.selected {
+            if let Some(inst) = state.tracks.tracks.get(selected_idx) {
                 if let Some(track_idx) = state
                     .session
                     .piano_roll
-                    .track_order
+                    .sequence_order
                     .iter()
                     .position(|&id| id == inst.id)
                 {
@@ -237,10 +237,10 @@ impl Pane for PianoRollPane {
         let instrument_id = state
             .session
             .piano_roll
-            .track_order
+            .sequence_order
             .get(self.current_track)
             .copied()
-            .unwrap_or(InstrumentId::new(0));
+            .unwrap_or(TrackId::new(0));
         // Flatten all released pitches (handles chords)
         released
             .into_iter()
@@ -443,7 +443,7 @@ mod tests {
     fn test_toggle_view_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
 
         assert_eq!(pane.view_mode, ViewMode::NoteEditor);
 
@@ -468,7 +468,7 @@ mod tests {
     fn test_toggle_view_mode_blocked_without_kit() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
 
         assert_eq!(pane.view_mode, ViewMode::NoteEditor);
 
@@ -485,7 +485,7 @@ mod tests {
     fn test_auto_view_mode_kit() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
 
         pane.on_enter(&state);
         assert_eq!(pane.view_mode, ViewMode::StepSequencer);
@@ -495,7 +495,7 @@ mod tests {
     fn test_auto_view_mode_non_kit() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
 
         // Force step sequencer mode first
         pane.view_mode = ViewMode::StepSequencer;
@@ -508,7 +508,7 @@ mod tests {
     fn test_sequencer_cursor_navigation() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
 
         assert_eq!(pane.seq_cursor_pad, 0);
@@ -551,7 +551,7 @@ mod tests {
     fn test_toggle_step_action_in_sequencer_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
         pane.seq_cursor_pad = 3;
         pane.seq_cursor_step = 7;
@@ -583,7 +583,7 @@ mod tests {
     fn test_home_resets_seq_step_in_sequencer_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
         pane.seq_cursor_step = 10;
 
@@ -599,7 +599,7 @@ mod tests {
     fn test_vel_up_down_in_sequencer_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
         pane.seq_cursor_pad = 2;
         pane.seq_cursor_step = 5;
@@ -629,7 +629,7 @@ mod tests {
     fn test_pattern_nav_in_sequencer_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
 
         let action = pane.handle_action(
@@ -657,7 +657,7 @@ mod tests {
     fn test_cycle_pattern_length_in_sequencer_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
 
         let action = pane.handle_action(
@@ -675,7 +675,7 @@ mod tests {
     fn test_cycle_step_resolution_in_sequencer_mode() {
         let mut pane = PianoRollPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         pane.view_mode = ViewMode::StepSequencer;
 
         let action = pane.handle_action(

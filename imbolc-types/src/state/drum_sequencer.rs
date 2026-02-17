@@ -1,7 +1,7 @@
 //! Drum sequencer types.
 
 use super::sampler::{BufferId, Slice, SliceId};
-use crate::InstrumentId;
+use crate::TrackId;
 use serde::{Deserialize, Serialize};
 
 pub const NUM_PADS: usize = 12;
@@ -102,9 +102,9 @@ pub struct DrumPad {
     pub buffer_id: Option<BufferId>,
     pub path: Option<String>,
 
-    // Instrument trigger (one-shot)
+    // Track trigger (one-shot)
     #[serde(default)]
-    pub instrument_id: Option<InstrumentId>,
+    pub instrument_id: Option<TrackId>,
     #[serde(default = "default_trigger_freq")]
     pub trigger_freq: f32, // Base frequency for this pad (default 440.0)
 

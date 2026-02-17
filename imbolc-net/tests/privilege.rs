@@ -83,7 +83,7 @@ fn test_privilege_transfer() {
     std::thread::sleep(Duration::from_millis(50));
     let state = common::make_test_state(&server);
     server.accept_connections();
-    server.poll_actions(&state.session, &state.instruments);
+    server.poll_actions(&state.session, &state.tracks);
     server.flush_writer();
 
     // Bob should receive PrivilegeGranted

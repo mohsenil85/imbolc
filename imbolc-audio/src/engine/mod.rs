@@ -16,7 +16,7 @@ use std::time::Instant;
 
 use super::bus_allocator::BusAllocator;
 use backend::AudioBackend;
-use imbolc_types::{BufferId, BusId, EffectId, InstrumentId};
+use imbolc_types::{BufferId, BusId, EffectId, TrackId};
 use node_registry::NodeRegistry;
 use voice_allocator::VoiceAllocator;
 
@@ -67,7 +67,7 @@ const VST_UGEN_INDEX: i32 = 0;
 /// A polyphonic voice chain: entire signal chain spawned per note
 #[derive(Debug, Clone)]
 pub struct VoiceChain {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub pitch: u8,
     pub velocity: f32,
     pub group_id: i32,
@@ -83,7 +83,7 @@ pub struct VoiceChain {
 }
 
 #[derive(Debug, Clone)]
-pub struct InstrumentNodes {
+pub struct TrackNodes {
     pub source: Option<i32>,
     pub lfo: Option<i32>,
     pub filter: Option<i32>,
@@ -94,7 +94,7 @@ pub struct InstrumentNodes {
     pub output: i32,
 }
 
-impl InstrumentNodes {
+impl TrackNodes {
     pub fn all_node_ids(&self) -> Vec<i32> {
         let mut ids = Vec::new();
         if let Some(id) = self.source {
@@ -121,7 +121,7 @@ impl InstrumentNodes {
 
 pub struct AudioEngine {
     backend: Option<Box<dyn AudioBackend>>,
-    pub(crate) node_map: HashMap<InstrumentId, InstrumentNodes>,
+    pub(crate) node_map: HashMap<TrackId, TrackNodes>,
     next_node_id: i32,
     pub(crate) is_running: bool,
     scsynth_process: Option<Child>,
@@ -133,7 +133,7 @@ pub struct AudioEngine {
     /// Dedicated audio bus per mixer bus (bus_id -> SC audio bus index)
     bus_audio_buses: HashMap<BusId, i32>,
     /// Send synth nodes: (instrument_id, bus_id) -> node_id
-    send_node_map: HashMap<(InstrumentId, BusId), i32>,
+    send_node_map: HashMap<(TrackId, BusId), i32>,
     /// Bus output synth nodes: bus_id -> node_id
     bus_node_map: HashMap<BusId, i32>,
     /// Layer group audio buses: group_id -> SC audio bus index
@@ -148,8 +148,8 @@ pub struct AudioEngine {
     layer_group_effect_node_map: HashMap<(u32, EffectId), i32>,
     /// Layer group EQ synth nodes: group_id -> node_id
     layer_group_eq_node_map: HashMap<u32, i32>,
-    /// Instrument final buses: instrument_id -> SC audio bus index (post-effects, pre-mixer)
-    pub(crate) instrument_final_buses: HashMap<InstrumentId, i32>,
+    /// Track final buses: instrument_id -> SC audio bus index (post-effects, pre-mixer)
+    pub(crate) instrument_final_buses: HashMap<TrackId, i32>,
     /// Voice allocation, tracking, stealing, and control bus pooling
     pub(crate) voice_allocator: VoiceAllocator,
     /// Safety limiter synth node ID (persistent, never freed during routing rebuilds)
@@ -402,7 +402,7 @@ mod tests {
     /// Test-only stand-in for AppState (which lives in imbolc-core).
     struct AppState {
         pub session: imbolc_types::SessionState,
-        pub instruments: imbolc_types::InstrumentState,
+        pub tracks: imbolc_types::TrackState,
     }
 
     impl AppState {
@@ -412,16 +412,13 @@ mod tests {
                     imbolc_types::session::MusicalSettings::default(),
                     DEFAULT_BUS_COUNT,
                 ),
-                instruments: imbolc_types::InstrumentState::new(),
+                tracks: imbolc_types::TrackState::new(),
             }
         }
 
-        fn add_instrument(
-            &mut self,
-            source: imbolc_types::SourceType,
-        ) -> imbolc_types::InstrumentId {
-            let id = self.instruments.add_instrument(source);
-            self.session.piano_roll.add_track(id);
+        fn add_track(&mut self, source: imbolc_types::SourceType) -> imbolc_types::TrackId {
+            let id = self.tracks.add_track(source);
+            self.session.piano_roll.add_sequence(id);
             id
         }
     }
@@ -439,8 +436,8 @@ mod tests {
         let mut engine = connect_engine();
         let mut state = AppState::new();
 
-        let inst_id = state.add_instrument(SourceType::AudioIn);
-        if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+        let inst_id = state.add_track(SourceType::AudioIn);
+        if let Some(inst) = state.tracks.track_mut(inst_id) {
             inst.set_filter(Some(FilterType::Lpf));
             inst.modulation.lfo.enabled = true;
             inst.add_effect(EffectType::Delay);
@@ -456,7 +453,7 @@ mod tests {
         }
 
         engine
-            .rebuild_instrument_routing(&state.instruments, &state.session)
+            .rebuild_instrument_routing(&state.tracks, &state.session)
             .expect("rebuild routing");
 
         let nodes = engine.node_map.get(&inst_id).expect("nodes");
@@ -473,8 +470,8 @@ mod tests {
         let mut engine = connect_engine();
         let mut state = AppState::new();
 
-        let inst_id = state.add_instrument(SourceType::BusIn);
-        if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+        let inst_id = state.add_track(SourceType::BusIn);
+        if let Some(inst) = state.tracks.track_mut(inst_id) {
             let effect_id = inst.add_effect(EffectType::SidechainComp);
             if let Some(effect) = inst.effect_by_id_mut(effect_id) {
                 if let Some(param) = effect.params.iter_mut().find(|p| p.name == "sc_bus") {
@@ -484,7 +481,7 @@ mod tests {
         }
 
         engine
-            .rebuild_instrument_routing(&state.instruments, &state.session)
+            .rebuild_instrument_routing(&state.tracks, &state.session)
             .expect("rebuild routing");
 
         let nodes = engine.node_map.get(&inst_id).expect("nodes");
@@ -497,8 +494,8 @@ mod tests {
         let mut engine = connect_engine();
         let mut state = AppState::new();
 
-        let inst_id = state.add_instrument(SourceType::Saw);
-        if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+        let inst_id = state.add_track(SourceType::Saw);
+        if let Some(inst) = state.tracks.track_mut(inst_id) {
             inst.set_filter(Some(FilterType::Hpf));
             let disabled_id = inst.add_effect(EffectType::Delay);
             if let Some(disabled) = inst.effect_by_id_mut(disabled_id) {
@@ -508,7 +505,7 @@ mod tests {
         }
 
         engine
-            .rebuild_instrument_routing(&state.instruments, &state.session)
+            .rebuild_instrument_routing(&state.tracks, &state.session)
             .expect("rebuild routing");
 
         engine.voice_allocator.add(VoiceChain {
@@ -528,7 +525,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::level(inst_id),
                 0.5,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -536,7 +533,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::pan(inst_id),
                 -0.25,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -544,7 +541,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::filter_cutoff(inst_id),
                 800.0,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -552,7 +549,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::filter_resonance(inst_id),
                 0.5,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -560,7 +557,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::effect_param(inst_id, EffectId::new(1), ParamIndex::new(0)),
                 0.7,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -568,7 +565,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::sample_rate(inst_id),
                 1.2,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -576,7 +573,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::sample_amp(inst_id),
                 0.8,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -585,7 +582,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::attack(inst_id),
                 0.05,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -593,7 +590,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::decay(inst_id),
                 0.2,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -601,7 +598,7 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::sustain(inst_id),
                 0.7,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
@@ -609,18 +606,13 @@ mod tests {
             .apply_automation(
                 &AutomationTarget::release(inst_id),
                 1.5,
-                &mut state.instruments,
+                &mut state.tracks,
                 &state.session,
             )
             .unwrap();
 
         // Verify envelope state was mutated
-        let env = &state
-            .instruments
-            .instrument(inst_id)
-            .unwrap()
-            .modulation
-            .amp_envelope;
+        let env = &state.tracks.track(inst_id).unwrap().modulation.amp_envelope;
         assert!((env.attack - 0.05).abs() < f32::EPSILON);
         assert!((env.decay - 0.2).abs() < f32::EPSILON);
         assert!((env.sustain - 0.7).abs() < f32::EPSILON);
@@ -632,9 +624,9 @@ mod tests {
         let mut engine = connect_engine();
         let mut state = AppState::new();
 
-        let inst_id = state.add_instrument(SourceType::BusIn);
+        let inst_id = state.add_track(SourceType::BusIn);
         engine
-            .rebuild_instrument_routing(&state.instruments, &state.session)
+            .rebuild_instrument_routing(&state.tracks, &state.session)
             .expect("rebuild routing");
 
         engine
@@ -646,10 +638,10 @@ mod tests {
     fn set_bus_mixer_params_uses_bus_nodes() {
         let mut engine = connect_engine();
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
 
         engine
-            .rebuild_instrument_routing(&state.instruments, &state.session)
+            .rebuild_instrument_routing(&state.tracks, &state.session)
             .expect("rebuild routing");
 
         engine
@@ -657,7 +649,7 @@ mod tests {
             .expect("set_bus_mixer_params");
     }
 
-    fn make_voice(inst_id: InstrumentId, pitch: u8, velocity: f32, age_ms: u64) -> VoiceChain {
+    fn make_voice(inst_id: TrackId, pitch: u8, velocity: f32, age_ms: u64) -> VoiceChain {
         VoiceChain {
             instrument_id: inst_id,
             pitch,
@@ -673,7 +665,7 @@ mod tests {
     }
 
     fn make_released_voice(
-        inst_id: InstrumentId,
+        inst_id: TrackId,
         pitch: u8,
         velocity: f32,
         released_ago_ms: u64,
@@ -699,7 +691,7 @@ mod tests {
     #[test]
     fn test_same_pitch_retrigger() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Add a voice at pitch 60
         engine
@@ -725,7 +717,7 @@ mod tests {
     #[test]
     fn test_released_voices_stolen_first() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Fill to limit with active voices (pitches 40..40+N, all unique)
         for i in 0..MAX_VOICES_PER_INSTRUMENT {
@@ -769,7 +761,7 @@ mod tests {
     #[test]
     fn test_lowest_velocity_stolen() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Fill to limit — all same age, varying velocity (pitches 40..40+N)
         for i in 0..MAX_VOICES_PER_INSTRUMENT {
@@ -799,7 +791,7 @@ mod tests {
     #[test]
     fn test_age_tiebreaker() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Fill to limit — all same velocity, varying age (pitches 40..40+N)
         for i in 0..MAX_VOICES_PER_INSTRUMENT {
@@ -829,7 +821,7 @@ mod tests {
     #[test]
     fn test_cleanup_expired_voices() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
 
         // Add a voice released long ago (should be cleaned up)
         engine
@@ -867,7 +859,7 @@ mod tests {
     #[test]
     fn test_process_node_ends_removes_voice() {
         let mut engine = connect_engine();
-        let inst_id = InstrumentId::new(1);
+        let inst_id = TrackId::new(1);
         let group_id = 5000;
         let midi_node_id = 5001;
         let source_node = 5002;
@@ -952,7 +944,7 @@ mod tests {
         fn release_voice_forces_gate_bus_zero_before_group_free() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
+            let inst_id = state.add_track(SourceType::Saw);
 
             let group_id = 9100;
             let midi_node_id = 9101;
@@ -974,7 +966,7 @@ mod tests {
             });
 
             engine
-                .release_voice(inst_id, 60, 0.25, &state.instruments)
+                .release_voice(inst_id, 60, 0.25, &state.tracks)
                 .expect("release_voice");
 
             let ops = backend.operations();
@@ -993,8 +985,8 @@ mod tests {
             );
 
             let release_secs = state
-                .instruments
-                .instrument(inst_id)
+                .tracks
+                .track(inst_id)
                 .expect("instrument")
                 .modulation
                 .amp_envelope
@@ -1017,7 +1009,7 @@ mod tests {
         #[test]
         fn steal_voice_forces_gate_bus_zero_on_stolen_voice() {
             let (mut engine, backend) = engine_with_test_backend();
-            let inst_id = InstrumentId::new(42);
+            let inst_id = TrackId::new(42);
 
             let group_id = 9200;
             let midi_node_id = 9201;
@@ -1070,9 +1062,9 @@ mod tests {
         fn routing_creates_correct_synth_chain_for_saw() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
+            let inst_id = state.add_track(SourceType::Saw);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let nodes = engine.node_map.get(&inst_id).expect("nodes must exist");
             assert!(
@@ -1099,14 +1091,14 @@ mod tests {
         fn routing_creates_filter_and_effects_for_audio_in() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.set_filter(Some(FilterType::Lpf));
                 inst.add_effect(EffectType::Delay);
                 inst.add_effect(EffectType::Reverb);
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let nodes = engine.node_map.get(&inst_id).expect("nodes");
             assert!(nodes.source.is_some(), "AudioIn has a persistent source");
@@ -1126,8 +1118,8 @@ mod tests {
         fn routing_creates_send_synths() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.channel_strip.sends.insert(
                     BusId::new(1),
                     imbolc_types::MixerSend {
@@ -1139,7 +1131,7 @@ mod tests {
                 );
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let send_count = backend.count(|op| matches!(op, TestOp::CreateSynth { def_name, .. } if def_name == "imbolc_send"));
             assert_eq!(send_count, 1, "one send synth for the enabled send");
@@ -1153,13 +1145,13 @@ mod tests {
         fn routing_buses_are_chained_correctly() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.set_filter(Some(FilterType::Hpf));
                 inst.add_effect(EffectType::Delay);
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let synths = backend.synths_created();
             let source_out = synths
@@ -1282,14 +1274,14 @@ mod tests {
         fn rebuild_frees_old_nodes() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
+            let inst_id = state.add_track(SourceType::AudioIn);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("first build");
             let first_output_node = engine.node_map.get(&inst_id).unwrap().output;
             backend.clear();
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("second build");
             let freed = backend.nodes_freed();
             assert!(
@@ -1307,8 +1299,8 @@ mod tests {
         fn disabled_effects_are_not_created() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::Saw);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 let eid = inst.add_effect(EffectType::Delay);
                 if let Some(effect) = inst.effect_by_id_mut(eid) {
                     effect.enabled = false;
@@ -1316,7 +1308,7 @@ mod tests {
                 inst.add_effect(EffectType::Reverb);
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let nodes = engine.node_map.get(&inst_id).expect("nodes");
             assert_eq!(nodes.effects.len(), 1, "only enabled effects get nodes");
@@ -1328,9 +1320,9 @@ mod tests {
         fn set_param_records_operation() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
+            let inst_id = state.add_track(SourceType::AudioIn);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             engine
                 .set_source_param(inst_id, "gain", 0.75)
@@ -1346,9 +1338,9 @@ mod tests {
         fn groups_are_created_on_first_routing() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let group_count = backend.count(|op| matches!(op, TestOp::CreateGroup { .. }));
             assert_eq!(group_count, 6, "six execution groups");
@@ -1364,12 +1356,12 @@ mod tests {
         fn muted_instrument_creates_output_with_mute_flag() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::Saw);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.channel_strip.mute = true;
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let synths = backend.synths_created();
             let output = synths.iter().find(|op| matches!(op, TestOp::CreateSynth { def_name, .. } if def_name == "imbolc_output"));
@@ -1386,15 +1378,15 @@ mod tests {
         fn lfo_creates_synth_with_correct_params() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.modulation.lfo.enabled = true;
                 inst.modulation.lfo.target = imbolc_types::ParameterTarget::Pan;
                 inst.modulation.lfo.rate = 2.0;
                 inst.modulation.lfo.depth = 0.5;
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let nodes = engine.node_map.get(&inst_id).expect("nodes");
             assert!(nodes.lfo.is_some(), "LFO node should exist");
@@ -1419,12 +1411,12 @@ mod tests {
         fn output_target_bus_routes_to_bus_audio_bus() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::Saw);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.channel_strip.output_target = OutputTarget::Bus(BusId::new(1));
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let synths = backend.synths_created();
             let output_out = synths
@@ -1456,19 +1448,19 @@ mod tests {
         fn output_target_master_routes_to_hardware() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
+            let inst_id = state.add_track(SourceType::Saw);
             // output_target defaults to Master, no change needed
             assert_eq!(
                 state
-                    .instruments
-                    .instrument(inst_id)
+                    .tracks
+                    .track(inst_id)
                     .unwrap()
                     .channel_strip
                     .output_target,
                 OutputTarget::Master
             );
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let synths = backend.synths_created();
             let output_out = synths
@@ -1495,8 +1487,8 @@ mod tests {
         fn send_post_insert_taps_final_bus() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.set_filter(Some(FilterType::Lpf));
                 inst.add_effect(EffectType::Delay);
                 inst.channel_strip.sends.insert(
@@ -1510,7 +1502,7 @@ mod tests {
                 );
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let synths = backend.synths_created();
             // Get the send synth's `in` param
@@ -1553,14 +1545,14 @@ mod tests {
         fn bus_effect_chain_creates_synths_in_bus_processing_group() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             // Add reverb + delay to bus 1
             let bus = &mut state.session.mixer.buses[0];
             assert_eq!(bus.id, BusId::new(1));
             let reverb_id = bus.channel_strip.add_effect(EffectType::Reverb);
             let delay_id = bus.channel_strip.add_effect(EffectType::Delay);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             // Verify synths created in GROUP_BUS_PROCESSING
             let synths = backend.synths_created();
@@ -1593,11 +1585,11 @@ mod tests {
         fn bus_effect_chain_wiring() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
             bus.channel_strip.add_effect(EffectType::Reverb);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             let synths = backend.synths_created();
             // Reverb should read from bus_audio
@@ -1672,10 +1664,10 @@ mod tests {
         fn bus_no_effects_passthrough() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             // No effects on bus 1
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             let synths = backend.synths_created();
             let bus_audio = *engine
@@ -1710,9 +1702,9 @@ mod tests {
         fn layer_group_effect_creates_synth_in_bus_processing() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
+            let inst_id = state.add_track(SourceType::Saw);
             // Assign instrument to layer group 1 so the group bus gets allocated
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.layer.group = Some(1);
             }
             // Create a layer group mixer and add a reverb effect
@@ -1723,7 +1715,7 @@ mod tests {
             let gm = state.session.mixer.layer_group_mixer_mut(1).unwrap();
             let effect_id = gm.channel_strip.add_effect(EffectType::Reverb);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             let synths = backend.synths_created();
             let group_reverb = synths.iter().find(|op| matches!(op, TestOp::CreateSynth { def_name, group_id, .. } if def_name == "imbolc_reverb" && *group_id == GROUP_BUS_PROCESSING));
@@ -1743,11 +1735,11 @@ mod tests {
         fn set_bus_effect_param_records_operation() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
             let effect_id = bus.channel_strip.add_effect(EffectType::Reverb);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             backend.clear();
             engine
@@ -1764,8 +1756,8 @@ mod tests {
         fn set_layer_group_effect_param_records_operation() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::Saw);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::Saw);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.layer.group = Some(1);
             }
             state
@@ -1775,7 +1767,7 @@ mod tests {
             let gm = state.session.mixer.layer_group_mixer_mut(1).unwrap();
             let effect_id = gm.channel_strip.add_effect(EffectType::Delay);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             backend.clear();
             engine
@@ -1792,11 +1784,11 @@ mod tests {
         fn teardown_frees_bus_effect_nodes() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
             bus.channel_strip.add_effect(EffectType::Reverb);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("first build");
             let first_node = *engine
                 .bus_effect_node_map
@@ -1805,7 +1797,7 @@ mod tests {
                 .expect("has bus effect node");
             backend.clear();
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("second build");
             let freed = backend.nodes_freed();
             assert!(
@@ -1827,7 +1819,7 @@ mod tests {
         fn disabled_bus_effects_not_created() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            state.add_instrument(SourceType::Saw);
+            state.add_track(SourceType::Saw);
             let bus = &mut state.session.mixer.buses[0];
             let delay_id = bus.channel_strip.add_effect(EffectType::Delay);
             if let Some(effect) = bus.channel_strip.effect_by_id_mut(delay_id) {
@@ -1835,7 +1827,7 @@ mod tests {
             }
             bus.channel_strip.add_effect(EffectType::Reverb);
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             // Count effect synths in GROUP_BUS_PROCESSING (exclude bus_out synths)
             let delay_count = backend.count(|op| matches!(op, TestOp::CreateSynth { def_name, group_id, .. } if def_name == "imbolc_delay" && *group_id == GROUP_BUS_PROCESSING));
@@ -1854,8 +1846,8 @@ mod tests {
         fn send_pre_insert_taps_source_out() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
-            let inst_id = state.add_instrument(SourceType::AudioIn);
-            if let Some(inst) = state.instruments.instrument_mut(inst_id) {
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
                 inst.set_filter(Some(FilterType::Lpf));
                 inst.add_effect(EffectType::Delay);
                 inst.channel_strip.sends.insert(
@@ -1869,7 +1861,7 @@ mod tests {
                 );
             }
             engine
-                .rebuild_instrument_routing(&state.instruments, &state.session)
+                .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let synths = backend.synths_created();
             // Get the send synth's `in` param

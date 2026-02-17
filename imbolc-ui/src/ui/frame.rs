@@ -171,8 +171,8 @@ impl Frame {
         );
 
         // Right-aligned items: [instrument indicator] [A-REC indicator] [REC indicator]
-        let inst_indicator = if let Some(idx) = state.instruments.selected {
-            if let Some(inst) = state.instruments.instruments.get(idx) {
+        let inst_indicator = if let Some(idx) = state.tracks.selected {
+            if let Some(inst) = state.tracks.tracks.get(idx) {
                 format!(" {}: {} ", idx + 1, inst.name)
             } else {
                 String::new()
@@ -210,7 +210,7 @@ impl Frame {
             cursor = arec_start;
         }
 
-        // Instrument indicator (to the left of REC)
+        // Track indicator (to the left of REC)
         if !inst_indicator.is_empty() {
             let inst_start = cursor.saturating_sub(inst_indicator.len() as u16);
             let inst_style = Style::new().fg(Color::WHITE).bold();

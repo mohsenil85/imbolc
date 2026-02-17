@@ -3,17 +3,17 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
-use crate::state::instrument_state::InstrumentState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 pub(super) fn load_session(
     conn: &Connection,
     session: &mut SessionState,
-    instruments: &mut InstrumentState,
+    tracks: &mut TrackState,
 ) -> SqlResult<()> {
     let row = conn.query_row(
         "SELECT bpm, time_sig_num, time_sig_denom, key, scale, tuning_a4, snap,
-                next_instrument_id, next_sampler_buffer_id, selected_instrument, next_layer_group_id,
+                next_track_id, next_sampler_buffer_id, selected_track, next_layer_group_id,
                 humanize_velocity, humanize_timing,
                 click_enabled, click_volume, click_muted
          FROM session WHERE id = 1",
@@ -46,10 +46,10 @@ pub(super) fn load_session(
     session.scale = decode_scale(&row.4);
     session.tuning_a4 = row.5;
     session.snap = row.6 != 0;
-    instruments.next_id = imbolc_types::InstrumentId::new(row.7);
-    instruments.next_sampler_buffer_id = row.8;
-    instruments.selected = row.9.map(|v| v as usize);
-    instruments.next_layer_group_id = row.10;
+    tracks.next_id = imbolc_types::TrackId::new(row.7);
+    tracks.next_sampler_buffer_id = row.8;
+    tracks.selected = row.9.map(|v| v as usize);
+    tracks.next_layer_group_id = row.10;
     session.humanize.velocity = row.11;
     session.humanize.timing = row.12;
     session.click_track.enabled = row.13 != 0;
@@ -195,38 +195,38 @@ pub(super) fn load_musical_settings(
 pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> SqlResult<()> {
     use crate::state::piano_roll::Note;
 
-    // Clear existing tracks
-    session.piano_roll.tracks.clear();
-    session.piano_roll.track_order.clear();
+    // Clear existing sequences
+    session.piano_roll.sequences.clear();
+    session.piano_roll.sequence_order.clear();
 
     // Load tracks ordered by position
     let mut track_stmt =
-        conn.prepare("SELECT instrument_id, polyphonic FROM piano_roll_tracks ORDER BY position")?;
-    let tracks: Vec<(imbolc_types::InstrumentId, bool)> = track_stmt
+        conn.prepare("SELECT track_id, polyphonic FROM piano_roll_tracks ORDER BY position")?;
+    let tracks: Vec<(imbolc_types::TrackId, bool)> = track_stmt
         .query_map([], |row| {
             Ok((
-                imbolc_types::InstrumentId::new(row.get::<_, u32>(0)?),
+                imbolc_types::TrackId::new(row.get::<_, u32>(0)?),
                 row.get::<_, i32>(1)? != 0,
             ))
         })?
         .collect::<SqlResult<_>>()?;
 
     for (inst_id, polyphonic) in &tracks {
-        session.piano_roll.add_track(*inst_id);
-        if let Some(track) = session.piano_roll.tracks.get_mut(inst_id) {
-            track.polyphonic = *polyphonic;
+        session.piano_roll.add_sequence(*inst_id);
+        if let Some(seq) = session.piano_roll.sequences.get_mut(inst_id) {
+            seq.polyphonic = *polyphonic;
         }
     }
 
     // Load notes
     let mut note_stmt = conn.prepare(
-        "SELECT track_instrument_id, tick, duration, pitch, velocity, probability
-         FROM piano_roll_notes ORDER BY track_instrument_id, tick",
+        "SELECT track_track_id, tick, duration, pitch, velocity, probability
+         FROM piano_roll_notes ORDER BY track_track_id, tick",
     )?;
-    let notes: Vec<(imbolc_types::InstrumentId, Note)> = note_stmt
+    let notes: Vec<(imbolc_types::TrackId, Note)> = note_stmt
         .query_map([], |row| {
             Ok((
-                imbolc_types::InstrumentId::new(row.get::<_, u32>(0)?),
+                imbolc_types::TrackId::new(row.get::<_, u32>(0)?),
                 Note {
                     tick: row.get::<_, u32>(1)?,
                     duration: row.get::<_, u32>(2)?,
@@ -239,8 +239,8 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
         .collect::<SqlResult<_>>()?;
 
     for (inst_id, note) in notes {
-        if let Some(track) = session.piano_roll.tracks.get_mut(&inst_id) {
-            track.notes.push(note);
+        if let Some(seq) = session.piano_roll.sequences.get_mut(&inst_id) {
+            seq.notes.push(note);
         }
     }
 
@@ -307,7 +307,7 @@ pub(super) fn load_vst_plugins(conn: &Connection, session: &mut SessionState) ->
     for (id, name, plugin_path, kind_str) in plugins {
         let kind = match kind_str.as_str() {
             "Effect" => VstPluginKind::Effect,
-            _ => VstPluginKind::Instrument,
+            _ => VstPluginKind::Track,
         };
 
         let mut param_stmt = conn.prepare(

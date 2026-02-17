@@ -10,18 +10,18 @@ Comprehensive code map for agents. Read this first to avoid re-exploring.
 |---|---|---|
 | `Quit` | inline | Returns `DispatchResult::with_quit()` |
 | `Nav(_)` | inline | No-op (handled by PaneManager in UI) |
-| `Instrument(a)` | `instrument::dispatch_instrument` | Instrument CRUD, playback, effects, params |
+| `Track(a)` | `track::dispatch_track` | Track CRUD, playback, effects, params |
 | `Mixer(a)` | `mixer::dispatch_mixer` | Mixer level/pan/mute/solo, bus/group params |
 | `PianoRoll(a)` | `piano_roll::dispatch_piano_roll` | Note add/delete/move, selection, grid |
 | `Arrangement(a)` | `arrangement::dispatch_arrangement` | Clip CRUD, timeline placement |
 | `Server(a)` | `server::dispatch_server` | SC server start/stop, device config |
 | `Session(a)` | `session::dispatch_session` | Save/load, BPM, key, scale, tuning |
 | `Sequencer(a)` | `sequencer::dispatch_sequencer` | Drum sequencer pad/step editing |
-| `SampleSlicer(a)` | `sequencer::dispatch_sample_slicer` | Sample slicer slice config |
+| `Chopper(a)` | `sequencer::dispatch_chopper` | Sample chopper slice config |
 | `Automation(a)` | `automation::dispatch_automation` | Automation lane/point CRUD |
 | `Midi(a)` | `midi::dispatch_midi` | MIDI CC mapping, channel config |
 | `Bus(a)` | `bus::dispatch_bus` | Bus add/delete, bus effects |
-| `Group(a)` | `bus::dispatch_group` | Group effects, mixer params |
+| `LayerGroup(a)` | `bus::dispatch_layer_group` | Layer group effects, mixer params |
 | `VstParam(a)` | `vst_param::dispatch_vst_param` | VST parameter value editing |
 | `Click(a)` | `dispatch_click` (inline) | Click track toggle/volume |
 | `Tuner(a)` | `dispatch_tuner` (inline) | Reference pitch play/stop |
@@ -36,20 +36,20 @@ Comprehensive code map for agents. Read this first to avoid re-exploring.
 | `PopLayer(_)` | inline | No-op (handled in UI) |
 | `SaveAndQuit` | inline | No-op (handled in main.rs) |
 
-### Instrument Sub-Handlers (`imbolc-core/src/dispatch/instrument/`)
+### Track Sub-Handlers (`imbolc-core/src/dispatch/track/`)
 
-| Module | InstrumentAction Variants | Purpose |
+| Module | TrackAction Variants | Purpose |
 |---|---|---|
-| `crud.rs` | Add, Delete, Edit, SetState | Instrument lifecycle, source params |
+| `crud.rs` | Add, Delete, Edit, Update | Track lifecycle, source params |
 | `playback.rs` | PlayNote, PlayNotes, PlayDrumPad | Voice triggering via audio side-effects |
-| `selection.rs` | Select, SelectNext/Prev/First/Last | Instrument selection state |
-| `effects.rs` | AddEffect, RemoveEffect, ToggleEffectBypass, AdjustEffectParam, LoadIRResult, ShowVstEffectParams | Effect chain management |
-| `filter.rs` | SetFilter, ToggleFilter, NextFilterType, AdjustFilterCutoff/Resonance | Filter configuration |
+| `selection.rs` | Select, SelectNext/Prev/First/Last | Track selection state |
+| `effects.rs` | AddEffect, RemoveEffect, ToggleEffectBypass, AdjustEffectParam, LoadIRResult, OpenVstEffectParams | Effect chain management |
+| `filter.rs` | SetFilter, ToggleFilter, CycleFilterType, AdjustFilterCutoff/Resonance | Filter configuration |
 | `lfo.rs` | ToggleLfo, AdjustLfoRate/Depth, SetLfoShape/Target | LFO modulation |
 | `envelope.rs` | AdjustEnvelopeAttack/Decay/Sustain/Release | ADSR envelope |
-| `eq.rs` | SetEqualizerParam, ToggleEqualizer | 12-Band EQ |
-| `arpeggiator.rs` | ToggleArpeggiator, NextArpeggiatorDirection/Rate, AdjustArpeggiatorOctaves/Gate, NextChordShape, ClearChordShape | Arpeggiator + chord |
-| `groove.rs` | SetTrackSwing/SwingGrid, AdjustTrackSwing, SetTrackHumanize*, SetTrackTimingOffset, ResetTrackGroove, Set/NextTrackTimeSignature | Per-track groove/timing |
+| `eq.rs` | SetEqParam, ToggleEq | 12-Band EQ |
+| `arpeggiator.rs` | ToggleArp, CycleArpDirection/Rate, AdjustArpOctaves/Gate, CycleChordShape, ClearChordShape | Arpeggiator + chord |
+| `groove.rs` | SetTrackSwing/SwingGrid, AdjustTrackSwing, SetTrackHumanize*, SetTrackTimingOffset, ResetTrackGroove, Set/CycleTrackTimeSignature | Per-track groove/timing |
 | `layer.rs` | LinkLayer, UnlinkLayer | Layer group membership |
 | `sample.rs` | LoadSampleResult | Sample buffer loading |
 
@@ -71,7 +71,7 @@ AppState (imbolc-core/src/state/mod.rs)
 ├── session: SessionState
 │   ├── Musical: key, scale, bpm, tuning_a4, snap, time_signature
 │   ├── piano_roll: PianoRollState (tracks, notes, grid)
-│   ├── arrangement: ArrangementState (clips, clip instances)
+│   ├── arrangement: ArrangementState (clips, placements)
 │   ├── automation: AutomationState (lanes, points)
 │   ├── midi_recording: MidiRecordingState
 │   ├── custom_synthdefs: CustomSynthDefRegistry
@@ -79,15 +79,15 @@ AppState (imbolc-core/src/state/mod.rs)
 │   ├── mixer: MixerState
 │   │   ├── buses: Vec<MixerBus> (id, name, level, pan, mute, solo, effects)
 │   │   ├── master_level, master_mute
-│   │   ├── selection: MixerSelection (Instrument | Group | Bus | Master)
-│   │   └── layer_group_mixers: Vec<GroupMixer>
+│   │   ├── selection: MixerSelection (Track | LayerGroup | Bus | Master)
+│   │   └── layer_group_mixers: Vec<LayerGroupMixer>
 │   ├── humanize: HumanizeSettings
 │   ├── click_track: ClickTrackState
 │   └── theme: Theme
 │
-├── instruments: InstrumentState
-│   └── instruments: Vec<Instrument>
-│       └── Instrument
+├── tracks: TrackState
+│   └── tracks: Vec<Track>
+│       └── Track
 │           ├── id, name, source: SourceType, source_params
 │           ├── processing_chain: Vec<ProcessingStage> (filters/EQ/effects)
 │           ├── lfo: LfoConfig (enabled, rate, depth, shape, targets)
@@ -121,21 +121,21 @@ AppState (imbolc-core/src/state/mod.rs)
 
 | Variant | Purpose |
 |---|---|
-| `RebuildInstruments` | Instrument add/delete, source/processing chain change |
+| `RebuildTracks` | Track add/delete, source/processing chain change |
 | `RebuildSession` | BPM/key/scale/time signature/humanize changes |
 | `RebuildRouting` | Full SC node graph rebuild |
-| `RebuildRoutingForInstrument(InstrumentId)` | Targeted per-instrument rebuild |
-| `AddInstrumentRouting(InstrumentId)` | Add instrument without teardown |
-| `DeleteInstrumentRouting(InstrumentId)` | Delete instrument without teardown |
+| `RebuildRoutingForTrack(TrackId)` | Targeted per-track rebuild |
+| `AddTrackRouting(TrackId)` | Add track without teardown |
+| `DeleteTrackRouting(TrackId)` | Delete track without teardown |
 | `RebuildBusProcessing` | Bus/layer-group effect changes |
-| `UpdateMixerParams` | Level/pan/mute/solo on instruments/buses/groups |
+| `UpdateMixerParams` | Level/pan/mute/solo on tracks/buses/groups |
 | `UpdatePianoRoll` | Note edits, loop change |
 | `UpdateAutomation` | Automation lane/point change |
-| `SetFilterParam(InstrumentId, FilterParamKind, f32)` | Direct filter node update |
-| `SetEffectParam(InstrumentId, EffectId, ParamIndex, f32)` | Direct effect node update |
-| `SetLfoParam(InstrumentId, LfoParamKind, f32)` | Direct LFO node update |
+| `SetFilterParam(TrackId, FilterParamKind, f32)` | Direct filter node update |
+| `SetEffectParam(TrackId, EffectId, ParamIndex, f32)` | Direct effect node update |
+| `SetLfoParam(TrackId, LfoParamKind, f32)` | Direct LFO node update |
 | `SetBusEffectParam(BusId, EffectId, ParamIndex, f32)` | Direct bus effect update |
-| `SetGroupEffectParam(u32, EffectId, ParamIndex, f32)` | Direct group effect update |
+| `SetLayerGroupEffectParam(u32, EffectId, ParamIndex, f32)` | Direct layer group effect update |
 
 Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and applied by the runtime after dispatch returns.
 
@@ -148,26 +148,26 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `mod.rs` | Top-level `dispatch_action()`, undo/redo handling |
 | `local.rs` | `LocalDispatcher` — owns state, provides `dispatch_with_audio()` |
 | `helpers.rs` | Dispatch utilities |
-| `instrument/mod.rs` | Routes `InstrumentAction` to sub-handlers |
-| `instrument/crud.rs` | Add/delete/edit/update instruments |
-| `instrument/playback.rs` | Note/pad triggering → audio commands |
-| `instrument/selection.rs` | Instrument selection state |
-| `instrument/effects.rs` | Effect chain CRUD + param adjustment |
-| `instrument/filter.rs` | Filter type/cutoff/resonance |
-| `instrument/lfo.rs` | LFO toggle/rate/depth/shape/target |
-| `instrument/envelope.rs` | ADSR adjustment |
-| `instrument/eq.rs` | 12-Band EQ params |
-| `instrument/arpeggiator.rs` | Arpeggiator + chord shapes |
-| `instrument/groove.rs` | Per-track swing/humanize/timing |
-| `instrument/layer.rs` | Layer group link/unlink |
-| `instrument/sample.rs` | Sample load results |
+| `track/mod.rs` | Routes `TrackAction` to sub-handlers |
+| `track/crud.rs` | Add/delete/edit/update tracks |
+| `track/playback.rs` | Note/pad triggering → audio commands |
+| `track/selection.rs` | Track selection state |
+| `track/effects.rs` | Effect chain CRUD + param adjustment |
+| `track/filter.rs` | Filter type/cutoff/resonance |
+| `track/lfo.rs` | LFO toggle/rate/depth/shape/target |
+| `track/envelope.rs` | ADSR adjustment |
+| `track/eq.rs` | 12-Band EQ params |
+| `track/arpeggiator.rs` | Arpeggiator + chord shapes |
+| `track/groove.rs` | Per-track swing/humanize/timing |
+| `track/layer.rs` | Layer group link/unlink |
+| `track/sample.rs` | Sample load results |
 | `piano_roll.rs` | Note editing actions |
 | `automation.rs` | Automation lane/point actions |
-| `sequencer.rs` | Drum sequencer + sample slicer actions |
+| `sequencer.rs` | Drum sequencer + chopper actions |
 | `mixer.rs` | Mixer level/pan/mute/solo/send actions |
 | `session.rs` | Save/load/BPM/key/scale/tuning |
 | `server.rs` | SC server control |
-| `bus.rs` | Bus + group CRUD/effects |
+| `bus.rs` | Bus + layer group CRUD/effects |
 | `midi.rs` | MIDI CC mapping |
 | `vst_param.rs` | VST parameter editing |
 | `arrangement.rs` | Clip/arrangement actions |
@@ -238,8 +238,8 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 
 | File | Pane ID | Purpose |
 |---|---|---|
-| `instrument_edit_pane/` | instrument_edit | Main instrument parameter editor (source, filter, effects, ADSR, LFO) |
-| `instrument_pane.rs` | instrument | Instrument list with CRUD |
+| `track_edit_pane/` | track_edit | Main track parameter editor (source, filter, effects, ADSR, LFO) |
+| `track_list_pane.rs` | track_list | Track list with CRUD |
 | `arpeggiator_pane.rs` | arpeggiator | Arpeggiator settings editor |
 | `command_line_pane.rs` | command_line | Command line input |
 | `generative_pane.rs` | generative | Generative/procedural tools |
@@ -254,11 +254,11 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `waveform_pane.rs` | waveform | Waveform/spectrum/oscilloscope/LUFS |
 | `eq_pane.rs` | eq | 12-band parametric EQ |
 | `home_pane.rs` | home | Welcome screen |
-| `add_pane.rs` | add | Add instrument type selector |
+| `add_pane.rs` | add | Add track type selector |
 | `add_effect_pane.rs` | add_effect | Effect type selector |
 | `file_browser_pane.rs` | file_browser | File/directory navigator |
 | `project_browser_pane.rs` | project_browser | Recent projects |
-| `sample_chopper_pane.rs` | sample_slicer | Sample slicing into pads |
+| `sample_chopper_pane.rs` | sample_chopper | Sample slicing into pads |
 | `save_as_pane.rs` | save_as | Save dialog with text input |
 | `confirm_pane.rs` | confirm | Yes/No confirmation |
 | `quit_prompt_pane.rs` | quit_prompt | Save/Don't Save/Cancel |
@@ -272,7 +272,7 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `checkpoint_list_pane.rs` | checkpoint_list | Undo checkpoint browser |
 | `groove_pane.rs` | groove | Swing/humanize/timing settings |
 | `tuner_pane.rs` | tuner | Reference pitch player |
-| `instrument_picker_pane.rs` | instrument_picker | Instrument selector for drum pads |
+| `track_picker_pane.rs` | track_picker | Track selector for drum pads |
 
 ### imbolc-ui: ui/ (framework modules)
 
@@ -329,8 +329,8 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 ### MixerSelection
 
 ```
-Instrument(usize) — index into instruments vec
-Group(u32)        — group ID
+Track(usize)      — index into tracks vec
+LayerGroup(u32)   — layer group ID
 Bus(u8)           — bus 1-8
 Master            — master fader
 ```
@@ -347,10 +347,10 @@ Bus(u8)   — routes to specific bus (1-8)
 ### Undo Integration
 
 Every undoable dispatch pushes a scoped snapshot before mutation:
-- `SingleInstrument(id)` — one instrument only
-- `Instruments` — all instruments
+- `SingleTrack(id)` — one track only
+- `Tracks` — all tracks
 - `Session` — session state only
-- `Full` — both session + instruments
+- `Full` — both session + tracks
 
 Undo/Redo replaces state from stack and sets `AudioEffect::all()`.
 
@@ -365,4 +365,4 @@ Undo/Redo replaces state from stack and sets `AudioEffect::all()`.
 
 - **Main → Audio**: Triple buffer (lock-free), state snapshots
 - **Audio → Main**: `AudioFeedback` channel (playhead position, server status, meters)
-- **Routing rebuild**: Amortized 5-phase state machine (TearDown → AllocBuses → BuildInstrument(i) → BuildOutputs → Finalize), each phase bounded ~0.5ms
+- **Routing rebuild**: Amortized 5-phase state machine (TearDown → AllocBuses → BuildTrack(i) → BuildOutputs → Finalize), each phase bounded ~0.5ms

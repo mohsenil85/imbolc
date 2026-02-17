@@ -67,7 +67,7 @@ pub(super) fn reduce(action: &TagAction, session: &mut SessionState) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AutomationTarget, InstrumentId};
+    use crate::{AutomationTarget, TrackId};
 
     fn make_session() -> SessionState {
         SessionState::new()
@@ -122,7 +122,7 @@ mod tests {
     fn add_and_remove_target() {
         let mut s = make_session();
         reduce(&TagAction::CreateTag("test".into()), &mut s);
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(1));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(1));
         reduce(&TagAction::AddTarget(0, target.clone()), &mut s);
         assert_eq!(s.param_tags.tags[0].targets.len(), 1);
         reduce(&TagAction::RemoveTarget(0, target), &mut s);
@@ -141,7 +141,7 @@ mod tests {
     fn move_target() {
         let mut s = make_session();
         reduce(&TagAction::CreateTag("test".into()), &mut s);
-        let id = InstrumentId::new(1);
+        let id = TrackId::new(1);
         let t0 = AutomationTarget::filter_cutoff(id);
         let t1 = AutomationTarget::level(id);
         let t2 = AutomationTarget::pan(id);

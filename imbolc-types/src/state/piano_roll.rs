@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::InstrumentId;
+use crate::TrackId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Note {
@@ -25,19 +25,19 @@ pub struct ClipboardNote {
     pub probability: f32,
 }
 
-/// A single track in the piano roll, holding notes for one instrument.
+/// A note sequence in the piano roll, holding notes for one instrument.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Track {
-    pub instrument_id: InstrumentId,
+pub struct NoteSequence {
+    pub instrument_id: TrackId,
     pub notes: Vec<Note>,
     pub polyphonic: bool,
 }
 
-/// Global piano roll state: per-instrument note tracks, transport, and grid settings.
+/// Global piano roll state: per-instrument note sequences, transport, and grid settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PianoRollState {
-    pub tracks: HashMap<InstrumentId, Track>,
-    pub track_order: Vec<InstrumentId>,
+    pub sequences: HashMap<TrackId, NoteSequence>,
+    pub sequence_order: Vec<TrackId>,
     pub bpm: f32,
     pub time_signature: (u8, u8),
     #[serde(skip)]
@@ -48,7 +48,7 @@ pub struct PianoRollState {
     #[serde(skip)]
     pub playhead: u32,
     pub ticks_per_beat: u32,
-    /// Whether note input from piano keys should be recorded to the current track
+    /// Whether note input from piano keys should be recorded to the current sequence
     #[serde(skip)]
     pub recording: bool,
     /// Swing amount: 0.0 = no swing, 1.0 = max swing (delays offbeat notes)
@@ -58,8 +58,8 @@ pub struct PianoRollState {
 impl PianoRollState {
     pub fn new() -> Self {
         Self {
-            tracks: HashMap::new(),
-            track_order: Vec::new(),
+            sequences: HashMap::new(),
+            sequence_order: Vec::new(),
             bpm: 120.0,
             time_signature: (4, 4),
             playing: false,
@@ -73,55 +73,55 @@ impl PianoRollState {
         }
     }
 
-    pub fn add_track(&mut self, instrument_id: InstrumentId) {
-        if let Entry::Vacant(e) = self.tracks.entry(instrument_id) {
-            e.insert(Track {
+    pub fn add_sequence(&mut self, instrument_id: TrackId) {
+        if let Entry::Vacant(e) = self.sequences.entry(instrument_id) {
+            e.insert(NoteSequence {
                 instrument_id,
                 notes: Vec::new(),
                 polyphonic: true,
             });
-            self.track_order.push(instrument_id);
+            self.sequence_order.push(instrument_id);
         }
     }
 
-    pub fn remove_track(&mut self, instrument_id: InstrumentId) {
-        self.tracks.remove(&instrument_id);
-        self.track_order.retain(|&id| id != instrument_id);
+    pub fn remove_sequence(&mut self, instrument_id: TrackId) {
+        self.sequences.remove(&instrument_id);
+        self.sequence_order.retain(|&id| id != instrument_id);
     }
 
-    /// Get the track at the given index in track_order
-    pub fn track_at(&self, index: usize) -> Option<&Track> {
-        self.track_order
+    /// Get the sequence at the given index in sequence_order
+    pub fn sequence_at(&self, index: usize) -> Option<&NoteSequence> {
+        self.sequence_order
             .get(index)
-            .and_then(|id| self.tracks.get(id))
+            .and_then(|id| self.sequences.get(id))
     }
 
-    /// Get a mutable track at the given index
-    pub fn track_at_mut(&mut self, index: usize) -> Option<&mut Track> {
-        let id = self.track_order.get(index).copied();
-        id.and_then(move |id| self.tracks.get_mut(&id))
+    /// Get a mutable sequence at the given index
+    pub fn sequence_at_mut(&mut self, index: usize) -> Option<&mut NoteSequence> {
+        let id = self.sequence_order.get(index).copied();
+        id.and_then(move |id| self.sequences.get_mut(&id))
     }
 
     /// Toggle a note at the given position. If a note exists there, remove it; otherwise add one.
     pub fn toggle_note(
         &mut self,
-        track_index: usize,
+        sequence_index: usize,
         pitch: u8,
         tick: u32,
         duration: u32,
         velocity: u8,
     ) {
-        if let Some(track) = self.track_at_mut(track_index) {
+        if let Some(seq) = self.sequence_at_mut(sequence_index) {
             // Check if a note exists at this pitch/tick
-            if let Some(pos) = track
+            if let Some(pos) = seq
                 .notes
                 .iter()
                 .position(|n| n.pitch == pitch && n.tick == tick)
             {
-                track.notes.remove(pos);
+                seq.notes.remove(pos);
             } else {
-                let insert_pos = track.notes.partition_point(|n| n.tick < tick);
-                track.notes.insert(
+                let insert_pos = seq.notes.partition_point(|n| n.tick < tick);
+                seq.notes.insert(
                     insert_pos,
                     Note {
                         tick,
@@ -137,10 +137,9 @@ impl PianoRollState {
 
     /// Find a note at the given pitch and tick (exact match on tick start)
     #[allow(dead_code)]
-    pub fn find_note(&self, track_index: usize, pitch: u8, tick: u32) -> Option<&Note> {
-        self.track_at(track_index).and_then(|track| {
-            track
-                .notes
+    pub fn find_note(&self, sequence_index: usize, pitch: u8, tick: u32) -> Option<&Note> {
+        self.sequence_at(sequence_index).and_then(|seq| {
+            seq.notes
                 .iter()
                 .find(|n| n.pitch == pitch && n.tick == tick)
         })
@@ -148,10 +147,14 @@ impl PianoRollState {
 
     /// Find notes that start within a tick range (for playback)
     #[allow(dead_code)]
-    pub fn notes_in_range(&self, track_index: usize, start_tick: u32, end_tick: u32) -> Vec<&Note> {
-        if let Some(track) = self.track_at(track_index) {
-            track
-                .notes
+    pub fn notes_in_range(
+        &self,
+        sequence_index: usize,
+        start_tick: u32,
+        end_tick: u32,
+    ) -> Vec<&Note> {
+        if let Some(seq) = self.sequence_at(sequence_index) {
+            seq.notes
                 .iter()
                 .filter(|n| n.tick >= start_tick && n.tick < end_tick)
                 .collect()
@@ -197,22 +200,22 @@ impl Default for PianoRollState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::InstrumentId;
+    use crate::TrackId;
 
     #[test]
     fn toggle_note_adds_and_removes() {
         let mut pr = PianoRollState::new();
-        pr.add_track(InstrumentId::new(1));
+        pr.add_sequence(TrackId::new(1));
         pr.toggle_note(0, 60, 0, 480, 100);
-        assert_eq!(pr.track_at(0).unwrap().notes.len(), 1);
+        assert_eq!(pr.sequence_at(0).unwrap().notes.len(), 1);
         pr.toggle_note(0, 60, 0, 480, 100);
-        assert!(pr.track_at(0).unwrap().notes.is_empty());
+        assert!(pr.sequence_at(0).unwrap().notes.is_empty());
     }
 
     #[test]
     fn notes_in_range_filters_by_tick() {
         let mut pr = PianoRollState::new();
-        pr.add_track(InstrumentId::new(1));
+        pr.add_sequence(TrackId::new(1));
         pr.toggle_note(0, 60, 0, 480, 100);
         pr.toggle_note(0, 61, 480, 480, 100);
         let notes = pr.notes_in_range(0, 0, 480);
@@ -248,12 +251,12 @@ mod tests {
     #[test]
     fn notes_stay_sorted_after_toggle() {
         let mut pr = PianoRollState::new();
-        pr.add_track(InstrumentId::new(1));
+        pr.add_sequence(TrackId::new(1));
         pr.toggle_note(0, 60, 480, 480, 100);
         pr.toggle_note(0, 62, 0, 480, 100);
         pr.toggle_note(0, 64, 240, 480, 100);
-        let track = pr.track_at(0).unwrap();
-        let ticks: Vec<u32> = track.notes.iter().map(|n| n.tick).collect();
+        let seq = pr.sequence_at(0).unwrap();
+        let ticks: Vec<u32> = seq.notes.iter().map(|n| n.tick).collect();
         assert_eq!(ticks, vec![0, 240, 480]);
     }
 }

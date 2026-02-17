@@ -8,15 +8,15 @@ pub(super) fn handle_play_note(
     pitch: u8,
     velocity: u8,
 ) -> DispatchResult {
-    let instrument_id = state.instruments.selected_instrument().map(|s| s.id);
+    let instrument_id = state.tracks.selected_track().map(|s| s.id);
 
     if let Some(instrument_id) = instrument_id {
-        let targets = state.instruments.layer_group_members(instrument_id);
+        let targets = state.tracks.layer_group_members(instrument_id);
         if audio.is_running() {
             let vel_f = velocity as f32 / 127.0;
             for &target_id in &targets {
-                if let Some(inst) = state.instruments.instrument(target_id) {
-                    if state.effective_instrument_mute(inst) {
+                if let Some(inst) = state.tracks.track(target_id) {
+                    if state.effective_track_mute(inst) {
                         continue;
                     }
                     let pitches = match inst.note_input.chord_shape {
@@ -46,15 +46,15 @@ pub(super) fn handle_play_notes(
     pitches: &[u8],
     velocity: u8,
 ) -> DispatchResult {
-    let instrument_id = state.instruments.selected_instrument().map(|s| s.id);
+    let instrument_id = state.tracks.selected_track().map(|s| s.id);
 
     if let Some(instrument_id) = instrument_id {
-        let targets = state.instruments.layer_group_members(instrument_id);
+        let targets = state.tracks.layer_group_members(instrument_id);
         if audio.is_running() {
             let vel_f = velocity as f32 / 127.0;
             for &target_id in &targets {
-                if let Some(inst) = state.instruments.instrument(target_id) {
-                    if state.effective_instrument_mute(inst) {
+                if let Some(inst) = state.tracks.track(target_id) {
+                    if state.effective_track_mute(inst) {
                         continue;
                     }
                     for &pitch in pitches {
@@ -86,7 +86,7 @@ pub(super) fn handle_play_drum_pad(
     pad_idx: usize,
     velocity: u8,
 ) -> DispatchResult {
-    if let Some(instrument) = state.instruments.selected_instrument() {
+    if let Some(instrument) = state.tracks.selected_track() {
         if let Some(seq) = instrument.drum_sequencer() {
             if let Some(pad) = seq.pads.get(pad_idx) {
                 if let (Some(buffer_id), instrument_id) = (pad.buffer_id, instrument.id) {

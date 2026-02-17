@@ -25,9 +25,9 @@ impl HomePane {
     pub fn new(keymap: Keymap) -> Self {
         let items = vec![
             MenuItem {
-                label: "Instruments",
-                description: "Instrument list - add and edit synths",
-                pane_id: PaneId::Instrument,
+                label: "Tracks",
+                description: "Track list - add and edit synths",
+                pane_id: PaneId::TrackList,
             },
             MenuItem {
                 label: "Mixer",

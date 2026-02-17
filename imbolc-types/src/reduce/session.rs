@@ -1,9 +1,9 @@
-use crate::{InstrumentState, SessionAction, SessionState};
+use crate::{SessionAction, SessionState, TrackState};
 
 pub(super) fn reduce(
     action: &SessionAction,
     session: &mut SessionState,
-    _instruments: &mut InstrumentState,
+    _instruments: &mut TrackState,
 ) -> bool {
     match action {
         SessionAction::NewProject => false,

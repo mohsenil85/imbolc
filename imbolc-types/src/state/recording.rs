@@ -1,4 +1,4 @@
-use crate::InstrumentId;
+use crate::TrackId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -21,10 +21,10 @@ pub struct RecordingState {
     pub pending_recording_path: Option<PathBuf>,
     /// Tracks armed for recording (instrument IDs)
     #[serde(skip)]
-    pub armed_tracks: HashSet<InstrumentId>,
+    pub armed_tracks: HashSet<TrackId>,
     /// Tracks currently recording (instrument IDs)
     #[serde(skip)]
-    pub recording_tracks: HashSet<InstrumentId>,
+    pub recording_tracks: HashSet<TrackId>,
 }
 
 impl RecordingState {
@@ -38,17 +38,17 @@ impl RecordingState {
     }
 
     /// Arm a track for recording
-    pub fn arm_track(&mut self, id: InstrumentId) {
+    pub fn arm_track(&mut self, id: TrackId) {
         self.armed_tracks.insert(id);
     }
 
     /// Disarm a track
-    pub fn disarm_track(&mut self, id: InstrumentId) {
+    pub fn disarm_track(&mut self, id: TrackId) {
         self.armed_tracks.remove(&id);
     }
 
     /// Toggle track arm state
-    pub fn toggle_arm(&mut self, id: InstrumentId) {
+    pub fn toggle_arm(&mut self, id: TrackId) {
         if self.armed_tracks.contains(&id) {
             self.armed_tracks.remove(&id);
         } else {
@@ -57,27 +57,27 @@ impl RecordingState {
     }
 
     /// Check if a track is armed
-    pub fn is_armed(&self, id: InstrumentId) -> bool {
+    pub fn is_armed(&self, id: TrackId) -> bool {
         self.armed_tracks.contains(&id)
     }
 
     /// Check if a track is currently recording
-    pub fn is_track_recording(&self, id: InstrumentId) -> bool {
+    pub fn is_track_recording(&self, id: TrackId) -> bool {
         self.recording_tracks.contains(&id)
     }
 
     /// Start recording on a track
-    pub fn start_track_recording(&mut self, id: InstrumentId) {
+    pub fn start_track_recording(&mut self, id: TrackId) {
         self.recording_tracks.insert(id);
     }
 
     /// Stop recording on a track
-    pub fn stop_track_recording(&mut self, id: InstrumentId) {
+    pub fn stop_track_recording(&mut self, id: TrackId) {
         self.recording_tracks.remove(&id);
     }
 
     /// Get all armed track IDs
-    pub fn get_armed_tracks(&self) -> Vec<InstrumentId> {
+    pub fn get_armed_tracks(&self) -> Vec<TrackId> {
         self.armed_tracks.iter().copied().collect()
     }
 }

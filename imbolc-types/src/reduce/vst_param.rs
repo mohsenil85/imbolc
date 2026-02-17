@@ -1,17 +1,16 @@
 use crate::{
-    EffectType, Instrument, InstrumentState, SessionState, SourceExtra, SourceType, VstParamAction,
-    VstTarget,
+    EffectType, SessionState, SourceExtra, SourceType, Track, TrackState, VstParamAction, VstTarget,
 };
 
 pub(super) fn reduce(
     action: &VstParamAction,
-    instruments: &mut InstrumentState,
+    instruments: &mut TrackState,
     session: &SessionState,
 ) -> bool {
     match action {
         VstParamAction::SetParam(instrument_id, target, param_index, value) => {
             let value = value.clamp(0.0, 1.0);
-            if let Some(instrument) = instruments.instrument_mut(*instrument_id) {
+            if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(values) = get_param_values_mut(instrument, *target) {
                     if let Some(entry) = values.iter_mut().find(|(idx, _)| *idx == *param_index) {
                         entry.1 = value;
@@ -24,7 +23,7 @@ pub(super) fn reduce(
         }
         VstParamAction::AdjustParam(instrument_id, target, param_index, delta) => {
             let current = instruments
-                .instrument(*instrument_id)
+                .track(*instrument_id)
                 .map(|inst| {
                     let values = match *target {
                         VstTarget::Source => inst.vst_source_params(),
@@ -52,7 +51,7 @@ pub(super) fn reduce(
                 })
                 .unwrap_or(0.5);
             let new_value = (current + delta).clamp(0.0, 1.0);
-            if let Some(instrument) = instruments.instrument_mut(*instrument_id) {
+            if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(values) = get_param_values_mut(instrument, *target) {
                     if let Some(entry) = values.iter_mut().find(|(idx, _)| *idx == *param_index) {
                         entry.1 = new_value;
@@ -65,7 +64,7 @@ pub(super) fn reduce(
         }
         VstParamAction::ResetParam(instrument_id, target, param_index) => {
             let default = instruments
-                .instrument(*instrument_id)
+                .track(*instrument_id)
                 .and_then(|inst| {
                     let plugin_id = get_vst_plugin_id(inst, *target)?;
                     session
@@ -75,7 +74,7 @@ pub(super) fn reduce(
                         .map(|spec| spec.default)
                 })
                 .unwrap_or(0.5);
-            if let Some(instrument) = instruments.instrument_mut(*instrument_id) {
+            if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(values) = get_param_values_mut(instrument, *target) {
                     if let Some(entry) = values.iter_mut().find(|(idx, _)| *idx == *param_index) {
                         entry.1 = default;
@@ -91,7 +90,7 @@ pub(super) fn reduce(
     }
 }
 
-fn get_vst_plugin_id(instrument: &Instrument, target: VstTarget) -> Option<crate::VstPluginId> {
+fn get_vst_plugin_id(instrument: &Track, target: VstTarget) -> Option<crate::VstPluginId> {
     match target {
         VstTarget::Source => {
             if let SourceType::Vst(id) = instrument.source {
@@ -110,10 +109,7 @@ fn get_vst_plugin_id(instrument: &Instrument, target: VstTarget) -> Option<crate
     }
 }
 
-fn get_param_values_mut(
-    instrument: &mut Instrument,
-    target: VstTarget,
-) -> Option<&mut Vec<(u32, f32)>> {
+fn get_param_values_mut(instrument: &mut Track, target: VstTarget) -> Option<&mut Vec<(u32, f32)>> {
     match target {
         VstTarget::Source => match &mut instrument.source_extra {
             SourceExtra::Vst {

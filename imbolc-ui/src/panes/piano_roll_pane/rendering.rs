@@ -36,7 +36,7 @@ impl PianoRollPane {
         state: &AppState,
     ) {
         let automation = &state.session.automation;
-        let inst_id = state.instruments.selected_instrument().map(|i| i.id);
+        let inst_id = state.tracks.selected_track().map(|i| i.id);
 
         // Find the lane to display
         let lane = if let Some(idx) = self.automation_overlay_lane_idx {
@@ -173,13 +173,13 @@ impl PianoRollPane {
                 .map(|c| c.name.as_str())
                 .unwrap_or("?");
             format!(" Piano Roll - Editing: {} ", clip_name)
-        } else if let Some(track) = piano_roll.track_at(self.current_track) {
-            let mode = if track.polyphonic { "POLY" } else { "MONO" };
+        } else if let Some(seq) = piano_roll.sequence_at(self.current_track) {
+            let mode = if seq.polyphonic { "POLY" } else { "MONO" };
             format!(
                 " Piano Roll: midi-{} [{}/{}] {} ",
-                track.instrument_id,
+                seq.instrument_id,
                 self.current_track + 1,
-                piano_roll.track_order.len(),
+                piano_roll.sequence_order.len(),
                 mode,
             )
         } else {
@@ -224,8 +224,11 @@ impl PianoRollPane {
 
         // Rendering indicator
         if let Some(render) = &state.io.pending_render {
-            if let Some(track_inst_id) =
-                state.session.piano_roll.track_order.get(self.current_track)
+            if let Some(track_inst_id) = state
+                .session
+                .piano_roll
+                .sequence_order
+                .get(self.current_track)
             {
                 if render.instrument_id == *track_inst_id {
                     let label = " RENDERING ";
@@ -303,21 +306,22 @@ impl PianoRollPane {
                 let x = grid_x + col;
 
                 let has_note = piano_roll
-                    .track_at(self.current_track)
+                    .sequence_at(self.current_track)
                     .is_some_and(|track| {
                         track.notes.iter().any(|n| {
                             n.pitch == pitch && tick >= n.tick && tick < n.tick + n.duration
                         })
                     });
 
-                let is_note_start = piano_roll
-                    .track_at(self.current_track)
-                    .is_some_and(|track| {
-                        track
-                            .notes
-                            .iter()
-                            .any(|n| n.pitch == pitch && n.tick == tick)
-                    });
+                let is_note_start =
+                    piano_roll
+                        .sequence_at(self.current_track)
+                        .is_some_and(|track| {
+                            track
+                                .notes
+                                .iter()
+                                .any(|n| n.pitch == pitch && n.tick == tick)
+                        });
 
                 let is_cursor = pitch == self.cursor_pitch && tick == self.cursor_tick;
                 let is_playhead = state.audio.playing
@@ -460,7 +464,7 @@ impl PianoRollPane {
         let rect = center_rect(area, box_width, 29);
         let border_style = Style::new().fg(Color::ORANGE);
 
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => {
                 let inner =
@@ -469,7 +473,7 @@ impl PianoRollPane {
                 buf.draw_line(
                     Rect::new(inner.x + 11, cy, inner.width.saturating_sub(12), 1),
                     &[(
-                        "No drum machine instrument selected. Press t for note editor.",
+                        "No drum machine track selected. Press t for note editor.",
                         Style::new().fg(Color::DARK_GRAY),
                     )],
                 );

@@ -8,7 +8,7 @@ pub(super) fn dispatch_tag(action: &TagAction, state: &mut AppState) -> Dispatch
     // Delegate pure state mutation to the shared reducer
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Tag(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 

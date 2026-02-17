@@ -9,7 +9,7 @@ use crate::VstPluginId;
 /// Whether a VST plugin is an instrument or effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VstPluginKind {
-    Instrument,
+    Track,
     Effect,
 }
 
@@ -78,7 +78,7 @@ impl VstPluginRegistry {
     pub fn instruments(&self) -> impl Iterator<Item = &VstPlugin> {
         self.plugins
             .iter()
-            .filter(|p| p.kind == VstPluginKind::Instrument)
+            .filter(|p| p.kind == VstPluginKind::Track)
     }
 
     pub fn effects(&self) -> impl Iterator<Item = &VstPlugin> {
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn registry_add_assigns_id() {
         let mut reg = VstPluginRegistry::new();
-        let id0 = reg.add(make_plugin("A", VstPluginKind::Instrument));
+        let id0 = reg.add(make_plugin("A", VstPluginKind::Track));
         let id1 = reg.add(make_plugin("B", VstPluginKind::Effect));
         assert_eq!(id0, VstPluginId::new(0));
         assert_eq!(id1, VstPluginId::new(1));
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn registry_get_by_id() {
         let mut reg = VstPluginRegistry::new();
-        let id = reg.add(make_plugin("Test", VstPluginKind::Instrument));
+        let id = reg.add(make_plugin("Test", VstPluginKind::Track));
         assert!(reg.get(id).is_some());
         assert_eq!(reg.get(id).unwrap().name, "Test");
     }
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn registry_by_name() {
         let mut reg = VstPluginRegistry::new();
-        reg.add(make_plugin("Synth1", VstPluginKind::Instrument));
+        reg.add(make_plugin("Synth1", VstPluginKind::Track));
         assert!(reg.by_name("Synth1").is_some());
     }
 
@@ -155,7 +155,7 @@ mod tests {
     fn registry_is_empty() {
         let mut reg = VstPluginRegistry::new();
         assert!(reg.is_empty());
-        reg.add(make_plugin("A", VstPluginKind::Instrument));
+        reg.add(make_plugin("A", VstPluginKind::Track));
         assert!(!reg.is_empty());
     }
 
@@ -163,7 +163,7 @@ mod tests {
     fn registry_len() {
         let mut reg = VstPluginRegistry::new();
         assert_eq!(reg.len(), 0);
-        reg.add(make_plugin("A", VstPluginKind::Instrument));
+        reg.add(make_plugin("A", VstPluginKind::Track));
         reg.add(make_plugin("B", VstPluginKind::Effect));
         assert_eq!(reg.len(), 2);
     }
@@ -171,7 +171,7 @@ mod tests {
     #[test]
     fn registry_instruments_filter() {
         let mut reg = VstPluginRegistry::new();
-        reg.add(make_plugin("Inst", VstPluginKind::Instrument));
+        reg.add(make_plugin("Inst", VstPluginKind::Track));
         reg.add(make_plugin("FX", VstPluginKind::Effect));
         let insts: Vec<_> = reg.instruments().collect();
         assert_eq!(insts.len(), 1);
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn registry_effects_filter() {
         let mut reg = VstPluginRegistry::new();
-        reg.add(make_plugin("Inst", VstPluginKind::Instrument));
+        reg.add(make_plugin("Inst", VstPluginKind::Track));
         reg.add(make_plugin("FX", VstPluginKind::Effect));
         let effs: Vec<_> = reg.effects().collect();
         assert_eq!(effs.len(), 1);

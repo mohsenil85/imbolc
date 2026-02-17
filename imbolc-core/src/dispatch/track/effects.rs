@@ -2,24 +2,24 @@ use crate::action::{AudioEffect, DispatchResult, NavIntent, VstTarget};
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, InstrumentAction, ParamValue};
+use imbolc_types::{DomainAction, ParamValue, TrackAction};
 
 use super::super::automation::record_automation_point;
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(action.clone()),
-        &mut state.instruments,
+        &DomainAction::Track(action.clone()),
+        &mut state.tracks,
         &mut state.session,
     );
 }
 
 pub(super) fn handle_add_effect(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_type: crate::state::EffectType,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AddEffect(id, effect_type));
+    reduce(state, &TrackAction::AddEffect(id, effect_type));
     let mut result = DispatchResult::with_nav(NavIntent::Pop);
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -30,10 +30,10 @@ pub(super) fn handle_add_effect(
 
 pub(super) fn handle_remove_effect(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::RemoveEffect(id, effect_id));
+    reduce(state, &TrackAction::RemoveEffect(id, effect_id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -44,10 +44,10 @@ pub(super) fn handle_remove_effect(
 
 pub(super) fn handle_toggle_effect_bypass(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::ToggleEffectBypass(id, effect_id));
+    reduce(state, &TrackAction::ToggleEffectBypass(id, effect_id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -55,14 +55,14 @@ pub(super) fn handle_toggle_effect_bypass(
 
 pub(super) fn handle_adjust_effect_param(
     state: &mut AppState,
-    id: crate::state::InstrumentId,
+    id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
     param_idx: imbolc_types::ParamIndex,
     delta: f32,
 ) -> DispatchResult {
     reduce(
         state,
-        &InstrumentAction::AdjustEffectParam(id, effect_id, param_idx, delta),
+        &TrackAction::AdjustEffectParam(id, effect_id, param_idx, delta),
     );
 
     let mut result = DispatchResult::none();
@@ -71,8 +71,8 @@ pub(super) fn handle_adjust_effect_param(
     // Read post-mutation value for targeted param + automation recording
     // Extract value first to avoid borrow conflict with record_automation_point
     let param_value = state
-        .instruments
-        .instrument(id)
+        .tracks
+        .track(id)
         .and_then(|inst| inst.effects().find(|e| e.id == effect_id))
         .and_then(|effect| effect.params.get(param_idx.get()))
         .and_then(|param| match param.value {
@@ -97,19 +97,19 @@ pub(super) fn handle_adjust_effect_param(
 pub(super) fn handle_load_ir_result(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
     path: &std::path::Path,
 ) -> DispatchResult {
     // Load sample into audio engine before reducer increments the buffer_id
-    let buffer_id = state.instruments.next_sampler_buffer_id;
+    let buffer_id = state.tracks.next_sampler_buffer_id;
     if audio.is_running() {
         let _ = audio.load_sample(buffer_id, &path.to_string_lossy());
     }
 
     reduce(
         state,
-        &InstrumentAction::LoadIRResult(instrument_id, effect_id, path.to_path_buf()),
+        &TrackAction::LoadIRResult(instrument_id, effect_id, path.to_path_buf()),
     );
 
     let mut result = DispatchResult::with_nav(NavIntent::Pop);
@@ -121,7 +121,7 @@ pub(super) fn handle_load_ir_result(
 }
 
 pub(super) fn handle_open_vst_effect_params(
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
     DispatchResult::with_nav(NavIntent::OpenVstParams(
@@ -137,9 +137,9 @@ mod tests {
     use crate::state::AppState;
     use crate::state::SourceType;
 
-    fn setup() -> (AppState, imbolc_types::InstrumentId) {
+    fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         (state, id)
     }
 
@@ -149,7 +149,7 @@ mod tests {
         let result = handle_add_effect(&mut state, id, crate::state::EffectType::Delay);
 
         // Verify effect was added
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert_eq!(inst.effects().count(), 1);
         let effect = inst.effects().next().unwrap();
         assert_eq!(effect.effect_type, crate::state::EffectType::Delay);
@@ -172,19 +172,12 @@ mod tests {
         let (mut state, id) = setup();
         handle_add_effect(&mut state, id, crate::state::EffectType::Delay);
 
-        let effect_id = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .effects()
-            .next()
-            .unwrap()
-            .id;
+        let effect_id = state.tracks.track(id).unwrap().effects().next().unwrap().id;
 
         let result = handle_remove_effect(&mut state, id, effect_id);
 
         // Verify effect was removed
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert_eq!(inst.effects().count(), 0);
 
         // Verify audio effects
@@ -201,20 +194,13 @@ mod tests {
         let (mut state, id) = setup();
         handle_add_effect(&mut state, id, crate::state::EffectType::Reverb);
 
-        let effect_id = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .effects()
-            .next()
-            .unwrap()
-            .id;
+        let effect_id = state.tracks.track(id).unwrap().effects().next().unwrap().id;
 
         // Effect starts enabled
         assert!(
             state
-                .instruments
-                .instrument(id)
+                .tracks
+                .track(id)
                 .unwrap()
                 .effect_by_id(effect_id)
                 .unwrap()
@@ -226,8 +212,8 @@ mod tests {
         // Effect should now be bypassed
         assert!(
             !state
-                .instruments
-                .instrument(id)
+                .tracks
+                .track(id)
                 .unwrap()
                 .effect_by_id(effect_id)
                 .unwrap()
@@ -245,14 +231,7 @@ mod tests {
         let (mut state, id) = setup();
         handle_add_effect(&mut state, id, crate::state::EffectType::Delay);
 
-        let effect_id = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .effects()
-            .next()
-            .unwrap()
-            .id;
+        let effect_id = state.tracks.track(id).unwrap().effects().next().unwrap().id;
 
         let param_idx = imbolc_types::ParamIndex::new(0);
         let result = handle_adjust_effect_param(&mut state, id, effect_id, param_idx, 0.1);

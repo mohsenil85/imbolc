@@ -11,8 +11,8 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 
 use imbolc_types::DomainAction;
 
-use super::snapshot::{AutomationSnapshot, InstrumentSnapshot, PianoRollSnapshot, SessionSnapshot};
-use imbolc_types::InstrumentId;
+use super::snapshot::{AutomationSnapshot, PianoRollSnapshot, SessionSnapshot, TrackSnapshot};
+use imbolc_types::TrackId;
 
 /// A single entry in the event log.
 #[derive(Debug)]
@@ -31,15 +31,15 @@ pub enum LogEntryKind {
     Action {
         action: Box<DomainAction>,
         rebuild_routing: bool,
-        rebuild_instrument_routing: [Option<InstrumentId>; 4],
-        add_instrument_routing: Option<InstrumentId>,
-        delete_instrument_routing: Option<InstrumentId>,
+        rebuild_instrument_routing: [Option<TrackId>; 4],
+        add_instrument_routing: Option<TrackId>,
+        delete_instrument_routing: Option<TrackId>,
         rebuild_bus_processing: bool,
         mixer_dirty: bool,
     },
     /// Full state checkpoint (replaces AudioCmd::FullStateSync).
     Checkpoint {
-        instruments: InstrumentSnapshot,
+        instruments: TrackSnapshot,
         session: SessionSnapshot,
         piano_roll: PianoRollSnapshot,
         automation_lanes: AutomationSnapshot,

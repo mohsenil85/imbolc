@@ -6,20 +6,20 @@ use crate::ui::{
     translate_key, Action, InputEvent, KeyCode, MouseButton, MouseEvent, MouseEventKind,
     PianoRollAction, Rect, SequencerAction,
 };
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 use super::{PianoRollPane, ViewMode};
 
 impl PianoRollPane {
     /// Get the instrument ID for the current track from state
-    fn current_instrument_id(&self, state: &AppState) -> InstrumentId {
+    fn current_instrument_id(&self, state: &AppState) -> TrackId {
         state
             .session
             .piano_roll
-            .track_order
+            .sequence_order
             .get(self.current_track)
             .copied()
-            .unwrap_or(InstrumentId::new(0))
+            .unwrap_or(TrackId::new(0))
     }
 
     /// Visible steps that fit in the sequencer grid (same logic as standalone sequencer pane)
@@ -62,7 +62,7 @@ impl PianoRollPane {
             }
             ViewMode::NoteEditor => {
                 // Only switch to step sequencer if current instrument is a Kit
-                if let Some(inst) = state.instruments.selected_instrument() {
+                if let Some(inst) = state.tracks.selected_track() {
                     if inst.source.is_kit() {
                         self.view_mode = ViewMode::StepSequencer;
                         self.seq_selection_anchor = None;
@@ -137,7 +137,7 @@ impl PianoRollPane {
 
     /// Handle actions in step sequencer view mode by reinterpreting piano roll action IDs.
     fn handle_sequencer_action(&mut self, action: ActionId, state: &AppState) -> Action {
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
         };
@@ -475,7 +475,7 @@ impl PianoRollPane {
         let grid_y = header_y + 1;
         let visible = self.seq_visible_steps(box_width);
 
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
         };

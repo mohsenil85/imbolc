@@ -103,8 +103,8 @@ impl Pane for AutomationPane {
 
         // Title
         let inst_name = state
-            .instruments
-            .selected_instrument()
+            .tracks
+            .selected_track()
             .map(|i| format!("Inst {} ({})", i.id, &i.name))
             .unwrap_or_else(|| "—".to_string());
         let title = format!(" Automation: {} ", inst_name);

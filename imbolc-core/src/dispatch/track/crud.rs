@@ -4,12 +4,12 @@ use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use crate::state::BufferId;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, InstrumentAction};
+use imbolc_types::{DomainAction, TrackAction};
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(action.clone()),
-        &mut state.instruments,
+        &DomainAction::Track(action.clone()),
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -18,8 +18,8 @@ pub(super) fn handle_add(
     state: &mut AppState,
     source_type: crate::state::SourceType,
 ) -> DispatchResult {
-    let next_id = state.instruments.next_id;
-    reduce(state, &InstrumentAction::Add(source_type));
+    let next_id = state.tracks.next_id;
+    reduce(state, &TrackAction::Add(source_type));
     let mut result = DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit));
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result.audio_effects.push(AudioEffect::UpdatePianoRoll);
@@ -32,11 +32,11 @@ pub(super) fn handle_add(
 pub(super) fn handle_delete(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    inst_id: crate::state::InstrumentId,
+    inst_id: crate::state::TrackId,
 ) -> DispatchResult {
     // Collect buffer IDs from the instrument before removing it
     let mut buffer_ids: Vec<BufferId> = Vec::new();
-    if let Some(inst) = state.instruments.instrument(inst_id) {
+    if let Some(inst) = state.tracks.track(inst_id) {
         if let Some(seq) = inst.drum_sequencer() {
             for pad in &seq.pads {
                 if let Some(id) = pad.buffer_id {
@@ -59,7 +59,7 @@ pub(super) fn handle_delete(
         audio.free_samples(buffer_ids);
     }
 
-    reduce(state, &InstrumentAction::Delete(inst_id));
+    reduce(state, &TrackAction::Delete(inst_id));
 
     // Clear generative voice targets pointing to the deleted instrument
     for voice in &mut state.session.generative.voices {
@@ -69,9 +69,9 @@ pub(super) fn handle_delete(
     }
 
     // Remove deleted instrument from all param tags
-    state.session.param_tags.remove_instrument(inst_id);
+    state.session.param_tags.remove_track(inst_id);
 
-    let mut result = if state.instruments.instruments.is_empty() {
+    let mut result = if state.tracks.tracks.is_empty() {
         DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::Add))
     } else {
         DispatchResult::none()
@@ -85,18 +85,18 @@ pub(super) fn handle_delete(
     result
 }
 
-pub(super) fn handle_edit(state: &mut AppState, id: crate::state::InstrumentId) -> DispatchResult {
-    reduce(state, &InstrumentAction::Edit(id));
+pub(super) fn handle_edit(state: &mut AppState, id: crate::state::TrackId) -> DispatchResult {
+    reduce(state, &TrackAction::Edit(id));
     DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit))
 }
 
 pub(super) fn handle_update(
     state: &mut AppState,
-    update: &crate::action::InstrumentUpdate,
+    update: &crate::action::TrackUpdate,
 ) -> DispatchResult {
     // Capture old values for automation recording before applying
     let old_values = if state.recording.automation_recording && state.audio.playing {
-        state.instruments.instrument(update.id).map(|inst| {
+        state.tracks.track(update.id).map(|inst| {
             (
                 inst.modulation.lfo.rate,
                 inst.modulation.lfo.depth,
@@ -110,7 +110,7 @@ pub(super) fn handle_update(
         None
     };
 
-    reduce(state, &InstrumentAction::SetState(Box::new(update.clone())));
+    reduce(state, &TrackAction::SetState(Box::new(update.clone())));
 
     // Record automation for changed LFO/envelope params
     if let Some((old_lfo_rate, old_lfo_depth, old_attack, old_decay, old_sustain, old_release)) =
@@ -160,19 +160,19 @@ pub(super) fn handle_update(
 #[allow(unused_must_use)]
 mod tests {
     use super::*;
-    use crate::action::InstrumentUpdate;
-    use crate::state::instrument::SourceType;
-    use imbolc_types::InstrumentId;
+    use crate::action::TrackUpdate;
+    use crate::state::track::SourceType;
+    use imbolc_types::TrackId;
 
-    fn setup_with_instrument() -> (AppState, InstrumentId) {
+    fn setup_with_instrument() -> (AppState, TrackId) {
         let mut state = AppState::new();
-        let id = state.instruments.add_instrument(SourceType::Saw);
+        let id = state.tracks.add_track(SourceType::Saw);
         (state, id)
     }
 
-    fn default_update(state: &AppState, id: InstrumentId) -> InstrumentUpdate {
-        let inst = state.instruments.instrument(id).unwrap();
-        InstrumentUpdate {
+    fn default_update(state: &AppState, id: TrackId) -> TrackUpdate {
+        let inst = state.tracks.track(id).unwrap();
+        TrackUpdate {
             id,
             source: inst.source,
             source_params: inst.source_params.clone(),
@@ -191,7 +191,7 @@ mod tests {
         update.lfo.rate = 8.0;
         update.lfo.depth = 0.9;
         handle_update(&mut state, &update);
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert!((inst.modulation.lfo.rate - 8.0).abs() < f32::EPSILON);
         assert!((inst.modulation.lfo.depth - 0.9).abs() < f32::EPSILON);
     }
@@ -261,7 +261,7 @@ mod tests {
         handle_update(&mut state, &update);
 
         // Values should still be applied
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert!((inst.modulation.lfo.rate - 10.0).abs() < f32::EPSILON);
         assert!((inst.modulation.amp_envelope.attack - 0.5).abs() < f32::EPSILON);
 

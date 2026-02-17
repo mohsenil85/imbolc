@@ -1,11 +1,9 @@
 use std::any::Any;
 
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, ArpeggiatorActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{
-    Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style,
-};
+use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
 
 /// Parameter indices for the arpeggiator pane
 const PARAM_ENABLED: usize = 0;
@@ -42,7 +40,7 @@ impl Pane for ArpeggiatorPane {
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let instrument = match state.instruments.selected_instrument() {
+        let instrument = match state.tracks.selected_track() {
             Some(i) => i,
             None => return Action::None,
         };
@@ -58,7 +56,7 @@ impl Pane for ArpeggiatorPane {
                 Action::None
             }
             ActionId::Arpeggiator(ArpeggiatorActionId::Toggle) => {
-                Action::Instrument(InstrumentAction::ToggleArpeggiator(id))
+                Action::Track(TrackAction::ToggleArpeggiator(id))
             }
             ActionId::Arpeggiator(ArpeggiatorActionId::Increase) => {
                 adjust_param(id, self.selected_param, true)
@@ -67,7 +65,7 @@ impl Pane for ArpeggiatorPane {
                 adjust_param(id, self.selected_param, false)
             }
             ActionId::Arpeggiator(ArpeggiatorActionId::ClearChord) => {
-                Action::Instrument(InstrumentAction::ClearChordShape(id))
+                Action::Track(TrackAction::ClearChordShape(id))
             }
             _ => Action::None,
         }
@@ -76,7 +74,7 @@ impl Pane for ArpeggiatorPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let rect = center_rect(area, 44, 12);
 
-        let instrument = state.instruments.selected_instrument();
+        let instrument = state.tracks.selected_track();
         let title = match instrument {
             Some(i) => format!(" Arpeggiator: {} ", i.name),
             None => " Arpeggiator: (none) ".to_string(),
@@ -89,7 +87,7 @@ impl Pane for ArpeggiatorPane {
         let instrument = match instrument {
             Some(i) => i,
             None => {
-                render_centered_text(inner, buf, "(no instrument selected)", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "(no track selected)", Color::DARK_GRAY);
                 return;
             }
         };
@@ -255,36 +253,36 @@ fn render_param_row(
     }
 }
 
-fn adjust_param(id: InstrumentId, param_idx: usize, increase: bool) -> Action {
+fn adjust_param(id: TrackId, param_idx: usize, increase: bool) -> Action {
     match param_idx {
-        PARAM_ENABLED => Action::Instrument(InstrumentAction::ToggleArpeggiator(id)),
+        PARAM_ENABLED => Action::Track(TrackAction::ToggleArpeggiator(id)),
         PARAM_DIRECTION => {
             if increase {
-                Action::Instrument(InstrumentAction::NextArpeggiatorDirection(id))
+                Action::Track(TrackAction::NextArpeggiatorDirection(id))
             } else {
-                Action::Instrument(InstrumentAction::PrevArpeggiatorDirection(id))
+                Action::Track(TrackAction::PrevArpeggiatorDirection(id))
             }
         }
         PARAM_RATE => {
             if increase {
-                Action::Instrument(InstrumentAction::NextArpeggiatorRate(id))
+                Action::Track(TrackAction::NextArpeggiatorRate(id))
             } else {
-                Action::Instrument(InstrumentAction::PrevArpeggiatorRate(id))
+                Action::Track(TrackAction::PrevArpeggiatorRate(id))
             }
         }
         PARAM_OCTAVES => {
             let delta = if increase { 1 } else { -1 };
-            Action::Instrument(InstrumentAction::AdjustArpeggiatorOctaves(id, delta))
+            Action::Track(TrackAction::AdjustArpeggiatorOctaves(id, delta))
         }
         PARAM_GATE => {
             let delta = if increase { 0.1 } else { -0.1 };
-            Action::Instrument(InstrumentAction::AdjustArpeggiatorGate(id, delta))
+            Action::Track(TrackAction::AdjustArpeggiatorGate(id, delta))
         }
         PARAM_CHORD => {
             if increase {
-                Action::Instrument(InstrumentAction::NextChordShape(id))
+                Action::Track(TrackAction::NextChordShape(id))
             } else {
-                Action::Instrument(InstrumentAction::PrevChordShape(id))
+                Action::Track(TrackAction::PrevChordShape(id))
             }
         }
         _ => Action::None,

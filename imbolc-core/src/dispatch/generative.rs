@@ -8,7 +8,7 @@ pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> D
     // Delegate pure state mutation to the shared reducer
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Generative(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 
@@ -20,9 +20,9 @@ pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> D
             if voice.target_instrument.is_none() {
                 // Prefer selected instrument, fall back to first
                 let target = state
-                    .instruments
-                    .selected_instrument()
-                    .or_else(|| state.instruments.instruments.first())
+                    .tracks
+                    .selected_track()
+                    .or_else(|| state.tracks.tracks.first())
                     .map(|i| i.id);
                 voice.target_instrument = target;
             }
@@ -34,14 +34,14 @@ pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> D
             // Commit captured events to piano roll
             let events: Vec<_> = state.session.generative.captured_events.drain(..).collect();
             for event in &events {
-                // Add note to the track for this instrument
-                if let Some(track) = state
+                // Add note to the sequence for this instrument
+                if let Some(seq) = state
                     .session
                     .piano_roll
-                    .tracks
+                    .sequences
                     .get_mut(&event.instrument_id)
                 {
-                    track.notes.push(imbolc_types::Note {
+                    seq.notes.push(imbolc_types::Note {
                         pitch: event.pitch,
                         tick: event.tick,
                         duration: event.duration_ticks,

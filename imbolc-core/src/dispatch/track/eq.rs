@@ -2,26 +2,26 @@ use crate::action::{AudioEffect, DispatchResult, EqualizerParamKind};
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, InstrumentAction};
+use imbolc_types::{DomainAction, TrackAction};
 
 use super::super::automation::record_automation_point;
 
 pub(super) fn handle_set_eq_param(
     state: &mut AppState,
     audio: &mut AudioHandle,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
     band_idx: usize,
     param: EqualizerParamKind,
     value: f32,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::SetEqualizerParam(
+        &DomainAction::Track(TrackAction::SetEqualizerParam(
             instrument_id,
             band_idx,
             param,
             value,
         )),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 
@@ -62,11 +62,11 @@ pub(super) fn handle_set_eq_param(
 
 pub(super) fn handle_toggle_eq(
     state: &mut AppState,
-    instrument_id: crate::state::InstrumentId,
+    instrument_id: crate::state::TrackId,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::ToggleEqualizer(instrument_id)),
-        &mut state.instruments,
+        &DomainAction::Track(TrackAction::ToggleEqualizer(instrument_id)),
+        &mut state.tracks,
         &mut state.session,
     );
     let mut result = DispatchResult::none();

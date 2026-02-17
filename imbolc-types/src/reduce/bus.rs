@@ -1,12 +1,12 @@
 use crate::{
-    BusAction, EqualizerParamKind, GroupAction, InstrumentState, MixerSelection, OutputTarget,
-    SessionState,
+    BusAction, EqualizerParamKind, GroupAction, MixerSelection, OutputTarget, SessionState,
+    TrackState,
 };
 
 pub(super) fn reduce_bus(
     action: &BusAction,
     session: &mut SessionState,
-    instruments: &mut InstrumentState,
+    instruments: &mut TrackState,
 ) -> bool {
     match action {
         BusAction::Add => {
@@ -18,7 +18,7 @@ pub(super) fn reduce_bus(
             if session.bus(bus_id).is_none() {
                 return true;
             }
-            for inst in &mut instruments.instruments {
+            for inst in &mut instruments.tracks {
                 if inst.channel_strip.output_target == OutputTarget::Bus(bus_id) {
                     inst.channel_strip.output_target = OutputTarget::Master;
                 }

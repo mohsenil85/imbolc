@@ -1,9 +1,7 @@
 //! Serialization roundtrip tests for all protocol message types.
 
 use imbolc_net::protocol::*;
-use imbolc_types::{
-    InstrumentAction, InstrumentId, InstrumentState, ServerAction, SessionState, SourceType,
-};
+use imbolc_types::{ServerAction, SessionState, SourceType, TrackAction, TrackId, TrackState};
 use std::collections::HashMap;
 
 fn roundtrip_client(msg: &ClientMessage) -> ClientMessage {
@@ -25,11 +23,11 @@ fn roundtrip_server(msg: &ServerMessage) -> ServerMessage {
 }
 
 fn make_network_state() -> NetworkState {
-    let mut instruments = InstrumentState::new();
-    instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    tracks.add_track(SourceType::Saw);
     let mut ownership = HashMap::new();
     ownership.insert(
-        InstrumentId::new(0),
+        TrackId::new(0),
         OwnerInfo {
             client_id: ClientId::new(1),
             client_name: "Alice".into(),
@@ -37,7 +35,7 @@ fn make_network_state() -> NetworkState {
     );
     NetworkState {
         session: SessionState::new(),
-        instruments,
+        tracks,
         ownership,
         privileged_client: Some((ClientId::new(1), "Alice".into())),
     }
@@ -49,11 +47,7 @@ fn make_network_state() -> NetworkState {
 fn test_roundtrip_client_hello() {
     let msg = ClientMessage::Hello {
         client_name: "Alice".into(),
-        requested_instruments: vec![
-            InstrumentId::new(0),
-            InstrumentId::new(1),
-            InstrumentId::new(2),
-        ],
+        requested_instruments: vec![TrackId::new(0), TrackId::new(1), TrackId::new(2)],
         request_privilege: true,
         reconnect_token: None,
     };
@@ -68,11 +62,7 @@ fn test_roundtrip_client_hello() {
             assert_eq!(client_name, "Alice");
             assert_eq!(
                 requested_instruments,
-                vec![
-                    InstrumentId::new(0),
-                    InstrumentId::new(1),
-                    InstrumentId::new(2)
-                ]
+                vec![TrackId::new(0), TrackId::new(1), TrackId::new(2)]
             );
             assert!(request_privilege);
             assert!(reconnect_token.is_none());
@@ -103,10 +93,10 @@ fn test_roundtrip_client_hello_with_token() {
 
 #[test]
 fn test_roundtrip_client_action() {
-    let msg = ClientMessage::Action(NetworkAction::Instrument(InstrumentAction::Select(2)));
+    let msg = ClientMessage::Action(NetworkAction::Track(TrackAction::Select(2)));
     let rt = roundtrip_client(&msg);
     match rt {
-        ClientMessage::Action(NetworkAction::Instrument(InstrumentAction::Select(id))) => {
+        ClientMessage::Action(NetworkAction::Track(TrackAction::Select(id))) => {
             assert_eq!(id, 2);
         }
         _ => panic!("Roundtrip failed"),
@@ -157,7 +147,7 @@ fn test_roundtrip_server_welcome() {
     let state = make_network_state();
     let msg = ServerMessage::Welcome {
         client_id: ClientId::new(42),
-        granted_instruments: vec![InstrumentId::new(0), InstrumentId::new(1)],
+        granted_instruments: vec![TrackId::new(0), TrackId::new(1)],
         state,
         privilege: PrivilegeLevel::Privileged,
         session_token: SessionToken("tok-123".into()),
@@ -172,10 +162,7 @@ fn test_roundtrip_server_welcome() {
             ..
         } => {
             assert_eq!(client_id, ClientId::new(42));
-            assert_eq!(
-                granted_instruments,
-                vec![InstrumentId::new(0), InstrumentId::new(1)]
-            );
+            assert_eq!(granted_instruments, vec![TrackId::new(0), TrackId::new(1)]);
             assert_eq!(privilege, PrivilegeLevel::Privileged);
             assert_eq!(session_token, SessionToken("tok-123".into()));
         }
@@ -289,11 +276,7 @@ fn test_roundtrip_server_privilege_revoked() {
 fn test_roundtrip_server_reconnect_successful() {
     let msg = ServerMessage::ReconnectSuccessful {
         client_id: ClientId::new(7),
-        restored_instruments: vec![
-            InstrumentId::new(0),
-            InstrumentId::new(2),
-            InstrumentId::new(4),
-        ],
+        restored_instruments: vec![TrackId::new(0), TrackId::new(2), TrackId::new(4)],
         privilege: PrivilegeLevel::Normal,
     };
     let rt = roundtrip_server(&msg);
@@ -306,11 +289,7 @@ fn test_roundtrip_server_reconnect_successful() {
             assert_eq!(client_id, ClientId::new(7));
             assert_eq!(
                 restored_instruments,
-                vec![
-                    InstrumentId::new(0),
-                    InstrumentId::new(2),
-                    InstrumentId::new(4)
-                ]
+                vec![TrackId::new(0), TrackId::new(2), TrackId::new(4)]
             );
             assert_eq!(privilege, PrivilegeLevel::Normal);
         }
@@ -341,7 +320,7 @@ fn test_roundtrip_state_patch_update() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(Some((ClientId::new(1), "Alice".into()))),
@@ -352,7 +331,7 @@ fn test_roundtrip_state_patch_update() {
     match rt {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(patch.session.is_some());
-            assert!(patch.instruments.is_none());
+            assert!(patch.tracks.is_none());
             assert!(patch.ownership.is_none());
             assert!(patch.privileged_client.is_some());
             assert_eq!(patch.seq, 42);
@@ -381,7 +360,7 @@ fn test_roundtrip_network_action_variants() {
     let actions: Vec<NetworkAction> = vec![
         NetworkAction::None,
         NetworkAction::Quit,
-        NetworkAction::Instrument(InstrumentAction::Select(0)),
+        NetworkAction::Track(TrackAction::Select(0)),
         NetworkAction::Server(ServerAction::ToggleRecordMaster),
         NetworkAction::Undo,
         NetworkAction::Redo,
@@ -409,7 +388,7 @@ fn test_roundtrip_state_patch_all_none() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: None,
@@ -423,7 +402,7 @@ fn test_roundtrip_state_patch_all_none() {
     assert!(rt.arrangement.is_none());
     assert!(rt.automation.is_none());
     assert!(rt.mixer.is_none());
-    assert!(rt.instruments.is_none());
+    assert!(rt.tracks.is_none());
     assert!(rt.ownership.is_none());
     assert!(rt.privileged_client.is_none());
     assert_eq!(rt.seq, 0);
@@ -441,7 +420,7 @@ fn test_roundtrip_state_patch_privileged_client_cleared() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(None), // "changed to: nobody"
@@ -473,7 +452,7 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: None,
@@ -493,7 +472,7 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(None),
@@ -513,7 +492,7 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(Some((ClientId::new(1), "Alice".into()))),
@@ -528,16 +507,13 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
 
 #[test]
 fn test_roundtrip_state_patch_with_instrument_patches() {
-    let mut instruments = InstrumentState::new();
-    instruments.add_instrument(SourceType::Saw);
-    instruments.add_instrument(SourceType::Saw);
-    let inst = instruments
-        .instrument(InstrumentId::new(0))
-        .unwrap()
-        .clone();
+    let mut instruments = TrackState::new();
+    instruments.add_track(SourceType::Saw);
+    instruments.add_track(SourceType::Saw);
+    let inst = instruments.track(TrackId::new(0)).unwrap().clone();
 
     let mut patches = HashMap::new();
-    patches.insert(InstrumentId::new(0), inst);
+    patches.insert(TrackId::new(0), inst);
 
     let patch = StatePatch {
         session: None,
@@ -548,7 +524,7 @@ fn test_roundtrip_state_patch_with_instrument_patches() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: Some(patches),
         ownership: None,
         privileged_client: None,
@@ -558,9 +534,9 @@ fn test_roundtrip_state_patch_with_instrument_patches() {
     let bytes = bincode::serde::encode_to_vec(&patch, bincode::config::standard()).unwrap();
     let (rt, _): (StatePatch, _) =
         bincode::serde::decode_from_slice(&bytes, bincode::config::standard()).unwrap();
-    assert!(rt.instruments.is_none());
+    assert!(rt.tracks.is_none());
     let rt_patches = rt.instrument_patches.unwrap();
     assert_eq!(rt_patches.len(), 1);
-    assert!(rt_patches.contains_key(&InstrumentId::new(0)));
+    assert!(rt_patches.contains_key(&TrackId::new(0)));
     assert_eq!(rt.seq, 10);
 }

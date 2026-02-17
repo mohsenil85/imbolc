@@ -1,13 +1,12 @@
 use super::backend::RawArg;
 use super::AudioEngine;
 use super::{
-    InstrumentNodes, GROUP_BUS_PROCESSING, GROUP_OUTPUT, GROUP_PROCESSING, GROUP_SOURCES,
-    VST_UGEN_INDEX,
+    TrackNodes, GROUP_BUS_PROCESSING, GROUP_OUTPUT, GROUP_PROCESSING, GROUP_SOURCES, VST_UGEN_INDEX,
 };
 use imbolc_types::{
-    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, GroupMixer, Instrument,
-    InstrumentId, InstrumentState, MixerBus, ParamValue, ParameterTarget, SendTapPoint,
-    SessionState, SourceType, SourceTypeExt,
+    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, GroupMixer, MixerBus,
+    ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType, SourceTypeExt, Track,
+    TrackId, TrackState,
 };
 use std::collections::HashMap;
 
@@ -70,7 +69,7 @@ impl AudioEngine {
     /// Allocates buses, creates synth nodes, and registers everything in node_map/node_registry.
     fn build_instrument_chain(
         &mut self,
-        instrument: &Instrument,
+        instrument: &Track,
         any_solo: bool,
         session: &SessionState,
     ) -> Result<(), String> {
@@ -458,7 +457,7 @@ impl AudioEngine {
         self.instrument_final_buses
             .insert(instrument.id, current_bus);
 
-        let inst_nodes = InstrumentNodes {
+        let inst_nodes = TrackNodes {
             source: source_node,
             lfo: lfo_node,
             filter: filter_node,
@@ -476,7 +475,7 @@ impl AudioEngine {
     }
 
     /// Create send synths for a single instrument.
-    fn build_instrument_sends(&mut self, instrument: &Instrument) -> Result<(), String> {
+    fn build_instrument_sends(&mut self, instrument: &Track) -> Result<(), String> {
         let source_out_bus = self
             .bus_allocator
             .get_audio_bus(instrument.id, "source_out")
@@ -538,7 +537,7 @@ impl AudioEngine {
     }
 
     /// Restore saved VST param values for a single instrument's source and effects.
-    fn restore_instrument_vst_params(&self, instrument: &Instrument) {
+    fn restore_instrument_vst_params(&self, instrument: &Track) {
         let client = match self.backend.as_ref() {
             Some(c) => c,
             None => return,
@@ -598,7 +597,7 @@ impl AudioEngine {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let effect_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - bus.id.get() as u32),
+                TrackId::new(u32::MAX - bus.id.get() as u32),
                 &format!("bus_fx_{}_out", effect.id),
             );
 
@@ -692,7 +691,7 @@ impl AudioEngine {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let effect_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - gm.group_id),
+                TrackId::new(u32::MAX - 256 - gm.group_id),
                 &format!("group_fx_{}_out", effect.id),
             );
 
@@ -770,10 +769,9 @@ impl AudioEngine {
         if let Some(eq) = gm.eq() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
-            let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - gm.group_id),
-                "group_eq_out",
-            );
+            let eq_out_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - gm.group_id), "group_eq_out");
 
             let mut params: Vec<(String, f32)> = vec![
                 ("in".to_string(), current_bus as f32),
@@ -809,7 +807,7 @@ impl AudioEngine {
     /// 4. Output synth with level/pan/mute
     pub fn rebuild_instrument_routing(
         &mut self,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
@@ -870,25 +868,23 @@ impl AudioEngine {
 
         // Allocate audio buses for each mixer bus first (needed by BusIn instruments)
         for bus in &session.mixer.buses {
-            let bus_audio = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - bus.id.get() as u32),
-                "bus_out",
-            );
+            let bus_audio = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - bus.id.get() as u32), "bus_out");
             self.bus_audio_buses.insert(bus.id, bus_audio);
         }
 
         // Allocate audio buses for each active layer group
         for group_id in state.active_layer_groups() {
-            let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - group_id),
-                "layer_group_out",
-            );
+            let group_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - group_id), "layer_group_out");
             self.layer_group_audio_buses.insert(group_id, group_bus);
         }
 
         // Build signal chain for each instrument
-        let any_solo = state.any_instrument_solo();
-        for instrument in &state.instruments {
+        let any_solo = state.any_track_solo();
+        for instrument in &state.tracks {
             self.build_instrument_chain(instrument, any_solo, session)?;
         }
 
@@ -899,7 +895,7 @@ impl AudioEngine {
         );
 
         // Create send synths
-        for instrument in &state.instruments {
+        for instrument in &state.tracks {
             self.build_instrument_sends(instrument)?;
         }
 
@@ -996,7 +992,7 @@ impl AudioEngine {
         }
 
         // Restore saved VST param values
-        for instrument in &state.instruments {
+        for instrument in &state.tracks {
             self.restore_instrument_vst_params(instrument);
         }
 
@@ -1010,20 +1006,20 @@ impl AudioEngine {
     /// Allocates buses and creates the signal chain + sends for just the new instrument.
     pub fn add_instrument_routing(
         &mut self,
-        instrument_id: InstrumentId,
-        state: &InstrumentState,
+        instrument_id: TrackId,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
 
-        let instrument = match state.instruments.iter().find(|i| i.id == instrument_id) {
+        let instrument = match state.tracks.iter().find(|i| i.id == instrument_id) {
             Some(i) => i,
-            None => return Err(format!("Instrument {} not found", instrument_id)),
+            None => return Err(format!("Track {} not found", instrument_id)),
         };
 
-        let any_solo = state.any_instrument_solo();
+        let any_solo = state.any_track_solo();
         self.build_instrument_chain(instrument, any_solo, session)?;
 
         // Sync voice allocator bus watermarks (bus allocator extends naturally for new instruments)
@@ -1040,7 +1036,7 @@ impl AudioEngine {
 
     /// Tear down routing for a deleted instrument without rebuilding other instruments.
     /// Frees nodes, voices, sends, and buses for just the removed instrument.
-    pub fn delete_instrument_routing(&mut self, instrument_id: InstrumentId) -> Result<(), String> {
+    pub fn delete_instrument_routing(&mut self, instrument_id: TrackId) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
@@ -1056,7 +1052,7 @@ impl AudioEngine {
         }
 
         // Free send nodes
-        let send_keys: Vec<(InstrumentId, BusId)> = self
+        let send_keys: Vec<(TrackId, BusId)> = self
             .send_node_map
             .keys()
             .filter(|(id, _)| *id == instrument_id)
@@ -1092,7 +1088,7 @@ impl AudioEngine {
     /// outputs/effects/sends/EQ, then recreates them.
     pub fn rebuild_bus_processing(
         &mut self,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
@@ -1137,10 +1133,9 @@ impl AudioEngine {
         // Keep existing bus_audio_buses — they don't change for bus effect rebuilds
         self.layer_group_audio_buses.clear();
         for group_id in state.active_layer_groups() {
-            let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                InstrumentId::new(u32::MAX - 256 - group_id),
-                "layer_group_out",
-            );
+            let group_bus = self
+                .bus_allocator
+                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - group_id), "layer_group_out");
             self.layer_group_audio_buses.insert(group_id, group_bus);
         }
 
@@ -1236,17 +1231,17 @@ impl AudioEngine {
     /// and recreates them. Other instruments remain untouched.
     pub fn rebuild_single_instrument_routing(
         &mut self,
-        instrument_id: InstrumentId,
-        state: &InstrumentState,
+        instrument_id: TrackId,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
 
-        let instrument = match state.instruments.iter().find(|i| i.id == instrument_id) {
+        let instrument = match state.tracks.iter().find(|i| i.id == instrument_id) {
             Some(i) => i,
-            None => return Err(format!("Instrument {} not found", instrument_id)),
+            None => return Err(format!("Track {} not found", instrument_id)),
         };
 
         // 1. Free existing nodes for this instrument
@@ -1261,7 +1256,7 @@ impl AudioEngine {
             }
 
             // Free this instrument's send nodes
-            let send_keys: Vec<(InstrumentId, BusId)> = self
+            let send_keys: Vec<(TrackId, BusId)> = self
                 .send_node_map
                 .keys()
                 .filter(|(id, _)| *id == instrument_id)
@@ -1288,7 +1283,7 @@ impl AudioEngine {
         self.instrument_final_buses.remove(&instrument_id);
 
         // 2. Recreate the signal chain
-        let any_solo = state.any_instrument_solo();
+        let any_solo = state.any_track_solo();
         self.build_instrument_chain(instrument, any_solo, session)?;
 
         // Sync voice allocator bus watermarks
@@ -1311,7 +1306,7 @@ impl AudioEngine {
     pub(crate) fn routing_rebuild_step(
         &mut self,
         phase: RoutingRebuildPhase,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<RebuildStepResult, String> {
         match phase {
@@ -1377,7 +1372,7 @@ impl AudioEngine {
                 // Allocate audio buses for each mixer bus (needed by BusIn instruments)
                 for bus in &session.mixer.buses {
                     let bus_audio = self.bus_allocator.get_or_alloc_audio_bus(
-                        InstrumentId::new(u32::MAX - bus.id.get() as u32),
+                        TrackId::new(u32::MAX - bus.id.get() as u32),
                         "bus_out",
                     );
                     self.bus_audio_buses.insert(bus.id, bus_audio);
@@ -1386,13 +1381,13 @@ impl AudioEngine {
                 // Allocate audio buses for each active layer group
                 for group_id in state.active_layer_groups() {
                     let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                        InstrumentId::new(u32::MAX - 256 - group_id),
+                        TrackId::new(u32::MAX - 256 - group_id),
                         "layer_group_out",
                     );
                     self.layer_group_audio_buses.insert(group_id, group_bus);
                 }
 
-                if state.instruments.is_empty() {
+                if state.tracks.is_empty() {
                     Ok(RebuildStepResult::Continue(
                         RoutingRebuildPhase::BuildOutputs,
                     ))
@@ -1404,13 +1399,13 @@ impl AudioEngine {
             }
 
             RoutingRebuildPhase::BuildInstrument(i) => {
-                let any_solo = state.any_instrument_solo();
-                if let Some(instrument) = state.instruments.get(i) {
+                let any_solo = state.any_track_solo();
+                if let Some(instrument) = state.tracks.get(i) {
                     self.build_instrument_chain(instrument, any_solo, session)?;
                     self.build_instrument_sends(instrument)?;
 
                     let next = i + 1;
-                    if next < state.instruments.len() {
+                    if next < state.tracks.len() {
                         Ok(RebuildStepResult::Continue(
                             RoutingRebuildPhase::BuildInstrument(next),
                         ))
@@ -1529,7 +1524,7 @@ impl AudioEngine {
                 }
 
                 // Restore saved VST param values
-                for instrument in &state.instruments {
+                for instrument in &state.tracks {
                     self.restore_instrument_vst_params(instrument);
                 }
 
@@ -1604,15 +1599,15 @@ impl AudioEngine {
     /// Update all instrument output mixer params (level, mute, pan) in real-time without rebuilding the graph
     pub fn update_all_instrument_mixer_params(
         &self,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
-        let any_solo = state.any_instrument_solo();
-        for instrument in &state.instruments {
+        let any_solo = state.any_track_solo();
+        for instrument in &state.tracks {
             if let Some(nodes) = self.node_map.get(&instrument.id) {
                 let mute = instrument.channel_strip.mute
                     || session.mixer.master_mute
@@ -1639,7 +1634,7 @@ impl AudioEngine {
     /// Updates the persistent source node (AudioIn) and all active voice source nodes.
     pub fn set_source_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1681,7 +1676,7 @@ impl AudioEngine {
     /// Set an EQ parameter on an instrument in real-time.
     pub fn set_eq_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1702,7 +1697,7 @@ impl AudioEngine {
     /// Set a filter parameter on an instrument in real-time (targeted /n_set, no rebuild).
     pub fn set_filter_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1723,7 +1718,7 @@ impl AudioEngine {
     /// Set an effect parameter on an instrument in real-time (targeted /n_set, no rebuild).
     pub fn set_effect_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         effect_id: EffectId,
         param: &str,
         value: f32,
@@ -1745,7 +1740,7 @@ impl AudioEngine {
     /// Set an LFO parameter on an instrument in real-time (targeted /n_set, no rebuild).
     pub fn set_lfo_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {

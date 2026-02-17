@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::InstrumentId;
+use crate::TrackId;
 
 /// Unique identifier for a generative voice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -68,7 +68,7 @@ pub struct GenVoice {
     pub name: String,
     pub enabled: bool,
     pub muted: bool,
-    pub target_instrument: Option<InstrumentId>,
+    pub target_instrument: Option<TrackId>,
     pub algorithm: GenerativeAlgorithm,
     pub velocity_min: u8,
     pub velocity_max: u8,
@@ -462,7 +462,7 @@ impl Default for GenerativeConstraints {
 /// A captured generative event (for piano roll commit).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapturedGenEvent {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub pitch: u8,
     pub velocity: u8,
     pub duration_ticks: u32,

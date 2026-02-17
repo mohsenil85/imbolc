@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use imbolc_types::{
     ArrangementAction, ArrangementState, AutomationAction, AutomationLane, AutomationLaneId,
-    AutomationState, BusAction, BusId, GenerativeAction, GroupAction, Instrument, InstrumentAction,
-    InstrumentId, InstrumentState, MidiAction, MixerAction, MixerBus, MixerState, PianoRollAction,
-    PianoRollState, SampleSlicerAction, SequencerAction, ServerAction, SessionAction, SessionState,
-    Track, VstParamAction,
+    AutomationState, BusAction, BusId, GenerativeAction, GroupAction, MidiAction, MixerAction,
+    MixerBus, MixerState, NoteSequence, PianoRollAction, PianoRollState, SampleSlicerAction,
+    SequencerAction, ServerAction, SessionAction, SessionState, Track, TrackAction, TrackId,
+    TrackState, VstParamAction,
 };
 
 /// Unique identifier for a connected client.
@@ -87,7 +87,7 @@ fn rand_u64() -> u64 {
 pub enum NetworkAction {
     None,
     Quit,
-    Instrument(InstrumentAction),
+    Track(TrackAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -115,9 +115,9 @@ pub enum NetworkAction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkState {
     pub session: SessionState,
-    pub instruments: InstrumentState,
+    pub tracks: TrackState,
     /// Map of instrument IDs to their owners.
-    pub ownership: HashMap<InstrumentId, OwnerInfo>,
+    pub ownership: HashMap<TrackId, OwnerInfo>,
     /// The privileged client (if any) who can control transport/save/load.
     pub privileged_client: Option<(ClientId, String)>,
 }
@@ -131,7 +131,7 @@ pub struct StatePatch {
     /// Granular session subsystem patches (only used when `session` is `None`).
     pub piano_roll: Option<PianoRollState>,
     /// Per-track delta patches (mutually exclusive with `piano_roll`).
-    pub piano_roll_track_patches: Option<HashMap<InstrumentId, Track>>,
+    pub piano_roll_track_patches: Option<HashMap<TrackId, NoteSequence>>,
     pub arrangement: Option<ArrangementState>,
     pub automation: Option<AutomationState>,
     /// Per-lane delta patches (mutually exclusive with `automation`).
@@ -139,10 +139,10 @@ pub struct StatePatch {
     pub mixer: Option<MixerState>,
     /// Per-bus delta patches (mutually exclusive with `mixer`).
     pub mixer_bus_patches: Option<HashMap<BusId, MixerBus>>,
-    pub instruments: Option<InstrumentState>,
-    /// Per-instrument delta patches (mutually exclusive with `instruments`).
-    pub instrument_patches: Option<HashMap<InstrumentId, Instrument>>,
-    pub ownership: Option<HashMap<InstrumentId, OwnerInfo>>,
+    pub tracks: Option<TrackState>,
+    /// Per-instrument delta patches (mutually exclusive with `tracks`).
+    pub instrument_patches: Option<HashMap<TrackId, Track>>,
+    pub ownership: Option<HashMap<TrackId, OwnerInfo>>,
     pub privileged_client: Option<Option<(ClientId, String)>>,
     pub seq: u64,
 }
@@ -154,7 +154,7 @@ pub enum ClientMessage {
     Hello {
         client_name: String,
         /// Instruments the client wants to own (may be partially granted).
-        requested_instruments: Vec<InstrumentId>,
+        requested_instruments: Vec<TrackId>,
         /// Request privileged status (transport/save/load control).
         request_privilege: bool,
         /// Token for reconnecting to a previous session.
@@ -183,7 +183,7 @@ pub enum ServerMessage {
         /// The client's assigned ID.
         client_id: ClientId,
         /// Instruments the client was granted ownership of.
-        granted_instruments: Vec<InstrumentId>,
+        granted_instruments: Vec<TrackId>,
         /// Initial state snapshot.
         state: NetworkState,
         /// Client's privilege level.
@@ -218,7 +218,7 @@ pub enum ServerMessage {
     /// Reconnection was successful.
     ReconnectSuccessful {
         client_id: ClientId,
-        restored_instruments: Vec<InstrumentId>,
+        restored_instruments: Vec<TrackId>,
         privilege: PrivilegeLevel,
     },
     /// Reconnection failed (token expired or invalid).

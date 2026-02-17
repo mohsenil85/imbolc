@@ -6,22 +6,22 @@ use rusqlite::{params, Connection, DatabaseName, Result as SqlResult};
 use super::blob;
 use super::save;
 use super::schema;
-use crate::state::instrument_state::InstrumentState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 /// Data tables to include in session diffs (all tables except metadata/checkpoint tables).
 const DIFF_TABLES: &[&str] = &[
     "session",
     "theme",
-    "instruments",
-    "instrument_source_params",
-    "instrument_effects",
-    "instrument_effect_params",
-    "instrument_sends",
-    "instrument_modulations",
-    "instrument_filter_extra_params",
-    "instrument_eq_bands",
-    "instrument_vst_params",
+    "tracks",
+    "track_source_params",
+    "track_effects",
+    "track_effect_params",
+    "track_sends",
+    "track_modulations",
+    "track_filter_extra_params",
+    "track_eq_bands",
+    "track_vst_params",
     "effect_vst_params",
     "mixer_buses",
     "mixer_master",
@@ -72,7 +72,7 @@ pub struct CheckpointInfo {
 fn compute_changeset(
     conn: &Connection,
     old_session: &SessionState,
-    old_instruments: &InstrumentState,
+    old_instruments: &TrackState,
 ) -> SqlResult<Option<Vec<u8>>> {
     // 1. Write the old state to a temp file
     let tmp = tempfile::NamedTempFile::new()
@@ -124,11 +124,11 @@ pub fn create_checkpoint(
     path: &Path,
     label: &str,
     session: &SessionState,
-    instruments: &InstrumentState,
+    tracks: &TrackState,
 ) -> SqlResult<i64> {
     let session_blob = blob::serialize_session(session)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
-    let instrument_blob = blob::serialize_instruments(instruments)
+    let instrument_blob = blob::serialize_tracks(tracks)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
 
     let mut conn = Connection::open(path)?;
@@ -162,14 +162,14 @@ pub fn create_checkpoint(
 
         let old_session = blob::deserialize_session(&parent_session_blob)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
-        let old_instruments = blob::deserialize_instruments(&parent_instrument_blob)
+        let old_instruments = blob::deserialize_tracks(&parent_instrument_blob)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
 
         // Write current (new) state to relational tables inside a savepoint,
         // compute the changeset, then roll back the relational data.
         let changeset_bytes = {
             let mut sp = conn.savepoint()?;
-            save::save_relational(&sp, session, instruments)?;
+            save::save_relational(&sp, session, tracks)?;
             let bytes = compute_changeset(&sp, &old_session, &old_instruments)?;
             sp.rollback()?;
             bytes
@@ -191,7 +191,7 @@ pub fn create_checkpoint(
 pub fn restore_checkpoint(
     path: &Path,
     checkpoint_id: i64,
-) -> SqlResult<(SessionState, InstrumentState)> {
+) -> SqlResult<(SessionState, TrackState)> {
     let conn = Connection::open(path)?;
 
     let (session_blob, instrument_blob): (Vec<u8>, Vec<u8>) = conn.query_row(
@@ -202,12 +202,12 @@ pub fn restore_checkpoint(
 
     let mut session = blob::deserialize_session(&session_blob)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
-    let instruments = blob::deserialize_instruments(&instrument_blob)
+    let tracks = blob::deserialize_tracks(&instrument_blob)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(e.into()))?;
 
     session.recompute_next_bus_id();
 
-    Ok((session, instruments))
+    Ok((session, tracks))
 }
 
 /// List all checkpoints, newest first.
@@ -271,13 +271,13 @@ pub fn delete_checkpoint(path: &Path, checkpoint_id: i64) -> SqlResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::instrument::SourceType;
+    use crate::state::track::SourceType;
     use tempfile::NamedTempFile;
 
     fn save_empty_project(path: &Path) {
         let session = SessionState::new();
-        let instruments = InstrumentState::new();
-        crate::state::persistence::save_project(path, &session, &instruments).unwrap();
+        let tracks = TrackState::new();
+        crate::state::persistence::save_project(path, &session, &tracks).unwrap();
     }
 
     #[test]
@@ -287,10 +287,10 @@ mod tests {
         save_empty_project(path);
 
         let session = SessionState::new();
-        let instruments = InstrumentState::new();
+        let tracks = TrackState::new();
 
-        let id1 = create_checkpoint(path, "First", &session, &instruments).unwrap();
-        let id2 = create_checkpoint(path, "Second", &session, &instruments).unwrap();
+        let id1 = create_checkpoint(path, "First", &session, &tracks).unwrap();
+        let id2 = create_checkpoint(path, "Second", &session, &tracks).unwrap();
 
         let list = list_checkpoints(path).unwrap();
         assert_eq!(list.len(), 2);
@@ -312,16 +312,16 @@ mod tests {
         // Create state with specific values
         let mut session = SessionState::new();
         session.bpm = 140;
-        let mut instruments = InstrumentState::new();
-        instruments.add_instrument(SourceType::Saw);
-        instruments.add_instrument(SourceType::Sin);
+        let mut tracks = TrackState::new();
+        tracks.add_track(SourceType::Saw);
+        tracks.add_track(SourceType::Sin);
 
-        let cp_id = create_checkpoint(path, "Snapshot", &session, &instruments).unwrap();
+        let cp_id = create_checkpoint(path, "Snapshot", &session, &tracks).unwrap();
 
         // Restore and verify
         let (loaded_session, loaded_instruments) = restore_checkpoint(path, cp_id).unwrap();
         assert_eq!(loaded_session.bpm, 140);
-        assert_eq!(loaded_instruments.instruments.len(), 2);
+        assert_eq!(loaded_instruments.tracks.len(), 2);
     }
 
     #[test]
@@ -331,10 +331,10 @@ mod tests {
         save_empty_project(path);
 
         let session = SessionState::new();
-        let instruments = InstrumentState::new();
+        let tracks = TrackState::new();
 
-        let id1 = create_checkpoint(path, "First", &session, &instruments).unwrap();
-        let id2 = create_checkpoint(path, "Second", &session, &instruments).unwrap();
+        let id1 = create_checkpoint(path, "First", &session, &tracks).unwrap();
+        let id2 = create_checkpoint(path, "Second", &session, &tracks).unwrap();
 
         delete_checkpoint(path, id1).unwrap();
 
@@ -377,14 +377,14 @@ mod tests {
 
         // Checkpoint A: empty state
         let session_a = SessionState::new();
-        let instruments_a = InstrumentState::new();
+        let instruments_a = TrackState::new();
         let _id_a = create_checkpoint(path, "A", &session_a, &instruments_a).unwrap();
 
         // Checkpoint B: modified state
         let mut session_b = SessionState::new();
         session_b.bpm = 200;
-        let mut instruments_b = InstrumentState::new();
-        instruments_b.add_instrument(SourceType::Saw);
+        let mut instruments_b = TrackState::new();
+        instruments_b.add_track(SourceType::Saw);
         let id_b = create_checkpoint(path, "B", &session_b, &instruments_b).unwrap();
 
         // Verify changeset row exists
@@ -406,10 +406,10 @@ mod tests {
         save_empty_project(path);
 
         let session = SessionState::new();
-        let instruments = InstrumentState::new();
+        let tracks = TrackState::new();
 
-        let _id1 = create_checkpoint(path, "First", &session, &instruments).unwrap();
-        let id2 = create_checkpoint(path, "Second", &session, &instruments).unwrap();
+        let _id1 = create_checkpoint(path, "First", &session, &tracks).unwrap();
+        let id2 = create_checkpoint(path, "Second", &session, &tracks).unwrap();
 
         // Verify NO changeset row — identical states
         let conn = Connection::open(path).unwrap();
@@ -431,15 +431,15 @@ mod tests {
 
         // Checkpoint A: empty
         let session_a = SessionState::new();
-        let instruments_a = InstrumentState::new();
+        let instruments_a = TrackState::new();
         let _id_a = create_checkpoint(path, "A", &session_a, &instruments_a).unwrap();
 
-        // Checkpoint B: with instruments
+        // Checkpoint B: with tracks
         let mut session_b = SessionState::new();
         session_b.bpm = 180;
-        let mut instruments_b = InstrumentState::new();
-        instruments_b.add_instrument(SourceType::Sin);
-        instruments_b.add_instrument(SourceType::Sqr);
+        let mut instruments_b = TrackState::new();
+        instruments_b.add_track(SourceType::Sin);
+        instruments_b.add_track(SourceType::Sqr);
         let id_b = create_checkpoint(path, "B", &session_b, &instruments_b).unwrap();
 
         // Verify changeset blob is non-empty

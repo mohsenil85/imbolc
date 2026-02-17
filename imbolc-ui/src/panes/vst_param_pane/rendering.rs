@@ -66,7 +66,7 @@ impl VstParamPane {
             .map(|plugin| {
                 let param_vals = self
                     .instrument_id
-                    .and_then(|id| state.instruments.instrument(id))
+                    .and_then(|id| state.tracks.track(id))
                     .map(|inst| match self.target {
                         crate::action::VstTarget::Source => inst.vst_source_params().to_vec(),
                         crate::action::VstTarget::Effect(effect_id) => inst

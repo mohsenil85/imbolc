@@ -28,7 +28,7 @@ impl FilterableItem for PaneEntry {
 
 /// Available panes for the switcher
 const PANE_ENTRIES: &[(PaneId, &str, &str)] = &[
-    (PaneId::InstrumentEdit, "Instrument Editor", "F1"),
+    (PaneId::InstrumentEdit, "Track Editor", "F1"),
     (PaneId::PianoRoll, "Piano Roll", "F2"),
     (PaneId::Sequencer, "Drum Sequencer", "F2"),
     (PaneId::Waveform, "Waveform Display", "F2"),
@@ -37,7 +37,7 @@ const PANE_ENTRIES: &[(PaneId, &str, &str)] = &[
     (PaneId::Server, "Audio Server", "F5"),
     (PaneId::Automation, "Automation", "F7"),
     (PaneId::Eq, "12-Band EQ", "F8"),
-    (PaneId::Instrument, "Instrument List", "Ctrl+g"),
+    (PaneId::TrackList, "Track List", "Ctrl+g"),
     (PaneId::SampleSlicer, "Sample Slicer", ""),
     (PaneId::FrameEdit, "Frame Settings", "Ctrl+f"),
     (PaneId::MidiSettings, "MIDI Settings", "Ctrl+m"),

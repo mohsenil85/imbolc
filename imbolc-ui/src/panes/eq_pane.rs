@@ -1,14 +1,12 @@
 use std::any::Any;
 
-use crate::state::{AppState, EqBandType, EqConfig, InstrumentId};
+use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{
-    Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style,
-};
+use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
 use imbolc_types::EqualizerParamKind;
 
-use crate::state::instrument::EqBand;
+use crate::state::track::EqBand;
 
 pub struct EqPane {
     keymap: Keymap,
@@ -38,7 +36,7 @@ impl Pane for EqPane {
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let instrument = match state.instruments.selected_instrument() {
+        let instrument = match state.tracks.selected_track() {
             Some(i) => i,
             None => return Action::None,
         };
@@ -82,13 +80,13 @@ impl Pane for EqPane {
                 action,
             ),
             ActionId::Eq(EqActionId::ToggleEq) => {
-                Action::Instrument(InstrumentAction::ToggleEqualizer(instrument_id))
+                Action::Track(TrackAction::ToggleEqualizer(instrument_id))
             }
             ActionId::Eq(EqActionId::ToggleBand) => {
                 if let Some(eq) = instrument.eq() {
                     let band = &eq.bands[self.selected_band];
                     let new_val = if band.enabled { 0.0 } else { 1.0 };
-                    Action::Instrument(InstrumentAction::SetEqualizerParam(
+                    Action::Track(TrackAction::SetEqualizerParam(
                         instrument_id,
                         self.selected_band,
                         EqualizerParamKind::Enabled,
@@ -105,7 +103,7 @@ impl Pane for EqPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let rect = center_rect(area, 78, 24);
 
-        let instrument = state.instruments.selected_instrument();
+        let instrument = state.tracks.selected_track();
         let title = match instrument {
             Some(i) => format!(" EQ: {} ", i.name),
             None => " EQ: (none) ".to_string(),
@@ -118,7 +116,7 @@ impl Pane for EqPane {
         let instrument = match instrument {
             Some(i) => i,
             None => {
-                render_centered_text(inner, buf, "(no instrument selected)", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "(no track selected)", Color::DARK_GRAY);
                 return;
             }
         };
@@ -211,7 +209,7 @@ fn render_centered_text(area: Rect, buf: &mut RenderBuf, text: &str, color: Colo
 }
 
 fn adjust_param(
-    instrument_id: InstrumentId,
+    instrument_id: TrackId,
     eq: Option<&EqConfig>,
     band_idx: usize,
     param_idx: usize,
@@ -265,7 +263,7 @@ fn adjust_param(
         (current - delta).max(min)
     };
 
-    Action::Instrument(InstrumentAction::SetEqualizerParam(
+    Action::Track(TrackAction::SetEqualizerParam(
         instrument_id,
         band_idx,
         param,

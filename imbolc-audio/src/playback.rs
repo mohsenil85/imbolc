@@ -4,10 +4,10 @@ use std::time::Duration;
 
 use super::commands::AudioFeedback;
 use super::engine::AudioEngine;
-use super::snapshot::{AutomationSnapshot, InstrumentSnapshot, PianoRollSnapshot, SessionSnapshot};
+use super::snapshot::{AutomationSnapshot, PianoRollSnapshot, SessionSnapshot, TrackSnapshot};
 use crate::arp_state::ArpPlayState;
 use imbolc_types::SwingGrid;
-use imbolc_types::{AutomationTarget, InstrumentId};
+use imbolc_types::{AutomationTarget, TrackId};
 
 fn next_random(state: &mut u64) -> f32 {
     *state = state
@@ -19,12 +19,12 @@ fn next_random(state: &mut u64) -> f32 {
 #[allow(clippy::too_many_arguments)]
 pub fn tick_playback(
     piano_roll: &mut PianoRollSnapshot,
-    instruments: &mut InstrumentSnapshot,
+    instruments: &mut TrackSnapshot,
     session: &mut SessionSnapshot,
     automation_lanes: &AutomationSnapshot,
     engine: &mut AudioEngine,
-    active_notes: &mut Vec<(InstrumentId, u8, u32)>,
-    arp_states: &mut HashMap<InstrumentId, ArpPlayState>,
+    active_notes: &mut Vec<(TrackId, u8, u32)>,
+    arp_states: &mut HashMap<TrackId, ArpPlayState>,
     rng_state: &mut u64,
     feedback_tx: &Sender<AudioFeedback>,
     elapsed: Duration,
@@ -34,7 +34,7 @@ pub fn tick_playback(
     // (instrument_id, pitch, velocity, duration, note_tick, probability, ticks_from_old_playhead)
     #[allow(clippy::type_complexity)]
     let mut playback_data: Option<(
-        Vec<(InstrumentId, u8, u8, u32, u32, f32, f64)>,
+        Vec<(TrackId, u8, u8, u32, u32, f32, f64)>,
         u32,
         u32,
         u32,
@@ -125,10 +125,10 @@ pub fn tick_playback(
                 effective_scan_end = clamped_end;
             };
 
-            let mut note_ons: Vec<(InstrumentId, u8, u8, u32, u32, f32, f64)> = Vec::new();
-            let any_solo = instruments.any_instrument_solo();
-            for &instrument_id in &piano_roll.track_order {
-                if let Some(track) = piano_roll.tracks.get(&instrument_id) {
+            let mut note_ons: Vec<(TrackId, u8, u8, u32, u32, f32, f64)> = Vec::new();
+            let any_solo = instruments.any_track_solo();
+            for &instrument_id in &piano_roll.sequence_order {
+                if let Some(seq) = piano_roll.sequences.get(&instrument_id) {
                     // Expand layer group: collect all target IDs for this instrument
                     let targets = instruments.layer_group_members(instrument_id);
 
@@ -138,14 +138,14 @@ pub fn tick_playback(
                         }
                         // Binary search for efficiency
                         // Notes are expected to be sorted by tick
-                        let start_idx = track.notes.partition_point(|n| n.tick < range_start);
-                        let end_idx = track.notes.partition_point(|n| n.tick < range_end);
+                        let start_idx = seq.notes.partition_point(|n| n.tick < range_start);
+                        let end_idx = seq.notes.partition_point(|n| n.tick < range_end);
 
-                        for note in &track.notes[start_idx..end_idx] {
+                        for note in &seq.notes[start_idx..end_idx] {
                             let ticks_from_old = base_ticks + (note.tick - range_start) as f64;
                             for &target_id in &targets {
                                 // Skip muted/inactive siblings
-                                let skip = instruments.instrument(target_id).is_none_or(|inst| {
+                                let skip = instruments.track(target_id).is_none_or(|inst| {
                                     !inst.channel_strip.active
                                         || if any_solo {
                                             !inst.channel_strip.solo
@@ -216,7 +216,7 @@ pub fn tick_playback(
                 }
 
                 // Get per-track groove settings, falling back to global
-                let groove = instruments.instrument(instrument_id).map(|i| &i.groove);
+                let groove = instruments.track(instrument_id).map(|i| &i.groove);
                 let effective_swing = groove.and_then(|g| g.swing_amount).unwrap_or(global_swing);
                 let effective_swing_grid = groove
                     .and_then(|g| g.swing_grid)
@@ -231,7 +231,7 @@ pub fn tick_playback(
 
                 // Check if this instrument has arpeggiator enabled
                 let arp_enabled = instruments
-                    .instruments
+                    .tracks
                     .iter()
                     .find(|inst| inst.id == instrument_id)
                     .map(|inst| inst.note_input.arpeggiator.enabled)
@@ -296,7 +296,7 @@ pub fn tick_playback(
                 }
 
                 let pitch = instruments
-                    .instrument(instrument_id)
+                    .track(instrument_id)
                     .map_or(pitch, |inst| inst.offset_pitch(pitch));
                 // Evict stale entry for same instrument+pitch (voice was already stolen by spawn_voice)
                 active_notes.retain(|n| !(n.0 == instrument_id && n.1 == pitch));
@@ -349,7 +349,7 @@ pub fn tick_playback(
             let _ = engine.send_automation_bundle(automation_msgs, engine.schedule_lookahead_secs);
         }
 
-        let mut note_offs: Vec<(InstrumentId, u8, u32)> = Vec::new();
+        let mut note_offs: Vec<(TrackId, u8, u32)> = Vec::new();
         for note in active_notes.iter_mut() {
             if note.2 <= tick_delta {
                 note_offs.push((note.0, note.1, note.2));
@@ -381,25 +381,25 @@ mod tests {
     use super::*;
     use imbolc_types::PianoRollState;
     use imbolc_types::SourceType;
-    use imbolc_types::{InstrumentState, SessionState};
+    use imbolc_types::{SessionState, TrackState};
     use std::sync::mpsc;
 
     /// Helper: create minimal fixtures for tick_playback tests.
     /// Returns (piano_roll, instruments, session, engine, feedback_rx) with one instrument and track.
     fn make_fixtures() -> (
         PianoRollState,
-        InstrumentState,
+        TrackState,
         SessionState,
         AudioEngine,
         mpsc::Receiver<AudioFeedback>,
         mpsc::Sender<AudioFeedback>,
     ) {
-        let mut instruments = InstrumentState::new();
-        let inst_id = instruments.add_instrument(SourceType::Saw);
+        let mut instruments = TrackState::new();
+        let inst_id = instruments.add_track(SourceType::Saw);
 
         let mut piano_roll = PianoRollState::new();
         piano_roll.playing = true;
-        piano_roll.add_track(inst_id);
+        piano_roll.add_sequence(inst_id);
 
         let session = SessionState::new();
         let engine = AudioEngine::new();
@@ -412,14 +412,14 @@ mod tests {
     #[allow(clippy::too_many_arguments)]
     fn do_tick(
         piano_roll: &mut PianoRollState,
-        instruments: &mut InstrumentState,
+        instruments: &mut TrackState,
         session: &mut SessionState,
         engine: &mut AudioEngine,
         feedback_tx: &mpsc::Sender<AudioFeedback>,
         elapsed: Duration,
         tick_accumulator: &mut f64,
         last_scheduled_tick: &mut Option<u32>,
-    ) -> Vec<(InstrumentId, u8, u32)> {
+    ) -> Vec<(TrackId, u8, u32)> {
         let mut active_notes = Vec::new();
         let mut arp_states = HashMap::new();
         let mut rng_state = 0u64;

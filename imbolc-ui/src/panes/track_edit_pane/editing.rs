@@ -1,7 +1,7 @@
-use super::InstrumentEditPane;
+use super::TrackEditPane;
 use crate::state::param::{adjust_freq_semitone, adjust_musical_step};
-use crate::state::InstrumentSection;
-use crate::ui::{Action, InstrumentAction, InstrumentUpdate};
+use crate::state::TrackSection;
+use crate::ui::{Action, TrackAction, TrackUpdate};
 use imbolc_types::ProcessingStage;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,7 +12,7 @@ pub(super) enum AdjustMode {
     Musical,
 }
 
-impl InstrumentEditPane {
+impl TrackEditPane {
     pub(super) fn adjust_value(&mut self, increase: bool, big: bool) {
         let mode = if big {
             AdjustMode::Big
@@ -37,7 +37,7 @@ impl InstrumentEditPane {
         };
 
         match section {
-            InstrumentSection::Source => {
+            TrackSection::Source => {
                 let param_idx = if self.source.is_sample() {
                     if local_idx == 0 {
                         return;
@@ -54,7 +54,7 @@ impl InstrumentEditPane {
                     }
                 }
             }
-            InstrumentSection::Processing(i) => {
+            TrackSection::Processing(i) => {
                 match self.processing_chain.get_mut(i) {
                     Some(ProcessingStage::Filter(f)) => {
                         match local_idx {
@@ -130,7 +130,7 @@ impl InstrumentEditPane {
                     None => {}
                 }
             }
-            InstrumentSection::Lfo => {
+            TrackSection::Lfo => {
                 match local_idx {
                     0 => {} // enabled - use 'l' to toggle
                     1 => {
@@ -164,7 +164,7 @@ impl InstrumentEditPane {
                     _ => {}
                 }
             }
-            InstrumentSection::Envelope => {
+            TrackSection::Envelope => {
                 let delta = match mode {
                     AdjustMode::Tiny => 0.01,
                     AdjustMode::Musical => 0.1,
@@ -189,7 +189,7 @@ impl InstrumentEditPane {
 
     pub(super) fn emit_update(&self) -> Action {
         if let Some(id) = self.instrument_id {
-            Action::Instrument(InstrumentAction::SetState(Box::new(InstrumentUpdate {
+            Action::Track(TrackAction::SetState(Box::new(TrackUpdate {
                 id,
                 source: self.source,
                 source_params: self.source_params.clone(),
@@ -209,7 +209,7 @@ impl InstrumentEditPane {
         let (section, local_idx) = self.row_info(self.selected_row);
 
         match section {
-            InstrumentSection::Source => {
+            TrackSection::Source => {
                 let param_idx = if self.source.is_sample() {
                     if local_idx == 0 {
                         return;
@@ -222,7 +222,7 @@ impl InstrumentEditPane {
                     param.zero();
                 }
             }
-            InstrumentSection::Processing(i) => {
+            TrackSection::Processing(i) => {
                 match self.processing_chain.get_mut(i) {
                     Some(ProcessingStage::Filter(f)) => {
                         match local_idx {
@@ -250,7 +250,7 @@ impl InstrumentEditPane {
                     None => {}
                 }
             }
-            InstrumentSection::Lfo => {
+            TrackSection::Lfo => {
                 match local_idx {
                     0 => self.lfo.enabled = false,
                     1 => self.lfo.rate = 0.1,
@@ -259,7 +259,7 @@ impl InstrumentEditPane {
                     _ => {}
                 }
             }
-            InstrumentSection::Envelope => match local_idx {
+            TrackSection::Envelope => match local_idx {
                 0 => self.amp_envelope.attack = 0.0,
                 1 => self.amp_envelope.decay = 0.0,
                 2 => self.amp_envelope.sustain = 0.0,
@@ -274,7 +274,7 @@ impl InstrumentEditPane {
         let (section, local_idx) = self.row_info(self.selected_row);
 
         match section {
-            InstrumentSection::Source => {
+            TrackSection::Source => {
                 let param_idx = if self.source.is_sample() {
                     if local_idx == 0 {
                         return;
@@ -290,7 +290,7 @@ impl InstrumentEditPane {
                     }
                 }
             }
-            InstrumentSection::Processing(i) => {
+            TrackSection::Processing(i) => {
                 match self.processing_chain.get_mut(i) {
                     Some(ProcessingStage::Filter(f)) => {
                         match local_idx {
@@ -324,7 +324,7 @@ impl InstrumentEditPane {
                     None => {}
                 }
             }
-            InstrumentSection::Lfo => {
+            TrackSection::Lfo => {
                 use crate::state::LfoConfig;
                 let defaults = LfoConfig::default();
                 match local_idx {
@@ -335,7 +335,7 @@ impl InstrumentEditPane {
                     _ => {}
                 }
             }
-            InstrumentSection::Envelope => {
+            TrackSection::Envelope => {
                 let defaults = self.source.default_envelope();
                 match local_idx {
                     0 => self.amp_envelope.attack = defaults.attack,
@@ -353,12 +353,12 @@ impl InstrumentEditPane {
         let section = self.current_section();
 
         match section {
-            InstrumentSection::Source => {
+            TrackSection::Source => {
                 for param in &mut self.source_params {
                     param.zero();
                 }
             }
-            InstrumentSection::Processing(i) => {
+            TrackSection::Processing(i) => {
                 match self.processing_chain.get_mut(i) {
                     Some(ProcessingStage::Filter(f)) => {
                         f.cutoff.value = f.cutoff.min;
@@ -376,12 +376,12 @@ impl InstrumentEditPane {
                     None => {}
                 }
             }
-            InstrumentSection::Lfo => {
+            TrackSection::Lfo => {
                 self.lfo.enabled = false;
                 self.lfo.rate = 0.1;
                 self.lfo.depth = 0.0;
             }
-            InstrumentSection::Envelope => {
+            TrackSection::Envelope => {
                 self.amp_envelope.attack = 0.0;
                 self.amp_envelope.decay = 0.0;
                 self.amp_envelope.sustain = 0.0;
@@ -394,7 +394,7 @@ impl InstrumentEditPane {
     pub(super) fn current_value_string(&self) -> String {
         let (section, local_idx) = self.row_info(self.selected_row);
         match section {
-            InstrumentSection::Source => {
+            TrackSection::Source => {
                 let param_idx = if self.source.is_sample() {
                     if local_idx == 0 {
                         return String::new();
@@ -408,7 +408,7 @@ impl InstrumentEditPane {
                     .map(|p| p.value_string())
                     .unwrap_or_default()
             }
-            InstrumentSection::Processing(i) => match self.processing_chain.get(i) {
+            TrackSection::Processing(i) => match self.processing_chain.get(i) {
                 Some(ProcessingStage::Filter(f)) => match local_idx {
                     1 => format!("{:.2}", f.cutoff.value),
                     2 => format!("{:.2}", f.resonance.value),
@@ -433,7 +433,7 @@ impl InstrumentEditPane {
                 }
                 None => String::new(),
             },
-            InstrumentSection::Envelope => match local_idx {
+            TrackSection::Envelope => match local_idx {
                 0 => format!("{:.2}", self.amp_envelope.attack),
                 1 => format!("{:.2}", self.amp_envelope.decay),
                 2 => format!("{:.2}", self.amp_envelope.sustain),

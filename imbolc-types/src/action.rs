@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     AutomationLaneId, AutomationTarget, BusId, ClipId, ClipInstanceId, ClipboardNote, CurveType,
     DrumStep, EffectId, EffectType, EnvConfig, FilterType, GenVoiceId, GenerativeAlgorithm,
-    InstrumentId, LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, ProcessingStage,
-    ServerStatus, SourceType, VstPluginKind,
+    LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, ProcessingStage, ServerStatus,
+    SourceType, TrackId, VstPluginKind,
 };
 
 // ============================================================================
@@ -37,7 +37,7 @@ pub enum PaneId {
     Generative,
     Help,
     Home,
-    Instrument,
+    TrackList,
     InstrumentEdit,
     InstrumentPicker,
     MidiSettings,
@@ -77,7 +77,7 @@ impl PaneId {
             PaneId::Generative => "generative",
             PaneId::Help => "help",
             PaneId::Home => "home",
-            PaneId::Instrument => "instrument",
+            PaneId::TrackList => "track_list",
             PaneId::InstrumentEdit => "instrument_edit",
             PaneId::InstrumentPicker => "instrument_picker",
             PaneId::MidiSettings => "midi_settings",
@@ -118,7 +118,7 @@ impl PaneId {
             "generative" => Some(PaneId::Generative),
             "help" => Some(PaneId::Help),
             "home" => Some(PaneId::Home),
-            "instrument" => Some(PaneId::Instrument),
+            "track_list" => Some(PaneId::TrackList),
             "instrument_edit" => Some(PaneId::InstrumentEdit),
             "instrument_picker" => Some(PaneId::InstrumentPicker),
             "midi_settings" => Some(PaneId::MidiSettings),
@@ -276,24 +276,24 @@ pub enum BusAction {
     AdjustEffectParam(BusId, EffectId, ParamIndex, f32),
 }
 
-/// Layer group actions.
+/// Group actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GroupAction {
-    /// Add an effect to a layer group
+    /// Add an effect to a group
     AddEffect(u32, EffectType),
-    /// Remove an effect from a layer group
+    /// Remove an effect from a group
     RemoveEffect(u32, EffectId),
-    /// Move an effect up/down on a layer group
+    /// Move an effect up/down on a group
     MoveEffect(u32, EffectId, i8),
-    /// Toggle bypass on a layer group effect
+    /// Toggle bypass on a group effect
     ToggleEffectBypass(u32, EffectId),
-    /// Adjust a parameter on a layer group effect
+    /// Adjust a parameter on a group effect
     AdjustEffectParam(u32, EffectId, ParamIndex, f32),
-    /// Toggle EQ on/off for a layer group
+    /// Toggle EQ on/off for a group
     ToggleEqualizer(u32),
-    /// Set an EQ band parameter on a layer group (group_id, band_index, param, value)
+    /// Set an EQ band parameter on a group (group_id, band_index, param, value)
     SetEqualizerParam(u32, usize, EqualizerParamKind, f32),
-    /// Rename a layer group
+    /// Rename a group
     Rename(u32, String),
 }
 
@@ -326,8 +326,8 @@ pub enum FileSelectAction {
     ImportVstEffect,
     LoadDrumSample(usize), // pad index
     LoadSlicerSample,
-    LoadPitchedSample(InstrumentId),
-    LoadImpulseResponse(InstrumentId, EffectId), // instrument_id, effect_id
+    LoadPitchedSample(TrackId),
+    LoadImpulseResponse(TrackId, EffectId), // instrument_id, effect_id
     ImportProject,
 }
 
@@ -345,7 +345,7 @@ pub enum NavIntent {
     /// Configure and push to the file browser
     OpenFileBrowser(FileSelectAction),
     /// Configure and push to the VST param pane for a specific target
-    OpenVstParams(InstrumentId, VstTarget),
+    OpenVstParams(TrackId, VstTarget),
     /// Open tag picker modal with context target for tag assignment
     OpenTagPicker(AutomationTarget),
 }
@@ -373,18 +373,18 @@ pub enum AudioEffect {
     RebuildInstruments,
     RebuildSession,
     RebuildRouting,
-    RebuildRoutingForInstrument(InstrumentId),
-    AddInstrumentRouting(InstrumentId),
-    DeleteInstrumentRouting(InstrumentId),
+    RebuildRoutingForInstrument(TrackId),
+    AddInstrumentRouting(TrackId),
+    DeleteInstrumentRouting(TrackId),
     RebuildBusProcessing,
     UpdateMixerParams,
     UpdatePianoRoll,
     UpdateAutomation,
 
     // Targeted /n_set params (no rebuild needed)
-    SetFilterParam(InstrumentId, FilterParamKind, f32),
-    SetEffectParam(InstrumentId, EffectId, ParamIndex, f32),
-    SetLfoParam(InstrumentId, LfoParamKind, f32),
+    SetFilterParam(TrackId, FilterParamKind, f32),
+    SetEffectParam(TrackId, EffectId, ParamIndex, f32),
+    SetLfoParam(TrackId, LfoParamKind, f32),
     SetBusEffectParam(BusId, EffectId, ParamIndex, f32),
     SetGroupEffectParam(u32, EffectId, ParamIndex, f32),
 }
@@ -403,7 +403,7 @@ impl AudioEffect {
     }
 
     /// Effects for a single instrument rebuild + targeted routing.
-    pub fn for_instrument(id: InstrumentId) -> Vec<AudioEffect> {
+    pub fn for_instrument(id: TrackId) -> Vec<AudioEffect> {
         vec![
             AudioEffect::RebuildInstruments,
             AudioEffect::RebuildRoutingForInstrument(id),
@@ -515,11 +515,11 @@ impl DispatchResult {
 /// VST parameter actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum VstParamAction {
-    SetParam(InstrumentId, VstTarget, u32, f32), // instrument_id, target, param_index, value
-    AdjustParam(InstrumentId, VstTarget, u32, f32), // instrument_id, target, param_index, delta
-    ResetParam(InstrumentId, VstTarget, u32),    // instrument_id, target, param_index
-    DiscoverParams(InstrumentId, VstTarget),
-    SaveState(InstrumentId, VstTarget),
+    SetParam(TrackId, VstTarget, u32, f32), // instrument_id, target, param_index, value
+    AdjustParam(TrackId, VstTarget, u32, f32), // instrument_id, target, param_index, delta
+    ResetParam(TrackId, VstTarget, u32),    // instrument_id, target, param_index
+    DiscoverParams(TrackId, VstTarget),
+    SaveState(TrackId, VstTarget),
 }
 
 /// Mixer actions.
@@ -581,7 +581,7 @@ pub enum MidiAction {
         channel: Option<u8>,
     },
     SetChannelFilter(Option<u8>),
-    SetLiveInputInstrument(Option<InstrumentId>),
+    SetLiveInputInstrument(Option<TrackId>),
     ToggleNotePassthrough,
     /// Enter learn mode — next CC event will create a mapping to this target
     StartLearn(AutomationTarget),
@@ -625,17 +625,17 @@ pub enum AutomationAction {
 pub enum ArrangementAction {
     TogglePlayMode,
     CreateClip {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         length_ticks: u32,
     },
     CaptureClipFromPianoRoll {
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
     },
     DeleteClip(ClipId),
     RenameClip(ClipId, String),
     AddClipInstance {
         clip_id: ClipId,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         start_tick: u32,
     },
     RemoveClipInstance(ClipInstanceId),
@@ -678,28 +678,28 @@ pub enum PianoRollAction {
     PlayNote {
         pitch: u8,
         velocity: u8,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         track: usize,
     },
     PlayNotes {
         pitches: Vec<u8>,
         velocity: u8,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         track: usize,
     },
     /// Release a sustained note (key-up via timeout detection)
     ReleaseNote {
         pitch: u8,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
     },
     /// Release multiple sustained notes (for chords)
     ReleaseNotes {
         pitches: Vec<u8>,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
     },
     ToggleRecordPlayback,
     AdjustSwing(f32), // delta for swing amount
-    RenderToWav(InstrumentId),
+    RenderToWav(TrackId),
     /// Delete all notes in the given region (used by Cut)
     DeleteNotesInRegion {
         track: usize,
@@ -731,8 +731,8 @@ pub enum PianoRollAction {
 impl PianoRollAction {
     /// Returns the target instrument ID for ownership validation, if applicable.
     /// Returns None for actions that don't explicitly specify an instrument ID.
-    /// Note: Actions with `track` index need state to resolve to InstrumentId.
-    pub fn target_instrument_id(&self) -> Option<InstrumentId> {
+    /// Note: Actions with `track` index need state to resolve to TrackId.
+    pub fn target_track_id(&self) -> Option<TrackId> {
         match self {
             // Actions with explicit instrument_id
             Self::PlayNote { instrument_id, .. } => Some(*instrument_id),
@@ -811,7 +811,7 @@ pub enum SequencerAction {
         end_step: usize,
     },
     /// Assign an instrument to a pad for one-shot triggering
-    SetPadInstrument(usize, InstrumentId, f32), // pad_idx, instrument_id, freq
+    SetPadInstrument(usize, TrackId, f32), // pad_idx, instrument_id, freq
     /// Clear instrument assignment from a pad
     ClearPadInstrument(usize), // pad_idx
     /// Adjust the trigger frequency for a pad
@@ -822,10 +822,10 @@ pub enum SequencerAction {
     NextStepResolution,
 }
 
-/// Data carried by InstrumentAction::SetState to apply edits without dispatch reading pane state.
+/// Data carried by TrackAction::Update to apply edits without dispatch reading pane state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstrumentUpdate {
-    pub id: InstrumentId,
+pub struct TrackUpdate {
+    pub id: TrackId,
     pub source: SourceType,
     pub source_params: Vec<Param>,
     pub processing_chain: Vec<ProcessingStage>,
@@ -835,23 +835,23 @@ pub struct InstrumentUpdate {
     pub active: bool,
 }
 
-/// Instrument actions.
+/// Track actions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum InstrumentAction {
+pub enum TrackAction {
     Add(SourceType),
-    Delete(InstrumentId),
-    Edit(InstrumentId),
-    SetState(Box<InstrumentUpdate>),
-    AddEffect(InstrumentId, EffectType),
-    RemoveEffect(InstrumentId, EffectId),
-    MoveStage(InstrumentId, usize, i8),
-    SetFilter(InstrumentId, Option<FilterType>),
-    ToggleEffectBypass(InstrumentId, EffectId),
-    ToggleFilter(InstrumentId),
-    NextFilterType(InstrumentId),
-    AdjustFilterCutoff(InstrumentId, f32),
-    AdjustFilterResonance(InstrumentId, f32),
-    AdjustEffectParam(InstrumentId, EffectId, ParamIndex, f32),
+    Delete(TrackId),
+    Edit(TrackId),
+    SetState(Box<TrackUpdate>),
+    AddEffect(TrackId, EffectType),
+    RemoveEffect(TrackId, EffectId),
+    MoveStage(TrackId, usize, i8),
+    SetFilter(TrackId, Option<FilterType>),
+    ToggleEffectBypass(TrackId, EffectId),
+    ToggleFilter(TrackId),
+    NextFilterType(TrackId),
+    AdjustFilterCutoff(TrackId, f32),
+    AdjustFilterResonance(TrackId, f32),
+    AdjustEffectParam(TrackId, EffectId, ParamIndex, f32),
     PlayNote(u8, u8),
     PlayNotes(Vec<u8>, u8),
     Select(usize),
@@ -860,57 +860,57 @@ pub enum InstrumentAction {
     SelectFirst,
     SelectLast,
     PlayDrumPad(usize, u8),
-    LoadSampleResult(InstrumentId, PathBuf),
-    ToggleArpeggiator(InstrumentId),
-    NextArpeggiatorDirection(InstrumentId),
-    PrevArpeggiatorDirection(InstrumentId),
-    NextArpeggiatorRate(InstrumentId),
-    PrevArpeggiatorRate(InstrumentId),
-    AdjustArpeggiatorOctaves(InstrumentId, i8),
-    AdjustArpeggiatorGate(InstrumentId, f32),
-    NextChordShape(InstrumentId),
-    PrevChordShape(InstrumentId),
-    ClearChordShape(InstrumentId),
-    LoadIRResult(InstrumentId, EffectId, PathBuf), // instrument_id, effect_id, path
-    ShowVstEffectParams(InstrumentId, EffectId),   // instrument_id, effect_id
-    SetEqualizerParam(InstrumentId, usize, EqualizerParamKind, f32), // instrument_id, band_index, param, value
-    ToggleEqualizer(InstrumentId),
-    LinkLayer(InstrumentId, InstrumentId),
-    UnlinkLayer(InstrumentId),
-    AdjustLayerOctaveOffset(InstrumentId, i8),
+    LoadSampleResult(TrackId, PathBuf),
+    ToggleArpeggiator(TrackId),
+    NextArpeggiatorDirection(TrackId),
+    PrevArpeggiatorDirection(TrackId),
+    NextArpeggiatorRate(TrackId),
+    PrevArpeggiatorRate(TrackId),
+    AdjustArpeggiatorOctaves(TrackId, i8),
+    AdjustArpeggiatorGate(TrackId, f32),
+    NextChordShape(TrackId),
+    PrevChordShape(TrackId),
+    ClearChordShape(TrackId),
+    LoadIRResult(TrackId, EffectId, PathBuf), // instrument_id, effect_id, path
+    ShowVstEffectParams(TrackId, EffectId),   // instrument_id, effect_id
+    SetEqualizerParam(TrackId, usize, EqualizerParamKind, f32), // instrument_id, band_index, param, value
+    ToggleEqualizer(TrackId),
+    LinkLayer(TrackId, TrackId),
+    UnlinkLayer(TrackId),
+    AdjustLayerOctaveOffset(TrackId, i8),
     // Per-track groove settings
-    SetTrackSwing(InstrumentId, Option<f32>),
-    SetTrackSwingGrid(InstrumentId, Option<crate::SwingGrid>),
-    AdjustTrackSwing(InstrumentId, f32),
-    SetTrackHumanizeVelocity(InstrumentId, Option<f32>),
-    AdjustTrackHumanizeVelocity(InstrumentId, f32),
-    SetTrackHumanizeTiming(InstrumentId, Option<f32>),
-    AdjustTrackHumanizeTiming(InstrumentId, f32),
-    SetTrackTimingOffset(InstrumentId, f32),
-    AdjustTrackTimingOffset(InstrumentId, f32),
-    ResetTrackGroove(InstrumentId),
+    SetTrackSwing(TrackId, Option<f32>),
+    SetTrackSwingGrid(TrackId, Option<crate::SwingGrid>),
+    AdjustTrackSwing(TrackId, f32),
+    SetTrackHumanizeVelocity(TrackId, Option<f32>),
+    AdjustTrackHumanizeVelocity(TrackId, f32),
+    SetTrackHumanizeTiming(TrackId, Option<f32>),
+    AdjustTrackHumanizeTiming(TrackId, f32),
+    SetTrackTimingOffset(TrackId, f32),
+    AdjustTrackTimingOffset(TrackId, f32),
+    ResetTrackGroove(TrackId),
     // Per-track time signature
-    SetTrackTimeSignature(InstrumentId, Option<(u8, u8)>),
-    NextTrackTimeSignature(InstrumentId),
+    SetTrackTimeSignature(TrackId, Option<(u8, u8)>),
+    NextTrackTimeSignature(TrackId),
     // LFO actions
-    ToggleLfo(InstrumentId),
-    AdjustLfoRate(InstrumentId, f32),
-    AdjustLfoDepth(InstrumentId, f32),
-    SetLfoShape(InstrumentId, crate::LfoShape),
-    SetLfoTarget(InstrumentId, crate::ParameterTarget),
+    ToggleLfo(TrackId),
+    AdjustLfoRate(TrackId, f32),
+    AdjustLfoDepth(TrackId, f32),
+    SetLfoShape(TrackId, crate::LfoShape),
+    SetLfoTarget(TrackId, crate::ParameterTarget),
     // Envelope actions
-    AdjustEnvelopeAttack(InstrumentId, f32),
-    AdjustEnvelopeDecay(InstrumentId, f32),
-    AdjustEnvelopeSustain(InstrumentId, f32),
-    AdjustEnvelopeRelease(InstrumentId, f32),
+    AdjustEnvelopeAttack(TrackId, f32),
+    AdjustEnvelopeDecay(TrackId, f32),
+    AdjustEnvelopeSustain(TrackId, f32),
+    AdjustEnvelopeRelease(TrackId, f32),
     // Channel config
-    ToggleChannelConfig(InstrumentId),
+    ToggleChannelConfig(TrackId),
 }
 
-impl InstrumentAction {
+impl TrackAction {
     /// Returns the target instrument ID for ownership validation, if applicable.
     /// Returns None for actions that don't target a specific instrument (Add, Select, PlayNote, etc).
-    pub fn target_instrument_id(&self) -> Option<InstrumentId> {
+    pub fn target_track_id(&self) -> Option<TrackId> {
         match self {
             // Actions that don't target a specific instrument
             Self::Add(_) => None,
@@ -1038,7 +1038,7 @@ pub enum GenerativeAction {
     RemoveVoice(GenVoiceId),
     ToggleVoice(GenVoiceId),
     MuteVoice(GenVoiceId),
-    SetVoiceTarget(GenVoiceId, Option<InstrumentId>),
+    SetVoiceTarget(GenVoiceId, Option<TrackId>),
     SetVoiceAlgorithm(GenVoiceId, GenerativeAlgorithm),
     // Macros
     AdjustDensity(f32),
@@ -1078,7 +1078,7 @@ pub enum GenerativeAction {
 
 /// Actions returned from pane input handling. Contains both UI-layer mechanics
 /// (Nav, PushLayer, PopLayer, ExitPerformanceMode, Quit, SaveAndQuit) and
-/// domain mutations (Instrument, Mixer, etc.).
+/// domain mutations (Track, Mixer, etc.).
 ///
 /// Use `route()` to classify the action as UI-layer or domain-layer.
 #[derive(Debug, Clone, Serialize)]
@@ -1089,7 +1089,7 @@ pub enum Action {
     /// Panes emit this instead of `Quit` when the user hasn't confirmed.
     QuitIntent,
     Nav(NavAction),
-    Instrument(InstrumentAction),
+    Track(TrackAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -1161,7 +1161,7 @@ pub enum RoutedAction {
 /// audio projection operate on `DomainAction` exclusively.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DomainAction {
-    Instrument(InstrumentAction),
+    Track(TrackAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -1188,7 +1188,7 @@ impl Action {
     #[must_use = "Action::route() result must be matched; do not drop UI actions."]
     pub fn route(self) -> RoutedAction {
         match self {
-            Self::Instrument(a) => RoutedAction::Domain(DomainAction::Instrument(a)),
+            Self::Track(a) => RoutedAction::Domain(DomainAction::Track(a)),
             Self::Mixer(a) => RoutedAction::Domain(DomainAction::Mixer(a)),
             Self::PianoRoll(a) => RoutedAction::Domain(DomainAction::PianoRoll(a)),
             Self::Arrangement(a) => RoutedAction::Domain(DomainAction::Arrangement(a)),
@@ -1223,7 +1223,7 @@ impl Action {
 impl From<DomainAction> for Action {
     fn from(d: DomainAction) -> Self {
         match d {
-            DomainAction::Instrument(a) => Self::Instrument(a),
+            DomainAction::Track(a) => Self::Track(a),
             DomainAction::Mixer(a) => Self::Mixer(a),
             DomainAction::PianoRoll(a) => Self::PianoRoll(a),
             DomainAction::Arrangement(a) => Self::Arrangement(a),
@@ -1269,7 +1269,7 @@ mod tests {
             PaneId::Generative,
             PaneId::Help,
             PaneId::Home,
-            PaneId::Instrument,
+            PaneId::TrackList,
             PaneId::InstrumentEdit,
             PaneId::InstrumentPicker,
             PaneId::MidiSettings,
@@ -1309,7 +1309,7 @@ mod tests {
 
     #[test]
     fn audio_effect_for_instrument() {
-        let id = InstrumentId::new(42);
+        let id = TrackId::new(42);
         let effects = AudioEffect::for_instrument(id);
         assert!(effects.contains(&AudioEffect::RebuildInstruments));
         assert!(effects.contains(&AudioEffect::RebuildRoutingForInstrument(id)));
@@ -1409,9 +1409,9 @@ mod tests {
     #[test]
     fn audio_effect_is_routing() {
         assert!(AudioEffect::RebuildRouting.is_routing());
-        assert!(AudioEffect::RebuildRoutingForInstrument(InstrumentId::new(1)).is_routing());
-        assert!(AudioEffect::AddInstrumentRouting(InstrumentId::new(1)).is_routing());
-        assert!(AudioEffect::DeleteInstrumentRouting(InstrumentId::new(1)).is_routing());
+        assert!(AudioEffect::RebuildRoutingForInstrument(TrackId::new(1)).is_routing());
+        assert!(AudioEffect::AddInstrumentRouting(TrackId::new(1)).is_routing());
+        assert!(AudioEffect::DeleteInstrumentRouting(TrackId::new(1)).is_routing());
         assert!(!AudioEffect::RebuildInstruments.is_routing());
         assert!(!AudioEffect::UpdatePianoRoll.is_routing());
     }

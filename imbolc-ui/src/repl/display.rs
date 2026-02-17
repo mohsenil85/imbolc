@@ -2,13 +2,13 @@ use crate::state::AppState;
 use imbolc_types::*;
 
 pub fn format_instrument_list(state: &AppState) -> String {
-    if state.instruments.instruments.is_empty() {
-        return "No instruments. Use 'instrument add <source>' to create one.".to_string();
+    if state.tracks.tracks.is_empty() {
+        return "No tracks. Use 'track add <source>' to create one.".to_string();
     }
 
-    let selected = state.instruments.selected;
+    let selected = state.tracks.selected;
     let mut lines = Vec::new();
-    for (i, inst) in state.instruments.instruments.iter().enumerate() {
+    for (i, inst) in state.tracks.tracks.iter().enumerate() {
         let marker = if Some(i) == selected { '*' } else { ' ' };
         let mute_str = if inst.channel_strip.mute {
             " muted"
@@ -32,14 +32,14 @@ pub fn format_instrument_list(state: &AppState) -> String {
     lines.join("\n")
 }
 
-pub fn format_instrument_detail(state: &AppState, id: InstrumentId) -> String {
-    let inst = match state.instruments.instrument(id) {
+pub fn format_instrument_detail(state: &AppState, id: TrackId) -> String {
+    let inst = match state.tracks.track(id) {
         Some(inst) => inst,
-        None => return format!("Instrument {} not found", id),
+        None => return format!("Track {} not found", id),
     };
 
     let mut lines = vec![
-        format!("Instrument: {} (id: {})", inst.name, id),
+        format!("Track: {} (id: {})", inst.name, id),
         format!(
             "  Source: {} ({})",
             inst.source.name(),
@@ -153,7 +153,7 @@ pub fn format_mixer(state: &AppState) -> String {
     let mut lines = vec!["Mixer:".to_string()];
 
     // Instruments
-    for (i, inst) in state.instruments.instruments.iter().enumerate() {
+    for (i, inst) in state.tracks.tracks.iter().enumerate() {
         let mute = if inst.channel_strip.mute { " M" } else { "" };
         let solo = if inst.channel_strip.solo { " S" } else { "" };
         lines.push(format!(
@@ -197,26 +197,26 @@ pub fn format_mixer(state: &AppState) -> String {
 }
 
 pub fn format_notes(state: &AppState, track_idx: usize) -> String {
-    let track_order = &state.session.piano_roll.track_order;
-    if track_idx >= track_order.len() {
+    let sequence_order = &state.session.piano_roll.sequence_order;
+    if track_idx >= sequence_order.len() {
         return format!(
             "Track index {} out of range (0..{})",
             track_idx,
-            track_order.len()
+            sequence_order.len()
         );
     }
-    let inst_id = track_order[track_idx];
-    let track = match state.session.piano_roll.tracks.get(&inst_id) {
+    let inst_id = sequence_order[track_idx];
+    let seq = match state.session.piano_roll.sequences.get(&inst_id) {
         Some(t) => t,
-        None => return format!("No track for instrument {}", inst_id),
+        None => return format!("No sequence for track {}", inst_id),
     };
 
-    if track.notes.is_empty() {
-        return format!("Track {} (instrument {}): no notes", track_idx, inst_id);
+    if seq.notes.is_empty() {
+        return format!("Track {} (id {}): no notes", track_idx, inst_id);
     }
 
-    let mut lines = vec![format!("Track {} (instrument {}):", track_idx, inst_id)];
-    for note in &track.notes {
+    let mut lines = vec![format!("Track {} (id {}):", track_idx, inst_id)];
+    for note in &seq.notes {
         lines.push(format!(
             "  pitch:{:>3}  tick:{:>6}  dur:{:>5}  vel:{:>3}",
             note.pitch, note.tick, note.duration, note.velocity,
@@ -225,15 +225,15 @@ pub fn format_notes(state: &AppState, track_idx: usize) -> String {
     lines.join("\n")
 }
 
-pub fn format_effects(state: &AppState, id: InstrumentId) -> String {
-    let inst = match state.instruments.instrument(id) {
+pub fn format_effects(state: &AppState, id: TrackId) -> String {
+    let inst = match state.tracks.track(id) {
         Some(inst) => inst,
-        None => return format!("Instrument {} not found", id),
+        None => return format!("Track {} not found", id),
     };
 
     let effects: Vec<_> = inst.effects().collect();
     if effects.is_empty() {
-        return format!("Instrument {} ({}) has no effects", id, inst.name);
+        return format!("Track {} ({}) has no effects", id, inst.name);
     }
 
     let mut lines = vec![format!("Effects for {} (id: {}):", inst.name, id)];
@@ -410,16 +410,16 @@ pub fn format_session(state: &AppState) -> String {
 }
 
 pub fn format_sequencer(state: &AppState) -> String {
-    let selected = state.instruments.selected;
-    let inst = selected.and_then(|i| state.instruments.instruments.get(i));
+    let selected = state.tracks.selected;
+    let inst = selected.and_then(|i| state.tracks.tracks.get(i));
     let inst = match inst {
         Some(i) => i,
-        None => return "No instrument selected".to_string(),
+        None => return "No track selected".to_string(),
     };
 
     let seq = match &inst.source_extra {
-        imbolc_types::state::instrument::SourceExtra::Kit(seq) => seq,
-        _ => return "No drum sequencer on selected instrument".to_string(),
+        imbolc_types::state::track::SourceExtra::Kit(seq) => seq,
+        _ => return "No drum sequencer on selected track".to_string(),
     };
 
     let mut lines = vec![format!(

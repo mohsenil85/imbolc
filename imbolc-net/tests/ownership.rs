@@ -2,7 +2,7 @@ mod common;
 
 use imbolc_net::protocol::ServerMessage;
 use imbolc_net::server::NetServer;
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 use std::time::Duration;
 
 #[test]
@@ -14,11 +14,7 @@ fn test_contested_ownership() {
     // Alice requests instruments 0, 1
     let mut alice = common::RawClient::connect(&addr).unwrap();
     alice
-        .send_hello(
-            "Alice",
-            vec![InstrumentId::new(0), InstrumentId::new(1)],
-            false,
-        )
+        .send_hello("Alice", vec![TrackId::new(0), TrackId::new(1)], false)
         .unwrap();
     common::drive_until_clients(&mut server, &state, 1, Duration::from_secs(2));
 
@@ -38,12 +34,8 @@ fn test_contested_ownership() {
 
     // Bob requests instruments 1, 2 — should only get 2 (1 is taken)
     let mut bob = common::RawClient::connect(&addr).unwrap();
-    bob.send_hello(
-        "Bob",
-        vec![InstrumentId::new(1), InstrumentId::new(2)],
-        false,
-    )
-    .unwrap();
+    bob.send_hello("Bob", vec![TrackId::new(1), TrackId::new(2)], false)
+        .unwrap();
     common::drive_until_clients(&mut server, &state, 2, Duration::from_secs(2));
 
     let bob_welcome = bob.recv().unwrap();
@@ -53,7 +45,7 @@ fn test_contested_ownership() {
             ..
         } => {
             assert_eq!(granted_instruments.len(), 1);
-            assert!(granted_instruments.contains(&InstrumentId::new(2)));
+            assert!(granted_instruments.contains(&TrackId::new(2)));
         }
         other => panic!("Expected Welcome, got {:?}", other),
     }

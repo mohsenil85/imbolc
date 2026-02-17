@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AutomationTarget, InstrumentId};
+use crate::{AutomationTarget, TrackId};
 
 /// A named group of tagged parameters from any instrument.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,8 +31,8 @@ impl ParamTag {
         self.targets.retain(|t| t != target);
     }
 
-    /// Remove all targets referencing a given instrument.
-    pub fn remove_instrument(&mut self, id: InstrumentId) {
+    /// Remove all targets referencing a given track.
+    pub fn remove_track(&mut self, id: TrackId) {
         self.targets.retain(|t| t.instrument_id() != Some(id));
     }
 }
@@ -60,10 +60,10 @@ impl ParamTagState {
         self.selected_tag.and_then(|i| self.tags.get_mut(i))
     }
 
-    /// Remove all targets referencing a given instrument across all tags.
-    pub fn remove_instrument(&mut self, id: InstrumentId) {
+    /// Remove all targets referencing a given track across all tags.
+    pub fn remove_track(&mut self, id: TrackId) {
         for tag in &mut self.tags {
-            tag.remove_instrument(id);
+            tag.remove_track(id);
         }
     }
 }
@@ -76,7 +76,7 @@ mod tests {
     #[test]
     fn add_target_dedup() {
         let mut tag = ParamTag::new("test".into());
-        let target = AutomationTarget::filter_cutoff(InstrumentId::new(1));
+        let target = AutomationTarget::filter_cutoff(TrackId::new(1));
         tag.add_target(target.clone());
         tag.add_target(target.clone());
         assert_eq!(tag.targets.len(), 1);
@@ -85,8 +85,8 @@ mod tests {
     #[test]
     fn remove_target() {
         let mut tag = ParamTag::new("test".into());
-        let t1 = AutomationTarget::filter_cutoff(InstrumentId::new(1));
-        let t2 = AutomationTarget::level(InstrumentId::new(1));
+        let t1 = AutomationTarget::filter_cutoff(TrackId::new(1));
+        let t2 = AutomationTarget::level(TrackId::new(1));
         tag.add_target(t1.clone());
         tag.add_target(t2.clone());
         tag.remove_target(&t1);
@@ -97,11 +97,11 @@ mod tests {
     #[test]
     fn remove_instrument_from_tag() {
         let mut tag = ParamTag::new("test".into());
-        let id1 = InstrumentId::new(1);
-        let id2 = InstrumentId::new(2);
+        let id1 = TrackId::new(1);
+        let id2 = TrackId::new(2);
         tag.add_target(AutomationTarget::filter_cutoff(id1));
         tag.add_target(AutomationTarget::level(id2));
-        tag.remove_instrument(id1);
+        tag.remove_track(id1);
         assert_eq!(tag.targets.len(), 1);
         assert_eq!(tag.targets[0].instrument_id(), Some(id2));
     }
@@ -109,14 +109,14 @@ mod tests {
     #[test]
     fn remove_instrument_from_state() {
         let mut state = ParamTagState::new();
-        let id1 = InstrumentId::new(1);
-        let id2 = InstrumentId::new(2);
+        let id1 = TrackId::new(1);
+        let id2 = TrackId::new(2);
         state.tags.push(ParamTag::new("tag1".into()));
         state.tags.push(ParamTag::new("tag2".into()));
         state.tags[0].add_target(AutomationTarget::filter_cutoff(id1));
         state.tags[0].add_target(AutomationTarget::level(id2));
         state.tags[1].add_target(AutomationTarget::instrument(id1, ParameterTarget::Pan));
-        state.remove_instrument(id1);
+        state.remove_track(id1);
         assert_eq!(state.tags[0].targets.len(), 1);
         assert_eq!(state.tags[1].targets.len(), 0);
     }

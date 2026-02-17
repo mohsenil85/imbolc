@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use super::engine::AudioEngine;
 use super::generative_state::{GenerativePlayState, VoicePlayState};
-use super::snapshot::{InstrumentSnapshot, SessionSnapshot};
+use super::snapshot::{SessionSnapshot, TrackSnapshot};
 use imbolc_types::state::drum_sequencer::euclidean_rhythm;
 use imbolc_types::state::generative::*;
 use imbolc_types::state::music::{Key, Scale};
@@ -54,7 +54,7 @@ fn algorithm_fingerprint(algorithm: &GenerativeAlgorithm) -> u64 {
 /// Main tick function for the generative engine.
 #[allow(clippy::too_many_arguments)]
 pub fn tick_generative(
-    instruments: &InstrumentSnapshot,
+    instruments: &TrackSnapshot,
     session: &SessionSnapshot,
     bpm: f32,
     gen_states: &mut GenerativePlayState,
@@ -88,11 +88,11 @@ pub fn tick_generative(
 
     let macros = &gen.macros;
     let tpb = 480u32; // ticks per beat (standard)
-    let any_solo = instruments.any_instrument_solo();
+    let any_solo = instruments.any_track_solo();
 
     for (voice_id, target_id, algorithm, vel_min, vel_max, oct_min, oct_max) in &voice_configs {
         // Validate target instrument exists and is playable
-        let target_inst = match instruments.instrument(*target_id) {
+        let target_inst = match instruments.track(*target_id) {
             Some(inst) => inst,
             None => continue,
         };

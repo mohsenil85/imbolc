@@ -6,8 +6,7 @@ use crate::ui::pane::*;
 use crate::ui::style::{Color, Style};
 use crate::ui::{InputEvent, Keymap, MouseEvent, Rect, RenderBuf};
 use imbolc_types::{
-    AutomationTarget, BusParameter, GlobalParameter, InstrumentParameter, ParameterTarget,
-    TagAction,
+    AutomationTarget, BusParameter, GlobalParameter, ParameterTarget, TagAction, TrackParameter,
 };
 
 /// Pane showing tagged parameters as adjustable sliders.
@@ -149,7 +148,7 @@ impl Pane for TagViewPane {
         let inactive_tab = Style::new().fg(Color::new(160, 160, 160));
 
         if tags.tags.is_empty() {
-            let msg = "No tags. Press 'T' in instrument edit to tag a parameter.";
+            let msg = "No tags. Press 'T' in track edit to tag a parameter.";
             let x = area.x + (area.width.saturating_sub(msg.len() as u16)) / 2;
             let y = area.y + area.height / 2;
             buf.draw_str(x, y, msg, dim);
@@ -192,7 +191,7 @@ impl Pane for TagViewPane {
         };
 
         if selected_tag.targets.is_empty() {
-            let msg = "No parameters tagged. Press 'T' on a param in instrument edit.";
+            let msg = "No parameters tagged. Press 'T' on a param in track edit.";
             let x = area.x + (area.width.saturating_sub(msg.len() as u16)) / 2;
             buf.draw_str(x, content_y + 1, msg, dim);
             return;
@@ -235,7 +234,7 @@ impl Pane for TagViewPane {
             let blank = " ".repeat(area.width as usize);
             buf.draw_str(area.x, y, &blank, row_style);
 
-            // Instrument name
+            // Track name
             let inst_name = target_instrument_name(target, state);
             let inst_truncated: String = inst_name.chars().take(inst_col_w as usize).collect();
             let inst_style = if is_selected {
@@ -358,9 +357,9 @@ fn format_value(v: f32) -> String {
 
 fn target_instrument_name(target: &AutomationTarget, state: &AppState) -> String {
     match target {
-        AutomationTarget::Instrument(id, _) => state
-            .instruments
-            .instrument(*id)
+        AutomationTarget::Track(id, _) => state
+            .tracks
+            .track(*id)
             .map(|i| i.name.clone())
             .unwrap_or_else(|| format!("#{}", id.get())),
         AutomationTarget::Bus(id, _) => format!("Bus {}", id.get()),
@@ -371,9 +370,7 @@ fn target_instrument_name(target: &AutomationTarget, state: &AppState) -> String
 
 fn target_param_name(target: &AutomationTarget) -> String {
     match target {
-        AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => {
-            param.name().to_string()
-        }
+        AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.name().to_string(),
         AutomationTarget::Bus(_, BusParameter::Level) => "Level".to_string(),
         AutomationTarget::Global(GlobalParameter::Bpm) => "BPM".to_string(),
         AutomationTarget::Global(GlobalParameter::TimeSignature) => "Time Sig".to_string(),
@@ -386,8 +383,8 @@ fn target_param_name(target: &AutomationTarget) -> String {
 fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32, f32, f32)> {
     let (min, max) = target.default_range();
     let value = match target {
-        AutomationTarget::Instrument(id, InstrumentParameter::Standard(param)) => {
-            let inst = state.instruments.instrument(*id)?;
+        AutomationTarget::Track(id, TrackParameter::Standard(param)) => {
+            let inst = state.tracks.track(*id)?;
             match param {
                 ParameterTarget::Level => inst.channel_strip.level,
                 ParameterTarget::Pan => inst.channel_strip.pan,
@@ -437,55 +434,53 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
 /// Generate an Action to adjust a target by delta.
 /// Delta is in the natural unit of the parameter (not normalized).
 fn action_for_target_adjust(target: &AutomationTarget, delta: f32) -> Option<Action> {
-    use imbolc_types::InstrumentAction;
+    use imbolc_types::TrackAction;
     match target {
-        AutomationTarget::Instrument(id, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(id, TrackParameter::Standard(param)) => {
             let id = *id;
             let action = match param {
                 ParameterTarget::FilterCutoff => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustFilterCutoff(id, delta * (max - min))
+                    TrackAction::AdjustFilterCutoff(id, delta * (max - min))
                 }
                 ParameterTarget::FilterResonance => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustFilterResonance(id, delta * (max - min))
+                    TrackAction::AdjustFilterResonance(id, delta * (max - min))
                 }
                 ParameterTarget::Attack => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustEnvelopeAttack(id, delta * (max - min))
+                    TrackAction::AdjustEnvelopeAttack(id, delta * (max - min))
                 }
                 ParameterTarget::Decay => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustEnvelopeDecay(id, delta * (max - min))
+                    TrackAction::AdjustEnvelopeDecay(id, delta * (max - min))
                 }
-                ParameterTarget::Sustain => InstrumentAction::AdjustEnvelopeSustain(id, delta),
+                ParameterTarget::Sustain => TrackAction::AdjustEnvelopeSustain(id, delta),
                 ParameterTarget::Release => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustEnvelopeRelease(id, delta * (max - min))
+                    TrackAction::AdjustEnvelopeRelease(id, delta * (max - min))
                 }
                 ParameterTarget::LfoRate => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustLfoRate(id, delta * (max - min))
+                    TrackAction::AdjustLfoRate(id, delta * (max - min))
                 }
-                ParameterTarget::LfoDepth => InstrumentAction::AdjustLfoDepth(id, delta),
+                ParameterTarget::LfoDepth => TrackAction::AdjustLfoDepth(id, delta),
                 ParameterTarget::EffectParam(eid, pidx) => {
-                    InstrumentAction::AdjustEffectParam(id, *eid, *pidx, delta)
+                    TrackAction::AdjustEffectParam(id, *eid, *pidx, delta)
                 }
-                ParameterTarget::Swing => InstrumentAction::AdjustTrackSwing(id, delta),
+                ParameterTarget::Swing => TrackAction::AdjustTrackSwing(id, delta),
                 ParameterTarget::HumanizeVelocity => {
-                    InstrumentAction::AdjustTrackHumanizeVelocity(id, delta)
+                    TrackAction::AdjustTrackHumanizeVelocity(id, delta)
                 }
                 ParameterTarget::HumanizeTiming => {
-                    InstrumentAction::AdjustTrackHumanizeTiming(id, delta)
+                    TrackAction::AdjustTrackHumanizeTiming(id, delta)
                 }
-                ParameterTarget::TimingOffset => {
-                    InstrumentAction::AdjustTrackTimingOffset(id, delta)
-                }
+                ParameterTarget::TimingOffset => TrackAction::AdjustTrackTimingOffset(id, delta),
                 // Level/Pan: no per-instrument adjust action available
                 // VstParam, SourceParam, SendLevel: no direct adjust action
                 _ => return None,
             };
-            Some(Action::Instrument(action))
+            Some(Action::Track(action))
         }
         // Bus level, Global BPM: no direct delta actions exposed to UI
         _ => None,

@@ -6,21 +6,21 @@
 use std::path::PathBuf;
 
 use crate::state::custom_synthdef::CustomSynthDef;
-use crate::state::instrument_state::InstrumentState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 // Re-export all action types from imbolc-types
 pub use imbolc_types::{
     Action, ArrangementAction, AudioEffect, AudioFeedback, AutomationAction, BusAction,
     ClickAction, DispatchResult, DomainAction, EqualizerParamKind, FileSelectAction,
-    FilterParamKind, GenerativeAction, GroupAction, InstrumentAction, InstrumentUpdate,
-    LfoParamKind, MidiAction, MixerAction, NavAction, NavIntent, PaneId, PianoRollAction,
-    RoutedAction, SampleSlicerAction, SequencerAction, ServerAction, SessionAction, StatusEvent,
-    ToggleResult, TunerAction, UiAction, VstParamAction, VstTarget,
+    FilterParamKind, GenerativeAction, GroupAction, LfoParamKind, MidiAction, MixerAction,
+    NavAction, NavIntent, PaneId, PianoRollAction, RoutedAction, SampleSlicerAction,
+    SequencerAction, ServerAction, SessionAction, StatusEvent, ToggleResult, TrackAction,
+    TrackUpdate, TunerAction, UiAction, VstParamAction, VstTarget,
 };
 
 /// Feedback from async I/O operations to the main thread.
-/// This type stays in imbolc-core because it references SessionState and InstrumentState.
+/// This type stays in imbolc-core because it references SessionState and TrackState.
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum IoFeedback {
@@ -37,7 +37,7 @@ pub enum IoFeedback {
     LoadComplete {
         id: u64,
         path: PathBuf,
-        result: Result<(SessionState, InstrumentState, String), String>,
+        result: Result<(SessionState, TrackState, String), String>,
     },
     ImportSynthDefComplete {
         id: u64,

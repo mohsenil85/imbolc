@@ -38,7 +38,7 @@ and receive state updates. **Audio never traverses the network** — only contro
 | `NetServer` | `server.rs` | Accepts connections, validates actions, broadcasts updates |
 | `RemoteDispatcher` | `client.rs` | Connects to server, sends actions, applies updates |
 | `DirtyFlags` | `server.rs` | Tracks which subsystems changed since last broadcast |
-| `OwnerInfo` | `protocol.rs` | Ownership info for an instrument (client_id + name) |
+| `OwnerInfo` | `protocol.rs` | Ownership info for a track (client_id + name) |
 | `PrivilegeLevel` | `protocol.rs` | Normal or Privileged (transport/save/load control) |
 | `SessionToken` | `protocol.rs` | Token for reconnecting to a suspended session |
 | `DiscoveryServer` | `discovery.rs` | mDNS advertisement for LAN discovery (requires `mdns`) |
@@ -74,8 +74,8 @@ Messages are defined in `protocol.rs`:
 - The server maintains a `DirtyFlags` set and increments a monotonically increasing `seq`.
 - Patches are rate-limited to ~30 Hz.
 - Each patch includes only the dirty subsystems: session remainder (`SessionState`) or granular subsystems (piano roll, arrangement, automation, mixer).
-- Instrument updates are either full `InstrumentState` for structural changes or per-instrument deltas for targeted edits.
-- If more than half the instruments are dirty or a structural change occurs, the server sends a full `InstrumentState`.
+- Track updates are either full `TrackState` for structural changes or per-track deltas for targeted edits.
+- If more than half the tracks are dirty or a structural change occurs, the server sends a full `TrackState`.
 - A `FullStateSync` is sent every 30 seconds or on `RequestFullSync`.
 - Clients discard out-of-order patches by tracking `seq`.
 
@@ -84,14 +84,14 @@ Messages are defined in `protocol.rs`:
 | Synced (NetworkState) | Client-Local |
 |----------------------|--------------|
 | SessionState | Clipboard |
-| InstrumentState | Undo/Redo history |
+| TrackState | Undo/Redo history |
 | Ownership map | Navigation (active pane) |
 | Privileged client info | Layer stack (UI modes) |
 | | MIDI connections |
 
 ## Ownership & Privilege
 
-- **Ownership**: Each client owns specific instruments (assigned at connection or requested later).
+- **Ownership**: Each client owns specific tracks (assigned at connection or requested later).
 - **Privilege**: A single client has privileged status for transport, session, and bus controls.
 - Unauthorized actions are rejected with `ServerMessage::ActionRejected`.
 
@@ -136,7 +136,7 @@ cargo run -p imbolc-ui --features net -- --connect 192.168.1.100:9999 --own 1,2,
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Wire format | JSON | Debuggable; switch to binary later for performance |
-| State sync | Dirty-flag patches + periodic full sync | Scales to more instruments while preserving recovery path |
+| State sync | Dirty-flag patches + periodic full sync | Scales to more tracks while preserving recovery path |
 | TCP vs UDP | TCP | Reliability matters; latency budget is generous |
 | Reconnect window | 60 seconds | Balance between UX and stale reservations |
 | Privilege model | Single privileged | Simple; multi-admin adds complexity |

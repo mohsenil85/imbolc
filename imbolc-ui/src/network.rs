@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 
 use imbolc_net::{NetworkState, RemoteDispatcher};
-use imbolc_types::{Action, DomainAction, InstrumentId, RoutedAction, UiAction};
+use imbolc_types::{Action, DomainAction, RoutedAction, TrackId, UiAction};
 
 use crate::action::{AudioEffect, IoFeedback};
 use crate::audio::AudioHandle;
@@ -84,7 +84,7 @@ pub fn run_server() -> std::io::Result<()> {
 
         // Poll for client actions (pass refs, NetworkState built only during Hello handshake)
         for (client_id, net_action) in
-            server.poll_actions(&dispatcher.state().session, &dispatcher.state().instruments)
+            server.poll_actions(&dispatcher.state().session, &dispatcher.state().tracks)
         {
             log::debug!("Received action from {:?}: {:?}", client_id, net_action);
 
@@ -115,7 +115,7 @@ pub fn run_server() -> std::io::Result<()> {
         if server.needs_full_sync() || server.has_dirty_flags() {
             let network_state = NetworkState {
                 session: dispatcher.state().session.clone(),
-                instruments: dispatcher.state().instruments.clone(),
+                instruments: dispatcher.state().tracks.clone(),
                 ownership: server.build_ownership_map(),
                 privileged_client: server.privileged_client_info(),
             };
@@ -243,13 +243,13 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
         .map(|h| h.to_string_lossy().to_string())
         .unwrap_or_else(|_| "unknown".to_string());
 
-    // Convert CLI instrument IDs to InstrumentId type
-    let requested_instruments: Vec<InstrumentId> =
-        own_instruments.into_iter().map(InstrumentId::new).collect();
+    // Convert CLI instrument IDs to TrackId type
+    let requested_instruments: Vec<TrackId> =
+        own_instruments.into_iter().map(TrackId::new).collect();
 
     let mut remote = RemoteDispatcher::connect(addr, &client_name, requested_instruments)?;
     log::info!(
-        "Connected to server as {:?}, owning {} instruments",
+        "Connected to server as {:?}, owning {} tracks",
         remote.client_id(),
         remote.owned_instruments().len()
     );
@@ -275,11 +275,11 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
     let config = config::Config::load();
     let mut local_state = AppState::new_with_defaults(config.defaults());
     local_state.session = remote.state().session.clone();
-    local_state.instruments = remote.state().instruments.clone();
-    local_state.instruments.rebuild_index();
+    local_state.tracks = remote.state().tracks.clone();
+    local_state.tracks.rebuild_index();
     sync_network_context(&mut local_state, &remote);
 
-    if local_state.instruments.instruments.is_empty() {
+    if local_state.tracks.tracks.is_empty() {
         panes.switch_to(PaneId::Add, &local_state);
     }
     layer_stack.set_pane_layer(panes.active().id());
@@ -293,8 +293,8 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
         if remote.poll_updates() {
             // State was updated from server
             local_state.session = remote.state().session.clone();
-            local_state.instruments = remote.state().instruments.clone();
-            local_state.instruments.rebuild_index();
+            local_state.tracks = remote.state().tracks.clone();
+            local_state.tracks.rebuild_index();
             sync_network_context(&mut local_state, &remote);
         }
 
@@ -356,8 +356,8 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
 
                         // Sync state
                         local_state.session = remote.state().session.clone();
-                        local_state.instruments = remote.state().instruments.clone();
-                        local_state.instruments.rebuild_index();
+                        local_state.tracks = remote.state().tracks.clone();
+                        local_state.tracks.rebuild_index();
                         sync_network_context(&mut local_state, &remote);
                         reconnected = true;
                         break;
@@ -476,7 +476,7 @@ pub fn network_action_to_action(net_action: imbolc_net::NetworkAction) -> Action
     match net_action {
         NetworkAction::None => Action::None,
         NetworkAction::Quit => Action::Quit,
-        NetworkAction::Instrument(a) => Action::Instrument(a),
+        NetworkAction::Track(a) => Action::Track(a),
         NetworkAction::Mixer(a) => Action::Mixer(a),
         NetworkAction::PianoRoll(a) => Action::PianoRoll(a),
         NetworkAction::Arrangement(a) => Action::Arrangement(a),
@@ -500,7 +500,7 @@ pub fn routed_to_network_action(action: &RoutedAction) -> Option<imbolc_net::Net
     use imbolc_net::NetworkAction;
     match action {
         RoutedAction::Domain(domain) => match domain {
-            DomainAction::Instrument(a) => Some(NetworkAction::Instrument(a.clone())),
+            DomainAction::Track(a) => Some(NetworkAction::Track(a.clone())),
             DomainAction::Mixer(a) => Some(NetworkAction::Mixer(a.clone())),
             DomainAction::PianoRoll(a) => Some(NetworkAction::PianoRoll(a.clone())),
             DomainAction::Arrangement(a) => Some(NetworkAction::Arrangement(a.clone())),
@@ -538,7 +538,7 @@ pub fn sync_network_context(local_state: &mut AppState, remote: &RemoteDispatche
 
     let mut ownership = HashMap::new();
 
-    for inst in &local_state.instruments.instruments {
+    for inst in &local_state.tracks.tracks {
         let status = match remote.ownership_status(inst.id) {
             OwnershipStatus::OwnedByMe => OwnershipDisplayStatus::OwnedByMe,
             OwnershipStatus::OwnedByOther(name) => OwnershipDisplayStatus::OwnedByOther(name),

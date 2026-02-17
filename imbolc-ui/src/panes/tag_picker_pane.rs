@@ -189,12 +189,12 @@ fn default_tag_name(state: &AppState) -> String {
 }
 
 fn describe_target(target: &AutomationTarget, state: &AppState) -> String {
-    use imbolc_types::{BusParameter, GlobalParameter, InstrumentParameter};
+    use imbolc_types::{BusParameter, GlobalParameter, TrackParameter};
     match target {
-        AutomationTarget::Instrument(id, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(id, TrackParameter::Standard(param)) => {
             let inst_name = state
-                .instruments
-                .instrument(*id)
+                .tracks
+                .track(*id)
                 .map(|i| i.name.as_str())
                 .unwrap_or("?");
             format!("{} > {}", inst_name, param.name())

@@ -1,19 +1,19 @@
-use crate::state::instrument_state::InstrumentState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 pub fn serialize_session(session: &SessionState) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(session).map_err(|e| e.to_string())
 }
 
-pub fn serialize_instruments(instruments: &InstrumentState) -> Result<Vec<u8>, String> {
-    rmp_serde::to_vec_named(instruments).map_err(|e| e.to_string())
+pub fn serialize_tracks(tracks: &TrackState) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(tracks).map_err(|e| e.to_string())
 }
 
 pub fn deserialize_session(bytes: &[u8]) -> Result<SessionState, String> {
     rmp_serde::from_slice(bytes).map_err(|e| e.to_string())
 }
 
-pub fn deserialize_instruments(bytes: &[u8]) -> Result<InstrumentState, String> {
+pub fn deserialize_tracks(bytes: &[u8]) -> Result<TrackState, String> {
     rmp_serde::from_slice(bytes).map_err(|e| e.to_string())
 }
 
@@ -21,12 +21,12 @@ pub fn deserialize_instruments(bytes: &[u8]) -> Result<InstrumentState, String> 
 mod tests {
     use super::*;
     use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
-    use crate::state::instrument::{
+    use crate::state::param::ParamValue;
+    use crate::state::sampler::Slice;
+    use crate::state::track::{
         EffectType, FilterType, LfoConfig, LfoShape, ModSource, OutputTarget, ParameterTarget,
         SourceType,
     };
-    use crate::state::param::ParamValue;
-    use crate::state::sampler::Slice;
     use crate::state::AutomationTarget;
     use imbolc_types::{BusId, CustomSynthDefId, EffectId, ParamIndex};
     use std::path::PathBuf;
@@ -46,11 +46,11 @@ mod tests {
         session.piano_roll.loop_start = 480;
         session.piano_roll.loop_end = 960;
 
-        let mut instruments = InstrumentState::new();
+        let mut tracks = TrackState::new();
 
-        let saw_id = instruments.add_instrument(SourceType::Saw);
-        let sampler_id = instruments.add_instrument(SourceType::PitchedSampler);
-        let kit_id = instruments.add_instrument(SourceType::Kit);
+        let saw_id = tracks.add_track(SourceType::Saw);
+        let sampler_id = tracks.add_track(SourceType::PitchedSampler);
+        let kit_id = tracks.add_track(SourceType::Kit);
 
         let mut registry = CustomSynthDefRegistry::new();
         let custom_id = registry.add(CustomSynthDef {
@@ -67,10 +67,10 @@ mod tests {
         });
         session.custom_synthdefs = registry;
 
-        let custom_inst_id = instruments.add_instrument(SourceType::Custom(custom_id));
+        let custom_inst_id = tracks.add_track(SourceType::Custom(custom_id));
 
         // Saw instrument: filter, mod source, effect, output, send, and source param
-        if let Some(inst) = instruments.instrument_mut(saw_id) {
+        if let Some(inst) = tracks.track_mut(saw_id) {
             inst.set_filter(Some(FilterType::Hpf));
             if let Some(filter) = inst.filter_mut() {
                 filter.cutoff.value = 1234.0;
@@ -108,7 +108,7 @@ mod tests {
         }
 
         // Sampler instrument: config and slices
-        if let Some(inst) = instruments.instrument_mut(sampler_id) {
+        if let Some(inst) = tracks.track_mut(sampler_id) {
             if let Some(config) = inst.sampler_config_mut() {
                 config.buffer_id = Some(77);
                 config.sample_name = Some("kick.wav".to_string());
@@ -125,7 +125,7 @@ mod tests {
         }
 
         // Kit instrument: pads, steps, and chopper state
-        if let Some(inst) = instruments.instrument_mut(kit_id) {
+        if let Some(inst) = tracks.track_mut(kit_id) {
             if let Some(seq) = inst.drum_sequencer_mut() {
                 seq.pads[0].buffer_id = Some(123);
                 seq.pads[0].path = Some("/tmp/kick.wav".to_string());
@@ -152,9 +152,9 @@ mod tests {
             }
         }
 
-        // Piano roll tracks and notes
-        session.piano_roll.add_track(saw_id);
-        session.piano_roll.add_track(sampler_id);
+        // Piano roll sequences and notes
+        session.piano_roll.add_sequence(saw_id);
+        session.piano_roll.add_sequence(sampler_id);
         session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
         // Automation lane targeting effect param
@@ -208,13 +208,13 @@ mod tests {
 
         // --- Serialize ---
         let session_bytes = serialize_session(&session).expect("serialize session");
-        let instrument_bytes = serialize_instruments(&instruments).expect("serialize instruments");
+        let instrument_bytes = serialize_tracks(&tracks).expect("serialize tracks");
 
         // --- Deserialize ---
         let loaded_session: SessionState =
             deserialize_session(&session_bytes).expect("deserialize session");
-        let loaded_instruments: InstrumentState =
-            deserialize_instruments(&instrument_bytes).expect("deserialize instruments");
+        let loaded_instruments: TrackState =
+            deserialize_tracks(&instrument_bytes).expect("deserialize tracks");
 
         // --- Assert session ---
         assert_eq!(loaded_session.bpm, 98);
@@ -232,7 +232,7 @@ mod tests {
         assert_eq!(loaded_synth.params[0].name, "cutoff");
 
         // Piano roll
-        assert_eq!(loaded_session.piano_roll.track_order.len(), 2);
+        assert_eq!(loaded_session.piano_roll.sequence_order.len(), 2);
         assert!(loaded_session.piano_roll.looping);
         assert_eq!(loaded_session.piano_roll.loop_start, 480);
 
@@ -263,16 +263,16 @@ mod tests {
         // Skipped fields should be default
         assert_eq!(
             loaded_session.mixer.selection,
-            crate::state::session::MixerSelection::Instrument(0)
+            crate::state::session::MixerSelection::Track(0)
         );
 
-        // --- Assert instruments ---
-        assert_eq!(loaded_instruments.instruments.len(), 4);
-        assert_eq!(loaded_instruments.editing_instrument_id, None); // skipped
+        // --- Assert tracks ---
+        assert_eq!(loaded_instruments.tracks.len(), 4);
+        assert_eq!(loaded_instruments.editing_track_id, None); // skipped
         assert_eq!(loaded_instruments.next_sampler_buffer_id, 20000);
 
         let loaded_saw = loaded_instruments
-            .instruments
+            .tracks
             .iter()
             .find(|i| i.id == saw_id)
             .unwrap();
@@ -308,7 +308,7 @@ mod tests {
         );
 
         let loaded_sampler = loaded_instruments
-            .instruments
+            .tracks
             .iter()
             .find(|i| i.id == sampler_id)
             .unwrap();
@@ -322,7 +322,7 @@ mod tests {
         assert_eq!(config.next_slice_id(), 10);
 
         let loaded_kit = loaded_instruments
-            .instruments
+            .tracks
             .iter()
             .find(|i| i.id == kit_id)
             .unwrap();
@@ -339,7 +339,7 @@ mod tests {
         assert_eq!(seq.current_step, 0);
 
         let loaded_custom = loaded_instruments
-            .instruments
+            .tracks
             .iter()
             .find(|i| i.id == custom_inst_id)
             .unwrap();

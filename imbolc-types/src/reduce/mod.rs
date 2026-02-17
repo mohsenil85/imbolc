@@ -3,7 +3,7 @@
 //! These functions are the single source of truth for action → state mutations.
 //! Both imbolc-core dispatch and imbolc-audio's audio thread call into this module.
 //!
-//! Reducers are pure: they mutate `InstrumentState` and `SessionState` only.
+//! Reducers are pure: they mutate `TrackState` and `SessionState` only.
 //! They do NOT:
 //! - Construct DispatchResult (no nav intents, no status events)
 //! - Record automation
@@ -11,8 +11,8 @@
 //! - Generate AudioEffect events
 //! - Send audio commands
 
-mod instrument;
-pub use instrument::initialize_instrument_from_registries;
+mod track;
+pub use track::initialize_track_from_registries;
 mod automation;
 mod bus;
 mod click;
@@ -24,7 +24,7 @@ mod tag;
 mod vst_param;
 
 use crate::{
-    AutomationAction, DomainAction, InstrumentState, PianoRollAction, SessionAction, SessionState,
+    AutomationAction, DomainAction, PianoRollAction, SessionAction, SessionState, TrackState,
     VstParamAction,
 };
 
@@ -41,7 +41,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
 
         DomainAction::Undo | DomainAction::Redo => false,
 
-        DomainAction::Instrument(_) => true,
+        DomainAction::Track(_) => true,
         DomainAction::Mixer(_) => true,
         DomainAction::Bus(_) => true,
         DomainAction::Group(_) => true,
@@ -85,7 +85,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
 /// Returns false if the action is not reducible (caller should use full sync).
 pub fn reduce_action(
     action: &DomainAction,
-    instruments: &mut InstrumentState,
+    instruments: &mut TrackState,
     session: &mut SessionState,
 ) -> bool {
     match action {
@@ -100,7 +100,7 @@ pub fn reduce_action(
         // Undo/Redo: not reducible (wholesale state replacement)
         DomainAction::Undo | DomainAction::Redo => false,
 
-        DomainAction::Instrument(a) => instrument::reduce(a, instruments, session),
+        DomainAction::Track(a) => track::reduce(a, instruments, session),
         DomainAction::Mixer(a) => mixer::reduce(a, instruments, session),
         DomainAction::PianoRoll(a) => piano_roll::reduce(a, session),
         DomainAction::Automation(a) => automation::reduce(a, session),

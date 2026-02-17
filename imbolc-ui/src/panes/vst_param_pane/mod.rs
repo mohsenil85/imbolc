@@ -4,13 +4,13 @@ mod rendering;
 use std::any::Any;
 
 use crate::action::VstTarget;
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use crate::ui::action_id::ActionId;
 use crate::ui::{Action, InputEvent, Keymap, Pane, Rect, RenderBuf};
 
 pub struct VstParamPane {
     keymap: Keymap,
-    instrument_id: Option<InstrumentId>,
+    instrument_id: Option<TrackId>,
     target: VstTarget,
     selected_param: usize,
     scroll_offset: usize,
@@ -34,7 +34,7 @@ impl VstParamPane {
     }
 
     /// Set the target instrument and VST target (source or effect), resetting selection state
-    pub fn set_target(&mut self, instrument_id: InstrumentId, target: VstTarget) {
+    pub fn set_target(&mut self, instrument_id: TrackId, target: VstTarget) {
         self.instrument_id = Some(instrument_id);
         self.target = target;
         self.selected_param = 0;
@@ -45,9 +45,7 @@ impl VstParamPane {
 
     /// Get the VstPluginId for the current target
     fn get_plugin_id(&self, state: &AppState) -> Option<crate::state::vst_plugin::VstPluginId> {
-        let inst = self
-            .instrument_id
-            .and_then(|id| state.instruments.instrument(id))?;
+        let inst = self.instrument_id.and_then(|id| state.tracks.track(id))?;
         match self.target {
             VstTarget::Source => {
                 if let crate::state::SourceType::Vst(id) = inst.source {
@@ -97,7 +95,7 @@ impl VstParamPane {
 
     /// Sync state from current selection (only when navigated to via instrument selection, not set_target)
     fn sync_from_state(&mut self, state: &AppState) {
-        let new_id = state.instruments.selected_instrument().map(|i| i.id);
+        let new_id = state.tracks.selected_track().map(|i| i.id);
         if new_id != self.instrument_id {
             self.instrument_id = new_id;
             self.target = VstTarget::Source;

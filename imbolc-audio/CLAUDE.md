@@ -47,7 +47,7 @@ src/
 |------|---------|
 | `AudioHandle` | Main-thread API, sends `AudioCmd` via channel |
 | `AudioEngine` | SC backend, node map, voice allocator |
-| `AudioStateProvider` | Trait for accessing session/instrument state (implemented by AppState in core) |
+| `AudioStateProvider` | Trait for accessing session/track state (implemented by AppState in core) |
 | `ArpPlayState` | Runtime arpeggiator state (held notes, step index) |
 
 ## AudioStateProvider Trait
@@ -57,7 +57,7 @@ Breaks the circular dependency between audio and core:
 ```rust
 pub trait AudioStateProvider {
     fn session(&self) -> &SessionState;
-    fn instruments(&self) -> &InstrumentState;
+    fn tracks(&self) -> &TrackState;
 }
 ```
 

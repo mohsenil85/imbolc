@@ -7,7 +7,7 @@ use imbolc_types::{DomainAction, PianoRollAction};
 fn reduce(action: &PianoRollAction, state: &mut AppState) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::PianoRoll(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -109,13 +109,13 @@ pub(super) fn dispatch_piano_roll(
             let track = *track;
 
             // Fan-out to layer group members
-            let targets = state.instruments.layer_group_members(instrument_id);
+            let targets = state.tracks.layer_group_members(instrument_id);
 
             if audio.is_running() {
                 let vel_f = velocity as f32 / 127.0;
                 for &target_id in &targets {
-                    if let Some(inst) = state.instruments.instrument(target_id) {
-                        if state.effective_instrument_mute(inst) {
+                    if let Some(inst) = state.tracks.track(target_id) {
+                        if state.effective_track_mute(inst) {
                             continue;
                         }
                         let expanded: Vec<u8> = match inst.note_input.chord_shape {
@@ -139,8 +139,8 @@ pub(super) fn dispatch_piano_roll(
             // Record note only on the original track (not siblings)
             if state.session.piano_roll.recording {
                 let chord_shape = state
-                    .instruments
-                    .instrument(instrument_id)
+                    .tracks
+                    .track(instrument_id)
                     .and_then(|inst| inst.note_input.chord_shape);
                 let record_pitches: Vec<u8> = match chord_shape {
                     Some(shape) => shape.expand(pitch),
@@ -171,13 +171,13 @@ pub(super) fn dispatch_piano_roll(
             let track = *track;
 
             // Fan-out to layer group members
-            let targets = state.instruments.layer_group_members(instrument_id);
+            let targets = state.tracks.layer_group_members(instrument_id);
 
             if audio.is_running() {
                 let vel_f = velocity as f32 / 127.0;
                 for &target_id in &targets {
-                    if let Some(inst) = state.instruments.instrument(target_id) {
-                        if state.effective_instrument_mute(inst) {
+                    if let Some(inst) = state.tracks.track(target_id) {
+                        if state.effective_track_mute(inst) {
                             continue;
                         }
                         for &pitch in pitches {
@@ -203,8 +203,8 @@ pub(super) fn dispatch_piano_roll(
             // Record chord notes only on the original track (not siblings)
             if state.session.piano_roll.recording {
                 let chord_shape = state
-                    .instruments
-                    .instrument(instrument_id)
+                    .tracks
+                    .track(instrument_id)
                     .and_then(|inst| inst.note_input.chord_shape);
                 let all_pitches: Vec<u8> = pitches
                     .iter()
@@ -301,10 +301,10 @@ pub(super) fn dispatch_piano_roll(
                     "Audio engine not running",
                 );
             }
-            if state.instruments.instruments.is_empty() {
+            if state.tracks.tracks.is_empty() {
                 return DispatchResult::with_status(
                     imbolc_audio::ServerStatus::Stopped,
-                    "No instruments",
+                    "No tracks",
                 );
             }
 
@@ -351,10 +351,10 @@ pub(super) fn dispatch_piano_roll(
                     "Audio engine not running",
                 );
             }
-            if state.instruments.instruments.is_empty() {
+            if state.tracks.tracks.is_empty() {
                 return DispatchResult::with_status(
                     imbolc_audio::ServerStatus::Stopped,
-                    "No instruments",
+                    "No tracks",
                 );
             }
 
@@ -368,7 +368,7 @@ pub(super) fn dispatch_piano_roll(
 
             let mut stems = Vec::new();
             let mut paths = Vec::new();
-            for inst in &state.instruments.instruments {
+            for inst in &state.tracks.tracks {
                 let safe_name: String = inst
                     .name
                     .replace(' ', "_")
@@ -429,7 +429,7 @@ pub(super) fn dispatch_piano_roll(
             start_pitch,
             end_pitch,
         } => {
-            if let Some(t) = state.session.piano_roll.track_at(*track) {
+            if let Some(t) = state.session.piano_roll.sequence_at(*track) {
                 let mut notes = Vec::new();
                 for note in &t.notes {
                     if note.tick >= *start_tick
@@ -457,11 +457,11 @@ pub(super) fn dispatch_piano_roll(
             instrument_id,
         } => {
             // Fan-out to layer group members
-            let targets = state.instruments.layer_group_members(*instrument_id);
+            let targets = state.tracks.layer_group_members(*instrument_id);
 
             if audio.is_running() {
                 for &target_id in &targets {
-                    if let Some(inst) = state.instruments.instrument(target_id) {
+                    if let Some(inst) = state.tracks.track(target_id) {
                         let _ = audio.release_voice(target_id, inst.offset_pitch(*pitch), 0.0);
                     }
                 }
@@ -473,11 +473,11 @@ pub(super) fn dispatch_piano_roll(
             instrument_id,
         } => {
             // Fan-out to layer group members
-            let targets = state.instruments.layer_group_members(*instrument_id);
+            let targets = state.tracks.layer_group_members(*instrument_id);
 
             if audio.is_running() {
                 for &target_id in &targets {
-                    if let Some(inst) = state.instruments.instrument(target_id) {
+                    if let Some(inst) = state.tracks.track(target_id) {
                         for &pitch in pitches {
                             let _ = audio.release_voice(target_id, inst.offset_pitch(pitch), 0.0);
                         }
@@ -505,7 +505,7 @@ mod tests {
     #[test]
     fn toggle_note_adds_note_and_sets_dirty() {
         let (mut state, mut audio) = setup();
-        let _id = state.add_instrument(crate::state::SourceType::Saw);
+        let _id = state.add_track(crate::state::SourceType::Saw);
         let action = PianoRollAction::ToggleNote {
             pitch: 60,
             tick: 0,
@@ -515,7 +515,10 @@ mod tests {
         };
         let result = dispatch_piano_roll(&action, &mut state, &mut audio);
         assert!(result.audio_effects.contains(&AudioEffect::UpdatePianoRoll));
-        assert_eq!(state.session.piano_roll.track_at(0).unwrap().notes.len(), 1);
+        assert_eq!(
+            state.session.piano_roll.sequence_at(0).unwrap().notes.len(),
+            1
+        );
 
         // Toggle again removes
         let result = dispatch_piano_roll(&action, &mut state, &mut audio);
@@ -523,7 +526,7 @@ mod tests {
         assert!(state
             .session
             .piano_roll
-            .track_at(0)
+            .sequence_at(0)
             .unwrap()
             .notes
             .is_empty());
@@ -591,7 +594,7 @@ mod tests {
     #[test]
     fn delete_notes_in_region() {
         let (mut state, mut audio) = setup();
-        let _id = state.add_instrument(crate::state::SourceType::Saw);
+        let _id = state.add_track(crate::state::SourceType::Saw);
         // Add notes
         state.session.piano_roll.toggle_note(0, 60, 0, 480, 100);
         state.session.piano_roll.toggle_note(0, 64, 480, 480, 100);
@@ -605,7 +608,7 @@ mod tests {
             end_pitch: 64,
         };
         dispatch_piano_roll(&action, &mut state, &mut audio);
-        let notes = &state.session.piano_roll.track_at(0).unwrap().notes;
+        let notes = &state.session.piano_roll.sequence_at(0).unwrap().notes;
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].pitch, 72);
     }
@@ -613,7 +616,7 @@ mod tests {
     #[test]
     fn paste_notes_skips_duplicates_and_clamps_pitch() {
         let (mut state, mut audio) = setup();
-        let _id = state.add_instrument(crate::state::SourceType::Saw);
+        let _id = state.add_track(crate::state::SourceType::Saw);
         // Pre-existing note at (60, 0)
         state.session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
@@ -647,7 +650,7 @@ mod tests {
             notes: clipboard_notes,
         };
         dispatch_piano_roll(&action, &mut state, &mut audio);
-        let notes = &state.session.piano_roll.track_at(0).unwrap().notes;
+        let notes = &state.session.piano_roll.sequence_at(0).unwrap().notes;
         // Original + one valid paste (duplicate and out-of-range skipped)
         assert_eq!(notes.len(), 2);
     }
@@ -655,7 +658,7 @@ mod tests {
     #[test]
     fn copy_notes_populates_clipboard() {
         let (mut state, mut audio) = setup();
-        let _id = state.add_instrument(crate::state::SourceType::Saw);
+        let _id = state.add_track(crate::state::SourceType::Saw);
         state.session.piano_roll.toggle_note(0, 60, 0, 480, 100);
         state.session.piano_roll.toggle_note(0, 64, 240, 480, 100);
 

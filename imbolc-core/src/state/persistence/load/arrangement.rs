@@ -9,7 +9,7 @@ pub(super) fn load_automation(conn: &Connection, session: &mut SessionState) -> 
     session.automation.lanes.clear();
 
     let mut stmt = conn.prepare(
-        "SELECT id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
+        "SELECT id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
          FROM automation_lanes ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -96,14 +96,14 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     use crate::state::midi_recording::{CcMappingSource, MidiCcMapping, PitchBendConfig};
 
     let result = conn.query_row(
-        "SELECT live_input_instrument, note_passthrough, channel_filter FROM midi_recording_settings WHERE id = 1",
+        "SELECT live_input_track, note_passthrough, channel_filter FROM midi_recording_settings WHERE id = 1",
         [],
         |row| Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, i32>(1)?, row.get::<_, Option<i32>>(2)?)),
     ).optional()?;
 
     if let Some((live_inst, passthrough, channel)) = result {
         session.midi_recording.live_input_instrument =
-            live_inst.map(|v| imbolc_types::InstrumentId::new(v as u32));
+            live_inst.map(|v| imbolc_types::TrackId::new(v as u32));
         session.midi_recording.note_passthrough = passthrough != 0;
         session.midi_recording.channel_filter = channel.map(|v| v as u8);
     }
@@ -111,7 +111,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     // CC mappings
     session.midi_recording.cc_mappings.clear();
     let mut cc_stmt = conn.prepare(
-        "SELECT cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source
+        "SELECT cc_number, channel, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source
          FROM midi_cc_mappings ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -179,7 +179,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     // Pitch bend configs
     session.midi_recording.pitch_bend_configs.clear();
     let mut pb_stmt = conn.prepare(
-        "SELECT target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, center_value, range, sensitivity
+        "SELECT target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, center_value, range, sensitivity
          FROM midi_pitch_bend_configs ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -259,7 +259,7 @@ pub(super) fn load_param_tags(conn: &Connection, session: &mut SessionState) -> 
         let mut tag = ParamTag::new(name);
 
         let mut target_stmt = conn.prepare(
-            "SELECT target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra
+            "SELECT target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra
              FROM param_tag_targets WHERE tag_id = ?1 ORDER BY position"
         )?;
         #[allow(clippy::type_complexity)]
@@ -341,9 +341,8 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
 
     // Clips
     session.arrangement.clips.clear();
-    let mut clip_stmt = conn.prepare(
-        "SELECT id, name, instrument_id, length_ticks FROM arrangement_clips ORDER BY id",
-    )?;
+    let mut clip_stmt =
+        conn.prepare("SELECT id, name, track_id, length_ticks FROM arrangement_clips ORDER BY id")?;
     let clips: Vec<(u32, String, u32, u32)> = clip_stmt
         .query_map([], |row| {
             Ok((
@@ -359,7 +358,7 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
         let mut clip = Clip {
             id,
             name,
-            instrument_id: imbolc_types::InstrumentId::new(inst_id),
+            instrument_id: imbolc_types::TrackId::new(inst_id),
             length_ticks: length,
             notes: Vec::new(),
             automation_lanes: Vec::new(),
@@ -383,7 +382,7 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
 
         // Clip automation lanes
         let mut lane_stmt = conn.prepare(
-            "SELECT id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
+            "SELECT id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
              FROM arrangement_clip_automation_lanes WHERE clip_id = ?1 ORDER BY id"
         )?;
         #[allow(clippy::type_complexity)]
@@ -465,14 +464,14 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
     // Placements
     session.arrangement.placements.clear();
     let mut place_stmt = conn.prepare(
-        "SELECT id, clip_id, instrument_id, start_tick, length_override FROM arrangement_placements ORDER BY id"
+        "SELECT id, clip_id, track_id, start_tick, length_override FROM arrangement_placements ORDER BY id"
     )?;
     session.arrangement.placements = place_stmt
         .query_map([], |row| {
             Ok(ClipInstance {
                 id: row.get(0)?,
                 clip_id: row.get(1)?,
-                instrument_id: imbolc_types::InstrumentId::new(row.get::<_, u32>(2)?),
+                instrument_id: imbolc_types::TrackId::new(row.get::<_, u32>(2)?),
                 start_tick: row.get::<_, i64>(3)? as u32,
                 length_override: row.get::<_, Option<i64>>(4)?.map(|v| v as u32),
             })

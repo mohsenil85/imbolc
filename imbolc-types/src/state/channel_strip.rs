@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::instrument::{
+use super::track::{
     decode_effect_cursor_from_slice, deserialize_sends, effects_max_cursor, ChannelConfig,
     EffectSlot, EffectType, EqConfig, FilterConfig, FilterType, MixerSend, OutputTarget,
     ProcessingStage,
@@ -11,7 +11,7 @@ use crate::{BusId, EffectId, ParamIndex};
 
 /// Unified channel strip: level, pan, mute, solo, routing, processing chain.
 ///
-/// Shared by `Instrument`, `MixerBus`, and `GroupMixer` so that mixer
+/// Shared by `Track`, `MixerBus`, and `GroupMixer` so that mixer
 /// operations (level/pan/mute/solo, effect CRUD, EQ, filter) are written once.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelStrip {

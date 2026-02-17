@@ -10,13 +10,13 @@ The leaf crate of the Imbolc workspace. Contains data structures used across imb
 
 ```
 src/
-  lib.rs              — Re-exports, type aliases (InstrumentId, EffectId, etc.)
+  lib.rs              — Re-exports, type aliases (TrackId, EffectId, etc.)
   action.rs           — Action enum for UI -> core dispatch
   param.rs            — Param, ParamValue, frequency helpers
   audio.rs            — AudioFeedback, ServerStatus, ExportKind
   reduce/             — Pure state-mutation reducers (single source of truth)
     mod.rs              — reduce_action(), is_reducible()
-    instrument.rs       — Instrument action reducer + initialize_instrument_from_registries()
+    track.rs           — Track action reducer + initialize_track_from_registries()
     mixer.rs            — Mixer action reducer
     piano_roll.rs       — Piano roll action reducer
     automation.rs       — Automation action reducer
@@ -26,16 +26,16 @@ src/
     click.rs            — Click track reducer
   state/
     mod.rs            — AppState components, re-exports
-    instrument/       — Instrument types
-      mod.rs            — Instrument struct, Layer
+    track/          — Track types
+      mod.rs            — Track struct, Layer
       source_type.rs    — SourceType enum (oscillators, samplers, VST)
       filter.rs         — FilterType, FilterState
       effect.rs         — EffectType, EffectSlot
       envelope.rs       — Envelope, EnvelopePoint
       lfo.rs            — LFO, LfoTarget, LfoShape
-    instrument_state.rs — InstrumentState (collection + selection)
+    track_state.rs — TrackState (collection + selection)
     session.rs          — SessionState (global settings, buses, transport)
-    piano_roll.rs       — PianoRollState, Track, Note
+    piano_roll.rs       — PianoRollState, NoteSequence, Note
     automation.rs       — AutomationState, lanes, points
     arrangement.rs      — ArrangementState, clips
     sampler.rs          — SamplerConfig, SampleRegistry, slices
@@ -58,14 +58,14 @@ src/
 
 | Type | Location | Purpose |
 |------|----------|---------|
-| `InstrumentId` | `lib.rs` | `u32` — unique identifier for instruments |
-| `Instrument` | `state/instrument/mod.rs` | Source + processing chain + LFO + envelope + mixer |
-| `SourceType` | `state/instrument/source_type.rs` | Oscillator types: Saw, Sin, AudioIn, BusIn, Sampler, VST, etc. |
-| `EffectSlot` | `state/instrument/effect.rs` | One effect in chain: type + params + enabled + VST state |
-| `FilterType` | `state/instrument/filter.rs` | Filter types: LowPass, HighPass, BandPass, Notch |
+| `TrackId` | `lib.rs` | `u32` — unique identifier for tracks |
+| `Track` | `state/track/mod.rs` | Source + processing chain + LFO + envelope + mixer |
+| `SourceType` | `state/track/source_type.rs` | Oscillator types: Saw, Sin, AudioIn, BusIn, Sampler, VST, etc. |
+| `EffectSlot` | `state/track/effect.rs` | One effect in chain: type + params + enabled + VST state |
+| `FilterType` | `state/track/filter.rs` | Filter types: LowPass, HighPass, BandPass, Notch |
 | `Action` | `action.rs` | Enum of all actions dispatched from UI to core |
 | `Param` / `ParamValue` | `param.rs` | Generic parameter with Float/Int/Bool values |
-| `InstrumentState` | `state/instrument_state.rs` | Collection of instruments + selection state |
+| `TrackState` | `state/track_state.rs` | Collection of tracks + selection state |
 | `SessionState` | `state/session.rs` | Global session: arrangement, mixer, automation, transport |
 | `PianoRollState` | `state/piano_roll.rs` | Tracks, notes, grid settings |
 | `AutomationState` | `state/automation.rs` | Automation lanes and points |
@@ -84,11 +84,11 @@ AppState (defined in imbolc-core, composed of types from here)
 │   │   ├── buses: Vec<MixerBus> (effects, level, pan, sends)
 │   │   ├── master_level, master_mute
 │   │   ├── selection: MixerSelection
-│   │   └── layer_group_mixers: Vec<GroupMixer>
+│   │   └── layer_group_mixers: Vec<LayerGroupMixer>
 │   └── humanize, click_track, theme
 │
-└── instruments: InstrumentState
-    └── instruments: Vec<Instrument>
+└── tracks: TrackState
+    └── tracks: Vec<Track>
         ├── source: SourceType + source_params
         ├── processing_chain: Vec<ProcessingStage> (filters/EQ/effects)
         ├── lfo: LfoConfig, amp_envelope: EnvConfig
@@ -137,7 +137,7 @@ AppState (defined in imbolc-core, composed of types from here)
 
 ### Other Key Enums
 
-- **MixerSelection**: `Instrument(usize)` | `Group(u32)` | `Bus(u8)` | `Master`
+- **MixerSelection**: `Track(usize)` | `LayerGroup(u32)` | `Bus(u8)` | `Master`
 - **OutputTarget**: `Master` | `Bus(u8)`
 - **FilterType**: LowPass, HighPass, BandPass, Notch
 - **LfoShape**: Sin, Tri, Saw, Sqr, SampleAndHold, Random
@@ -158,6 +158,6 @@ cargo test -p imbolc-types
 
 ```rust
 // In imbolc-core or imbolc-ui
-use imbolc_types::{Action, InstrumentId, Instrument, SourceType};
-use imbolc_types::state::{SessionState, InstrumentState};
+use imbolc_types::{Action, TrackId, Track, SourceType};
+use imbolc_types::state::{SessionState, TrackState};
 ```

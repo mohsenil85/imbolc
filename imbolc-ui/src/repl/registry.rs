@@ -5,55 +5,55 @@ use imbolc_types::*;
 use super::macro_def::repl_actions;
 
 repl_actions! {
-    group "instrument" => DomainAction::Instrument, InstrumentAction {
-        "add"                      => Add(source: SourceType);                                         "Add instrument with given source type"
-        "delete"                   => Delete(id: InstrumentId);                                        "Delete instrument by ID"
-        "select"                   => Select(idx: usize);                                              "Select instrument by index"
-        "select-next"              => SelectNext;                                                      "Select next instrument"
-        "select-prev"              => SelectPrev;                                                      "Select previous instrument"
-        "select-first"             => SelectFirst;                                                     "Select first instrument"
-        "select-last"              => SelectLast;                                                      "Select last instrument"
-        "add-effect"               => AddEffect(id: InstrumentId, fx: EffectType);                     "Add effect to instrument"
-        "remove-effect"            => RemoveEffect(id: InstrumentId, fx_id: EffectId);                 "Remove effect from instrument"
-        "move-stage"               => MoveStage(id: InstrumentId, idx: usize, dir: i8);                "Move processing stage up/down"
-        "set-filter"               => SetFilter(id: InstrumentId, ft: Option<FilterType>);             "Set filter type (or none)"
-        "toggle-effect-bypass"     => ToggleEffectBypass(id: InstrumentId, fx_id: EffectId);           "Toggle effect bypass"
-        "toggle-filter"            => ToggleFilter(id: InstrumentId);                                  "Toggle filter on/off"
-        "cycle-filter-type"        => NextFilterType(id: InstrumentId);                                "Cycle to next filter type"
-        "adjust-filter-cutoff"     => AdjustFilterCutoff(id: InstrumentId, d: f32);                    "Adjust filter cutoff"
-        "adjust-filter-resonance"  => AdjustFilterResonance(id: InstrumentId, d: f32);                 "Adjust filter resonance"
-        "adjust-effect-param"      => AdjustEffectParam(id: InstrumentId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust effect parameter"
-        "toggle-arp"               => ToggleArpeggiator(id: InstrumentId);                              "Toggle arpeggiator"
-        "cycle-arp-direction"      => NextArpeggiatorDirection(id: InstrumentId);                      "Cycle arp direction forward"
-        "cycle-arp-direction-rev"  => PrevArpeggiatorDirection(id: InstrumentId);                      "Cycle arp direction reverse"
-        "cycle-arp-rate"           => NextArpeggiatorRate(id: InstrumentId);                           "Cycle arp rate forward"
-        "cycle-arp-rate-rev"       => PrevArpeggiatorRate(id: InstrumentId);                           "Cycle arp rate reverse"
-        "adjust-arp-octaves"       => AdjustArpeggiatorOctaves(id: InstrumentId, d: i8);                "Adjust arp octave range"
-        "adjust-arp-gate"          => AdjustArpeggiatorGate(id: InstrumentId, d: f32);                 "Adjust arp gate length"
-        "cycle-chord-shape"        => NextChordShape(id: InstrumentId);                                "Cycle chord shape forward"
-        "cycle-chord-shape-rev"    => PrevChordShape(id: InstrumentId);                                "Cycle chord shape reverse"
-        "clear-chord-shape"        => ClearChordShape(id: InstrumentId);                               "Clear chord shape"
-        "set-eq-param"             => SetEqualizerParam(id: InstrumentId, band: usize, kind: EqualizerParamKind, v: f32); "Set EQ band parameter"
-        "toggle-eq"                => ToggleEqualizer(id: InstrumentId);                               "Toggle EQ on/off"
-        "link-layer"               => LinkLayer(id: InstrumentId, target: InstrumentId);               "Link instrument to layer group"
-        "unlink-layer"             => UnlinkLayer(id: InstrumentId);                                   "Unlink instrument from layer group"
-        "adjust-layer-octave"      => AdjustLayerOctaveOffset(id: InstrumentId, d: i8);                "Adjust layer octave offset"
-        "adjust-track-swing"       => AdjustTrackSwing(id: InstrumentId, d: f32);                      "Adjust per-track swing"
-        "adjust-track-hum-vel"     => AdjustTrackHumanizeVelocity(id: InstrumentId, d: f32);           "Adjust track velocity humanization"
-        "adjust-track-hum-time"    => AdjustTrackHumanizeTiming(id: InstrumentId, d: f32);             "Adjust track timing humanization"
-        "adjust-track-timing"      => AdjustTrackTimingOffset(id: InstrumentId, d: f32);               "Adjust track timing offset"
-        "reset-track-groove"       => ResetTrackGroove(id: InstrumentId);                              "Reset per-track groove settings"
-        "cycle-track-time-sig"     => NextTrackTimeSignature(id: InstrumentId);                        "Cycle track time signature"
-        "toggle-lfo"               => ToggleLfo(id: InstrumentId);                                     "Toggle LFO on/off"
-        "adjust-lfo-rate"          => AdjustLfoRate(id: InstrumentId, d: f32);                         "Adjust LFO rate"
-        "adjust-lfo-depth"         => AdjustLfoDepth(id: InstrumentId, d: f32);                        "Adjust LFO depth"
-        "set-lfo-shape"            => SetLfoShape(id: InstrumentId, shape: LfoShape);                  "Set LFO waveform shape"
-        "set-lfo-target"           => SetLfoTarget(id: InstrumentId, target: ParameterTarget);         "Set LFO modulation target"
-        "adjust-attack"            => AdjustEnvelopeAttack(id: InstrumentId, d: f32);                  "Adjust envelope attack"
-        "adjust-decay"             => AdjustEnvelopeDecay(id: InstrumentId, d: f32);                   "Adjust envelope decay"
-        "adjust-sustain"           => AdjustEnvelopeSustain(id: InstrumentId, d: f32);                 "Adjust envelope sustain"
-        "adjust-release"           => AdjustEnvelopeRelease(id: InstrumentId, d: f32);                 "Adjust envelope release"
-        "toggle-channel-config"    => ToggleChannelConfig(id: InstrumentId);                           "Toggle mono/stereo channel config"
+    group "track" => DomainAction::Track, TrackAction {
+        "add"                      => Add(source: SourceType);                                         "Add track with given source type"
+        "delete"                   => Delete(id: TrackId);                                        "Delete track by ID"
+        "select"                   => Select(idx: usize);                                              "Select track by index"
+        "select-next"              => SelectNext;                                                      "Select next track"
+        "select-prev"              => SelectPrev;                                                      "Select previous track"
+        "select-first"             => SelectFirst;                                                     "Select first track"
+        "select-last"              => SelectLast;                                                      "Select last track"
+        "add-effect"               => AddEffect(id: TrackId, fx: EffectType);                     "Add effect to track"
+        "remove-effect"            => RemoveEffect(id: TrackId, fx_id: EffectId);                 "Remove effect from track"
+        "move-stage"               => MoveStage(id: TrackId, idx: usize, dir: i8);                "Move processing stage up/down"
+        "set-filter"               => SetFilter(id: TrackId, ft: Option<FilterType>);             "Set filter type (or none)"
+        "toggle-effect-bypass"     => ToggleEffectBypass(id: TrackId, fx_id: EffectId);           "Toggle effect bypass"
+        "toggle-filter"            => ToggleFilter(id: TrackId);                                  "Toggle filter on/off"
+        "cycle-filter-type"        => NextFilterType(id: TrackId);                               "Cycle to next filter type"
+        "adjust-filter-cutoff"     => AdjustFilterCutoff(id: TrackId, d: f32);                    "Adjust filter cutoff"
+        "adjust-filter-resonance"  => AdjustFilterResonance(id: TrackId, d: f32);                 "Adjust filter resonance"
+        "adjust-effect-param"      => AdjustEffectParam(id: TrackId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust effect parameter"
+        "toggle-arp"               => ToggleArpeggiator(id: TrackId);                                     "Toggle arpeggiator"
+        "cycle-arp-direction"      => NextArpeggiatorDirection(id: TrackId);                             "Cycle arp direction forward"
+        "cycle-arp-direction-rev"  => PrevArpeggiatorDirection(id: TrackId);                      "Cycle arp direction reverse"
+        "cycle-arp-rate"           => NextArpeggiatorRate(id: TrackId);                                  "Cycle arp rate forward"
+        "cycle-arp-rate-rev"       => PrevArpeggiatorRate(id: TrackId);                           "Cycle arp rate reverse"
+        "adjust-arp-octaves"       => AdjustArpeggiatorOctaves(id: TrackId, d: i8);                       "Adjust arp octave range"
+        "adjust-arp-gate"          => AdjustArpeggiatorGate(id: TrackId, d: f32);                         "Adjust arp gate length"
+        "cycle-chord-shape"        => NextChordShape(id: TrackId);                               "Cycle chord shape forward"
+        "cycle-chord-shape-rev"    => PrevChordShape(id: TrackId);                        "Cycle chord shape reverse"
+        "clear-chord-shape"        => ClearChordShape(id: TrackId);                               "Clear chord shape"
+        "set-eq-param"             => SetEqualizerParam(id: TrackId, band: usize, kind: EqualizerParamKind, v: f32); "Set EQ band parameter"
+        "toggle-eq"                => ToggleEqualizer(id: TrackId);                                      "Toggle EQ on/off"
+        "link-layer"               => LinkLayer(id: TrackId, target: TrackId);               "Link track to layer group"
+        "unlink-layer"             => UnlinkLayer(id: TrackId);                                   "Unlink track from layer group"
+        "adjust-layer-octave"      => AdjustLayerOctaveOffset(id: TrackId, d: i8);                "Adjust layer octave offset"
+        "adjust-track-swing"       => AdjustTrackSwing(id: TrackId, d: f32);                      "Adjust per-track swing"
+        "adjust-track-hum-vel"     => AdjustTrackHumanizeVelocity(id: TrackId, d: f32);           "Adjust track velocity humanization"
+        "adjust-track-hum-time"    => AdjustTrackHumanizeTiming(id: TrackId, d: f32);             "Adjust track timing humanization"
+        "adjust-track-timing"      => AdjustTrackTimingOffset(id: TrackId, d: f32);               "Adjust track timing offset"
+        "reset-track-groove"       => ResetTrackGroove(id: TrackId);                              "Reset per-track groove settings"
+        "cycle-track-time-sig"     => NextTrackTimeSignature(id: TrackId);                       "Cycle track time signature"
+        "toggle-lfo"               => ToggleLfo(id: TrackId);                                     "Toggle LFO on/off"
+        "adjust-lfo-rate"          => AdjustLfoRate(id: TrackId, d: f32);                         "Adjust LFO rate"
+        "adjust-lfo-depth"         => AdjustLfoDepth(id: TrackId, d: f32);                        "Adjust LFO depth"
+        "set-lfo-shape"            => SetLfoShape(id: TrackId, shape: LfoShape);                  "Set LFO waveform shape"
+        "set-lfo-target"           => SetLfoTarget(id: TrackId, target: ParameterTarget);         "Set LFO modulation target"
+        "adjust-attack"            => AdjustEnvelopeAttack(id: TrackId, d: f32);                  "Adjust envelope attack"
+        "adjust-decay"             => AdjustEnvelopeDecay(id: TrackId, d: f32);                   "Adjust envelope decay"
+        "adjust-sustain"           => AdjustEnvelopeSustain(id: TrackId, d: f32);                 "Adjust envelope sustain"
+        "adjust-release"           => AdjustEnvelopeRelease(id: TrackId, d: f32);                 "Adjust envelope release"
+        "toggle-channel-config"    => ToggleChannelConfig(id: TrackId);                           "Toggle mono/stereo channel config"
     }
 
     group "mixer" => DomainAction::Mixer, MixerAction {
@@ -63,12 +63,12 @@ repl_actions! {
         "adjust-level"          => AdjustLevel(d: f32);                            "Adjust channel level"
         "toggle-mute"           => ToggleMute;                                     "Toggle mute on selected channel"
         "toggle-solo"           => ToggleSolo;                                     "Toggle solo on selected channel"
-        "cycle-section"         => NextSection;                                    "Cycle mixer section"
-        "cycle-output"          => NextOutput;                                     "Cycle output routing forward"
-        "cycle-output-rev"      => PrevOutput;                                     "Cycle output routing reverse"
+        "cycle-section"         => NextSection;                                   "Cycle mixer section"
+        "cycle-output"          => NextOutput;                                    "Cycle output routing forward"
+        "cycle-output-rev"      => PrevOutput;                             "Cycle output routing reverse"
         "adjust-send"           => AdjustSend(bus: BusId, d: f32);                 "Adjust send level to bus"
         "toggle-send"           => ToggleSend(bus: BusId);                         "Toggle send to bus"
-        "cycle-send-tap"        => NextSendTapPoint(bus: BusId);                   "Cycle send tap point"
+        "cycle-send-tap"        => NextSendTapPoint(bus: BusId);                  "Cycle send tap point"
         "adjust-pan"            => AdjustPan(d: f32);                              "Adjust pan position"
     }
 
@@ -79,9 +79,9 @@ repl_actions! {
         "set-loop-end"      => SetLoopEnd(tick: u32);                              "Set loop end tick"
         "cycle-time-sig"    => NextTimeSig;                                       "Cycle time signature"
         "toggle-poly-mode"  => TogglePolyMode(track: usize);                      "Toggle polyphonic mode"
-        "play-stop-record"  => ToggleRecordPlayback;                                "Toggle record mode"
+        "play-stop-record"  => ToggleRecordPlayback;                                     "Toggle record mode"
         "adjust-swing"      => AdjustSwing(d: f32);                                "Adjust swing amount"
-        "render"            => RenderToWav(id: InstrumentId);                      "Render track to WAV"
+        "render"            => RenderToWav(id: TrackId);                      "Render track to WAV"
         "bounce"            => BounceToWav;                                         "Bounce master to WAV"
         "export-stems"      => ExportStems;                                         "Export individual stems"
         "cancel-export"     => CancelExport;                                        "Cancel export in progress"
@@ -90,7 +90,7 @@ repl_actions! {
     group "sequencer" => DomainAction::Sequencer, SequencerAction {
         "toggle-step"           => ToggleStep(pad: usize, step: usize);                        "Toggle sequencer step"
         "adjust-velocity"       => AdjustVelocity(pad: usize, step: usize, d: i8);             "Adjust step velocity"
-        "play-stop"             => TogglePlayback;                                               "Toggle sequencer playback"
+        "play-stop"             => TogglePlayback;                                                    "Toggle sequencer playback"
         "clear-pad"             => ClearPad(pad: usize);                                       "Clear all steps on pad"
         "clear-pattern"         => ClearPattern;                                                "Clear entire pattern"
         "cycle-pattern-length"  => NextPatternLength;                                          "Cycle pattern length"
@@ -111,8 +111,8 @@ repl_actions! {
     group "arrangement" => DomainAction::Arrangement, ArrangementAction {
         "toggle-play-mode"       => TogglePlayMode;                                "Toggle arrangement play mode"
         "delete-clip"            => DeleteClip(id: ClipId);                        "Delete a clip"
-        "remove-clip-instance"   => RemoveClipInstance(id: ClipInstanceId);         "Remove a clip instance"
-        "duplicate-clip-instance" => DuplicateClipInstance(id: ClipInstanceId);    "Duplicate a clip instance"
+        "remove-clip-instance"       => RemoveClipInstance(id: ClipInstanceId);              "Remove a clip placement"
+        "duplicate-clip-instance"    => DuplicateClipInstance(id: ClipInstanceId);           "Duplicate a placement"
         "move-cursor"            => MoveCursor(d: i32);                            "Move arrangement cursor"
         "scroll-view"            => ScrollView(d: i32);                            "Scroll arrangement view"
         "zoom-in"                => ZoomIn;                                         "Zoom in on arrangement"
@@ -159,8 +159,8 @@ repl_actions! {
         "compile-synthdefs"     => CompileSynthDefs;                              "Compile SynthDefs"
         "compile-vst-synthdefs" => CompileVstSynthDefs;                           "Compile VST SynthDefs"
         "load-synthdefs"        => LoadSynthDefs;                                 "Load SynthDefs into server"
-        "record-master"         => ToggleRecordMaster;                             "Toggle master recording"
-        "record-input"          => ToggleRecordInput;                              "Toggle input recording"
+        "record-master"         => ToggleRecordMaster;                                  "Toggle master recording"
+        "record-input"          => ToggleRecordInput;                                   "Toggle input recording"
     }
 
     group "bus" => DomainAction::Bus, BusAction {
@@ -180,8 +180,8 @@ repl_actions! {
         "move-effect"           => MoveEffect(gid: u32, fx_id: EffectId, d: i8);                   "Move layer group effect"
         "toggle-effect-bypass"  => ToggleEffectBypass(gid: u32, fx_id: EffectId);                  "Toggle layer group effect bypass"
         "adjust-effect-param"   => AdjustEffectParam(gid: u32, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust layer group effect param"
-        "toggle-eq"             => ToggleEqualizer(gid: u32);                                      "Toggle layer group EQ"
-        "set-eq-param"          => SetEqualizerParam(gid: u32, band: usize, kind: EqualizerParamKind, v: f32); "Set layer group EQ band param"
+        "toggle-eq"             => ToggleEqualizer(gid: u32);                                             "Toggle layer group EQ"
+        "set-eq-param"          => SetEqualizerParam(gid: u32, band: usize, kind: EqualizerParamKind, v: f32);   "Set layer group EQ band param"
         "rename"                => Rename(gid: u32, name: String);                                  "Rename layer group"
     }
 
@@ -231,11 +231,11 @@ repl_actions! {
     }
 
     group "vst-param" => DomainAction::VstParam, VstParamAction {
-        "set"           => SetParam(id: InstrumentId, target: VstTarget, idx: u32, val: f32);      "Set VST parameter value"
-        "adjust"        => AdjustParam(id: InstrumentId, target: VstTarget, idx: u32, d: f32);     "Adjust VST parameter"
-        "reset"         => ResetParam(id: InstrumentId, target: VstTarget, idx: u32);               "Reset VST parameter to default"
-        "discover"      => DiscoverParams(id: InstrumentId, target: VstTarget);                     "Discover VST parameters"
-        "save-state"    => SaveState(id: InstrumentId, target: VstTarget);                          "Save VST plugin state"
+        "set"           => SetParam(id: TrackId, target: VstTarget, idx: u32, val: f32);      "Set VST parameter value"
+        "adjust"        => AdjustParam(id: TrackId, target: VstTarget, idx: u32, d: f32);     "Adjust VST parameter"
+        "reset"         => ResetParam(id: TrackId, target: VstTarget, idx: u32);               "Reset VST parameter to default"
+        "discover"      => DiscoverParams(id: TrackId, target: VstTarget);                     "Discover VST parameters"
+        "save-state"    => SaveState(id: TrackId, target: VstTarget);                          "Save VST plugin state"
     }
 
     group "click" => DomainAction::Click, ClickAction {
@@ -291,29 +291,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_instrument_add() {
-        let action = parse_action("instrument add saw").unwrap();
+    fn parse_track_add() {
+        let action = parse_action("track add saw").unwrap();
         assert!(matches!(
             action,
-            DomainAction::Instrument(InstrumentAction::Add(SourceType::Saw))
+            DomainAction::Track(TrackAction::Add(SourceType::Saw))
         ));
     }
 
     #[test]
-    fn parse_instrument_select_next() {
-        let action = parse_action("instrument select-next").unwrap();
+    fn parse_track_select_next() {
+        let action = parse_action("track select-next").unwrap();
         assert!(matches!(
             action,
-            DomainAction::Instrument(InstrumentAction::SelectNext)
+            DomainAction::Track(TrackAction::SelectNext)
         ));
     }
 
     #[test]
-    fn parse_instrument_adjust_filter_cutoff() {
-        let action = parse_action("instrument adjust-filter-cutoff 1 0.5").unwrap();
+    fn parse_track_adjust_filter_cutoff() {
+        let action = parse_action("track adjust-filter-cutoff 1 0.5").unwrap();
         match action {
-            DomainAction::Instrument(InstrumentAction::AdjustFilterCutoff(id, d)) => {
-                assert_eq!(id, InstrumentId::new(1));
+            DomainAction::Track(TrackAction::AdjustFilterCutoff(id, d)) => {
+                assert_eq!(id, TrackId::new(1));
                 assert!((d - 0.5).abs() < f32::EPSILON);
             }
             _ => panic!("wrong action"),
@@ -342,12 +342,12 @@ mod tests {
 
     #[test]
     fn parse_unknown_subcommand() {
-        assert!(parse_action("instrument nonexistent").is_err());
+        assert!(parse_action("track nonexistent").is_err());
     }
 
     #[test]
     fn parse_missing_args() {
-        assert!(parse_action("instrument add").is_err());
+        assert!(parse_action("track add").is_err());
     }
 
     #[test]
@@ -358,13 +358,13 @@ mod tests {
 
     #[test]
     fn complete_groups() {
-        let completions = complete_command("ins");
-        assert!(completions.contains(&"instrument".to_string()));
+        let completions = complete_command("tra");
+        assert!(completions.contains(&"track".to_string()));
     }
 
     #[test]
     fn complete_subcommands() {
-        let completions = complete_command("instrument tog");
+        let completions = complete_command("track tog");
         assert!(completions.iter().any(|c| c.contains("toggle")));
     }
 }

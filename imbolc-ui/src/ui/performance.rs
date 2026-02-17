@@ -4,11 +4,11 @@ use super::pad_keyboard::PadKeyboard;
 use super::pane::ToggleResult;
 use super::piano_keyboard::PianoKeyboard;
 use crate::ui::{Action, PianoRollAction};
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 /// Shared piano/pad keyboard lifecycle controller.
 ///
-/// Used by InstrumentPane, InstrumentEditPane, and (piano-only subset) PianoRollPane
+/// Used by TrackListPane, TrackEditPane, and (piano-only subset) PianoRollPane
 /// to eliminate duplicated toggle/activate/deactivate/tick logic.
 pub struct PerformanceController {
     pub piano: PianoKeyboard,
@@ -69,7 +69,7 @@ impl PerformanceController {
     }
 
     /// Check for released keys and return ReleaseNote/ReleaseNotes actions.
-    pub fn tick_releases(&mut self, instrument_id: InstrumentId) -> Vec<Action> {
+    pub fn tick_releases(&mut self, instrument_id: TrackId) -> Vec<Action> {
         if !self.piano.is_active() || !self.piano.has_active_keys() {
             return vec![];
         }

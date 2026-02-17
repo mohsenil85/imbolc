@@ -10,7 +10,7 @@ use std::thread;
 
 use log::{error, info, warn};
 
-use imbolc_types::InstrumentId;
+use imbolc_types::TrackId;
 
 use crate::framing::{read_message, write_message};
 use crate::protocol::{
@@ -69,7 +69,7 @@ pub struct RemoteDispatcher {
     /// Our assigned client ID from the server.
     client_id: ClientId,
     /// Instruments we own (can mutate).
-    owned_instruments: HashSet<InstrumentId>,
+    owned_instruments: HashSet<TrackId>,
     /// Last rejection reason, if any.
     last_rejection: Option<String>,
     /// Our privilege level.
@@ -94,7 +94,7 @@ impl RemoteDispatcher {
     pub fn connect(
         addr: &str,
         client_name: &str,
-        requested_instruments: Vec<InstrumentId>,
+        requested_instruments: Vec<TrackId>,
     ) -> io::Result<Self> {
         Self::connect_with_options(addr, client_name, requested_instruments, false, None)
     }
@@ -103,7 +103,7 @@ impl RemoteDispatcher {
     pub fn connect_with_options(
         addr: &str,
         client_name: &str,
-        requested_instruments: Vec<InstrumentId>,
+        requested_instruments: Vec<TrackId>,
         request_privilege: bool,
         reconnect_token: Option<SessionToken>,
     ) -> io::Result<Self> {
@@ -252,12 +252,12 @@ impl RemoteDispatcher {
     }
 
     /// Get the instruments this client owns.
-    pub fn owned_instruments(&self) -> &HashSet<InstrumentId> {
+    pub fn owned_instruments(&self) -> &HashSet<TrackId> {
         &self.owned_instruments
     }
 
     /// Check if this client owns a specific instrument.
-    pub fn owns(&self, instrument_id: InstrumentId) -> bool {
+    pub fn owns(&self, instrument_id: TrackId) -> bool {
         self.owned_instruments.contains(&instrument_id)
     }
 
@@ -297,7 +297,7 @@ impl RemoteDispatcher {
     }
 
     /// Get ownership status for an instrument.
-    pub fn ownership_status(&self, instrument_id: InstrumentId) -> OwnershipStatus {
+    pub fn ownership_status(&self, instrument_id: TrackId) -> OwnershipStatus {
         if self.owned_instruments.contains(&instrument_id) {
             return OwnershipStatus::OwnedByMe;
         }
@@ -310,7 +310,7 @@ impl RemoteDispatcher {
     }
 
     /// Get the ownership map from the state.
-    pub fn ownership_map(&self) -> &HashMap<InstrumentId, OwnerInfo> {
+    pub fn ownership_map(&self) -> &HashMap<TrackId, OwnerInfo> {
         &self.state.ownership
     }
 
@@ -358,7 +358,7 @@ impl RemoteDispatcher {
                                 self.owned_instruments.insert(inst_id);
                             }
                         }
-                        new_state.instruments.rebuild_index();
+                        new_state.tracks.rebuild_index();
                         self.state = new_state;
                         state_updated = true;
                     }
@@ -410,8 +410,8 @@ impl RemoteDispatcher {
                                 if let Some(pr) = patch.piano_roll {
                                     self.state.session.piano_roll = pr;
                                 } else if let Some(track_patches) = patch.piano_roll_track_patches {
-                                    for (id, track) in track_patches {
-                                        self.state.session.piano_roll.tracks.insert(id, track);
+                                    for (id, seq) in track_patches {
+                                        self.state.session.piano_roll.sequences.insert(id, seq);
                                     }
                                 }
                                 if let Some(arr) = patch.arrangement {
@@ -439,14 +439,12 @@ impl RemoteDispatcher {
                                     }
                                 }
                             }
-                            if let Some(instruments) = patch.instruments {
-                                self.state.instruments = instruments;
-                                self.state.instruments.rebuild_index();
+                            if let Some(instruments) = patch.tracks {
+                                self.state.tracks = instruments;
+                                self.state.tracks.rebuild_index();
                             } else if let Some(patches) = patch.instrument_patches {
                                 for (id, new_instrument) in patches {
-                                    if let Some(existing) =
-                                        self.state.instruments.instrument_mut(id)
-                                    {
+                                    if let Some(existing) = self.state.tracks.track_mut(id) {
                                         *existing = new_instrument;
                                     }
                                 }
@@ -475,7 +473,7 @@ impl RemoteDispatcher {
                                 self.owned_instruments.insert(inst_id);
                             }
                         }
-                        new_state.instruments.rebuild_index();
+                        new_state.tracks.rebuild_index();
                         self.state = new_state;
                         state_updated = true;
                     }

@@ -29,9 +29,9 @@ CREATE TABLE IF NOT EXISTS session (
     scale TEXT NOT NULL,
     tuning_a4 REAL NOT NULL,
     snap INTEGER NOT NULL,
-    next_instrument_id INTEGER NOT NULL,
+    next_track_id INTEGER NOT NULL,
     next_sampler_buffer_id INTEGER NOT NULL,
-    selected_instrument INTEGER,
+    selected_track INTEGER,
     next_layer_group_id INTEGER NOT NULL DEFAULT 0,
     -- humanize
     humanize_velocity REAL NOT NULL DEFAULT 0.0,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS theme (
 -- Instruments
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS instruments (
+CREATE TABLE IF NOT EXISTS tracks (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     position INTEGER NOT NULL,
@@ -137,8 +137,8 @@ CREATE TABLE IF NOT EXISTS instruments (
     layer_octave_offset INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS instrument_source_params (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_source_params (
+    track_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     param_name TEXT NOT NULL,
     param_value_type TEXT NOT NULL,
@@ -147,21 +147,21 @@ CREATE TABLE IF NOT EXISTS instrument_source_params (
     param_value_bool INTEGER,
     param_min REAL NOT NULL,
     param_max REAL NOT NULL,
-    PRIMARY KEY (instrument_id, position)
+    PRIMARY KEY (track_id, position)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_effects (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_effects (
+    track_id INTEGER NOT NULL,
     effect_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     effect_type TEXT NOT NULL,
     enabled INTEGER NOT NULL,
     vst_state_path TEXT,
-    PRIMARY KEY (instrument_id, effect_id)
+    PRIMARY KEY (track_id, effect_id)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_effect_params (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_effect_params (
+    track_id INTEGER NOT NULL,
     effect_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     param_name TEXT NOT NULL,
@@ -171,20 +171,20 @@ CREATE TABLE IF NOT EXISTS instrument_effect_params (
     param_value_bool INTEGER,
     param_min REAL NOT NULL,
     param_max REAL NOT NULL,
-    PRIMARY KEY (instrument_id, effect_id, position)
+    PRIMARY KEY (track_id, effect_id, position)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_sends (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_sends (
+    track_id INTEGER NOT NULL,
     bus_id INTEGER NOT NULL,
     level REAL NOT NULL,
     enabled INTEGER NOT NULL,
     tap_point TEXT NOT NULL DEFAULT 'PostInsert',
-    PRIMARY KEY (instrument_id, bus_id)
+    PRIMARY KEY (track_id, bus_id)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_modulations (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_modulations (
+    track_id INTEGER NOT NULL,
     target_param TEXT NOT NULL,
     mod_type TEXT NOT NULL,
     lfo_enabled INTEGER,
@@ -196,13 +196,13 @@ CREATE TABLE IF NOT EXISTS instrument_modulations (
     env_decay REAL,
     env_sustain REAL,
     env_release REAL,
-    source_instrument_id INTEGER,
+    source_track_id INTEGER,
     source_param_name TEXT,
-    PRIMARY KEY (instrument_id, target_param)
+    PRIMARY KEY (track_id, target_param)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_filter_extra_params (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_filter_extra_params (
+    track_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     param_name TEXT NOT NULL,
     param_value_type TEXT NOT NULL,
@@ -211,41 +211,41 @@ CREATE TABLE IF NOT EXISTS instrument_filter_extra_params (
     param_value_bool INTEGER,
     param_min REAL NOT NULL,
     param_max REAL NOT NULL,
-    PRIMARY KEY (instrument_id, position)
+    PRIMARY KEY (track_id, position)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_eq_bands (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_eq_bands (
+    track_id INTEGER NOT NULL,
     band_index INTEGER NOT NULL,
     band_type TEXT NOT NULL,
     freq REAL NOT NULL,
     gain REAL NOT NULL,
     q REAL NOT NULL,
     enabled INTEGER NOT NULL,
-    PRIMARY KEY (instrument_id, band_index)
+    PRIMARY KEY (track_id, band_index)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_processing_chain (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_processing_chain (
+    track_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     stage_type TEXT NOT NULL,
     effect_id INTEGER,
-    PRIMARY KEY (instrument_id, position)
+    PRIMARY KEY (track_id, position)
 );
 
-CREATE TABLE IF NOT EXISTS instrument_vst_params (
-    instrument_id INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS track_vst_params (
+    track_id INTEGER NOT NULL,
     param_index INTEGER NOT NULL,
     value REAL NOT NULL,
-    PRIMARY KEY (instrument_id, param_index)
+    PRIMARY KEY (track_id, param_index)
 );
 
 CREATE TABLE IF NOT EXISTS effect_vst_params (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     effect_id INTEGER NOT NULL,
     param_index INTEGER NOT NULL,
     value REAL NOT NULL,
-    PRIMARY KEY (instrument_id, effect_id, param_index)
+    PRIMARY KEY (track_id, effect_id, param_index)
 );
 
 -- ============================================================
@@ -378,15 +378,15 @@ CREATE TABLE IF NOT EXISTS musical_settings (
 );
 
 CREATE TABLE IF NOT EXISTS piano_roll_tracks (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     polyphonic INTEGER NOT NULL,
-    PRIMARY KEY (instrument_id)
+    PRIMARY KEY (track_id)
 );
 
 CREATE TABLE IF NOT EXISTS piano_roll_notes (
     id INTEGER PRIMARY KEY,
-    track_instrument_id INTEGER NOT NULL,
+    track_track_id INTEGER NOT NULL,
     tick INTEGER NOT NULL,
     duration INTEGER NOT NULL,
     pitch INTEGER NOT NULL,
@@ -399,7 +399,7 @@ CREATE TABLE IF NOT EXISTS piano_roll_notes (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS sampler_configs (
-    instrument_id INTEGER PRIMARY KEY,
+    track_id INTEGER PRIMARY KEY,
     buffer_id INTEGER,
     sample_name TEXT,
     loop_mode INTEGER NOT NULL,
@@ -409,14 +409,14 @@ CREATE TABLE IF NOT EXISTS sampler_configs (
 );
 
 CREATE TABLE IF NOT EXISTS sampler_slices (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     slice_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     start_pos REAL NOT NULL,
     end_pos REAL NOT NULL,
     name TEXT NOT NULL,
     root_note INTEGER NOT NULL,
-    PRIMARY KEY (instrument_id, slice_id)
+    PRIMARY KEY (track_id, slice_id)
 );
 
 -- ============================================================
@@ -448,7 +448,7 @@ CREATE TABLE IF NOT EXISTS vst_plugin_params (
 CREATE TABLE IF NOT EXISTS automation_lanes (
     id INTEGER PRIMARY KEY,
     target_type TEXT NOT NULL,
-    target_instrument_id INTEGER,
+    target_track_id INTEGER,
     target_bus_id INTEGER,
     target_effect_id INTEGER,
     target_param_idx INTEGER,
@@ -494,7 +494,7 @@ CREATE TABLE IF NOT EXISTS custom_synthdef_params (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS drum_sequencer_state (
-    instrument_id INTEGER PRIMARY KEY,
+    track_id INTEGER PRIMARY KEY,
     current_pattern INTEGER NOT NULL DEFAULT 0,
     next_buffer_id INTEGER NOT NULL DEFAULT 0,
     swing_amount REAL NOT NULL DEFAULT 0.0,
@@ -503,14 +503,14 @@ CREATE TABLE IF NOT EXISTS drum_sequencer_state (
 );
 
 CREATE TABLE IF NOT EXISTS drum_sequencer_chain (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     pattern_index INTEGER NOT NULL,
-    PRIMARY KEY (instrument_id, position)
+    PRIMARY KEY (track_id, position)
 );
 
 CREATE TABLE IF NOT EXISTS drum_pads (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     pad_index INTEGER NOT NULL,
     buffer_id INTEGER,
     path TEXT,
@@ -520,27 +520,27 @@ CREATE TABLE IF NOT EXISTS drum_pads (
     slice_end REAL NOT NULL DEFAULT 1.0,
     reverse INTEGER NOT NULL DEFAULT 0,
     pitch INTEGER NOT NULL DEFAULT 0,
-    trigger_instrument_id INTEGER,
+    trigger_track_id INTEGER,
     trigger_freq REAL NOT NULL DEFAULT 440.0,
-    PRIMARY KEY (instrument_id, pad_index)
+    PRIMARY KEY (track_id, pad_index)
 );
 
 CREATE TABLE IF NOT EXISTS drum_patterns (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     pattern_index INTEGER NOT NULL,
     length INTEGER NOT NULL DEFAULT 16,
-    PRIMARY KEY (instrument_id, pattern_index)
+    PRIMARY KEY (track_id, pattern_index)
 );
 
 CREATE TABLE IF NOT EXISTS drum_steps (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     pattern_index INTEGER NOT NULL,
     pad_index INTEGER NOT NULL,
     step_index INTEGER NOT NULL,
     velocity INTEGER NOT NULL DEFAULT 100,
     probability REAL NOT NULL DEFAULT 1.0,
     pitch_offset INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (instrument_id, pattern_index, pad_index, step_index)
+    PRIMARY KEY (track_id, pattern_index, pad_index, step_index)
 );
 
 -- ============================================================
@@ -548,7 +548,7 @@ CREATE TABLE IF NOT EXISTS drum_steps (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS chopper_states (
-    instrument_id INTEGER PRIMARY KEY,
+    track_id INTEGER PRIMARY KEY,
     buffer_id INTEGER,
     path TEXT,
     name TEXT NOT NULL,
@@ -559,14 +559,14 @@ CREATE TABLE IF NOT EXISTS chopper_states (
 );
 
 CREATE TABLE IF NOT EXISTS chopper_slices (
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     slice_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     start_pos REAL NOT NULL,
     end_pos REAL NOT NULL,
     name TEXT NOT NULL,
     root_note INTEGER NOT NULL,
-    PRIMARY KEY (instrument_id, slice_id)
+    PRIMARY KEY (track_id, slice_id)
 );
 
 -- ============================================================
@@ -575,7 +575,7 @@ CREATE TABLE IF NOT EXISTS chopper_slices (
 
 CREATE TABLE IF NOT EXISTS midi_recording_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    live_input_instrument INTEGER,
+    live_input_track INTEGER,
     note_passthrough INTEGER NOT NULL,
     channel_filter INTEGER
 );
@@ -585,7 +585,7 @@ CREATE TABLE IF NOT EXISTS midi_cc_mappings (
     cc_number INTEGER NOT NULL,
     channel INTEGER,
     target_type TEXT NOT NULL,
-    target_instrument_id INTEGER,
+    target_track_id INTEGER,
     target_bus_id INTEGER,
     target_effect_id INTEGER,
     target_param_idx INTEGER,
@@ -598,7 +598,7 @@ CREATE TABLE IF NOT EXISTS midi_cc_mappings (
 CREATE TABLE IF NOT EXISTS midi_pitch_bend_configs (
     id INTEGER PRIMARY KEY,
     target_type TEXT NOT NULL,
-    target_instrument_id INTEGER,
+    target_track_id INTEGER,
     target_bus_id INTEGER,
     target_effect_id INTEGER,
     target_param_idx INTEGER,
@@ -622,7 +622,7 @@ CREATE TABLE IF NOT EXISTS param_tag_targets (
     tag_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
     target_type TEXT NOT NULL,
-    target_instrument_id INTEGER,
+    target_track_id INTEGER,
     target_bus_id INTEGER,
     target_effect_id INTEGER,
     target_param_idx INTEGER,
@@ -650,7 +650,7 @@ CREATE TABLE IF NOT EXISTS arrangement_state (
 CREATE TABLE IF NOT EXISTS arrangement_clips (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     length_ticks INTEGER NOT NULL
 );
 
@@ -668,7 +668,7 @@ CREATE TABLE IF NOT EXISTS arrangement_clip_notes (
 CREATE TABLE IF NOT EXISTS arrangement_placements (
     id INTEGER PRIMARY KEY,
     clip_id INTEGER NOT NULL,
-    instrument_id INTEGER NOT NULL,
+    track_id INTEGER NOT NULL,
     start_tick INTEGER NOT NULL,
     length_override INTEGER
 );
@@ -677,7 +677,7 @@ CREATE TABLE IF NOT EXISTS arrangement_clip_automation_lanes (
     id INTEGER PRIMARY KEY,
     clip_id INTEGER NOT NULL,
     target_type TEXT NOT NULL,
-    target_instrument_id INTEGER,
+    target_track_id INTEGER,
     target_bus_id INTEGER,
     target_effect_id INTEGER,
     target_param_idx INTEGER,
@@ -719,16 +719,16 @@ CREATE TABLE IF NOT EXISTS checkpoint_changesets (
 const DELETE_ALL_SQL: &str = "
 DELETE FROM session;
 DELETE FROM theme;
-DELETE FROM instruments;
-DELETE FROM instrument_source_params;
-DELETE FROM instrument_effects;
-DELETE FROM instrument_effect_params;
-DELETE FROM instrument_sends;
-DELETE FROM instrument_modulations;
-DELETE FROM instrument_filter_extra_params;
-DELETE FROM instrument_eq_bands;
-DELETE FROM instrument_processing_chain;
-DELETE FROM instrument_vst_params;
+DELETE FROM tracks;
+DELETE FROM track_source_params;
+DELETE FROM track_effects;
+DELETE FROM track_effect_params;
+DELETE FROM track_sends;
+DELETE FROM track_modulations;
+DELETE FROM track_filter_extra_params;
+DELETE FROM track_eq_bands;
+DELETE FROM track_processing_chain;
+DELETE FROM track_vst_params;
 DELETE FROM effect_vst_params;
 DELETE FROM mixer_buses;
 DELETE FROM mixer_master;
@@ -776,16 +776,16 @@ const DROP_ALL_SQL: &str = "
 DROP TABLE IF EXISTS schema_version;
 DROP TABLE IF EXISTS session;
 DROP TABLE IF EXISTS theme;
-DROP TABLE IF EXISTS instruments;
-DROP TABLE IF EXISTS instrument_source_params;
-DROP TABLE IF EXISTS instrument_effects;
-DROP TABLE IF EXISTS instrument_effect_params;
-DROP TABLE IF EXISTS instrument_sends;
-DROP TABLE IF EXISTS instrument_modulations;
-DROP TABLE IF EXISTS instrument_filter_extra_params;
-DROP TABLE IF EXISTS instrument_eq_bands;
-DROP TABLE IF EXISTS instrument_processing_chain;
-DROP TABLE IF EXISTS instrument_vst_params;
+DROP TABLE IF EXISTS tracks;
+DROP TABLE IF EXISTS track_source_params;
+DROP TABLE IF EXISTS track_effects;
+DROP TABLE IF EXISTS track_effect_params;
+DROP TABLE IF EXISTS track_sends;
+DROP TABLE IF EXISTS track_modulations;
+DROP TABLE IF EXISTS track_filter_extra_params;
+DROP TABLE IF EXISTS track_eq_bands;
+DROP TABLE IF EXISTS track_processing_chain;
+DROP TABLE IF EXISTS track_vst_params;
 DROP TABLE IF EXISTS effect_vst_params;
 DROP TABLE IF EXISTS mixer_buses;
 DROP TABLE IF EXISTS mixer_master;

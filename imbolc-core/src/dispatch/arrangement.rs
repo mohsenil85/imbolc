@@ -34,10 +34,10 @@ pub(super) fn dispatch_arrangement(
             DispatchResult::none()
         }
         ArrangementAction::CaptureClipFromPianoRoll { instrument_id } => {
-            let (loop_start, loop_end, track_notes) = {
+            let (loop_start, loop_end, seq_notes) = {
                 let pr = &state.session.piano_roll;
                 let notes = pr
-                    .tracks
+                    .sequences
                     .get(instrument_id)
                     .map(|t| t.notes.clone())
                     .unwrap_or_default();
@@ -47,7 +47,7 @@ pub(super) fn dispatch_arrangement(
             let length_ticks = loop_end.saturating_sub(loop_start);
             let mut notes = Vec::new();
             if length_ticks > 0 {
-                for note in track_notes {
+                for note in seq_notes {
                     if note.tick >= loop_start && note.tick < loop_end {
                         let mut new_note = note.clone();
                         new_note.tick = note.tick - loop_start;
@@ -201,7 +201,7 @@ pub(super) fn dispatch_arrangement(
             DispatchResult::none()
         }
         ArrangementAction::SelectLane(lane) => {
-            let max_lane = state.instruments.instruments.len().saturating_sub(1);
+            let max_lane = state.tracks.tracks.len().saturating_sub(1);
             state.session.arrangement.selected_lane = (*lane).min(max_lane);
             DispatchResult::none()
         }
@@ -237,16 +237,16 @@ pub(super) fn dispatch_arrangement(
 
             let (stashed_notes, stashed_loop_start, stashed_loop_end, stashed_looping) = {
                 let pr = &mut state.session.piano_roll;
-                let track = match pr.tracks.get_mut(&clip.instrument_id) {
-                    Some(track) => track,
+                let seq = match pr.sequences.get_mut(&clip.instrument_id) {
+                    Some(seq) => seq,
                     None => return DispatchResult::none(),
                 };
-                let stashed_notes = track.notes.clone();
+                let stashed_notes = seq.notes.clone();
                 let stashed_loop_start = pr.loop_start;
                 let stashed_loop_end = pr.loop_end;
                 let stashed_looping = pr.looping;
 
-                track.notes = clip.notes.clone();
+                seq.notes = clip.notes.clone();
                 pr.loop_start = 0;
                 pr.loop_end = clip.length_ticks;
                 pr.looping = true;
@@ -311,7 +311,7 @@ pub(super) fn dispatch_arrangement(
             let (edited_notes, loop_end) = {
                 let pr = &state.session.piano_roll;
                 let notes = pr
-                    .tracks
+                    .sequences
                     .get(&ctx.instrument_id)
                     .map(|t| t.notes.clone())
                     .unwrap_or_default();
@@ -355,15 +355,15 @@ pub(super) fn dispatch_arrangement(
 
             {
                 let pr = &mut state.session.piano_roll;
-                if let Some(track) = pr.tracks.get_mut(&ctx.instrument_id) {
-                    track.notes = ctx.stashed_notes;
+                if let Some(seq) = pr.sequences.get_mut(&ctx.instrument_id) {
+                    seq.notes = ctx.stashed_notes;
                 }
                 pr.loop_start = ctx.stashed_loop_start;
                 pr.loop_end = ctx.stashed_loop_end;
                 pr.looping = ctx.stashed_looping;
             }
 
-            let mut result = DispatchResult::with_nav(NavIntent::PopOrSwitchTo(PaneId::Track));
+            let mut result = DispatchResult::with_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
@@ -395,16 +395,16 @@ mod tests {
     use crate::state::SourceType;
     use imbolc_audio::AudioHandle;
     use imbolc_types::state::piano_roll::Note;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
     fn setup() -> (AppState, AudioHandle) {
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
         (state, AudioHandle::new())
     }
 
-    fn first_instrument_id(state: &AppState) -> InstrumentId {
-        state.instruments.instruments[0].id
+    fn first_instrument_id(state: &AppState) -> TrackId {
+        state.tracks.tracks[0].id
     }
 
     // ── 1. TogglePlayMode ─────────────────────────────────────────────
@@ -538,16 +538,16 @@ mod tests {
         let (mut state, mut audio) = setup();
         let inst_id = first_instrument_id(&state);
 
-        // Add notes to the piano roll track
-        if let Some(track) = state.session.piano_roll.tracks.get_mut(&inst_id) {
-            track.notes.push(Note {
+        // Add notes to the piano roll sequence
+        if let Some(seq) = state.session.piano_roll.sequences.get_mut(&inst_id) {
+            seq.notes.push(Note {
                 tick: 0,
                 pitch: 60,
                 velocity: 100,
                 duration: 96,
                 probability: 1.0,
             });
-            track.notes.push(Note {
+            seq.notes.push(Note {
                 tick: 192,
                 pitch: 64,
                 velocity: 80,
@@ -555,7 +555,7 @@ mod tests {
                 probability: 1.0,
             });
             // Note outside loop region
-            track.notes.push(Note {
+            seq.notes.push(Note {
                 tick: 500,
                 pitch: 67,
                 velocity: 90,
@@ -591,8 +591,8 @@ mod tests {
         let (mut state, mut audio) = setup();
         let inst_id = first_instrument_id(&state);
 
-        if let Some(track) = state.session.piano_roll.tracks.get_mut(&inst_id) {
-            track.notes.push(Note {
+        if let Some(seq) = state.session.piano_roll.sequences.get_mut(&inst_id) {
+            seq.notes.push(Note {
                 tick: 100,
                 pitch: 60,
                 velocity: 100,
@@ -623,9 +623,9 @@ mod tests {
         let (mut state, mut audio) = setup();
         let inst_id = first_instrument_id(&state);
 
-        if let Some(track) = state.session.piano_roll.tracks.get_mut(&inst_id) {
+        if let Some(seq) = state.session.piano_roll.sequences.get_mut(&inst_id) {
             // Note that extends past the loop end
-            track.notes.push(Note {
+            seq.notes.push(Note {
                 tick: 80,
                 pitch: 60,
                 velocity: 100,
@@ -1152,7 +1152,7 @@ mod tests {
     fn select_lane_allows_valid_index() {
         let (mut state, mut audio) = setup();
         // Add a second instrument
-        state.add_instrument(SourceType::Sin);
+        state.add_track(SourceType::Sin);
         // 2 instruments → lanes 0 and 1 valid
         dispatch_arrangement(&ArrangementAction::SelectLane(1), &mut state, &mut audio);
         assert_eq!(state.session.arrangement.selected_lane, 1);

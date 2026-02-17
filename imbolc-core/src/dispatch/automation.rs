@@ -12,7 +12,7 @@ const RECORD_MIN_TICK_DELTA: u32 = 48;
 fn reduce(state: &mut AppState, action: &AutomationAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Automation(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -30,7 +30,7 @@ pub(super) fn dispatch_automation(
             if !state.recording.automation_recording {
                 state
                     .undo_history
-                    .push_from(state.session.clone(), state.instruments.clone());
+                    .push_from(state.session.clone(), state.tracks.clone());
             }
             state.recording.automation_recording = !state.recording.automation_recording;
             return result;
@@ -155,7 +155,7 @@ mod tests {
     use super::*;
     use crate::state::automation::AutomationLaneId;
     use imbolc_audio::AudioHandle;
-    use imbolc_types::InstrumentId;
+    use imbolc_types::TrackId;
 
     fn setup() -> (AppState, AudioHandle) {
         let state = AppState::new();
@@ -167,13 +167,13 @@ mod tests {
         state
             .session
             .automation
-            .add_lane(AutomationTarget::level(InstrumentId::new(0)))
+            .add_lane(AutomationTarget::level(TrackId::new(0)))
     }
 
     #[test]
     fn add_lane_creates_and_is_idempotent() {
         let (mut state, mut audio) = setup();
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
         let result = dispatch_automation(
             &AutomationAction::AddLane(target.clone()),
             &mut state,
@@ -269,7 +269,7 @@ mod tests {
         state
             .session
             .automation
-            .add_lane(AutomationTarget::pan(InstrumentId::new(0)));
+            .add_lane(AutomationTarget::pan(TrackId::new(0)));
 
         dispatch_automation(&AutomationAction::ArmAllLanes, &mut state, &mut audio);
         assert!(state
@@ -302,7 +302,7 @@ mod tests {
         let (mut state, _audio) = setup();
         state.recording.automation_recording = true;
         state.session.piano_roll.playing = true;
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
 
         // First point always added
         state.audio.playhead = 0;
@@ -342,7 +342,7 @@ mod tests {
         let (mut state, _audio) = setup();
         state.recording.automation_recording = true;
         state.session.piano_roll.playing = true;
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
         let lane_id = state.session.automation.add_lane(target.clone());
 
         // Disarm the lane
@@ -371,7 +371,7 @@ mod tests {
         state.recording.automation_recording = false;
         state.session.piano_roll.playing = true;
         state.audio.playing = true;
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
         dispatch_automation(
             &AutomationAction::RecordValue(target.clone(), 0.5),
             &mut state,
@@ -387,7 +387,7 @@ mod tests {
         // Recording but not playing — RecordValue should NOT add points
         state.recording.automation_recording = true;
         state.session.piano_roll.playing = false;
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
         dispatch_automation(
             &AutomationAction::RecordValue(target.clone(), 0.5),
             &mut state,
@@ -403,7 +403,7 @@ mod tests {
         state.session.piano_roll.playing = true;
         state.audio.playing = true;
         state.audio.playhead = 100;
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
         let result = dispatch_automation(
             &AutomationAction::RecordValue(target.clone(), 0.5),
             &mut state,
@@ -423,7 +423,7 @@ mod tests {
         state.recording.automation_recording = true;
         state.session.piano_roll.playing = true;
         state.audio.playing = true;
-        let target = AutomationTarget::level(InstrumentId::new(0));
+        let target = AutomationTarget::level(TrackId::new(0));
 
         // First point
         state.audio.playhead = 0;

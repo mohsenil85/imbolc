@@ -25,7 +25,7 @@ use imbolc_types::AudioEffect;
 use imbolc_types::Note;
 use imbolc_types::{ArrangementState, PlayMode};
 use imbolc_types::{AutomationLane, AutomationTarget};
-use imbolc_types::{BufferId, BusId, EffectId, InstrumentId};
+use imbolc_types::{BufferId, BusId, EffectId, TrackId};
 
 /// Audio-owned read state: values that the audio thread is the authority on.
 /// UI reads these for display; audio feedback updates them.
@@ -60,7 +60,7 @@ struct ArrangementFlattenCache {
     /// Hash of arrangement state for cache invalidation
     version_hash: u64,
     /// Cached flattened notes by instrument ID
-    flattened_notes: HashMap<InstrumentId, Vec<Note>>,
+    flattened_notes: HashMap<TrackId, Vec<Note>>,
     /// Cached arrangement length in ticks
     arrangement_length: u32,
     /// Cached flattened automation lanes
@@ -124,7 +124,7 @@ impl ArrangementFlattenCache {
     fn get_or_compute(
         &mut self,
         arr: &ArrangementState,
-    ) -> (&HashMap<InstrumentId, Vec<Note>>, u32, &Vec<AutomationLane>) {
+    ) -> (&HashMap<TrackId, Vec<Note>>, u32, &Vec<AutomationLane>) {
         let current_hash = Self::compute_version_hash(arr);
 
         if current_hash != self.version_hash {
@@ -354,8 +354,8 @@ impl AudioHandle {
             let (flattened, arr_len, _) = self
                 .arrangement_cache
                 .get_or_compute(&state.session().arrangement);
-            for (&instrument_id, track) in &mut flat_pr.tracks {
-                track.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
+            for (&instrument_id, seq) in &mut flat_pr.sequences {
+                seq.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
             }
             if arr_len > 0 {
                 flat_pr.loop_end = arr_len;
@@ -380,7 +380,7 @@ impl AudioHandle {
         };
 
         self.event_log.append(LogEntryKind::Checkpoint {
-            instruments: state.instruments().clone(),
+            instruments: state.tracks().clone(),
             session: state.session().clone(),
             piano_roll,
             automation_lanes,
@@ -406,8 +406,8 @@ impl AudioHandle {
                 let (flattened, arr_len, _) = self
                     .arrangement_cache
                     .get_or_compute(&state.session().arrangement);
-                for (&instrument_id, track) in &mut flat_pr.tracks {
-                    track.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
+                for (&instrument_id, seq) in &mut flat_pr.sequences {
+                    seq.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
                 }
                 if arr_len > 0 {
                     flat_pr.loop_end = arr_len;
@@ -465,7 +465,7 @@ impl AudioHandle {
                     }
                 }
                 AudioEffect::SetEffectParam(instrument_id, effect_id, param_idx, value) => {
-                    if let Some(inst) = state.instruments().instrument(*instrument_id) {
+                    if let Some(inst) = state.tracks().track(*instrument_id) {
                         if let Some(effect) = inst.effect_by_id(*effect_id) {
                             if let Some(param) = effect.params.get(param_idx.get()) {
                                 if let Err(e) = self.set_effect_param(
@@ -583,7 +583,7 @@ impl AudioHandle {
         l.max(r)
     }
 
-    pub fn audio_in_waveform(&self, instrument_id: InstrumentId) -> Vec<f32> {
+    pub fn audio_in_waveform(&self, instrument_id: TrackId) -> Vec<f32> {
         self.monitor.audio_in_waveform(instrument_id.get())
     }
 
@@ -855,7 +855,7 @@ impl AudioHandle {
         mute: bool,
         pan: f32,
     ) -> Result<(), String> {
-        self.send_cmd(AudioCmd::SetLayerGroupMixerParams {
+        self.send_cmd(AudioCmd::SetGroupMixerParams {
             group_id,
             level,
             mute,
@@ -865,7 +865,7 @@ impl AudioHandle {
 
     pub fn set_source_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -878,7 +878,7 @@ impl AudioHandle {
 
     pub fn set_eq_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -891,7 +891,7 @@ impl AudioHandle {
 
     pub fn set_filter_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -904,7 +904,7 @@ impl AudioHandle {
 
     pub fn set_effect_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         effect_id: EffectId,
         param: &str,
         value: f32,
@@ -919,7 +919,7 @@ impl AudioHandle {
 
     pub fn set_lfo_param(
         &self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -952,7 +952,7 @@ impl AudioHandle {
         param: &str,
         value: f32,
     ) -> Result<(), String> {
-        self.send_cmd(AudioCmd::SetLayerGroupEffectParam {
+        self.send_cmd(AudioCmd::SetGroupEffectParam {
             group_id,
             effect_id,
             param: param.to_string(),
@@ -977,7 +977,7 @@ impl AudioHandle {
 
     pub fn spawn_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
@@ -992,7 +992,7 @@ impl AudioHandle {
 
     pub fn release_voice(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         pitch: u8,
         offset_secs: f64,
     ) -> Result<(), String> {
@@ -1003,12 +1003,7 @@ impl AudioHandle {
         })
     }
 
-    pub fn push_active_note(
-        &mut self,
-        instrument_id: InstrumentId,
-        pitch: u8,
-        duration_ticks: u32,
-    ) {
+    pub fn push_active_note(&mut self, instrument_id: TrackId, pitch: u8, duration_ticks: u32) {
         self.send(AudioCmd::RegisterActiveNote {
             instrument_id,
             pitch,
@@ -1029,7 +1024,7 @@ impl AudioHandle {
         &mut self,
         buffer_id: BufferId,
         amp: f32,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         slice_start: f32,
         slice_end: f32,
         rate: f32,
@@ -1050,7 +1045,7 @@ impl AudioHandle {
 
     pub fn start_instrument_render(
         &mut self,
-        instrument_id: InstrumentId,
+        instrument_id: TrackId,
         path: &Path,
     ) -> Result<(), String> {
         let (reply_tx, reply_rx) = mpsc::channel();
@@ -1122,7 +1117,7 @@ impl AudioHandle {
         }
     }
 
-    pub fn start_stem_export(&mut self, stems: &[(InstrumentId, PathBuf)]) -> Result<(), String> {
+    pub fn start_stem_export(&mut self, stems: &[(TrackId, PathBuf)]) -> Result<(), String> {
         let (reply_tx, reply_rx) = mpsc::channel();
         self.send_cmd(AudioCmd::StartStemExport {
             stems: stems.to_vec(),

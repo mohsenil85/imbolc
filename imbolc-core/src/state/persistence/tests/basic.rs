@@ -2,14 +2,14 @@ use std::path::PathBuf;
 
 use super::{load_project, save_project, temp_db_path};
 use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
-use crate::state::instrument::{
-    EffectType, FilterType, LfoConfig, LfoShape, ModSource, OutputTarget, ParameterTarget,
-    SourceType,
-};
-use crate::state::instrument_state::InstrumentState;
 use crate::state::param::ParamValue;
 use crate::state::sampler::Slice;
 use crate::state::session::SessionState;
+use crate::state::track::{
+    EffectType, FilterType, LfoConfig, LfoShape, ModSource, OutputTarget, ParameterTarget,
+    SourceType,
+};
+use crate::state::track_state::TrackState;
 use crate::state::AutomationTarget;
 use imbolc_types::{BusId, CustomSynthDefId, EffectId, MixerSend, ParamIndex};
 
@@ -25,9 +25,9 @@ fn save_and_load_round_trip_basic() {
     session.piano_roll.bpm = session.bpm as f32;
     session.piano_roll.time_signature = session.time_signature;
 
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
-    let inst = instruments.instrument_mut(inst_id).unwrap();
+    let mut tracks = TrackState::new();
+    let inst_id = tracks.add_track(SourceType::Saw);
+    let inst = tracks.track_mut(inst_id).unwrap();
     inst.name = "Test".to_string();
     inst.set_filter(Some(FilterType::Hpf));
     if let Some(filter) = inst.filter_mut() {
@@ -41,7 +41,7 @@ fn save_and_load_round_trip_basic() {
     inst.channel_strip.output_target = OutputTarget::Bus(BusId::new(2));
     inst.add_effect(EffectType::Delay);
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
     session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
     let lane_id = session
@@ -52,7 +52,7 @@ fn save_and_load_round_trip_basic() {
     lane.add_point(480, 0.75);
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save_project");
+    save_project(&path, &session, &tracks).expect("save_project");
     let (loaded_session, loaded_instruments) = load_project(&path).expect("load_project");
 
     assert_eq!(loaded_session.bpm, session.bpm);
@@ -62,8 +62,8 @@ fn save_and_load_round_trip_basic() {
     assert_eq!(loaded_session.tuning_a4, session.tuning_a4);
     assert_eq!(loaded_session.snap, session.snap);
 
-    assert_eq!(loaded_instruments.instruments.len(), 1);
-    let loaded_inst = &loaded_instruments.instruments[0];
+    assert_eq!(loaded_instruments.tracks.len(), 1);
+    let loaded_inst = &loaded_instruments.tracks[0];
     assert_eq!(loaded_inst.id, inst_id);
     assert_eq!(loaded_inst.name, "Test");
     assert!((loaded_inst.channel_strip.level - 0.42).abs() < 0.001);
@@ -84,12 +84,12 @@ fn save_and_load_round_trip_basic() {
         EffectType::Delay
     );
 
-    assert_eq!(loaded_session.piano_roll.track_order.len(), 1);
-    assert_eq!(loaded_session.piano_roll.track_order[0], inst_id);
+    assert_eq!(loaded_session.piano_roll.sequence_order.len(), 1);
+    assert_eq!(loaded_session.piano_roll.sequence_order[0], inst_id);
     assert_eq!(
         loaded_session
             .piano_roll
-            .track_at(0)
+            .sequence_at(0)
             .map(|t| t.notes.len())
             .unwrap_or(0),
         1
@@ -118,11 +118,11 @@ fn save_and_load_round_trip_complex() {
     session.piano_roll.loop_start = 480;
     session.piano_roll.loop_end = 960;
 
-    let mut instruments = InstrumentState::new();
+    let mut tracks = TrackState::new();
 
-    let saw_id = instruments.add_instrument(SourceType::Saw);
-    let sampler_id = instruments.add_instrument(SourceType::PitchedSampler);
-    let kit_id = instruments.add_instrument(SourceType::Kit);
+    let saw_id = tracks.add_track(SourceType::Saw);
+    let sampler_id = tracks.add_track(SourceType::PitchedSampler);
+    let kit_id = tracks.add_track(SourceType::Kit);
 
     let mut registry = CustomSynthDefRegistry::new();
     let custom_id = registry.add(CustomSynthDef {
@@ -139,10 +139,10 @@ fn save_and_load_round_trip_complex() {
     });
     session.custom_synthdefs = registry;
 
-    let custom_inst_id = instruments.add_instrument(SourceType::Custom(custom_id));
+    let custom_inst_id = tracks.add_track(SourceType::Custom(custom_id));
 
     // Saw instrument: filter, mod source, effect, output, send, and source param
-    if let Some(inst) = instruments.instrument_mut(saw_id) {
+    if let Some(inst) = tracks.track_mut(saw_id) {
         inst.set_filter(Some(FilterType::Hpf));
         if let Some(filter) = inst.filter_mut() {
             filter.cutoff.value = 1234.0;
@@ -180,7 +180,7 @@ fn save_and_load_round_trip_complex() {
     }
 
     // Sampler instrument: config and slices
-    if let Some(inst) = instruments.instrument_mut(sampler_id) {
+    if let Some(inst) = tracks.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
             config.buffer_id = Some(77);
             config.sample_name = Some("kick.wav".to_string());
@@ -197,7 +197,7 @@ fn save_and_load_round_trip_complex() {
     }
 
     // Kit instrument: pads, steps, and chopper state
-    if let Some(inst) = instruments.instrument_mut(kit_id) {
+    if let Some(inst) = tracks.track_mut(kit_id) {
         if let Some(seq) = inst.drum_sequencer_mut() {
             seq.pads[0].buffer_id = Some(123);
             seq.pads[0].path = Some("/tmp/kick.wav".to_string());
@@ -224,9 +224,9 @@ fn save_and_load_round_trip_complex() {
         }
     }
 
-    // Piano roll tracks and notes
-    session.piano_roll.add_track(saw_id);
-    session.piano_roll.add_track(sampler_id);
+    // Piano roll sequences and notes
+    session.piano_roll.add_sequence(saw_id);
+    session.piano_roll.add_sequence(sampler_id);
     session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
     // Automation lane targeting effect param
@@ -260,7 +260,7 @@ fn save_and_load_round_trip_complex() {
         });
 
     let path = temp_db_path();
-    save_project(&path, &session, &instruments).expect("save_project");
+    save_project(&path, &session, &tracks).expect("save_project");
     let (loaded_session, loaded_instruments) = load_project(&path).expect("load_project");
 
     // Custom synthdefs
@@ -271,9 +271,9 @@ fn save_and_load_round_trip_complex() {
     assert_eq!(loaded_synth.params[0].name, "cutoff");
 
     // Instruments + sources
-    assert_eq!(loaded_instruments.instruments.len(), 4);
+    assert_eq!(loaded_instruments.tracks.len(), 4);
     let loaded_saw = loaded_instruments
-        .instruments
+        .tracks
         .iter()
         .find(|i| i.id == saw_id)
         .unwrap();
@@ -318,7 +318,7 @@ fn save_and_load_round_trip_complex() {
     }
 
     let loaded_sampler = loaded_instruments
-        .instruments
+        .tracks
         .iter()
         .find(|i| i.id == sampler_id)
         .unwrap();
@@ -335,7 +335,7 @@ fn save_and_load_round_trip_complex() {
     assert_eq!(config.next_slice_id(), 10);
 
     let loaded_kit = loaded_instruments
-        .instruments
+        .tracks
         .iter()
         .find(|i| i.id == kit_id)
         .unwrap();
@@ -352,7 +352,7 @@ fn save_and_load_round_trip_complex() {
     assert_eq!(chopper.slices[0].name, "A");
 
     let loaded_custom = loaded_instruments
-        .instruments
+        .tracks
         .iter()
         .find(|i| i.id == custom_inst_id)
         .unwrap();

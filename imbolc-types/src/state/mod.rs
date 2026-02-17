@@ -8,8 +8,6 @@ pub mod drum_sequencer;
 pub mod generative;
 pub mod groove;
 pub mod humanize;
-pub mod instrument;
-pub mod instrument_state;
 pub mod io;
 pub mod midi_recording;
 pub mod mixer;
@@ -22,6 +20,8 @@ pub mod recording;
 pub mod sampler;
 pub mod session;
 pub mod theme;
+pub mod track;
+pub mod track_state;
 pub mod vst;
 
 pub use arpeggiator::*;
@@ -34,8 +34,6 @@ pub use drum_sequencer::*;
 pub use generative::*;
 pub use groove::*;
 pub use humanize::*;
-pub use instrument::*;
-pub use instrument_state::*;
 pub use io::*;
 pub use midi_recording::*;
 pub use mixer::*;
@@ -48,6 +46,8 @@ pub use recording::*;
 pub use sampler::*;
 pub use session::*;
 pub use theme::*;
+pub use track::*;
+pub use track_state::*;
 pub use vst::*;
 
 use std::collections::VecDeque;
@@ -55,12 +55,12 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ExportKind, InstrumentId};
+use crate::{ExportKind, TrackId};
 
 /// State for a render-to-WAV operation in progress
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingRender {
-    pub instrument_id: InstrumentId,
+    pub instrument_id: TrackId,
     pub path: PathBuf,
     pub was_looping: bool,
 }
@@ -152,7 +152,7 @@ pub struct ClientDisplayInfo {
 #[derive(Debug, Clone, Default)]
 pub struct NetworkDisplayContext {
     /// Ownership status for each instrument (by ID).
-    pub ownership: std::collections::HashMap<InstrumentId, OwnershipDisplayStatus>,
+    pub ownership: std::collections::HashMap<TrackId, OwnershipDisplayStatus>,
     /// Whether this client has privileged status (can control transport, save, load).
     pub is_privileged: bool,
     /// Name of the privileged client (if any).

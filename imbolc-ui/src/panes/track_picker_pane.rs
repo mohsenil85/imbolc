@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::state::{AppState, InstrumentId};
+use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
@@ -10,17 +10,17 @@ use crate::ui::{
 
 const LIST_HEIGHT: usize = 12;
 
-/// Instrument picker for assigning instruments to drum pads.
+/// Track picker for assigning instruments to drum pads.
 /// Reads the target pad from DrumSequencerState.editing_pad.
-pub struct InstrumentPickerPane {
+pub struct TrackPickerPane {
     keymap: Keymap,
     selected: usize,
     scroll_offset: usize,
     /// Cached list of (instrument_id, name) pairs
-    cached_instruments: Vec<(InstrumentId, String)>,
+    cached_instruments: Vec<(TrackId, String)>,
 }
 
-impl InstrumentPickerPane {
+impl TrackPickerPane {
     pub fn new(keymap: Keymap) -> Self {
         Self {
             keymap,
@@ -40,12 +40,12 @@ impl InstrumentPickerPane {
 
     fn update_instruments(&mut self, state: &AppState) {
         // Get the current instrument (the Kit) to exclude from the list
-        let current_kit_id = state.instruments.selected_instrument().map(|i| i.id);
+        let current_kit_id = state.tracks.selected_track().map(|i| i.id);
 
         // Build list of instruments that can be triggered (exclude the current Kit)
         self.cached_instruments = state
-            .instruments
-            .instruments
+            .tracks
+            .tracks
             .iter()
             .filter(|i| {
                 // Exclude the current Kit instrument
@@ -95,7 +95,7 @@ impl InstrumentPickerPane {
     fn confirm_selection(&self, state: &AppState) -> Action {
         // Get the target pad from state
         let target_pad = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .and_then(|seq| seq.editing_pad);
 
@@ -114,13 +114,13 @@ impl InstrumentPickerPane {
     }
 }
 
-impl Default for InstrumentPickerPane {
+impl Default for TrackPickerPane {
     fn default() -> Self {
         Self::new(Keymap::new())
     }
 }
 
-impl Pane for InstrumentPickerPane {
+impl Pane for TrackPickerPane {
     fn id(&self) -> &'static str {
         "instrument_picker"
     }
@@ -175,21 +175,21 @@ impl Pane for InstrumentPickerPane {
         let rect = center_rect(area, 40, 18);
 
         let border_style = Style::new().fg(Color::CYAN);
-        let inner = buf.draw_block(rect, " Assign Instrument ", border_style, border_style);
+        let inner = buf.draw_block(rect, " Assign Track ", border_style, border_style);
 
         let content_x = inner.x + 1;
         let content_y = inner.y + 1;
 
         // Get the pad number from state
         let pad_num = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .and_then(|seq| seq.editing_pad)
             .map(|p| p + 1)
             .unwrap_or(0);
 
         // Title
-        let title = format!("Select instrument for Pad {}:", pad_num);
+        let title = format!("Select track for Pad {}:", pad_num);
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
             &[(&title, Style::new().fg(Color::CYAN).bold())],
@@ -201,15 +201,12 @@ impl Pane for InstrumentPickerPane {
         if self.cached_instruments.is_empty() {
             buf.draw_line(
                 Rect::new(content_x, list_y, inner.width.saturating_sub(2), 1),
-                &[(
-                    "No instruments available.",
-                    Style::new().fg(Color::DARK_GRAY),
-                )],
+                &[("No tracks available.", Style::new().fg(Color::DARK_GRAY))],
             );
             buf.draw_line(
                 Rect::new(content_x, list_y + 1, inner.width.saturating_sub(2), 1),
                 &[(
-                    "Add a synth instrument first.",
+                    "Add a synth track first.",
                     Style::new().fg(Color::DARK_GRAY),
                 )],
             );
@@ -225,8 +222,8 @@ impl Pane for InstrumentPickerPane {
 
                 // Find instrument to get source type
                 let source_label = state
-                    .instruments
-                    .instrument(*id)
+                    .tracks
+                    .track(*id)
                     .map(|inst| format!("{:?}", inst.source))
                     .unwrap_or_default();
 

@@ -1,14 +1,14 @@
 use super::editing::AdjustMode;
-use super::InstrumentEditPane;
-use crate::state::{AppState, FilterConfig, FilterType, InstrumentSection};
-use crate::ui::action_id::{ActionId, InstrumentEditActionId, ModeActionId};
+use super::TrackEditPane;
+use crate::state::{AppState, FilterConfig, FilterType, TrackSection};
+use crate::ui::action_id::{ActionId, ModeActionId, TrackEditActionId};
 use crate::ui::{
-    translate_key, Action, FileSelectAction, InputEvent, InstrumentAction, KeyCode, PaneId,
-    SessionAction,
+    translate_key, Action, FileSelectAction, InputEvent, KeyCode, PaneId, SessionAction,
+    TrackAction,
 };
 use imbolc_types::ProcessingStage;
 
-impl InstrumentEditPane {
+impl TrackEditPane {
     pub(super) fn handle_action_impl(
         &mut self,
         action: ActionId,
@@ -43,15 +43,12 @@ impl InstrumentEditPane {
                             ) {
                                 // NEW press - spawn voice(s)
                                 if new_pitches.len() == 1 {
-                                    return Action::Instrument(InstrumentAction::PlayNote(
+                                    return Action::Track(TrackAction::PlayNote(
                                         new_pitches[0],
                                         100,
                                     ));
                                 } else {
-                                    return Action::Instrument(InstrumentAction::PlayNotes(
-                                        new_pitches,
-                                        100,
-                                    ));
+                                    return Action::Track(TrackAction::PlayNotes(new_pitches, 100));
                                 }
                             }
                             // Key repeat - sustain, no action needed
@@ -68,7 +65,7 @@ impl InstrumentEditPane {
                     if let KeyCode::Char(c) = event.key {
                         let c = translate_key(c, state.keyboard_layout);
                         if let Some(pad_idx) = self.perf.pad.key_to_pad(c) {
-                            return Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, 100));
+                            return Action::Track(TrackAction::PlayDrumPad(pad_idx, 100));
                         }
                     }
                     Action::None
@@ -78,7 +75,7 @@ impl InstrumentEditPane {
                     let text = self.edit_input.value().to_string();
                     let (section, local_idx) = self.row_info(self.selected_row);
                     match section {
-                        InstrumentSection::Source => {
+                        TrackSection::Source => {
                             let param_idx = if self.source.is_sample() {
                                 if local_idx == 0 {
                                     self.editing = false;
@@ -93,7 +90,7 @@ impl InstrumentEditPane {
                                 param.parse_and_set(&text);
                             }
                         }
-                        InstrumentSection::Processing(i) => {
+                        TrackSection::Processing(i) => {
                             match self.processing_chain.get_mut(i) {
                                 Some(ProcessingStage::Filter(f)) => match local_idx {
                                     1 => {
@@ -126,7 +123,7 @@ impl InstrumentEditPane {
                                 None => {}
                             }
                         }
-                        InstrumentSection::Envelope => {
+                        TrackSection::Envelope => {
                             if let Ok(v) = text.parse::<f32>() {
                                 let max = if local_idx == 2 { 1.0 } else { 5.0 };
                                 let val = v.clamp(0.0, max);
@@ -151,7 +148,7 @@ impl InstrumentEditPane {
                     if let Some(ref backup) = self.edit_backup_value.take() {
                         let (section, local_idx) = self.row_info(self.selected_row);
                         match section {
-                            InstrumentSection::Source => {
+                            TrackSection::Source => {
                                 let param_idx = if self.source.is_sample() {
                                     if local_idx == 0 {
                                         0
@@ -165,41 +162,38 @@ impl InstrumentEditPane {
                                     param.parse_and_set(backup);
                                 }
                             }
-                            InstrumentSection::Processing(i) => {
-                                match self.processing_chain.get_mut(i) {
-                                    Some(ProcessingStage::Filter(f)) => match local_idx {
-                                        1 => {
-                                            if let Ok(v) = backup.parse::<f32>() {
-                                                f.cutoff.value =
-                                                    v.clamp(f.cutoff.min, f.cutoff.max);
-                                            }
-                                        }
-                                        2 => {
-                                            if let Ok(v) = backup.parse::<f32>() {
-                                                f.resonance.value =
-                                                    v.clamp(f.resonance.min, f.resonance.max);
-                                            }
-                                        }
-                                        idx => {
-                                            let extra_idx = idx - 3;
-                                            if let Some(param) = f.extra_params.get_mut(extra_idx) {
-                                                param.parse_and_set(backup);
-                                            }
-                                        }
-                                    },
-                                    Some(ProcessingStage::Eq(_)) => {}
-                                    Some(ProcessingStage::Effect(e)) => {
-                                        if local_idx > 0 {
-                                            let param_idx = local_idx - 1;
-                                            if let Some(param) = e.params.get_mut(param_idx) {
-                                                param.parse_and_set(backup);
-                                            }
+                            TrackSection::Processing(i) => match self.processing_chain.get_mut(i) {
+                                Some(ProcessingStage::Filter(f)) => match local_idx {
+                                    1 => {
+                                        if let Ok(v) = backup.parse::<f32>() {
+                                            f.cutoff.value = v.clamp(f.cutoff.min, f.cutoff.max);
                                         }
                                     }
-                                    None => {}
+                                    2 => {
+                                        if let Ok(v) = backup.parse::<f32>() {
+                                            f.resonance.value =
+                                                v.clamp(f.resonance.min, f.resonance.max);
+                                        }
+                                    }
+                                    idx => {
+                                        let extra_idx = idx - 3;
+                                        if let Some(param) = f.extra_params.get_mut(extra_idx) {
+                                            param.parse_and_set(backup);
+                                        }
+                                    }
+                                },
+                                Some(ProcessingStage::Eq(_)) => {}
+                                Some(ProcessingStage::Effect(e)) => {
+                                    if local_idx > 0 {
+                                        let param_idx = local_idx - 1;
+                                        if let Some(param) = e.params.get_mut(param_idx) {
+                                            param.parse_and_set(backup);
+                                        }
+                                    }
                                 }
-                            }
-                            InstrumentSection::Envelope => {
+                                None => {}
+                            },
+                            TrackSection::Envelope => {
                                 if let Ok(v) = backup.parse::<f32>() {
                                     let max = if local_idx == 2 { 1.0 } else { 5.0 };
                                     let val = v.clamp(0.0, max);
@@ -223,21 +217,21 @@ impl InstrumentEditPane {
             };
         }
 
-        let ActionId::InstrumentEdit(action) = action else {
+        let ActionId::TrackEdit(action) = action else {
             return Action::None;
         };
 
         match action {
             // Normal pane actions
-            InstrumentEditActionId::Done => self.emit_update(),
-            InstrumentEditActionId::Next => {
+            TrackEditActionId::Done => self.emit_update(),
+            TrackEditActionId::Next => {
                 let total = self.total_rows();
                 if total > 0 {
                     self.selected_row = (self.selected_row + 1) % total;
                 }
                 Action::None
             }
-            InstrumentEditActionId::Prev => {
+            TrackEditActionId::Prev => {
                 let total = self.total_rows();
                 if total > 0 {
                     self.selected_row = if self.selected_row == 0 {
@@ -248,43 +242,42 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::Increase => {
+            TrackEditActionId::Increase => {
                 self.adjust_value(true, false);
                 self.emit_update()
             }
-            InstrumentEditActionId::Decrease => {
+            TrackEditActionId::Decrease => {
                 self.adjust_value(false, false);
                 self.emit_update()
             }
-            InstrumentEditActionId::IncreaseBig => {
+            TrackEditActionId::IncreaseBig => {
                 self.adjust_value(true, true);
                 self.emit_update()
             }
-            InstrumentEditActionId::DecreaseBig => {
+            TrackEditActionId::DecreaseBig => {
                 self.adjust_value(false, true);
                 self.emit_update()
             }
-            InstrumentEditActionId::IncreaseTiny => {
+            TrackEditActionId::IncreaseTiny => {
                 self.adjust_value_with_mode(true, AdjustMode::Tiny, state.session.tuning_a4);
                 self.emit_update()
             }
-            InstrumentEditActionId::DecreaseTiny => {
+            TrackEditActionId::DecreaseTiny => {
                 self.adjust_value_with_mode(false, AdjustMode::Tiny, state.session.tuning_a4);
                 self.emit_update()
             }
-            InstrumentEditActionId::IncreaseMusical => {
+            TrackEditActionId::IncreaseMusical => {
                 self.adjust_value_with_mode(true, AdjustMode::Musical, state.session.tuning_a4);
                 self.emit_update()
             }
-            InstrumentEditActionId::DecreaseMusical => {
+            TrackEditActionId::DecreaseMusical => {
                 self.adjust_value_with_mode(false, AdjustMode::Musical, state.session.tuning_a4);
                 self.emit_update()
             }
-            InstrumentEditActionId::EnterEdit => {
+            TrackEditActionId::EnterEdit => {
                 let (section, local_idx) = self.row_info(self.selected_row);
                 // On the sample row, trigger load_sample instead of text edit
-                if self.source.is_sample() && section == InstrumentSection::Source && local_idx == 0
-                {
+                if self.source.is_sample() && section == TrackSection::Source && local_idx == 0 {
                     if let Some(id) = self.instrument_id {
                         return Action::Session(SessionAction::RequestFileBrowser(
                             FileSelectAction::LoadPitchedSample(id),
@@ -293,7 +286,7 @@ impl InstrumentEditPane {
                     return Action::None;
                 }
                 // Skip text edit on effect header rows and EQ rows
-                if let InstrumentSection::Processing(i) = section {
+                if let TrackSection::Processing(i) = section {
                     match self.processing_chain.get(i) {
                         Some(ProcessingStage::Effect(_)) if local_idx == 0 => return Action::None,
                         Some(ProcessingStage::Eq(_)) => return Action::None,
@@ -310,20 +303,19 @@ impl InstrumentEditPane {
                 self.edit_input.set_focused(true);
                 Action::PushLayer("text_edit")
             }
-            InstrumentEditActionId::ToggleFilter => {
+            TrackEditActionId::ToggleFilter => {
                 // Find first filter in chain
                 if let Some(idx) = self.processing_chain.iter().position(|s| s.is_filter()) {
                     // If cursor is on a filter, remove that one; otherwise remove first
-                    let remove_idx =
-                        if let InstrumentSection::Processing(i) = self.current_section() {
-                            if self.processing_chain.get(i).is_some_and(|s| s.is_filter()) {
-                                i
-                            } else {
-                                idx
-                            }
+                    let remove_idx = if let TrackSection::Processing(i) = self.current_section() {
+                        if self.processing_chain.get(i).is_some_and(|s| s.is_filter()) {
+                            i
                         } else {
                             idx
-                        };
+                        }
+                    } else {
+                        idx
+                    };
                     self.processing_chain.remove(remove_idx);
                     let max = self.total_rows().saturating_sub(1);
                     self.selected_row = self.selected_row.min(max);
@@ -336,9 +328,9 @@ impl InstrumentEditPane {
                 }
                 self.emit_update()
             }
-            InstrumentEditActionId::NextFilterType => {
+            TrackEditActionId::NextFilterType => {
                 // Find filter to cycle: prefer the one the cursor is on, else first in chain
-                let filter_idx = if let InstrumentSection::Processing(i) = self.current_section() {
+                let filter_idx = if let TrackSection::Processing(i) = self.current_section() {
                     if self.processing_chain.get(i).is_some_and(|s| s.is_filter()) {
                         Some(i)
                     } else {
@@ -366,11 +358,11 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::AddEffect => {
+            TrackEditActionId::AddEffect => {
                 Action::Nav(crate::ui::NavAction::PushPane(PaneId::AddEffect))
             }
-            InstrumentEditActionId::RemoveEffect => {
-                if let InstrumentSection::Processing(i) = self.current_section() {
+            TrackEditActionId::RemoveEffect => {
+                if let TrackSection::Processing(i) = self.current_section() {
                     if self.processing_chain.get(i).is_some_and(|s| s.is_effect()) {
                         self.processing_chain.remove(i);
                         let max = self.total_rows().saturating_sub(1);
@@ -380,11 +372,11 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::TogglePoly => {
+            TrackEditActionId::TogglePoly => {
                 self.polyphonic = !self.polyphonic;
                 self.emit_update()
             }
-            InstrumentEditActionId::ToggleActive => {
+            TrackEditActionId::ToggleActive => {
                 if self.source.is_audio_input() {
                     self.active = !self.active;
                     self.emit_update()
@@ -392,14 +384,14 @@ impl InstrumentEditPane {
                     Action::None
                 }
             }
-            InstrumentEditActionId::ToggleChannelConfig => {
+            TrackEditActionId::ToggleChannelConfig => {
                 if let Some(id) = self.instrument_id {
                     self.channel_config = self.channel_config.toggle();
-                    return Action::Instrument(InstrumentAction::ToggleChannelConfig(id));
+                    return Action::Track(TrackAction::ToggleChannelConfig(id));
                 }
                 Action::None
             }
-            InstrumentEditActionId::LoadSample => {
+            TrackEditActionId::LoadSample => {
                 if self.source.is_sample() {
                     if let Some(id) = self.instrument_id {
                         Action::Session(SessionAction::RequestFileBrowser(
@@ -412,19 +404,19 @@ impl InstrumentEditPane {
                     Action::None
                 }
             }
-            InstrumentEditActionId::ZeroParam => {
+            TrackEditActionId::ZeroParam => {
                 self.zero_current_param();
                 self.emit_update()
             }
-            InstrumentEditActionId::ZeroSection => {
+            TrackEditActionId::ZeroSection => {
                 self.zero_current_section();
                 self.emit_update()
             }
-            InstrumentEditActionId::ResetParam => {
+            TrackEditActionId::ResetParam => {
                 self.reset_current_param();
                 self.emit_update()
             }
-            InstrumentEditActionId::ToggleEq => {
+            TrackEditActionId::ToggleEq => {
                 if let Some(idx) = self.processing_chain.iter().position(|s| s.is_eq()) {
                     self.processing_chain.remove(idx);
                     let max = self.total_rows().saturating_sub(1);
@@ -444,28 +436,28 @@ impl InstrumentEditPane {
                 }
                 self.emit_update()
             }
-            InstrumentEditActionId::ToggleLfo => {
+            TrackEditActionId::ToggleLfo => {
                 self.lfo.enabled = !self.lfo.enabled;
                 self.emit_update()
             }
-            InstrumentEditActionId::CycleLfoShape => {
+            TrackEditActionId::CycleLfoShape => {
                 self.lfo.shape = self.lfo.shape.next();
                 self.emit_update()
             }
-            InstrumentEditActionId::CycleLfoTarget => {
+            TrackEditActionId::CycleLfoTarget => {
                 self.lfo.target = self.lfo.target.next_lfo_target();
                 self.emit_update()
             }
-            InstrumentEditActionId::VstParams => {
+            TrackEditActionId::VstParams => {
                 let (section, _local_idx) = self.row_info(self.selected_row);
-                if section == InstrumentSection::Source && self.source.is_vst() {
+                if section == TrackSection::Source && self.source.is_vst() {
                     // Navigate to VST params pane for VST instrument source
                     Action::Nav(crate::ui::NavAction::PushPane(PaneId::VstParams))
-                } else if let InstrumentSection::Processing(i) = section {
+                } else if let TrackSection::Processing(i) = section {
                     if let Some(ProcessingStage::Effect(effect)) = self.processing_chain.get(i) {
                         if effect.effect_type.is_vst() {
                             if let Some(instrument_id) = self.instrument_id {
-                                Action::Instrument(InstrumentAction::ShowVstEffectParams(
+                                Action::Track(TrackAction::ShowVstEffectParams(
                                     instrument_id,
                                     effect.id,
                                 ))
@@ -485,33 +477,33 @@ impl InstrumentEditPane {
                     Action::None
                 }
             }
-            InstrumentEditActionId::NextSection => {
+            TrackEditActionId::NextSection => {
                 let current = self.current_section();
                 let skip_env = self.source.is_vst();
                 let n = self.processing_chain.len();
                 let next = match current {
-                    InstrumentSection::Source => {
+                    TrackSection::Source => {
                         if n > 0 {
-                            InstrumentSection::Processing(0)
+                            TrackSection::Processing(0)
                         } else {
-                            InstrumentSection::Lfo
+                            TrackSection::Lfo
                         }
                     }
-                    InstrumentSection::Processing(i) => {
+                    TrackSection::Processing(i) => {
                         if i + 1 < n {
-                            InstrumentSection::Processing(i + 1)
+                            TrackSection::Processing(i + 1)
                         } else {
-                            InstrumentSection::Lfo
+                            TrackSection::Lfo
                         }
                     }
-                    InstrumentSection::Lfo => {
+                    TrackSection::Lfo => {
                         if skip_env {
-                            InstrumentSection::Source
+                            TrackSection::Source
                         } else {
-                            InstrumentSection::Envelope
+                            TrackSection::Envelope
                         }
                     }
-                    InstrumentSection::Envelope => InstrumentSection::Source,
+                    TrackSection::Envelope => TrackSection::Source,
                 };
                 for i in 0..self.total_rows() {
                     if self.section_for_row(i) == next {
@@ -521,33 +513,33 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::PrevSection => {
+            TrackEditActionId::PrevSection => {
                 let current = self.current_section();
                 let skip_env = self.source.is_vst();
                 let n = self.processing_chain.len();
                 let prev = match current {
-                    InstrumentSection::Source => {
+                    TrackSection::Source => {
                         if skip_env {
-                            InstrumentSection::Lfo
+                            TrackSection::Lfo
                         } else {
-                            InstrumentSection::Envelope
+                            TrackSection::Envelope
                         }
                     }
-                    InstrumentSection::Processing(i) => {
+                    TrackSection::Processing(i) => {
                         if i > 0 {
-                            InstrumentSection::Processing(i - 1)
+                            TrackSection::Processing(i - 1)
                         } else {
-                            InstrumentSection::Source
+                            TrackSection::Source
                         }
                     }
-                    InstrumentSection::Lfo => {
+                    TrackSection::Lfo => {
                         if n > 0 {
-                            InstrumentSection::Processing(n - 1)
+                            TrackSection::Processing(n - 1)
                         } else {
-                            InstrumentSection::Source
+                            TrackSection::Source
                         }
                     }
-                    InstrumentSection::Envelope => InstrumentSection::Lfo,
+                    TrackSection::Envelope => TrackSection::Lfo,
                 };
                 for i in 0..self.total_rows() {
                     if self.section_for_row(i) == prev {
@@ -557,8 +549,8 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::MoveStageUp => {
-                if let InstrumentSection::Processing(i) = self.current_section() {
+            TrackEditActionId::MoveStageUp => {
+                if let TrackSection::Processing(i) = self.current_section() {
                     if i > 0 {
                         let (_, local_idx) = self.row_info(self.selected_row);
                         self.processing_chain.swap(i, i - 1);
@@ -568,8 +560,8 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::MoveStageDown => {
-                if let InstrumentSection::Processing(i) = self.current_section() {
+            TrackEditActionId::MoveStageDown => {
+                if let TrackSection::Processing(i) = self.current_section() {
                     if i + 1 < self.processing_chain.len() {
                         let (_, local_idx) = self.row_info(self.selected_row);
                         self.processing_chain.swap(i, i + 1);
@@ -579,8 +571,8 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::ToggleEffectBypass => {
-                if let InstrumentSection::Processing(i) = self.current_section() {
+            TrackEditActionId::ToggleEffectBypass => {
+                if let TrackSection::Processing(i) = self.current_section() {
                     if let Some(ProcessingStage::Effect(e)) = self.processing_chain.get_mut(i) {
                         e.enabled = !e.enabled;
                         return self.emit_update();
@@ -588,7 +580,7 @@ impl InstrumentEditPane {
                 }
                 Action::None
             }
-            InstrumentEditActionId::TagParam => {
+            TrackEditActionId::TagParam => {
                 if let Some(id) = self.instrument_id {
                     if let Some(target) = self.build_automation_target(id) {
                         return Action::Tag(imbolc_types::TagAction::SetPendingTarget(target));

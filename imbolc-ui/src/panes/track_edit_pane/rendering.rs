@@ -1,11 +1,11 @@
-use super::InstrumentEditPane;
+use super::TrackEditPane;
 use crate::state::{AppState, Param, ParamValue};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{Color, Rect, RenderBuf, Style};
 use imbolc_types::ProcessingStage;
 
-impl InstrumentEditPane {
+impl TrackEditPane {
     pub(super) fn render_impl(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
         let rect = center_rect(area, 97, 29);
 

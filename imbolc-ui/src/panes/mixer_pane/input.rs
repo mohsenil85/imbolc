@@ -2,12 +2,12 @@ use super::{BusDetailSection, DetailTarget, GroupDetailSection, MixerPane, Mixer
 use super::{
     CHANNEL_WIDTH, METER_HEIGHT, NUM_VISIBLE_BUSES, NUM_VISIBLE_CHANNELS, NUM_VISIBLE_GROUPS,
 };
-use crate::state::{AppState, InstrumentId, MixerSelection};
+use crate::state::{AppState, MixerSelection, TrackId};
 use crate::ui::action_id::{ActionId, MixerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, GroupAction, InputEvent, InstrumentAction, MixerAction, MouseButton,
-    MouseEvent, MouseEventKind, NavAction, PaneId, Rect,
+    Action, BusAction, GroupAction, InputEvent, MixerAction, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, PaneId, Rect, TrackAction,
 };
 use imbolc_types::{BusId, EffectId};
 
@@ -106,9 +106,9 @@ impl MixerPane {
             }
             ActionId::Mixer(MixerActionId::EnterDetail) => {
                 match state.session.mixer.selection {
-                    MixerSelection::Instrument(idx) => {
-                        if idx < state.instruments.instruments.len() {
-                            self.detail_mode = Some(DetailTarget::Instrument(idx));
+                    MixerSelection::Track(idx) => {
+                        if idx < state.tracks.tracks.len() {
+                            self.detail_mode = Some(DetailTarget::Track(idx));
                             self.detail_section = MixerSection::Effects;
                             self.detail_cursor = 0;
                             self.effect_scroll = 0;
@@ -140,7 +140,7 @@ impl MixerPane {
         area: Rect,
         state: &AppState,
     ) -> Action {
-        let active_groups = state.instruments.active_layer_groups();
+        let active_groups = state.tracks.active_layer_groups();
         let num_group_slots = active_groups.len().min(NUM_VISIBLE_GROUPS);
         let group_section_width = if num_group_slots > 0 {
             num_group_slots as u16 * CHANNEL_WIDTH + 2
@@ -169,11 +169,9 @@ impl MixerPane {
 
         // Calculate scroll offsets (same as render)
         let instrument_scroll = match state.session.mixer.selection {
-            MixerSelection::Instrument(idx) => Self::calc_scroll_offset(
-                idx,
-                state.instruments.instruments.len(),
-                NUM_VISIBLE_CHANNELS,
-            ),
+            MixerSelection::Track(idx) => {
+                Self::calc_scroll_offset(idx, state.tracks.tracks.len(), NUM_VISIBLE_CHANNELS)
+            }
             _ => 0,
         };
         let bus_scroll = match state.session.mixer.selection {
@@ -187,16 +185,14 @@ impl MixerPane {
 
         match event.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                // Instrument channels region
+                // Track channels region
                 let inst_end_x = base_x + (NUM_VISIBLE_CHANNELS as u16 * CHANNEL_WIDTH);
                 if col >= base_x && col < inst_end_x {
                     let channel = ((col - base_x) / CHANNEL_WIDTH) as usize;
                     let idx = instrument_scroll + channel;
-                    if idx < state.instruments.instruments.len() {
+                    if idx < state.tracks.tracks.len() {
                         self.send_target = None;
-                        return Action::Mixer(MixerAction::SelectAt(MixerSelection::Instrument(
-                            idx,
-                        )));
+                        return Action::Mixer(MixerAction::SelectAt(MixerSelection::Track(idx)));
                     }
                 }
 
@@ -318,7 +314,7 @@ impl MixerPane {
                         if self.detail_cursor > max_after {
                             self.detail_cursor = max_after;
                         }
-                        return Action::Instrument(InstrumentAction::RemoveEffect(inst_id, ei));
+                        return Action::Track(TrackAction::RemoveEffect(inst_id, ei));
                     }
                 }
                 Action::None
@@ -326,26 +322,24 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::ToggleEffect) => {
                 if self.detail_section == MixerSection::Effects {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
-                        return Action::Instrument(InstrumentAction::ToggleEffectBypass(
-                            inst_id, ei,
-                        ));
+                        return Action::Track(TrackAction::ToggleEffectBypass(inst_id, ei));
                     }
                 }
                 Action::None
             }
             ActionId::Mixer(MixerActionId::ToggleFilter) => {
-                Action::Instrument(InstrumentAction::ToggleFilter(inst_id))
+                Action::Track(TrackAction::ToggleFilter(inst_id))
             }
             ActionId::Mixer(MixerActionId::NextFilterType) => {
-                Action::Instrument(InstrumentAction::NextFilterType(inst_id))
+                Action::Track(TrackAction::NextFilterType(inst_id))
             }
             ActionId::Mixer(MixerActionId::MoveUp) => {
                 if self.detail_section == MixerSection::Effects {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
-                        let inst = state.instruments.instrument(inst_id);
+                        let inst = state.tracks.track(inst_id);
                         if let Some(chain_idx) = inst.and_then(|i| i.effect_chain_index(ei)) {
                             if chain_idx > 0 {
-                                return Action::Instrument(InstrumentAction::MoveStage(
+                                return Action::Track(TrackAction::MoveStage(
                                     inst_id, chain_idx, -1,
                                 ));
                             }
@@ -357,10 +351,10 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::MoveDown) => {
                 if self.detail_section == MixerSection::Effects {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
-                        if let Some(inst) = state.instruments.instrument(inst_id) {
+                        if let Some(inst) = state.tracks.track(inst_id) {
                             if let Some(chain_idx) = inst.effect_chain_index(ei) {
                                 if chain_idx + 1 < inst.channel_strip.processing_chain.len() {
-                                    return Action::Instrument(InstrumentAction::MoveStage(
+                                    return Action::Track(TrackAction::MoveStage(
                                         inst_id, chain_idx, 1,
                                     ));
                                 }
@@ -664,13 +658,11 @@ impl MixerPane {
         }
     }
 
-    fn adjust_detail_param(&self, state: &AppState, inst_id: InstrumentId, delta: f32) -> Action {
+    fn adjust_detail_param(&self, state: &AppState, inst_id: TrackId, delta: f32) -> Action {
         match self.detail_section {
             MixerSection::Effects => {
                 if let Some((ei, Some(pi))) = self.decode_effect_cursor(state) {
-                    return Action::Instrument(InstrumentAction::AdjustEffectParam(
-                        inst_id, ei, pi, delta,
-                    ));
+                    return Action::Track(TrackAction::AdjustEffectParam(inst_id, ei, pi, delta));
                 }
                 Action::None
             }
@@ -683,9 +675,9 @@ impl MixerPane {
                 Action::None
             }
             MixerSection::Filter => match self.detail_cursor {
-                0 => Action::Instrument(InstrumentAction::NextFilterType(inst_id)),
-                1 => Action::Instrument(InstrumentAction::AdjustFilterCutoff(inst_id, delta)),
-                2 => Action::Instrument(InstrumentAction::AdjustFilterResonance(inst_id, delta)),
+                0 => Action::Track(TrackAction::NextFilterType(inst_id)),
+                1 => Action::Track(TrackAction::AdjustFilterCutoff(inst_id, delta)),
+                2 => Action::Track(TrackAction::AdjustFilterResonance(inst_id, delta)),
                 _ => Action::None,
             },
             MixerSection::Lfo => Action::None,

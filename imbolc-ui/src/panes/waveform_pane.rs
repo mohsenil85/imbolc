@@ -129,7 +129,7 @@ impl WaveformPane {
 
         let title = if is_recorded {
             " Recorded Waveform ".to_string()
-        } else if let Some(inst) = state.instruments.selected_instrument() {
+        } else if let Some(inst) = state.tracks.selected_track() {
             format!(" Audio Input: {} ", inst.name)
         } else {
             " Audio Input ".to_string()

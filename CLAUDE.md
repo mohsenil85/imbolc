@@ -49,7 +49,7 @@ cargo run -p imbolc-ui      # Run the DAW
 
 | Crate | Purpose | Key Files |
 |-------|---------|-----------|
-| `imbolc-types` | Shared types: Instrument, Action, SourceType, etc. | `src/state/`, `src/action.rs` |
+| `imbolc-types` | Shared types: Track, Action, SourceType, etc. | `src/state/`, `src/action.rs` |
 | `imbolc-audio` | Audio engine: SuperCollider OSC, playback, routing | `src/engine/`, `src/handle.rs` |
 | `imbolc-core` | State management, action dispatch, persistence | `src/dispatch/`, `src/state/` |
 | `imbolc-ui` | Terminal rendering, panes, keybindings | `src/panes/`, `src/ui/` |
@@ -89,7 +89,7 @@ Each crate has its own `CLAUDE.md` with detailed guidance:
 **Hard rule: One SynthDef per file.**
 1. Create file in `imbolc-core/synthdefs/defs/<category>/<name>.scd`
 2. Compile: `imbolc-core/bin/compile-synthdefs` (or `cd imbolc-core/synthdefs && sclang compile.scd`)
-3. Add `SourceType` variant in `imbolc-types/src/state/instrument/source_type.rs` if needed
+3. Add `SourceType` variant in `imbolc-types/src/state/track/source_type.rs` if needed
 
 See [imbolc-core/synthdefs/defs/README.md](imbolc-core/synthdefs/defs/README.md) for file template and conventions.
 

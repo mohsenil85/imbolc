@@ -98,8 +98,8 @@ pub fn complete_input(input: &str) -> Vec<String> {
         let group = parts[0];
         match group {
             "show" => vec![
-                "instruments",
-                "instrument",
+                "tracks",
+                "track",
                 "transport",
                 "mixer",
                 "notes",
@@ -137,8 +137,8 @@ pub fn complete_input(input: &str) -> Vec<String> {
         match group {
             "show" => {
                 let subs = [
-                    "instruments",
-                    "instrument",
+                    "tracks",
+                    "track",
                     "transport",
                     "mixer",
                     "notes",
@@ -184,7 +184,7 @@ pub fn complete_input(input: &str) -> Vec<String> {
         // After command, hint at arg types from source types etc.
         let group = parts[0];
         let cmd = parts[1];
-        if group == "instrument" && cmd == "add" && parts.len() == 2 {
+        if group == "track" && cmd == "add" && parts.len() == 2 {
             return imbolc_types::SourceType::all_short_names()
                 .iter()
                 .map(|s| s.to_string())
