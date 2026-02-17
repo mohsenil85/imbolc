@@ -189,10 +189,10 @@ impl AddPane {
     fn selected_option_action(&self) -> Action {
         match self.cached_options.get(self.selector.selected) {
             Some(AddOption::Source(source)) => Action::Instrument(InstrumentAction::Add(*source)),
-            Some(AddOption::ImportCustom) => Action::Session(SessionAction::OpenFileBrowser(
+            Some(AddOption::ImportCustom) => Action::Session(SessionAction::RequestFileBrowser(
                 FileSelectAction::ImportCustomSynthDef,
             )),
-            Some(AddOption::ImportVst) => Action::Session(SessionAction::OpenFileBrowser(
+            Some(AddOption::ImportVst) => Action::Session(SessionAction::RequestFileBrowser(
                 FileSelectAction::ImportVstInstrument,
             )),
             Some(AddOption::Separator(_)) | None => Action::None,

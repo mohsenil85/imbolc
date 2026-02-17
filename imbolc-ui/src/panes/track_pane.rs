@@ -134,7 +134,7 @@ impl Pane for TrackPane {
                 }
                 let idx = self.selected_clip_index.min(clips.len().saturating_sub(1));
                 let clip_id = clips[idx].id;
-                Action::Arrangement(ArrangementAction::PlaceClip {
+                Action::Arrangement(ArrangementAction::AddClipInstance {
                     clip_id,
                     instrument_id,
                     start_tick: arr.cursor_tick,
@@ -151,7 +151,7 @@ impl Pane for TrackPane {
             ActionId::Track(TrackActionId::Delete) => {
                 // Delete selected placement
                 if let Some(placement) = arr.placement_at(instrument_id, arr.cursor_tick) {
-                    Action::Arrangement(ArrangementAction::RemovePlacement(placement.id))
+                    Action::Arrangement(ArrangementAction::RemoveClipInstance(placement.id))
                 } else {
                     Action::None
                 }
@@ -168,7 +168,7 @@ impl Pane for TrackPane {
             }
             ActionId::Track(TrackActionId::Duplicate) => {
                 if let Some(placement) = arr.placement_at(instrument_id, arr.cursor_tick) {
-                    Action::Arrangement(ArrangementAction::DuplicatePlacement(placement.id))
+                    Action::Arrangement(ArrangementAction::DuplicateClipInstance(placement.id))
                 } else {
                     Action::None
                 }
@@ -176,14 +176,14 @@ impl Pane for TrackPane {
             ActionId::Track(TrackActionId::ToggleMode) => {
                 Action::Arrangement(ArrangementAction::TogglePlayMode)
             }
-            ActionId::Track(TrackActionId::PlayStop) => {
-                Action::Arrangement(ArrangementAction::PlayStop)
+            ActionId::Track(TrackActionId::TogglePlayback) => {
+                Action::Arrangement(ArrangementAction::TogglePlayback)
             }
             ActionId::Track(TrackActionId::MoveLeft) => {
                 if let Some(placement) = arr.placement_at(instrument_id, arr.cursor_tick) {
                     let new_start = placement.start_tick.saturating_sub(arr.ticks_per_col);
-                    Action::Arrangement(ArrangementAction::MovePlacement {
-                        placement_id: placement.id,
+                    Action::Arrangement(ArrangementAction::MoveClipInstance {
+                        clip_instance_id: placement.id,
                         new_start_tick: new_start,
                     })
                 } else {
@@ -193,8 +193,8 @@ impl Pane for TrackPane {
             ActionId::Track(TrackActionId::MoveRight) => {
                 if let Some(placement) = arr.placement_at(instrument_id, arr.cursor_tick) {
                     let new_start = placement.start_tick + arr.ticks_per_col;
-                    Action::Arrangement(ArrangementAction::MovePlacement {
-                        placement_id: placement.id,
+                    Action::Arrangement(ArrangementAction::MoveClipInstance {
+                        clip_instance_id: placement.id,
                         new_start_tick: new_start,
                     })
                 } else {
@@ -207,7 +207,7 @@ impl Pane for TrackPane {
             ActionId::Track(TrackActionId::ZoomOut) => {
                 Action::Arrangement(ArrangementAction::ZoomOut)
             }
-            ActionId::Track(TrackActionId::SelectNextPlacement) => {
+            ActionId::Track(TrackActionId::SelectNextClipInstance) => {
                 let placements = arr.placements_for_instrument(instrument_id);
                 if placements.is_empty() {
                     return Action::None;
@@ -223,9 +223,9 @@ impl Pane for TrackPane {
                     }
                     None => Some(0),
                 };
-                Action::Arrangement(ArrangementAction::SelectPlacement(next))
+                Action::Arrangement(ArrangementAction::SelectClipInstance(next))
             }
-            ActionId::Track(TrackActionId::SelectPrevPlacement) => {
+            ActionId::Track(TrackActionId::SelectPrevClipInstance) => {
                 let placements = arr.placements_for_instrument(instrument_id);
                 if placements.is_empty() {
                     return Action::None;
@@ -235,7 +235,7 @@ impl Pane for TrackPane {
                     Some(i) => Some(i - 1),
                     None => Some(0),
                 };
-                Action::Arrangement(ArrangementAction::SelectPlacement(prev))
+                Action::Arrangement(ArrangementAction::SelectClipInstance(prev))
             }
             ActionId::Track(TrackActionId::SelectNextClip) => {
                 let clips = arr.clips_for_instrument(instrument_id);

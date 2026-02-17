@@ -75,8 +75,8 @@ impl Pane for GroovePane {
                     Some(next),
                 ))
             }
-            ActionId::Groove(GrooveActionId::CycleTimeSig) => {
-                Action::Instrument(InstrumentAction::CycleTrackTimeSignature(instrument_id))
+            ActionId::Groove(GrooveActionId::NextTimeSig) => {
+                Action::Instrument(InstrumentAction::NextTrackTimeSignature(instrument_id))
             }
             ActionId::Groove(GrooveActionId::Reset) => {
                 Action::Instrument(InstrumentAction::ResetTrackGroove(instrument_id))

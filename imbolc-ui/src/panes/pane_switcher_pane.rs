@@ -38,7 +38,7 @@ const PANE_ENTRIES: &[(PaneId, &str, &str)] = &[
     (PaneId::Automation, "Automation", "F7"),
     (PaneId::Eq, "12-Band EQ", "F8"),
     (PaneId::Instrument, "Instrument List", "Ctrl+g"),
-    (PaneId::SampleChopper, "Sample Chopper", ""),
+    (PaneId::SampleSlicer, "Sample Slicer", ""),
     (PaneId::FrameEdit, "Frame Settings", "Ctrl+f"),
     (PaneId::MidiSettings, "MIDI Settings", "Ctrl+m"),
     (PaneId::Generative, "Generative Engine", "F11"),

@@ -6,9 +6,9 @@ use crate::state::AppState;
 
 // Re-export all action types from the core crate
 pub use crate::action::{
-    Action, ArrangementAction, AutomationAction, BusAction, ChopperAction, DispatchResult,
-    FileSelectAction, GenerativeAction, InstrumentAction, InstrumentUpdate, LayerGroupAction,
-    MixerAction, NavAction, NavIntent, PaneId, PianoRollAction, SequencerAction, ServerAction,
+    Action, ArrangementAction, AutomationAction, BusAction, DispatchResult, FileSelectAction,
+    GenerativeAction, GroupAction, InstrumentAction, InstrumentUpdate, MixerAction, NavAction,
+    NavIntent, PaneId, PianoRollAction, SampleSlicerAction, SequencerAction, ServerAction,
     SessionAction, StatusEvent, ToggleResult, VstParamAction,
 };
 

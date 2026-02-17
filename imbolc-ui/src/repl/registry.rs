@@ -19,22 +19,22 @@ repl_actions! {
         "set-filter"               => SetFilter(id: InstrumentId, ft: Option<FilterType>);             "Set filter type (or none)"
         "toggle-effect-bypass"     => ToggleEffectBypass(id: InstrumentId, fx_id: EffectId);           "Toggle effect bypass"
         "toggle-filter"            => ToggleFilter(id: InstrumentId);                                  "Toggle filter on/off"
-        "cycle-filter-type"        => CycleFilterType(id: InstrumentId);                               "Cycle to next filter type"
+        "cycle-filter-type"        => NextFilterType(id: InstrumentId);                                "Cycle to next filter type"
         "adjust-filter-cutoff"     => AdjustFilterCutoff(id: InstrumentId, d: f32);                    "Adjust filter cutoff"
         "adjust-filter-resonance"  => AdjustFilterResonance(id: InstrumentId, d: f32);                 "Adjust filter resonance"
         "adjust-effect-param"      => AdjustEffectParam(id: InstrumentId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust effect parameter"
-        "toggle-arp"               => ToggleArp(id: InstrumentId);                                     "Toggle arpeggiator"
-        "cycle-arp-direction"      => CycleArpDirection(id: InstrumentId);                             "Cycle arp direction forward"
-        "cycle-arp-direction-rev"  => CycleArpDirectionReverse(id: InstrumentId);                      "Cycle arp direction reverse"
-        "cycle-arp-rate"           => CycleArpRate(id: InstrumentId);                                  "Cycle arp rate forward"
-        "cycle-arp-rate-rev"       => CycleArpRateReverse(id: InstrumentId);                           "Cycle arp rate reverse"
-        "adjust-arp-octaves"       => AdjustArpOctaves(id: InstrumentId, d: i8);                       "Adjust arp octave range"
-        "adjust-arp-gate"          => AdjustArpGate(id: InstrumentId, d: f32);                         "Adjust arp gate length"
-        "cycle-chord-shape"        => CycleChordShape(id: InstrumentId);                               "Cycle chord shape forward"
-        "cycle-chord-shape-rev"    => CycleChordShapeReverse(id: InstrumentId);                        "Cycle chord shape reverse"
+        "toggle-arp"               => ToggleArpeggiator(id: InstrumentId);                              "Toggle arpeggiator"
+        "cycle-arp-direction"      => NextArpeggiatorDirection(id: InstrumentId);                      "Cycle arp direction forward"
+        "cycle-arp-direction-rev"  => PrevArpeggiatorDirection(id: InstrumentId);                      "Cycle arp direction reverse"
+        "cycle-arp-rate"           => NextArpeggiatorRate(id: InstrumentId);                           "Cycle arp rate forward"
+        "cycle-arp-rate-rev"       => PrevArpeggiatorRate(id: InstrumentId);                           "Cycle arp rate reverse"
+        "adjust-arp-octaves"       => AdjustArpeggiatorOctaves(id: InstrumentId, d: i8);                "Adjust arp octave range"
+        "adjust-arp-gate"          => AdjustArpeggiatorGate(id: InstrumentId, d: f32);                 "Adjust arp gate length"
+        "cycle-chord-shape"        => NextChordShape(id: InstrumentId);                                "Cycle chord shape forward"
+        "cycle-chord-shape-rev"    => PrevChordShape(id: InstrumentId);                                "Cycle chord shape reverse"
         "clear-chord-shape"        => ClearChordShape(id: InstrumentId);                               "Clear chord shape"
-        "set-eq-param"             => SetEqParam(id: InstrumentId, band: usize, kind: EqParamKind, v: f32); "Set EQ band parameter"
-        "toggle-eq"                => ToggleEq(id: InstrumentId);                                      "Toggle EQ on/off"
+        "set-eq-param"             => SetEqualizerParam(id: InstrumentId, band: usize, kind: EqualizerParamKind, v: f32); "Set EQ band parameter"
+        "toggle-eq"                => ToggleEqualizer(id: InstrumentId);                               "Toggle EQ on/off"
         "link-layer"               => LinkLayer(id: InstrumentId, target: InstrumentId);               "Link instrument to layer group"
         "unlink-layer"             => UnlinkLayer(id: InstrumentId);                                   "Unlink instrument from layer group"
         "adjust-layer-octave"      => AdjustLayerOctaveOffset(id: InstrumentId, d: i8);                "Adjust layer octave offset"
@@ -43,7 +43,7 @@ repl_actions! {
         "adjust-track-hum-time"    => AdjustTrackHumanizeTiming(id: InstrumentId, d: f32);             "Adjust track timing humanization"
         "adjust-track-timing"      => AdjustTrackTimingOffset(id: InstrumentId, d: f32);               "Adjust track timing offset"
         "reset-track-groove"       => ResetTrackGroove(id: InstrumentId);                              "Reset per-track groove settings"
-        "cycle-track-time-sig"     => CycleTrackTimeSignature(id: InstrumentId);                       "Cycle track time signature"
+        "cycle-track-time-sig"     => NextTrackTimeSignature(id: InstrumentId);                        "Cycle track time signature"
         "toggle-lfo"               => ToggleLfo(id: InstrumentId);                                     "Toggle LFO on/off"
         "adjust-lfo-rate"          => AdjustLfoRate(id: InstrumentId, d: f32);                         "Adjust LFO rate"
         "adjust-lfo-depth"         => AdjustLfoDepth(id: InstrumentId, d: f32);                        "Adjust LFO depth"
@@ -63,23 +63,23 @@ repl_actions! {
         "adjust-level"          => AdjustLevel(d: f32);                            "Adjust channel level"
         "toggle-mute"           => ToggleMute;                                     "Toggle mute on selected channel"
         "toggle-solo"           => ToggleSolo;                                     "Toggle solo on selected channel"
-        "cycle-section"         => CycleSection;                                   "Cycle mixer section"
-        "cycle-output"          => CycleOutput;                                    "Cycle output routing forward"
-        "cycle-output-rev"      => CycleOutputReverse;                             "Cycle output routing reverse"
+        "cycle-section"         => NextSection;                                    "Cycle mixer section"
+        "cycle-output"          => NextOutput;                                     "Cycle output routing forward"
+        "cycle-output-rev"      => PrevOutput;                                     "Cycle output routing reverse"
         "adjust-send"           => AdjustSend(bus: BusId, d: f32);                 "Adjust send level to bus"
         "toggle-send"           => ToggleSend(bus: BusId);                         "Toggle send to bus"
-        "cycle-send-tap"        => CycleSendTapPoint(bus: BusId);                  "Cycle send tap point"
+        "cycle-send-tap"        => NextSendTapPoint(bus: BusId);                   "Cycle send tap point"
         "adjust-pan"            => AdjustPan(d: f32);                              "Adjust pan position"
     }
 
     group "piano-roll" => DomainAction::PianoRoll, PianoRollAction {
-        "play-stop"         => PlayStop;                                           "Toggle playback"
+        "play-stop"         => TogglePlayback;                                           "Toggle playback"
         "toggle-loop"       => ToggleLoop;                                         "Toggle loop mode"
         "set-loop-start"    => SetLoopStart(tick: u32);                            "Set loop start tick"
         "set-loop-end"      => SetLoopEnd(tick: u32);                              "Set loop end tick"
-        "cycle-time-sig"    => CycleTimeSig;                                       "Cycle time signature"
+        "cycle-time-sig"    => NextTimeSig;                                       "Cycle time signature"
         "toggle-poly-mode"  => TogglePolyMode(track: usize);                      "Toggle polyphonic mode"
-        "play-stop-record"  => PlayStopRecord;                                     "Toggle record mode"
+        "play-stop-record"  => ToggleRecordPlayback;                                "Toggle record mode"
         "adjust-swing"      => AdjustSwing(d: f32);                                "Adjust swing amount"
         "render"            => RenderToWav(id: InstrumentId);                      "Render track to WAV"
         "bounce"            => BounceToWav;                                         "Bounce master to WAV"
@@ -90,10 +90,10 @@ repl_actions! {
     group "sequencer" => DomainAction::Sequencer, SequencerAction {
         "toggle-step"           => ToggleStep(pad: usize, step: usize);                        "Toggle sequencer step"
         "adjust-velocity"       => AdjustVelocity(pad: usize, step: usize, d: i8);             "Adjust step velocity"
-        "play-stop"             => PlayStop;                                                    "Toggle sequencer playback"
+        "play-stop"             => TogglePlayback;                                               "Toggle sequencer playback"
         "clear-pad"             => ClearPad(pad: usize);                                       "Clear all steps on pad"
         "clear-pattern"         => ClearPattern;                                                "Clear entire pattern"
-        "cycle-pattern-length"  => CyclePatternLength;                                          "Cycle pattern length"
+        "cycle-pattern-length"  => NextPatternLength;                                          "Cycle pattern length"
         "next-pattern"          => NextPattern;                                                  "Go to next pattern"
         "prev-pattern"          => PrevPattern;                                                  "Go to previous pattern"
         "adjust-pad-level"      => AdjustPadLevel(pad: usize, d: f32);                         "Adjust pad level"
@@ -105,21 +105,21 @@ repl_actions! {
         "toggle-reverse"        => ToggleReverse(pad: usize);                                   "Toggle pad reverse playback"
         "adjust-pad-pitch"      => AdjustPadPitch(pad: usize, d: i8);                          "Adjust pad pitch"
         "adjust-step-pitch"     => AdjustStepPitch(pad: usize, step: usize, d: i8);            "Adjust step pitch offset"
-        "cycle-step-resolution" => CycleStepResolution;                                         "Cycle step resolution"
+        "cycle-step-resolution" => NextStepResolution;                                         "Cycle step resolution"
     }
 
     group "arrangement" => DomainAction::Arrangement, ArrangementAction {
         "toggle-play-mode"       => TogglePlayMode;                                "Toggle arrangement play mode"
         "delete-clip"            => DeleteClip(id: ClipId);                        "Delete a clip"
-        "remove-placement"       => RemovePlacement(id: PlacementId);              "Remove a clip placement"
-        "duplicate-placement"    => DuplicatePlacement(id: PlacementId);           "Duplicate a placement"
+        "remove-clip-instance"   => RemoveClipInstance(id: ClipInstanceId);         "Remove a clip instance"
+        "duplicate-clip-instance" => DuplicateClipInstance(id: ClipInstanceId);    "Duplicate a clip instance"
         "move-cursor"            => MoveCursor(d: i32);                            "Move arrangement cursor"
         "scroll-view"            => ScrollView(d: i32);                            "Scroll arrangement view"
         "zoom-in"                => ZoomIn;                                         "Zoom in on arrangement"
         "zoom-out"               => ZoomOut;                                        "Zoom out on arrangement"
         "enter-clip-edit"        => EnterClipEdit(id: ClipId);                     "Enter clip editing mode"
         "exit-clip-edit"         => ExitClipEdit;                                   "Exit clip editing mode"
-        "play-stop"              => PlayStop;                                       "Toggle arrangement playback"
+        "play-stop"              => TogglePlayback;                                       "Toggle arrangement playback"
         "select-lane"            => SelectLane(idx: usize);                        "Select arrangement lane"
     }
 
@@ -146,7 +146,7 @@ repl_actions! {
         "adjust-hum-vel"        => AdjustHumanizeVelocity(d: f32);                "Adjust global velocity humanization"
         "adjust-hum-time"       => AdjustHumanizeTiming(d: f32);                  "Adjust global timing humanization"
         "toggle-master-mute"    => ToggleMasterMute;                              "Toggle master mute"
-        "cycle-theme"           => CycleTheme;                                    "Cycle UI theme"
+        "cycle-theme"           => NextTheme;                                    "Cycle UI theme"
         "create-checkpoint"     => CreateCheckpoint(name: String);                "Create named checkpoint"
         "restore-checkpoint"    => RestoreCheckpoint(id: i64);                    "Restore checkpoint by ID"
         "delete-checkpoint"     => DeleteCheckpoint(id: i64);                     "Delete checkpoint by ID"
@@ -159,8 +159,8 @@ repl_actions! {
         "compile-synthdefs"     => CompileSynthDefs;                              "Compile SynthDefs"
         "compile-vst-synthdefs" => CompileVstSynthDefs;                           "Compile VST SynthDefs"
         "load-synthdefs"        => LoadSynthDefs;                                 "Load SynthDefs into server"
-        "record-master"         => RecordMaster;                                  "Toggle master recording"
-        "record-input"          => RecordInput;                                   "Toggle input recording"
+        "record-master"         => ToggleRecordMaster;                             "Toggle master recording"
+        "record-input"          => ToggleRecordInput;                              "Toggle input recording"
     }
 
     group "bus" => DomainAction::Bus, BusAction {
@@ -174,14 +174,14 @@ repl_actions! {
         "adjust-effect-param"   => AdjustEffectParam(id: BusId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust bus effect parameter"
     }
 
-    group "layer-group" => DomainAction::LayerGroup, LayerGroupAction {
+    group "layer-group" => DomainAction::Group, GroupAction {
         "add-effect"            => AddEffect(gid: u32, fx: EffectType);                            "Add effect to layer group"
         "remove-effect"         => RemoveEffect(gid: u32, fx_id: EffectId);                        "Remove effect from layer group"
         "move-effect"           => MoveEffect(gid: u32, fx_id: EffectId, d: i8);                   "Move layer group effect"
         "toggle-effect-bypass"  => ToggleEffectBypass(gid: u32, fx_id: EffectId);                  "Toggle layer group effect bypass"
         "adjust-effect-param"   => AdjustEffectParam(gid: u32, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust layer group effect param"
-        "toggle-eq"             => ToggleEq(gid: u32);                                             "Toggle layer group EQ"
-        "set-eq-param"          => SetEqParam(gid: u32, band: usize, kind: EqParamKind, v: f32);   "Set layer group EQ band param"
+        "toggle-eq"             => ToggleEqualizer(gid: u32);                                      "Toggle layer group EQ"
+        "set-eq-param"          => SetEqualizerParam(gid: u32, band: usize, kind: EqualizerParamKind, v: f32); "Set layer group EQ band param"
         "rename"                => Rename(gid: u32, name: String);                                  "Rename layer group"
     }
 
@@ -206,18 +206,18 @@ repl_actions! {
         "set-euclidean-pulses"      => SetEuclideanPulses(id: GenVoiceId, n: u8);            "Set Euclidean pulse count"
         "set-euclidean-steps"       => SetEuclideanSteps(id: GenVoiceId, n: u8);             "Set Euclidean step count"
         "set-euclidean-rotation"    => SetEuclideanRotation(id: GenVoiceId, n: u8);           "Set Euclidean rotation"
-        "cycle-euclidean-pitch"     => CycleEuclideanPitchMode(id: GenVoiceId);              "Cycle Euclidean pitch mode"
-        "cycle-voice-rate"          => CycleVoiceRate(id: GenVoiceId);                       "Cycle voice rate forward"
-        "cycle-voice-rate-rev"      => CycleVoiceRateReverse(id: GenVoiceId);                "Cycle voice rate reverse"
+        "cycle-euclidean-pitch"     => NextEuclideanPitchMode(id: GenVoiceId);              "Cycle Euclidean pitch mode"
+        "cycle-voice-rate"          => NextVoiceRate(id: GenVoiceId);                       "Cycle voice rate forward"
+        "cycle-voice-rate-rev"      => PrevVoiceRate(id: GenVoiceId);                "Cycle voice rate reverse"
         "adjust-markov-rest"        => AdjustMarkovRestProb(id: GenVoiceId, d: f32);         "Adjust Markov rest probability"
-        "cycle-markov-duration"     => CycleMarkovDurationMode(id: GenVoiceId);              "Cycle Markov duration mode"
+        "cycle-markov-duration"     => NextMarkovDurationMode(id: GenVoiceId);              "Cycle Markov duration mode"
         "randomize-markov"          => RandomizeMarkovMatrix(id: GenVoiceId);                 "Randomize Markov transition matrix"
         "set-lsystem-iterations"    => SetLSystemIterations(id: GenVoiceId, n: u8);           "Set L-System iterations"
         "adjust-lsystem-step"       => AdjustLSystemStepInterval(id: GenVoiceId, d: i8);      "Adjust L-System step interval"
         "remove-lsystem-rule"       => RemoveLSystemRule(id: GenVoiceId, idx: usize);         "Remove L-System rule by index"
     }
 
-    group "chopper" => DomainAction::Chopper, ChopperAction {
+    group "slicer" => DomainAction::SampleSlicer, SampleSlicerAction {
         "add-slice"         => AddSlice(pos: f32);                     "Add slice at cursor position"
         "remove-slice"      => RemoveSlice;                            "Remove selected slice"
         "assign-to-pad"     => AssignToPad(pad: usize);               "Assign slice to pad"
@@ -226,7 +226,7 @@ repl_actions! {
         "select-slice"      => SelectSlice(d: i8);                     "Select next/prev slice"
         "nudge-start"       => NudgeSliceStart(d: f32);                "Nudge slice start point"
         "nudge-end"         => NudgeSliceEnd(d: f32);                  "Nudge slice end point"
-        "move-cursor"       => MoveCursor(d: i8);                      "Move chopper cursor"
+        "move-cursor"       => MoveCursor(d: i8);                      "Move slicer cursor"
         "commit-all"        => CommitAll;                              "Assign all slices to pads"
     }
 
@@ -283,7 +283,7 @@ impl super::parse::ReplParseable for i64 {
     }
 }
 
-// ClipId and PlacementId are u32 type aliases, already covered
+// ClipId and ClipInstanceId are u32 type aliases, already covered
 // AutomationLaneId is u32, already covered
 
 #[cfg(test)]

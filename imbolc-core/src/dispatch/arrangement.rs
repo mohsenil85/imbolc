@@ -113,7 +113,7 @@ pub(super) fn dispatch_arrangement(
             }
             DispatchResult::none()
         }
-        ArrangementAction::PlaceClip {
+        ArrangementAction::AddClipInstance {
             clip_id,
             instrument_id,
             start_tick,
@@ -127,46 +127,49 @@ pub(super) fn dispatch_arrangement(
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
         }
-        ArrangementAction::RemovePlacement(placement_id) => {
-            state.session.arrangement.remove_placement(*placement_id);
+        ArrangementAction::RemoveClipInstance(clip_instance_id) => {
+            state
+                .session
+                .arrangement
+                .remove_placement(*clip_instance_id);
             let mut result = DispatchResult::none();
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
         }
-        ArrangementAction::MovePlacement {
-            placement_id,
+        ArrangementAction::MoveClipInstance {
+            clip_instance_id,
             new_start_tick,
         } => {
             state
                 .session
                 .arrangement
-                .move_placement(*placement_id, *new_start_tick);
+                .move_placement(*clip_instance_id, *new_start_tick);
             let mut result = DispatchResult::none();
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
         }
-        ArrangementAction::ResizePlacement {
-            placement_id,
+        ArrangementAction::ResizeClipInstance {
+            clip_instance_id,
             new_length,
         } => {
             state
                 .session
                 .arrangement
-                .resize_placement(*placement_id, *new_length);
+                .resize_placement(*clip_instance_id, *new_length);
             let mut result = DispatchResult::none();
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
         }
-        ArrangementAction::DuplicatePlacement(placement_id) => {
+        ArrangementAction::DuplicateClipInstance(clip_instance_id) => {
             let original = state
                 .session
                 .arrangement
                 .placements
                 .iter()
-                .find(|p| p.id == *placement_id)
+                .find(|p| p.id == *clip_instance_id)
                 .cloned();
 
             if let Some(original) = original {
@@ -193,7 +196,7 @@ pub(super) fn dispatch_arrangement(
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
         }
-        ArrangementAction::SelectPlacement(selection) => {
+        ArrangementAction::SelectClipInstance(selection) => {
             state.session.arrangement.selected_placement = *selection;
             DispatchResult::none()
         }
@@ -365,7 +368,7 @@ pub(super) fn dispatch_arrangement(
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result
         }
-        ArrangementAction::PlayStop => {
+        ArrangementAction::TogglePlayback => {
             let pr = &mut state.session.piano_roll;
             pr.playing = !pr.playing;
             state.audio.playing = pr.playing;
@@ -695,7 +698,7 @@ mod tests {
 
         // Place the clip twice
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -704,7 +707,7 @@ mod tests {
             &mut audio,
         );
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 384,
@@ -781,7 +784,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         let result = dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 100,
@@ -817,7 +820,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -825,10 +828,10 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
 
         let result = dispatch_arrangement(
-            &ArrangementAction::RemovePlacement(placement_id),
+            &ArrangementAction::RemoveClipInstance(clip_instance_id),
             &mut state,
             &mut audio,
         );
@@ -856,7 +859,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -864,11 +867,11 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
         state.session.arrangement.selected_placement = Some(0);
 
         dispatch_arrangement(
-            &ArrangementAction::RemovePlacement(placement_id),
+            &ArrangementAction::RemoveClipInstance(clip_instance_id),
             &mut state,
             &mut audio,
         );
@@ -893,7 +896,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -901,11 +904,11 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
 
         let result = dispatch_arrangement(
-            &ArrangementAction::MovePlacement {
-                placement_id,
+            &ArrangementAction::MoveClipInstance {
+                clip_instance_id,
                 new_start_tick: 200,
             },
             &mut state,
@@ -935,7 +938,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -943,11 +946,11 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
 
         let result = dispatch_arrangement(
-            &ArrangementAction::ResizePlacement {
-                placement_id,
+            &ArrangementAction::ResizeClipInstance {
+                clip_instance_id,
                 new_length: Some(192),
             },
             &mut state,
@@ -977,7 +980,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -985,12 +988,12 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
 
         // First set an override
         dispatch_arrangement(
-            &ArrangementAction::ResizePlacement {
-                placement_id,
+            &ArrangementAction::ResizeClipInstance {
+                clip_instance_id,
                 new_length: Some(192),
             },
             &mut state,
@@ -998,8 +1001,8 @@ mod tests {
         );
         // Then clear it
         dispatch_arrangement(
-            &ArrangementAction::ResizePlacement {
-                placement_id,
+            &ArrangementAction::ResizeClipInstance {
+                clip_instance_id,
                 new_length: None,
             },
             &mut state,
@@ -1030,7 +1033,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -1038,10 +1041,10 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
 
         let result = dispatch_arrangement(
-            &ArrangementAction::DuplicatePlacement(placement_id),
+            &ArrangementAction::DuplicateClipInstance(clip_instance_id),
             &mut state,
             &mut audio,
         );
@@ -1073,7 +1076,7 @@ mod tests {
         let clip_id = state.session.arrangement.clips[0].id;
 
         dispatch_arrangement(
-            &ArrangementAction::PlaceClip {
+            &ArrangementAction::AddClipInstance {
                 clip_id,
                 instrument_id: inst_id,
                 start_tick: 0,
@@ -1081,19 +1084,19 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let placement_id = state.session.arrangement.placements[0].id;
+        let clip_instance_id = state.session.arrangement.placements[0].id;
 
         // Set a length override, then duplicate
         dispatch_arrangement(
-            &ArrangementAction::ResizePlacement {
-                placement_id,
+            &ArrangementAction::ResizeClipInstance {
+                clip_instance_id,
                 new_length: Some(200),
             },
             &mut state,
             &mut audio,
         );
         dispatch_arrangement(
-            &ArrangementAction::DuplicatePlacement(placement_id),
+            &ArrangementAction::DuplicateClipInstance(clip_instance_id),
             &mut state,
             &mut audio,
         );
@@ -1109,7 +1112,7 @@ mod tests {
         let (mut state, mut audio) = setup();
 
         dispatch_arrangement(
-            &ArrangementAction::DuplicatePlacement(9999),
+            &ArrangementAction::DuplicateClipInstance(9999),
             &mut state,
             &mut audio,
         );
@@ -1123,14 +1126,14 @@ mod tests {
         let (mut state, mut audio) = setup();
 
         dispatch_arrangement(
-            &ArrangementAction::SelectPlacement(Some(3)),
+            &ArrangementAction::SelectClipInstance(Some(3)),
             &mut state,
             &mut audio,
         );
         assert_eq!(state.session.arrangement.selected_placement, Some(3));
 
         dispatch_arrangement(
-            &ArrangementAction::SelectPlacement(None),
+            &ArrangementAction::SelectClipInstance(None),
             &mut state,
             &mut audio,
         );

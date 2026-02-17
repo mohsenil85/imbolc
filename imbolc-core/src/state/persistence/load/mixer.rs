@@ -72,7 +72,7 @@ pub(super) fn load_layer_group_mixers(
     session: &mut SessionState,
 ) -> SqlResult<()> {
     use crate::state::instrument::MixerSend;
-    use imbolc_types::LayerGroupMixer;
+    use imbolc_types::GroupMixer;
 
     session.mixer.layer_group_mixers.clear();
 
@@ -125,7 +125,7 @@ pub(super) fn load_layer_group_mixers(
             })?
             .collect::<SqlResult<_>>()?;
 
-        let mut gm = LayerGroupMixer {
+        let mut gm = GroupMixer {
             group_id,
             name,
             channel_strip: ChannelStrip {

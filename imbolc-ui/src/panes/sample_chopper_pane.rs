@@ -2,21 +2,21 @@ use std::any::Any;
 
 use crate::panes::FileBrowserPane;
 use crate::state::AppState;
-use crate::ui::action_id::{ActionId, SampleChopperActionId};
+use crate::ui::action_id::{ActionId, SampleSlicerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, ChopperAction, Color, FileSelectAction, InputEvent, Keymap, NavAction, Pane, Rect,
-    RenderBuf, Style,
+    Action, Color, FileSelectAction, InputEvent, Keymap, NavAction, Pane, Rect, RenderBuf,
+    SampleSlicerAction, Style,
 };
 
-pub struct SampleChopperPane {
+pub struct SampleSlicerPane {
     keymap: Keymap,
     cursor_pos: f32, // 0.0-1.0
     auto_slice_n: usize,
     file_browser: FileBrowserPane,
 }
 
-impl SampleChopperPane {
+impl SampleSlicerPane {
     pub fn new(keymap: Keymap, file_browser_keymap: Keymap) -> Self {
         Self {
             keymap,
@@ -36,10 +36,10 @@ impl SampleChopperPane {
             .and_then(|i| i.drum_sequencer())
     }
 
-    fn get_chopper_state<'a>(
+    fn get_slicer_state<'a>(
         &self,
         state: &'a AppState,
-    ) -> Option<&'a crate::state::drum_sequencer::ChopperState> {
+    ) -> Option<&'a crate::state::drum_sequencer::SampleSlicerState> {
         self.selected_drum_sequencer(state)
             .and_then(|d| d.chopper.as_ref())
     }
@@ -51,15 +51,15 @@ impl SampleChopperPane {
     }
 }
 
-impl Default for SampleChopperPane {
+impl Default for SampleSlicerPane {
     fn default() -> Self {
         Self::new(Keymap::new(), Keymap::new())
     }
 }
 
-impl Pane for SampleChopperPane {
+impl Pane for SampleSlicerPane {
     fn id(&self) -> &'static str {
-        "sample_chopper"
+        "sample_slicer"
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {
@@ -71,33 +71,33 @@ impl Pane for SampleChopperPane {
         }
 
         match action {
-            ActionId::SampleChopper(SampleChopperActionId::MoveLeft) => {
+            ActionId::SampleSlicer(SampleSlicerActionId::MoveLeft) => {
                 self.cursor_pos = (self.cursor_pos - 0.01).max(0.0);
-                Action::Chopper(ChopperAction::MoveCursor(-1))
+                Action::SampleSlicer(SampleSlicerAction::MoveCursor(-1))
             }
-            ActionId::SampleChopper(SampleChopperActionId::MoveRight) => {
+            ActionId::SampleSlicer(SampleSlicerActionId::MoveRight) => {
                 self.cursor_pos = (self.cursor_pos + 0.01).min(1.0);
-                Action::Chopper(ChopperAction::MoveCursor(1))
+                Action::SampleSlicer(SampleSlicerAction::MoveCursor(1))
             }
-            ActionId::SampleChopper(SampleChopperActionId::NextSlice) => {
-                Action::Chopper(ChopperAction::SelectSlice(1))
+            ActionId::SampleSlicer(SampleSlicerActionId::NextSlice) => {
+                Action::SampleSlicer(SampleSlicerAction::SelectSlice(1))
             }
-            ActionId::SampleChopper(SampleChopperActionId::PrevSlice) => {
-                Action::Chopper(ChopperAction::SelectSlice(-1))
+            ActionId::SampleSlicer(SampleSlicerActionId::PrevSlice) => {
+                Action::SampleSlicer(SampleSlicerAction::SelectSlice(-1))
             }
-            ActionId::SampleChopper(SampleChopperActionId::NudgeStart) => {
-                Action::Chopper(ChopperAction::NudgeSliceStart(-0.005))
+            ActionId::SampleSlicer(SampleSlicerActionId::NudgeStart) => {
+                Action::SampleSlicer(SampleSlicerAction::NudgeSliceStart(-0.005))
             }
-            ActionId::SampleChopper(SampleChopperActionId::NudgeEnd) => {
-                Action::Chopper(ChopperAction::NudgeSliceEnd(0.005))
+            ActionId::SampleSlicer(SampleSlicerActionId::NudgeEnd) => {
+                Action::SampleSlicer(SampleSlicerAction::NudgeSliceEnd(0.005))
             }
-            ActionId::SampleChopper(SampleChopperActionId::Chop) => {
-                Action::Chopper(ChopperAction::AddSlice(self.cursor_pos))
+            ActionId::SampleSlicer(SampleSlicerActionId::Chop) => {
+                Action::SampleSlicer(SampleSlicerAction::AddSlice(self.cursor_pos))
             }
-            ActionId::SampleChopper(SampleChopperActionId::Delete) => {
-                Action::Chopper(ChopperAction::RemoveSlice)
+            ActionId::SampleSlicer(SampleSlicerActionId::Delete) => {
+                Action::SampleSlicer(SampleSlicerAction::RemoveSlice)
             }
-            ActionId::SampleChopper(SampleChopperActionId::AutoSlice) => {
+            ActionId::SampleSlicer(SampleSlicerActionId::AutoSlice) => {
                 let n = self.auto_slice_n;
                 self.auto_slice_n = match n {
                     4 => 8,
@@ -105,20 +105,20 @@ impl Pane for SampleChopperPane {
                     12 => 16,
                     _ => 4,
                 };
-                Action::Chopper(ChopperAction::AutoSlice(n))
+                Action::SampleSlicer(SampleSlicerAction::AutoSlice(n))
             }
-            ActionId::SampleChopper(SampleChopperActionId::Commit) => {
-                Action::Chopper(ChopperAction::CommitAll)
+            ActionId::SampleSlicer(SampleSlicerActionId::Commit) => {
+                Action::SampleSlicer(SampleSlicerAction::CommitAll)
             }
-            ActionId::SampleChopper(SampleChopperActionId::LoadSample) => {
-                Action::Chopper(ChopperAction::LoadSample)
+            ActionId::SampleSlicer(SampleSlicerActionId::LoadSample) => {
+                Action::SampleSlicer(SampleSlicerAction::LoadSample)
             }
-            ActionId::SampleChopper(SampleChopperActionId::Preview) => {
-                Action::Chopper(ChopperAction::PreviewSlice)
+            ActionId::SampleSlicer(SampleSlicerActionId::Preview) => {
+                Action::SampleSlicer(SampleSlicerAction::PreviewSlice)
             }
-            ActionId::SampleChopper(SampleChopperActionId::Back) => Action::Nav(NavAction::PopPane),
-            ActionId::SampleChopper(SampleChopperActionId::AssignToPad(pad_num)) => {
-                Action::Chopper(ChopperAction::AssignToPad(
+            ActionId::SampleSlicer(SampleSlicerActionId::Back) => Action::Nav(NavAction::PopPane),
+            ActionId::SampleSlicer(SampleSlicerActionId::AssignToPad(pad_num)) => {
+                Action::SampleSlicer(SampleSlicerAction::AssignToPad(
                     pad_num.saturating_sub(1) as usize
                 ))
             }
@@ -139,7 +139,7 @@ impl Pane for SampleChopperPane {
 
         if self.selected_drum_sequencer(state).is_none() {
             let border_style = Style::new().fg(Color::GRAY);
-            let inner = buf.draw_block(rect, " Sample Chopper ", border_style, border_style);
+            let inner = buf.draw_block(rect, " Sample Slicer ", border_style, border_style);
             buf.draw_line(
                 Rect::new(inner.x + 1, inner.y + 1, inner.width.saturating_sub(2), 1),
                 &[(
@@ -151,10 +151,10 @@ impl Pane for SampleChopperPane {
         }
 
         let border_style = Style::new().fg(Color::GRAY);
-        let _inner = buf.draw_block(rect, " Sample Chopper ", border_style, border_style);
+        let _inner = buf.draw_block(rect, " Sample Slicer ", border_style, border_style);
 
-        // Get chopper state
-        let chopper = match self.get_chopper_state(state) {
+        // Get slicer state
+        let chopper = match self.get_slicer_state(state) {
             Some(c) => c,
             None => {
                 buf.draw_line(
@@ -339,7 +339,7 @@ impl Pane for SampleChopperPane {
     fn on_enter(&mut self, state: &AppState) {
         if self.should_show_file_browser(state) {
             self.file_browser
-                .open_for(FileSelectAction::LoadChopperSample, None);
+                .open_for(FileSelectAction::LoadSlicerSample, None);
         }
     }
 }

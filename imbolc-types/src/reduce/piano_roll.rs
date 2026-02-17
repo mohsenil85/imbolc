@@ -14,7 +14,7 @@ pub(super) fn reduce(action: &PianoRollAction, session: &mut SessionState) -> bo
                 .toggle_note(*track, *pitch, *tick, *duration, *velocity);
             true
         }
-        PianoRollAction::PlayStop => {
+        PianoRollAction::TogglePlayback => {
             let pr = &mut session.piano_roll;
             pr.playing = !pr.playing;
             if !pr.playing {
@@ -22,7 +22,7 @@ pub(super) fn reduce(action: &PianoRollAction, session: &mut SessionState) -> bo
             }
             true
         }
-        PianoRollAction::PlayStopRecord => {
+        PianoRollAction::ToggleRecordPlayback => {
             let is_playing = session.piano_roll.playing;
             if !is_playing {
                 session.piano_roll.playing = true;
@@ -45,7 +45,7 @@ pub(super) fn reduce(action: &PianoRollAction, session: &mut SessionState) -> bo
             session.piano_roll.loop_end = *tick;
             true
         }
-        PianoRollAction::CycleTimeSig => {
+        PianoRollAction::NextTimeSig => {
             let new_ts = match session.time_signature {
                 (4, 4) => (3, 4),
                 (3, 4) => (6, 8),

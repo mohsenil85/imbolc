@@ -8,9 +8,9 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AutomationLaneId, AutomationTarget, BusId, ClipId, ClipboardNote, CurveType, DrumStep,
-    EffectId, EffectType, EnvConfig, FilterType, GenVoiceId, GenerativeAlgorithm, InstrumentId,
-    LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, PlacementId, ProcessingStage,
+    AutomationLaneId, AutomationTarget, BusId, ClipId, ClipInstanceId, ClipboardNote, CurveType,
+    DrumStep, EffectId, EffectType, EnvConfig, FilterType, GenVoiceId, GenerativeAlgorithm,
+    InstrumentId, LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, ProcessingStage,
     ServerStatus, SourceType, VstPluginKind,
 };
 
@@ -46,7 +46,7 @@ pub enum PaneId {
     PianoRoll,
     ProjectBrowser,
     QuitPrompt,
-    SampleChopper,
+    SampleSlicer,
     SaveAs,
     Sequencer,
     Server,
@@ -86,7 +86,7 @@ impl PaneId {
             PaneId::PianoRoll => "piano_roll",
             PaneId::ProjectBrowser => "project_browser",
             PaneId::QuitPrompt => "quit_prompt",
-            PaneId::SampleChopper => "sample_chopper",
+            PaneId::SampleSlicer => "sample_slicer",
             PaneId::SaveAs => "save_as",
             PaneId::Sequencer => "sequencer",
             PaneId::Server => "server",
@@ -127,7 +127,7 @@ impl PaneId {
             "piano_roll" => Some(PaneId::PianoRoll),
             "project_browser" => Some(PaneId::ProjectBrowser),
             "quit_prompt" => Some(PaneId::QuitPrompt),
-            "sample_chopper" => Some(PaneId::SampleChopper),
+            "sample_slicer" => Some(PaneId::SampleSlicer),
             "save_as" => Some(PaneId::SaveAs),
             "sequencer" => Some(PaneId::Sequencer),
             "server" => Some(PaneId::Server),
@@ -199,20 +199,20 @@ impl LfoParamKind {
 
 /// Identifies an EQ band parameter for targeted /n_set updates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EqParamKind {
+pub enum EqualizerParamKind {
     Freq,
     Gain,
     Q,
     Enabled,
 }
 
-impl EqParamKind {
+impl EqualizerParamKind {
     pub fn as_str(&self) -> &'static str {
         match self {
-            EqParamKind::Freq => "freq",
-            EqParamKind::Gain => "gain",
-            EqParamKind::Q => "q",
-            EqParamKind::Enabled => "on",
+            EqualizerParamKind::Freq => "freq",
+            EqualizerParamKind::Gain => "gain",
+            EqualizerParamKind::Q => "q",
+            EqualizerParamKind::Enabled => "on",
         }
     }
 }
@@ -225,7 +225,7 @@ pub enum VstTarget {
 }
 
 // ============================================================================
-// Server / Bus / Chopper actions
+// Server / Bus / SampleSlicer actions
 // ============================================================================
 
 /// Audio server actions — Start/Restart carry device selections.
@@ -251,8 +251,8 @@ pub enum ServerAction {
         sample_rate: u32,
         scsynth_args: String,
     },
-    RecordMaster,
-    RecordInput,
+    ToggleRecordMaster,
+    ToggleRecordInput,
 }
 
 /// Bus management actions.
@@ -278,7 +278,7 @@ pub enum BusAction {
 
 /// Layer group actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum LayerGroupAction {
+pub enum GroupAction {
     /// Add an effect to a layer group
     AddEffect(u32, EffectType),
     /// Remove an effect from a layer group
@@ -290,16 +290,16 @@ pub enum LayerGroupAction {
     /// Adjust a parameter on a layer group effect
     AdjustEffectParam(u32, EffectId, ParamIndex, f32),
     /// Toggle EQ on/off for a layer group
-    ToggleEq(u32),
+    ToggleEqualizer(u32),
     /// Set an EQ band parameter on a layer group (group_id, band_index, param, value)
-    SetEqParam(u32, usize, EqParamKind, f32),
+    SetEqualizerParam(u32, usize, EqualizerParamKind, f32),
     /// Rename a layer group
     Rename(u32, String),
 }
 
-/// Sample chopper actions.
+/// Sample slicer actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ChopperAction {
+pub enum SampleSlicerAction {
     LoadSample,
     LoadSampleResult(PathBuf),
     AddSlice(f32), // cursor_pos
@@ -325,7 +325,7 @@ pub enum FileSelectAction {
     ImportVstInstrument,
     ImportVstEffect,
     LoadDrumSample(usize), // pad index
-    LoadChopperSample,
+    LoadSlicerSample,
     LoadPitchedSample(InstrumentId),
     LoadImpulseResponse(InstrumentId, EffectId), // instrument_id, effect_id
     ImportProject,
@@ -386,7 +386,7 @@ pub enum AudioEffect {
     SetEffectParam(InstrumentId, EffectId, ParamIndex, f32),
     SetLfoParam(InstrumentId, LfoParamKind, f32),
     SetBusEffectParam(BusId, EffectId, ParamIndex, f32),
-    SetLayerGroupEffectParam(u32, EffectId, ParamIndex, f32),
+    SetGroupEffectParam(u32, EffectId, ParamIndex, f32),
 }
 
 impl AudioEffect {
@@ -531,12 +531,12 @@ pub enum MixerAction {
     AdjustLevel(f32),
     ToggleMute,
     ToggleSolo,
-    CycleSection,
-    CycleOutput,
-    CycleOutputReverse,
+    NextSection,
+    NextOutput,
+    PrevOutput,
     AdjustSend(BusId, f32),
     ToggleSend(BusId),
-    CycleSendTapPoint(BusId),
+    NextSendTapPoint(BusId),
     AdjustPan(f32),
 }
 
@@ -548,16 +548,16 @@ pub enum SessionAction {
     Load,
     LoadFrom(PathBuf),
     NewProject,
-    UpdateSession(MusicalSettings),
-    UpdateSessionLive(MusicalSettings),
-    OpenFileBrowser(FileSelectAction),
+    SetSession(MusicalSettings),
+    SetSessionLive(MusicalSettings),
+    RequestFileBrowser(FileSelectAction),
     ImportCustomSynthDef(PathBuf),
     ImportVstPlugin(PathBuf, VstPluginKind),
     AdjustHumanizeVelocity(f32),
     AdjustHumanizeTiming(f32),
     ToggleMasterMute,
     /// Cycle through available themes (dark -> light -> high contrast)
-    CycleTheme,
+    NextTheme,
     /// Create a named checkpoint (persistent restore point)
     CreateCheckpoint(String),
     /// Restore project state to a checkpoint
@@ -633,22 +633,22 @@ pub enum ArrangementAction {
     },
     DeleteClip(ClipId),
     RenameClip(ClipId, String),
-    PlaceClip {
+    AddClipInstance {
         clip_id: ClipId,
         instrument_id: InstrumentId,
         start_tick: u32,
     },
-    RemovePlacement(PlacementId),
-    MovePlacement {
-        placement_id: PlacementId,
+    RemoveClipInstance(ClipInstanceId),
+    MoveClipInstance {
+        clip_instance_id: ClipInstanceId,
         new_start_tick: u32,
     },
-    ResizePlacement {
-        placement_id: PlacementId,
+    ResizeClipInstance {
+        clip_instance_id: ClipInstanceId,
         new_length: Option<u32>,
     },
-    DuplicatePlacement(PlacementId),
-    SelectPlacement(Option<usize>),
+    DuplicateClipInstance(ClipInstanceId),
+    SelectClipInstance(Option<usize>),
     SelectLane(usize),
     MoveCursor(i32),
     ScrollView(i32),
@@ -656,7 +656,7 @@ pub enum ArrangementAction {
     ZoomOut,
     EnterClipEdit(ClipId),
     ExitClipEdit,
-    PlayStop,
+    TogglePlayback,
 }
 
 /// Piano roll actions — all variants carry the data they need.
@@ -669,11 +669,11 @@ pub enum PianoRollAction {
         velocity: u8,
         track: usize,
     },
-    PlayStop,
+    TogglePlayback,
     ToggleLoop,
     SetLoopStart(u32),
     SetLoopEnd(u32),
-    CycleTimeSig,
+    NextTimeSig,
     TogglePolyMode(usize),
     PlayNote {
         pitch: u8,
@@ -697,7 +697,7 @@ pub enum PianoRollAction {
         pitches: Vec<u8>,
         instrument_id: InstrumentId,
     },
-    PlayStopRecord,
+    ToggleRecordPlayback,
     AdjustSwing(f32), // delta for swing amount
     RenderToWav(InstrumentId),
     /// Delete all notes in the given region (used by Cut)
@@ -743,13 +743,13 @@ impl PianoRollAction {
 
             // Actions without explicit instrument_id (use track index, need state to resolve)
             Self::ToggleNote { .. }
-            | Self::PlayStop
+            | Self::TogglePlayback
             | Self::ToggleLoop
             | Self::SetLoopStart(_)
             | Self::SetLoopEnd(_)
-            | Self::CycleTimeSig
+            | Self::NextTimeSig
             | Self::TogglePolyMode(_)
-            | Self::PlayStopRecord
+            | Self::ToggleRecordPlayback
             | Self::AdjustSwing(_)
             | Self::DeleteNotesInRegion { .. }
             | Self::PasteNotes { .. }
@@ -766,11 +766,11 @@ impl PianoRollAction {
 pub enum SequencerAction {
     ToggleStep(usize, usize),         // (pad_idx, step_idx)
     AdjustVelocity(usize, usize, i8), // (pad_idx, step_idx, delta)
-    PlayStop,
+    TogglePlayback,
     LoadSample(usize), // pad_idx
     ClearPad(usize),   // pad_idx
     ClearPattern,
-    CyclePatternLength,
+    NextPatternLength,
     NextPattern,
     PrevPattern,
     AdjustPadLevel(usize, f32),       // (pad_idx, delta)
@@ -817,12 +817,12 @@ pub enum SequencerAction {
     /// Adjust the trigger frequency for a pad
     SetPadTriggerFreq(usize, f32), // pad_idx, freq
     /// Set the editing pad and open instrument picker
-    OpenInstrumentPicker(usize), // pad_idx
+    SelectEditingPad(usize), // pad_idx
     /// Cycle step resolution (1/4 -> 1/8 -> 1/16 -> 1/32)
-    CycleStepResolution,
+    NextStepResolution,
 }
 
-/// Data carried by InstrumentAction::Update to apply edits without dispatch reading pane state.
+/// Data carried by InstrumentAction::SetState to apply edits without dispatch reading pane state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstrumentUpdate {
     pub id: InstrumentId,
@@ -841,14 +841,14 @@ pub enum InstrumentAction {
     Add(SourceType),
     Delete(InstrumentId),
     Edit(InstrumentId),
-    Update(Box<InstrumentUpdate>),
+    SetState(Box<InstrumentUpdate>),
     AddEffect(InstrumentId, EffectType),
     RemoveEffect(InstrumentId, EffectId),
     MoveStage(InstrumentId, usize, i8),
     SetFilter(InstrumentId, Option<FilterType>),
     ToggleEffectBypass(InstrumentId, EffectId),
     ToggleFilter(InstrumentId),
-    CycleFilterType(InstrumentId),
+    NextFilterType(InstrumentId),
     AdjustFilterCutoff(InstrumentId, f32),
     AdjustFilterResonance(InstrumentId, f32),
     AdjustEffectParam(InstrumentId, EffectId, ParamIndex, f32),
@@ -861,20 +861,20 @@ pub enum InstrumentAction {
     SelectLast,
     PlayDrumPad(usize, u8),
     LoadSampleResult(InstrumentId, PathBuf),
-    ToggleArp(InstrumentId),
-    CycleArpDirection(InstrumentId),
-    CycleArpDirectionReverse(InstrumentId),
-    CycleArpRate(InstrumentId),
-    CycleArpRateReverse(InstrumentId),
-    AdjustArpOctaves(InstrumentId, i8),
-    AdjustArpGate(InstrumentId, f32),
-    CycleChordShape(InstrumentId),
-    CycleChordShapeReverse(InstrumentId),
+    ToggleArpeggiator(InstrumentId),
+    NextArpeggiatorDirection(InstrumentId),
+    PrevArpeggiatorDirection(InstrumentId),
+    NextArpeggiatorRate(InstrumentId),
+    PrevArpeggiatorRate(InstrumentId),
+    AdjustArpeggiatorOctaves(InstrumentId, i8),
+    AdjustArpeggiatorGate(InstrumentId, f32),
+    NextChordShape(InstrumentId),
+    PrevChordShape(InstrumentId),
     ClearChordShape(InstrumentId),
     LoadIRResult(InstrumentId, EffectId, PathBuf), // instrument_id, effect_id, path
-    OpenVstEffectParams(InstrumentId, EffectId),   // instrument_id, effect_id
-    SetEqParam(InstrumentId, usize, EqParamKind, f32), // instrument_id, band_index, param, value
-    ToggleEq(InstrumentId),
+    ShowVstEffectParams(InstrumentId, EffectId),   // instrument_id, effect_id
+    SetEqualizerParam(InstrumentId, usize, EqualizerParamKind, f32), // instrument_id, band_index, param, value
+    ToggleEqualizer(InstrumentId),
     LinkLayer(InstrumentId, InstrumentId),
     UnlinkLayer(InstrumentId),
     AdjustLayerOctaveOffset(InstrumentId, i8),
@@ -891,7 +891,7 @@ pub enum InstrumentAction {
     ResetTrackGroove(InstrumentId),
     // Per-track time signature
     SetTrackTimeSignature(InstrumentId, Option<(u8, u8)>),
-    CycleTrackTimeSignature(InstrumentId),
+    NextTrackTimeSignature(InstrumentId),
     // LFO actions
     ToggleLfo(InstrumentId),
     AdjustLfoRate(InstrumentId, f32),
@@ -932,25 +932,25 @@ impl InstrumentAction {
             | Self::SetFilter(id, _)
             | Self::ToggleEffectBypass(id, _)
             | Self::ToggleFilter(id)
-            | Self::CycleFilterType(id)
+            | Self::NextFilterType(id)
             | Self::AdjustFilterCutoff(id, _)
             | Self::AdjustFilterResonance(id, _)
             | Self::AdjustEffectParam(id, _, _, _)
             | Self::LoadSampleResult(id, _)
-            | Self::ToggleArp(id)
-            | Self::CycleArpDirection(id)
-            | Self::CycleArpDirectionReverse(id)
-            | Self::CycleArpRate(id)
-            | Self::CycleArpRateReverse(id)
-            | Self::AdjustArpOctaves(id, _)
-            | Self::AdjustArpGate(id, _)
-            | Self::CycleChordShape(id)
-            | Self::CycleChordShapeReverse(id)
+            | Self::ToggleArpeggiator(id)
+            | Self::NextArpeggiatorDirection(id)
+            | Self::PrevArpeggiatorDirection(id)
+            | Self::NextArpeggiatorRate(id)
+            | Self::PrevArpeggiatorRate(id)
+            | Self::AdjustArpeggiatorOctaves(id, _)
+            | Self::AdjustArpeggiatorGate(id, _)
+            | Self::NextChordShape(id)
+            | Self::PrevChordShape(id)
             | Self::ClearChordShape(id)
             | Self::LoadIRResult(id, _, _)
-            | Self::OpenVstEffectParams(id, _)
-            | Self::SetEqParam(id, _, _, _)
-            | Self::ToggleEq(id)
+            | Self::ShowVstEffectParams(id, _)
+            | Self::SetEqualizerParam(id, _, _, _)
+            | Self::ToggleEqualizer(id)
             | Self::LinkLayer(id, _)
             | Self::UnlinkLayer(id)
             | Self::AdjustLayerOctaveOffset(id, _)
@@ -965,7 +965,7 @@ impl InstrumentAction {
             | Self::AdjustTrackTimingOffset(id, _)
             | Self::ResetTrackGroove(id)
             | Self::SetTrackTimeSignature(id, _)
-            | Self::CycleTrackTimeSignature(id)
+            | Self::NextTrackTimeSignature(id)
             | Self::ToggleLfo(id)
             | Self::AdjustLfoRate(id, _)
             | Self::AdjustLfoDepth(id, _)
@@ -977,7 +977,7 @@ impl InstrumentAction {
             | Self::AdjustEnvelopeRelease(id, _)
             | Self::ToggleChannelConfig(id) => Some(*id),
 
-            Self::Update(update) => Some(update.id),
+            Self::SetState(update) => Some(update.id),
         }
     }
 }
@@ -1056,13 +1056,13 @@ pub enum GenerativeAction {
     SetEuclideanPulses(GenVoiceId, u8),
     SetEuclideanSteps(GenVoiceId, u8),
     SetEuclideanRotation(GenVoiceId, u8),
-    CycleEuclideanPitchMode(GenVoiceId),
-    CycleVoiceRate(GenVoiceId),
-    CycleVoiceRateReverse(GenVoiceId),
+    NextEuclideanPitchMode(GenVoiceId),
+    NextVoiceRate(GenVoiceId),
+    PrevVoiceRate(GenVoiceId),
     // Markov
     SetMarkovTransition(GenVoiceId, u8, u8, f32),
     AdjustMarkovRestProb(GenVoiceId, f32),
-    CycleMarkovDurationMode(GenVoiceId),
+    NextMarkovDurationMode(GenVoiceId),
     RandomizeMarkovMatrix(GenVoiceId),
     // L-System
     SetLSystemAxiom(GenVoiceId, String),
@@ -1096,11 +1096,11 @@ pub enum Action {
     Server(ServerAction),
     Session(SessionAction),
     Sequencer(SequencerAction),
-    Chopper(ChopperAction),
+    SampleSlicer(SampleSlicerAction),
     Automation(AutomationAction),
     Midi(MidiAction),
     Bus(BusAction),
-    LayerGroup(LayerGroupAction),
+    Group(GroupAction),
     VstParam(VstParamAction),
     Click(ClickAction),
     Tuner(TunerAction),
@@ -1168,11 +1168,11 @@ pub enum DomainAction {
     Server(ServerAction),
     Session(SessionAction),
     Sequencer(SequencerAction),
-    Chopper(ChopperAction),
+    SampleSlicer(SampleSlicerAction),
     Automation(AutomationAction),
     Midi(MidiAction),
     Bus(BusAction),
-    LayerGroup(LayerGroupAction),
+    Group(GroupAction),
     VstParam(VstParamAction),
     Click(ClickAction),
     Tuner(TunerAction),
@@ -1195,11 +1195,11 @@ impl Action {
             Self::Server(a) => RoutedAction::Domain(DomainAction::Server(a)),
             Self::Session(a) => RoutedAction::Domain(DomainAction::Session(a)),
             Self::Sequencer(a) => RoutedAction::Domain(DomainAction::Sequencer(a)),
-            Self::Chopper(a) => RoutedAction::Domain(DomainAction::Chopper(a)),
+            Self::SampleSlicer(a) => RoutedAction::Domain(DomainAction::SampleSlicer(a)),
             Self::Automation(a) => RoutedAction::Domain(DomainAction::Automation(a)),
             Self::Midi(a) => RoutedAction::Domain(DomainAction::Midi(a)),
             Self::Bus(a) => RoutedAction::Domain(DomainAction::Bus(a)),
-            Self::LayerGroup(a) => RoutedAction::Domain(DomainAction::LayerGroup(a)),
+            Self::Group(a) => RoutedAction::Domain(DomainAction::Group(a)),
             Self::VstParam(a) => RoutedAction::Domain(DomainAction::VstParam(a)),
             Self::Click(a) => RoutedAction::Domain(DomainAction::Click(a)),
             Self::Tuner(a) => RoutedAction::Domain(DomainAction::Tuner(a)),
@@ -1230,11 +1230,11 @@ impl From<DomainAction> for Action {
             DomainAction::Server(a) => Self::Server(a),
             DomainAction::Session(a) => Self::Session(a),
             DomainAction::Sequencer(a) => Self::Sequencer(a),
-            DomainAction::Chopper(a) => Self::Chopper(a),
+            DomainAction::SampleSlicer(a) => Self::SampleSlicer(a),
             DomainAction::Automation(a) => Self::Automation(a),
             DomainAction::Midi(a) => Self::Midi(a),
             DomainAction::Bus(a) => Self::Bus(a),
-            DomainAction::LayerGroup(a) => Self::LayerGroup(a),
+            DomainAction::Group(a) => Self::Group(a),
             DomainAction::VstParam(a) => Self::VstParam(a),
             DomainAction::Click(a) => Self::Click(a),
             DomainAction::Tuner(a) => Self::Tuner(a),
@@ -1278,7 +1278,7 @@ mod tests {
             PaneId::PianoRoll,
             PaneId::ProjectBrowser,
             PaneId::QuitPrompt,
-            PaneId::SampleChopper,
+            PaneId::SampleSlicer,
             PaneId::SaveAs,
             PaneId::Sequencer,
             PaneId::Server,

@@ -120,20 +120,20 @@ pub fn reduce(action: &GenerativeAction, session: &mut SessionState) -> bool {
                 }
             }
         }
-        GenerativeAction::CycleEuclideanPitchMode(id) => {
+        GenerativeAction::NextEuclideanPitchMode(id) => {
             if let Some(v) = voice_mut(gen, *id) {
                 if let GenerativeAlgorithm::Euclidean(ref mut cfg) = v.algorithm {
                     cfg.pitch_mode = cfg.pitch_mode.cycle();
                 }
             }
         }
-        GenerativeAction::CycleVoiceRate(id) => {
+        GenerativeAction::NextVoiceRate(id) => {
             if let Some(v) = voice_mut(gen, *id) {
                 let rate = v.algorithm.rate_mut();
                 *rate = rate.cycle();
             }
         }
-        GenerativeAction::CycleVoiceRateReverse(id) => {
+        GenerativeAction::PrevVoiceRate(id) => {
             if let Some(v) = voice_mut(gen, *id) {
                 let rate = v.algorithm.rate_mut();
                 *rate = rate.cycle_reverse();
@@ -160,7 +160,7 @@ pub fn reduce(action: &GenerativeAction, session: &mut SessionState) -> bool {
                 }
             }
         }
-        GenerativeAction::CycleMarkovDurationMode(id) => {
+        GenerativeAction::NextMarkovDurationMode(id) => {
             if let Some(v) = voice_mut(gen, *id) {
                 if let GenerativeAlgorithm::Markov(ref mut cfg) = v.algorithm {
                     cfg.duration_mode = cfg.duration_mode.cycle();
@@ -359,7 +359,7 @@ mod tests {
         );
         let id = session.generative.voices[0].id;
         let original_rate = *session.generative.voices[0].algorithm.rate();
-        reduce(&GenerativeAction::CycleVoiceRate(id), &mut session);
+        reduce(&GenerativeAction::NextVoiceRate(id), &mut session);
         assert_ne!(
             *session.generative.voices[0].algorithm.rate(),
             original_rate

@@ -7,8 +7,8 @@ use crate::state::VstPluginKind;
 use crate::ui::action_id::{ActionId, FileBrowserActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, ChopperAction, Color, FileSelectAction, InputEvent, InstrumentAction, Keymap,
-    MouseButton, MouseEvent, MouseEventKind, NavAction, Pane, Rect, RenderBuf, SequencerAction,
+    Action, Color, FileSelectAction, InputEvent, InstrumentAction, Keymap, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, Pane, Rect, RenderBuf, SampleSlicerAction, SequencerAction,
     SessionAction, Style,
 };
 
@@ -61,7 +61,7 @@ impl FileBrowserPane {
                 Some(vec!["vst3".to_string(), "vst".to_string()])
             }
             FileSelectAction::LoadDrumSample(_)
-            | FileSelectAction::LoadChopperSample
+            | FileSelectAction::LoadSlicerSample
             | FileSelectAction::LoadPitchedSample(_)
             | FileSelectAction::LoadImpulseResponse(_, _) => Some(vec![
                 "wav".to_string(),
@@ -203,9 +203,9 @@ impl Pane for FileBrowserPane {
                             FileSelectAction::LoadDrumSample(pad_idx) => Action::Sequencer(
                                 SequencerAction::LoadSampleResult(pad_idx, entry.path.clone()),
                             ),
-                            FileSelectAction::LoadChopperSample => {
-                                Action::Chopper(ChopperAction::LoadSampleResult(entry.path.clone()))
-                            }
+                            FileSelectAction::LoadSlicerSample => Action::SampleSlicer(
+                                SampleSlicerAction::LoadSampleResult(entry.path.clone()),
+                            ),
                             FileSelectAction::LoadPitchedSample(id) => Action::Instrument(
                                 InstrumentAction::LoadSampleResult(id, entry.path.clone()),
                             ),
@@ -283,7 +283,7 @@ impl Pane for FileBrowserPane {
             FileSelectAction::ImportCustomSynthDef => " Import Custom SynthDef ",
             FileSelectAction::ImportVstInstrument => " Import VST Instrument ",
             FileSelectAction::ImportVstEffect => " Import VST Effect ",
-            FileSelectAction::LoadDrumSample(_) | FileSelectAction::LoadChopperSample => {
+            FileSelectAction::LoadDrumSample(_) | FileSelectAction::LoadSlicerSample => {
                 " Load Sample "
             }
             FileSelectAction::LoadPitchedSample(_) => " Load Sample ",
@@ -468,10 +468,12 @@ impl Pane for FileBrowserPane {
                                             ),
                                         );
                                     }
-                                    FileSelectAction::LoadChopperSample => {
-                                        return Action::Chopper(ChopperAction::LoadSampleResult(
-                                            self.entries[clicked_idx].path.clone(),
-                                        ));
+                                    FileSelectAction::LoadSlicerSample => {
+                                        return Action::SampleSlicer(
+                                            SampleSlicerAction::LoadSampleResult(
+                                                self.entries[clicked_idx].path.clone(),
+                                            ),
+                                        );
                                     }
                                     FileSelectAction::LoadPitchedSample(id) => {
                                         return Action::Instrument(

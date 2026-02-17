@@ -20,7 +20,7 @@ pub mod session;
 pub mod undo;
 pub mod vst_plugin;
 
-pub use arrangement::{ArrangementState, Clip, ClipId, ClipPlacement, PlacementId, PlayMode};
+pub use arrangement::{ArrangementState, Clip, ClipId, ClipInstance, ClipInstanceId, PlayMode};
 pub use audio_feedback::AudioFeedbackState;
 pub use automation::AutomationTarget;
 pub use clipboard::{Clipboard, ClipboardContents, ClipboardNote};

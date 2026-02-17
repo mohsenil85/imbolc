@@ -661,13 +661,13 @@ mod tests {
         pane.view_mode = ViewMode::StepSequencer;
 
         let action = pane.handle_action(
-            ActionId::PianoRoll(PianoRollActionId::CyclePatternLength),
+            ActionId::PianoRoll(PianoRollActionId::NextPatternLength),
             &dummy_event(),
             &state,
         );
         assert!(matches!(
             action,
-            Action::Sequencer(SequencerAction::CyclePatternLength)
+            Action::Sequencer(SequencerAction::NextPatternLength)
         ));
     }
 
@@ -679,13 +679,13 @@ mod tests {
         pane.view_mode = ViewMode::StepSequencer;
 
         let action = pane.handle_action(
-            ActionId::PianoRoll(PianoRollActionId::CycleStepResolution),
+            ActionId::PianoRoll(PianoRollActionId::NextStepResolution),
             &dummy_event(),
             &state,
         );
         assert!(matches!(
             action,
-            Action::Sequencer(SequencerAction::CycleStepResolution)
+            Action::Sequencer(SequencerAction::NextStepResolution)
         ));
     }
 }

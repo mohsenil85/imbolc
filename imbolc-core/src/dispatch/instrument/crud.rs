@@ -110,7 +110,7 @@ pub(super) fn handle_update(
         None
     };
 
-    reduce(state, &InstrumentAction::Update(Box::new(update.clone())));
+    reduce(state, &InstrumentAction::SetState(Box::new(update.clone())));
 
     // Record automation for changed LFO/envelope params
     if let Some((old_lfo_rate, old_lfo_depth, old_attack, old_decay, old_sustain, old_release)) =

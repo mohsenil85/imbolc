@@ -10,7 +10,7 @@ use crate::ui::{
     MouseEvent, MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf, SessionAction, Style,
     ToggleResult,
 };
-use imbolc_types::{InstrumentId, LayerGroupAction};
+use imbolc_types::{GroupAction, InstrumentId};
 
 fn source_color(source: SourceType) -> Color {
     match source {
@@ -244,7 +244,7 @@ impl Pane for InstrumentPane {
                 if let Some(group_id) = self.editing_group.take() {
                     let name = self.edit_input.value().to_string();
                     self.edit_input.set_focused(false);
-                    return Action::LayerGroup(LayerGroupAction::Rename(group_id, name));
+                    return Action::Group(GroupAction::Rename(group_id, name));
                 }
                 Action::None
             }

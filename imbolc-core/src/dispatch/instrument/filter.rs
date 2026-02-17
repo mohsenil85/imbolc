@@ -37,7 +37,7 @@ pub(super) fn handle_toggle_filter(state: &mut AppState, id: InstrumentId) -> Di
 }
 
 pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: InstrumentId) -> DispatchResult {
-    reduce(state, &InstrumentAction::CycleFilterType(id));
+    reduce(state, &InstrumentAction::NextFilterType(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result

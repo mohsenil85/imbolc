@@ -280,8 +280,8 @@ pub fn undo_scope(
         DomainAction::Instrument(InstrumentAction::LinkLayer(_, _))
         | DomainAction::Instrument(InstrumentAction::UnlinkLayer(_)) => UndoScope::Full,
 
-        // Instrument Update carries an explicit id
-        DomainAction::Instrument(InstrumentAction::Update(update)) => {
+        // Instrument SetState carries an explicit id
+        DomainAction::Instrument(InstrumentAction::SetState(update)) => {
             if recording {
                 UndoScope::Full
             } else {
@@ -320,8 +320,8 @@ pub fn undo_scope(
         DomainAction::Bus(BusAction::Add | BusAction::Remove(_)) => UndoScope::Full,
         DomainAction::Bus(BusAction::Rename(_, _)) => UndoScope::Session,
 
-        // Sequencer/Chopper operate on the selected instrument's drum sequencer
-        DomainAction::Sequencer(_) | DomainAction::Chopper(_) => {
+        // Sequencer/SampleSlicer operate on the selected instrument's drum sequencer
+        DomainAction::Sequencer(_) | DomainAction::SampleSlicer(_) => {
             match instruments.selected_instrument() {
                 Some(inst) => UndoScope::SingleInstrument(inst.id),
                 None => UndoScope::Full,
@@ -369,7 +369,7 @@ fn mixer_scope(
         },
         // Bus, LayerGroup, Master selections all live in SessionState
         super::session::MixerSelection::Bus(_)
-        | super::session::MixerSelection::LayerGroup(_)
+        | super::session::MixerSelection::Group(_)
         | super::session::MixerSelection::Master => {
             if recording {
                 UndoScope::Full
@@ -399,8 +399,8 @@ pub fn coalesce_key(
             | InstrumentAction::AdjustEnvelopeDecay(id, _)
             | InstrumentAction::AdjustEnvelopeSustain(id, _)
             | InstrumentAction::AdjustEnvelopeRelease(id, _)
-            | InstrumentAction::AdjustArpOctaves(id, _)
-            | InstrumentAction::AdjustArpGate(id, _)
+            | InstrumentAction::AdjustArpeggiatorOctaves(id, _)
+            | InstrumentAction::AdjustArpeggiatorGate(id, _)
             | InstrumentAction::AdjustLayerOctaveOffset(id, _)
             | InstrumentAction::AdjustTrackSwing(id, _)
             | InstrumentAction::AdjustTrackHumanizeVelocity(id, _)
@@ -480,14 +480,14 @@ pub fn is_undoable(action: &DomainAction) -> bool {
                 | InstrumentAction::SelectFirst
                 | InstrumentAction::SelectLast
                 | InstrumentAction::Edit(_)
-                | InstrumentAction::OpenVstEffectParams(_, _)
+                | InstrumentAction::ShowVstEffectParams(_, _)
         ),
         DomainAction::Mixer(a) => !matches!(
             a,
             MixerAction::Move(_)
                 | MixerAction::Jump(_)
                 | MixerAction::SelectAt(_)
-                | MixerAction::CycleSection
+                | MixerAction::NextSection
         ),
         DomainAction::PianoRoll(a) => matches!(
             a,
@@ -495,7 +495,7 @@ pub fn is_undoable(action: &DomainAction) -> bool {
                 | crate::action::PianoRollAction::ToggleLoop
                 | crate::action::PianoRollAction::SetLoopStart(_)
                 | crate::action::PianoRollAction::SetLoopEnd(_)
-                | crate::action::PianoRollAction::CycleTimeSig
+                | crate::action::PianoRollAction::NextTimeSig
                 | crate::action::PianoRollAction::TogglePolyMode(_)
                 | crate::action::PianoRollAction::AdjustSwing(_)
                 | crate::action::PianoRollAction::DeleteNotesInRegion { .. }
@@ -508,22 +508,22 @@ pub fn is_undoable(action: &DomainAction) -> bool {
                 | SessionAction::Load
                 | SessionAction::LoadFrom(_)
                 | SessionAction::NewProject
-                | SessionAction::OpenFileBrowser(_)
+                | SessionAction::RequestFileBrowser(_)
         ),
         DomainAction::Sequencer(a) => !matches!(
             a,
-            SequencerAction::PlayStop
+            SequencerAction::TogglePlayback
                 | SequencerAction::LoadSample(_)
                 | SequencerAction::LoadSampleResult(_, _)
                 | SequencerAction::CopySteps { .. }
         ),
-        DomainAction::Chopper(a) => !matches!(
+        DomainAction::SampleSlicer(a) => !matches!(
             a,
-            crate::action::ChopperAction::LoadSample
-                | crate::action::ChopperAction::LoadSampleResult(_)
-                | crate::action::ChopperAction::PreviewSlice
-                | crate::action::ChopperAction::SelectSlice(_)
-                | crate::action::ChopperAction::MoveCursor(_)
+            crate::action::SampleSlicerAction::LoadSample
+                | crate::action::SampleSlicerAction::LoadSampleResult(_)
+                | crate::action::SampleSlicerAction::PreviewSlice
+                | crate::action::SampleSlicerAction::SelectSlice(_)
+                | crate::action::SampleSlicerAction::MoveCursor(_)
         ),
         DomainAction::Automation(a) => !matches!(
             a,
@@ -545,11 +545,11 @@ pub fn is_undoable(action: &DomainAction) -> bool {
         DomainAction::Arrangement(a) => !matches!(
             a,
             crate::action::ArrangementAction::TogglePlayMode
-                | crate::action::ArrangementAction::SelectPlacement(_)
+                | crate::action::ArrangementAction::SelectClipInstance(_)
                 | crate::action::ArrangementAction::SelectLane(_)
                 | crate::action::ArrangementAction::MoveCursor(_)
                 | crate::action::ArrangementAction::ScrollView(_)
-                | crate::action::ArrangementAction::PlayStop
+                | crate::action::ArrangementAction::TogglePlayback
         ),
         DomainAction::VstParam(a) => matches!(
             a,

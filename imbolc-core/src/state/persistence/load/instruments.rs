@@ -783,8 +783,8 @@ fn load_drum_sequencer(
 fn load_chopper(
     conn: &Connection,
     instrument_id: u32,
-) -> SqlResult<Option<crate::state::drum_sequencer::ChopperState>> {
-    use crate::state::drum_sequencer::ChopperState;
+) -> SqlResult<Option<crate::state::drum_sequencer::SampleSlicerState>> {
+    use crate::state::drum_sequencer::SampleSlicerState;
     use crate::state::sampler::Slice;
 
     let result = conn.query_row(
@@ -831,7 +831,7 @@ fn load_chopper(
         })?
         .collect::<SqlResult<_>>()?;
 
-    Ok(Some(ChopperState {
+    Ok(Some(SampleSlicerState {
         buffer_id: buffer_id.map(|id| id as u32),
         path,
         name,

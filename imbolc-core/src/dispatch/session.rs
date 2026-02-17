@@ -136,7 +136,7 @@ pub(super) fn dispatch_session(
             result.push_nav(NavIntent::ConditionalPop(PaneId::ProjectBrowser));
             result.push_nav(NavIntent::SwitchTo(PaneId::Add));
         }
-        SessionAction::UpdateSession(_) => {
+        SessionAction::SetSession(_) => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
                 &mut state.instruments,
@@ -146,7 +146,7 @@ pub(super) fn dispatch_session(
             result.audio_effects.push(AudioEffect::RebuildSession);
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
         }
-        SessionAction::UpdateSessionLive(_) => {
+        SessionAction::SetSessionLive(_) => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
                 &mut state.instruments,
@@ -155,7 +155,7 @@ pub(super) fn dispatch_session(
             result.audio_effects.push(AudioEffect::RebuildSession);
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
         }
-        SessionAction::OpenFileBrowser(ref file_action) => {
+        SessionAction::RequestFileBrowser(ref file_action) => {
             // Reducer is a no-op for navigation; delegate for consistency
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
@@ -311,7 +311,7 @@ pub(super) fn dispatch_session(
             result.audio_effects.push(AudioEffect::RebuildSession);
             result.audio_effects.push(AudioEffect::UpdateMixerParams);
         }
-        SessionAction::CycleTheme => {
+        SessionAction::NextTheme => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
                 &mut state.instruments,
@@ -483,7 +483,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // UpdateSession
+    // SetSession
     // -----------------------------------------------------------------------
 
     #[test]
@@ -497,7 +497,7 @@ mod tests {
         };
 
         dispatch_session(
-            &SessionAction::UpdateSession(settings),
+            &SessionAction::SetSession(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -517,7 +517,7 @@ mod tests {
         };
 
         dispatch_session(
-            &SessionAction::UpdateSession(settings),
+            &SessionAction::SetSession(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -537,7 +537,7 @@ mod tests {
         };
 
         let result = dispatch_session(
-            &SessionAction::UpdateSession(settings),
+            &SessionAction::SetSession(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -554,7 +554,7 @@ mod tests {
         let settings = MusicalSettings::default();
 
         let result = dispatch_session(
-            &SessionAction::UpdateSession(settings),
+            &SessionAction::SetSession(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -567,7 +567,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // UpdateSessionLive
+    // SetSessionLive
     // -----------------------------------------------------------------------
 
     #[test]
@@ -580,7 +580,7 @@ mod tests {
         };
 
         dispatch_session(
-            &SessionAction::UpdateSessionLive(settings),
+            &SessionAction::SetSessionLive(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -599,7 +599,7 @@ mod tests {
         };
 
         let result = dispatch_session(
-            &SessionAction::UpdateSessionLive(settings),
+            &SessionAction::SetSessionLive(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -616,7 +616,7 @@ mod tests {
         let settings = MusicalSettings::default();
 
         let result = dispatch_session(
-            &SessionAction::UpdateSessionLive(settings),
+            &SessionAction::SetSessionLive(settings),
             &mut state,
             &mut audio,
             &io_tx,
@@ -677,7 +677,7 @@ mod tests {
         let (mut state, mut audio, io_tx) = setup();
         assert_eq!(state.session.theme.name, "Dark");
 
-        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert_eq!(state.session.theme.name, "Light");
     }
@@ -686,10 +686,10 @@ mod tests {
     fn cycle_theme_light_to_high_contrast() {
         let (mut state, mut audio, io_tx) = setup();
         // Set to Light first
-        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Light");
 
-        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert_eq!(state.session.theme.name, "High Contrast");
     }
@@ -698,11 +698,11 @@ mod tests {
     fn cycle_theme_wraps_to_dark() {
         let (mut state, mut audio, io_tx) = setup();
         // Cycle through all three
-        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "High Contrast");
 
-        dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert_eq!(state.session.theme.name, "Dark");
     }
@@ -711,7 +711,7 @@ mod tests {
     fn cycle_theme_produces_status_message() {
         let (mut state, mut audio, io_tx) = setup();
 
-        let result = dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        let result = dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert!(!result.status.is_empty());
         assert!(result.status[0].message.contains("Theme:"));
@@ -721,7 +721,7 @@ mod tests {
     fn cycle_theme_no_audio_effects() {
         let (mut state, mut audio, io_tx) = setup();
 
-        let result = dispatch_session(&SessionAction::CycleTheme, &mut state, &mut audio, &io_tx);
+        let result = dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert!(result.audio_effects.is_empty());
     }

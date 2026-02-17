@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::instrument::{LayerGroupMixer, MixerBus};
+use super::instrument::{GroupMixer, MixerBus};
 use super::session::MixerSelection;
 use crate::BusId;
 
@@ -24,7 +24,7 @@ pub struct MixerState {
     pub selection: MixerSelection,
     /// Per-layer-group sub-mixers
     #[serde(default)]
-    pub layer_group_mixers: Vec<LayerGroupMixer>,
+    pub layer_group_mixers: Vec<GroupMixer>,
 }
 
 impl MixerState {
@@ -104,14 +104,14 @@ impl MixerState {
             MixerSelection::Instrument(_) => {
                 // Select first layer group if any exist, otherwise skip to buses/master
                 if let Some(first) = self.layer_group_mixers.first() {
-                    MixerSelection::LayerGroup(first.group_id)
+                    MixerSelection::Group(first.group_id)
                 } else if let Some(first_id) = self.buses.first().map(|b| b.id) {
                     MixerSelection::Bus(first_id)
                 } else {
                     MixerSelection::Master
                 }
             }
-            MixerSelection::LayerGroup(_) => {
+            MixerSelection::Group(_) => {
                 if let Some(first_id) = self.buses.first().map(|b| b.id) {
                     MixerSelection::Bus(first_id)
                 } else {
@@ -135,14 +135,14 @@ impl MixerState {
     }
 
     /// Get a layer group mixer by group ID
-    pub fn layer_group_mixer(&self, group_id: u32) -> Option<&LayerGroupMixer> {
+    pub fn layer_group_mixer(&self, group_id: u32) -> Option<&GroupMixer> {
         self.layer_group_mixers
             .iter()
             .find(|g| g.group_id == group_id)
     }
 
     /// Get a mutable layer group mixer by group ID
-    pub fn layer_group_mixer_mut(&mut self, group_id: u32) -> Option<&mut LayerGroupMixer> {
+    pub fn layer_group_mixer_mut(&mut self, group_id: u32) -> Option<&mut GroupMixer> {
         self.layer_group_mixers
             .iter_mut()
             .find(|g| g.group_id == group_id)
@@ -154,7 +154,7 @@ impl MixerState {
             return false;
         }
         self.layer_group_mixers
-            .push(LayerGroupMixer::new(group_id, bus_ids));
+            .push(GroupMixer::new(group_id, bus_ids));
         true
     }
 
@@ -178,7 +178,7 @@ impl MixerState {
     }
 
     /// Compute effective mute for a layer group, considering solo state
-    pub fn effective_layer_group_mute(&self, group: &LayerGroupMixer) -> bool {
+    pub fn effective_layer_group_mute(&self, group: &GroupMixer) -> bool {
         if self.any_layer_group_solo() {
             !group.channel_strip.solo
         } else {
@@ -377,14 +377,14 @@ mod tests {
     }
 
     // ========================================================================
-    // LayerGroupMixer effect CRUD tests
+    // GroupMixer effect CRUD tests
     // ========================================================================
 
     #[test]
     fn layer_group_add_effect() {
-        use crate::state::instrument::{EffectType, LayerGroupMixer};
+        use crate::state::instrument::{EffectType, GroupMixer};
         use crate::EffectId;
-        let mut gm = LayerGroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
+        let mut gm = GroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
         let id = gm.channel_strip.add_effect(EffectType::TapeComp);
         assert_eq!(id, EffectId::new(0));
         let effects = gm.channel_strip.effects_vec();
@@ -394,8 +394,8 @@ mod tests {
 
     #[test]
     fn layer_group_remove_effect() {
-        use crate::state::instrument::{EffectType, LayerGroupMixer};
-        let mut gm = LayerGroupMixer::new(1, &[]);
+        use crate::state::instrument::{EffectType, GroupMixer};
+        let mut gm = GroupMixer::new(1, &[]);
         let id = gm.channel_strip.add_effect(EffectType::Limiter);
         assert!(gm.channel_strip.remove_effect(id));
         assert!(gm.channel_strip.effects_vec().is_empty());
@@ -403,8 +403,8 @@ mod tests {
 
     #[test]
     fn layer_group_move_effect() {
-        use crate::state::instrument::{EffectType, LayerGroupMixer};
-        let mut gm = LayerGroupMixer::new(1, &[]);
+        use crate::state::instrument::{EffectType, GroupMixer};
+        let mut gm = GroupMixer::new(1, &[]);
         let id0 = gm.channel_strip.add_effect(EffectType::Reverb);
         let id1 = gm.channel_strip.add_effect(EffectType::Delay);
         assert!(gm.channel_strip.move_effect(id0, 1));

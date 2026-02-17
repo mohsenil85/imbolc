@@ -1,4 +1,4 @@
-use crate::action::{AudioEffect, DispatchResult, EqParamKind};
+use crate::action::{AudioEffect, DispatchResult, EqualizerParamKind};
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
@@ -11,11 +11,11 @@ pub(super) fn handle_set_eq_param(
     audio: &mut AudioHandle,
     instrument_id: crate::state::InstrumentId,
     band_idx: usize,
-    param: EqParamKind,
+    param: EqualizerParamKind,
     value: f32,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::SetEqParam(
+        &DomainAction::Instrument(InstrumentAction::SetEqualizerParam(
             instrument_id,
             band_idx,
             param,
@@ -28,7 +28,7 @@ pub(super) fn handle_set_eq_param(
     // Send real-time param update to audio engine
     if audio.is_running() {
         let sc_param = format!("b{}_{}", band_idx, param.as_str());
-        let sc_value = if param == EqParamKind::Q {
+        let sc_value = if param == EqualizerParamKind::Q {
             1.0 / value
         } else {
             value
@@ -42,10 +42,14 @@ pub(super) fn handle_set_eq_param(
     // Automation recording
     if state.recording.automation_recording && state.audio.playing {
         let target = match param {
-            EqParamKind::Freq => Some(AutomationTarget::eq_band_freq(instrument_id, band_idx)),
-            EqParamKind::Gain => Some(AutomationTarget::eq_band_gain(instrument_id, band_idx)),
-            EqParamKind::Q => Some(AutomationTarget::eq_band_q(instrument_id, band_idx)),
-            EqParamKind::Enabled => None,
+            EqualizerParamKind::Freq => {
+                Some(AutomationTarget::eq_band_freq(instrument_id, band_idx))
+            }
+            EqualizerParamKind::Gain => {
+                Some(AutomationTarget::eq_band_gain(instrument_id, band_idx))
+            }
+            EqualizerParamKind::Q => Some(AutomationTarget::eq_band_q(instrument_id, band_idx)),
+            EqualizerParamKind::Enabled => None,
         };
         if let Some(t) = target {
             let normalized = t.normalize_value(value);
@@ -61,7 +65,7 @@ pub(super) fn handle_toggle_eq(
     instrument_id: crate::state::InstrumentId,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::ToggleEq(instrument_id)),
+        &DomainAction::Instrument(InstrumentAction::ToggleEqualizer(instrument_id)),
         &mut state.instruments,
         &mut state.session,
     );

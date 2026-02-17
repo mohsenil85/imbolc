@@ -7,11 +7,11 @@ pub(super) fn reduce(
 ) -> bool {
     match action {
         SessionAction::NewProject => false,
-        SessionAction::UpdateSession(ref settings) => {
+        SessionAction::SetSession(ref settings) => {
             session.apply_musical_settings(settings);
             true
         }
-        SessionAction::UpdateSessionLive(ref settings) => {
+        SessionAction::SetSessionLive(ref settings) => {
             session.apply_musical_settings(settings);
             true
         }
@@ -27,7 +27,7 @@ pub(super) fn reduce(
             session.mixer.master_mute = !session.mixer.master_mute;
             true
         }
-        SessionAction::CycleTheme => {
+        SessionAction::NextTheme => {
             use crate::state::Theme;
             let current_name = &session.theme.name;
             session.theme = match current_name.as_str() {
@@ -53,8 +53,8 @@ pub(super) fn reduce(
             session.vst_plugins.add(plugin);
             true
         }
-        // OpenFileBrowser: navigation only
-        SessionAction::OpenFileBrowser(_) => true,
+        // RequestFileBrowser: navigation only
+        SessionAction::RequestFileBrowser(_) => true,
         // File I/O actions: not reducible
         SessionAction::Save
         | SessionAction::SaveAs(_)

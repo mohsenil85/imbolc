@@ -30,7 +30,7 @@ use crate::{
 
 /// Check whether an action can be incrementally reduced on the audio thread.
 /// Returns false for actions that require full state sync (undo/redo, arrangement,
-/// sequencer, chopper, server, and specific sub-actions that involve file I/O or
+/// sequencer, sample slicer, server, and specific sub-actions that involve file I/O or
 /// state not available on the audio thread).
 pub fn is_reducible(action: &DomainAction) -> bool {
     match action {
@@ -44,7 +44,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
         DomainAction::Instrument(_) => true,
         DomainAction::Mixer(_) => true,
         DomainAction::Bus(_) => true,
-        DomainAction::LayerGroup(_) => true,
+        DomainAction::Group(_) => true,
         DomainAction::Click(_) => true,
         DomainAction::Generative(_) => true,
 
@@ -75,7 +75,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
 
         DomainAction::Arrangement(_) => false,
         DomainAction::Sequencer(_) => false,
-        DomainAction::Chopper(_) => false,
+        DomainAction::SampleSlicer(_) => false,
         DomainAction::Server(_) => false,
     }
 }
@@ -105,7 +105,7 @@ pub fn reduce_action(
         DomainAction::PianoRoll(a) => piano_roll::reduce(a, session),
         DomainAction::Automation(a) => automation::reduce(a, session),
         DomainAction::Bus(a) => bus::reduce_bus(a, session, instruments),
-        DomainAction::LayerGroup(a) => bus::reduce_layer_group(a, session),
+        DomainAction::Group(a) => bus::reduce_group(a, session),
         DomainAction::VstParam(a) => vst_param::reduce(a, instruments, session),
         DomainAction::Session(a) => session::reduce(a, session, instruments),
         DomainAction::Click(a) => {
@@ -116,7 +116,7 @@ pub fn reduce_action(
 
         DomainAction::Arrangement(_) => false,
         DomainAction::Sequencer(_) => false,
-        DomainAction::Chopper(_) => false,
+        DomainAction::SampleSlicer(_) => false,
         DomainAction::Server(_) => false,
     }
 }

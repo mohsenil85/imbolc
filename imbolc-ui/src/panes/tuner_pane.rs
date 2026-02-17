@@ -141,7 +141,7 @@ impl Pane for TunerPane {
                 }
                 Action::None
             }
-            TunerActionId::PlayStop => {
+            TunerActionId::TogglePlayback => {
                 if self.playing {
                     self.playing = false;
                     Action::Tuner(TunerAction::StopTone)
@@ -262,12 +262,20 @@ mod tests {
         assert!(!pane.playing);
 
         // Play
-        let action = pane.handle_action(ActionId::Tuner(TunerActionId::PlayStop), &event, &state);
+        let action = pane.handle_action(
+            ActionId::Tuner(TunerActionId::TogglePlayback),
+            &event,
+            &state,
+        );
         assert!(pane.playing);
         assert!(matches!(action, Action::Tuner(TunerAction::PlayTone(_))));
 
         // Stop
-        let action = pane.handle_action(ActionId::Tuner(TunerActionId::PlayStop), &event, &state);
+        let action = pane.handle_action(
+            ActionId::Tuner(TunerActionId::TogglePlayback),
+            &event,
+            &state,
+        );
         assert!(!pane.playing);
         assert!(matches!(action, Action::Tuner(TunerAction::StopTone)));
     }
@@ -388,7 +396,11 @@ mod tests {
         let event = make_event();
 
         // Start playing
-        pane.handle_action(ActionId::Tuner(TunerActionId::PlayStop), &event, &state);
+        pane.handle_action(
+            ActionId::Tuner(TunerActionId::TogglePlayback),
+            &event,
+            &state,
+        );
         assert!(pane.playing);
 
         // Navigate to next string — should emit PlayTone with new freq

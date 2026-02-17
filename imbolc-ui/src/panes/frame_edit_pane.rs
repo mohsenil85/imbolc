@@ -227,13 +227,13 @@ impl Pane for FrameEditPane {
                     }
                     self.editing = false;
                     self.edit_input.set_focused(false);
-                    Action::Session(SessionAction::UpdateSession(self.settings.clone()))
+                    Action::Session(SessionAction::SetSession(self.settings.clone()))
                 }
                 ModeActionId::TextCancel => {
                     self.editing = false;
                     self.edit_input.set_focused(false);
                     self.settings = self.original_settings.clone();
-                    Action::Session(SessionAction::UpdateSession(self.original_settings.clone()))
+                    Action::Session(SessionAction::SetSession(self.original_settings.clone()))
                 }
                 ModeActionId::PianoEscape
                 | ModeActionId::PianoOctaveDown
@@ -266,11 +266,11 @@ impl Pane for FrameEditPane {
             }
             FrameEditActionId::Decrease => {
                 self.adjust(false);
-                Action::Session(SessionAction::UpdateSessionLive(self.settings.clone()))
+                Action::Session(SessionAction::SetSessionLive(self.settings.clone()))
             }
             FrameEditActionId::Increase => {
                 self.adjust(true);
-                Action::Session(SessionAction::UpdateSessionLive(self.settings.clone()))
+                Action::Session(SessionAction::SetSessionLive(self.settings.clone()))
             }
             FrameEditActionId::Confirm => {
                 let field = self.current_field();
@@ -286,12 +286,12 @@ impl Pane for FrameEditPane {
                     self.editing = true;
                     Action::PushLayer("text_edit")
                 } else {
-                    Action::Session(SessionAction::UpdateSession(self.settings.clone()))
+                    Action::Session(SessionAction::SetSession(self.settings.clone()))
                 }
             }
             FrameEditActionId::Cancel => {
                 self.settings = self.original_settings.clone();
-                Action::Session(SessionAction::UpdateSession(self.original_settings.clone()))
+                Action::Session(SessionAction::SetSession(self.original_settings.clone()))
             }
         }
     }
@@ -417,10 +417,10 @@ mod tests {
             &state,
         );
         match action {
-            Action::Session(SessionAction::UpdateSession(updated)) => {
+            Action::Session(SessionAction::SetSession(updated)) => {
                 assert_eq!(updated.key, pane.settings.key);
             }
-            _ => panic!("Expected UpdateSession for non-text field confirm"),
+            _ => panic!("Expected SetSession for non-text field confirm"),
         }
     }
 
@@ -439,11 +439,11 @@ mod tests {
             &state,
         );
         match action {
-            Action::Session(SessionAction::UpdateSession(updated)) => {
+            Action::Session(SessionAction::SetSession(updated)) => {
                 assert_eq!(updated.bpm, 180);
                 assert!(!pane.editing);
             }
-            _ => panic!("Expected UpdateSession on text confirm"),
+            _ => panic!("Expected SetSession on text confirm"),
         }
     }
 
@@ -466,11 +466,11 @@ mod tests {
             &state,
         );
         match action {
-            Action::Session(SessionAction::UpdateSession(updated)) => {
+            Action::Session(SessionAction::SetSession(updated)) => {
                 assert_eq!(updated, settings);
                 assert_eq!(pane.settings, settings);
             }
-            _ => panic!("Expected UpdateSession on cancel"),
+            _ => panic!("Expected SetSession on cancel"),
         }
     }
 
@@ -494,12 +494,12 @@ mod tests {
             &state,
         );
         match action {
-            Action::Session(SessionAction::UpdateSession(updated)) => {
+            Action::Session(SessionAction::SetSession(updated)) => {
                 assert_eq!(updated, settings);
                 assert_eq!(pane.settings, settings);
                 assert!(!pane.editing);
             }
-            _ => panic!("Expected UpdateSession on text cancel"),
+            _ => panic!("Expected SetSession on text cancel"),
         }
     }
 }

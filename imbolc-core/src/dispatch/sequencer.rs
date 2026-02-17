@@ -1,5 +1,5 @@
 use crate::action::{
-    AudioEffect, ChopperAction, DispatchResult, NavIntent, PaneId, SequencerAction,
+    AudioEffect, DispatchResult, NavIntent, PaneId, SampleSlicerAction, SequencerAction,
 };
 use crate::state::drum_sequencer::{euclidean_rhythm, DrumPattern, DrumStep};
 use crate::state::sampler::Slice;
@@ -69,7 +69,7 @@ pub(super) fn dispatch_sequencer(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        SequencerAction::CyclePatternLength => {
+        SequencerAction::NextPatternLength => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 let lengths = [8, 16, 32, 64];
                 let current = seq.pattern().length;
@@ -120,7 +120,7 @@ pub(super) fn dispatch_sequencer(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        SequencerAction::PlayStop => {
+        SequencerAction::TogglePlayback => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 seq.playing = !seq.playing;
                 if !seq.playing {
@@ -400,14 +400,14 @@ pub(super) fn dispatch_sequencer(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        SequencerAction::OpenInstrumentPicker(pad_idx) => {
+        SequencerAction::SelectEditingPad(pad_idx) => {
             // Store which pad we're editing, then open the picker
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 seq.editing_pad = Some(*pad_idx);
             }
             DispatchResult::with_nav(NavIntent::PushTo(PaneId::InstrumentPicker))
         }
-        SequencerAction::CycleStepResolution => {
+        SequencerAction::NextStepResolution => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 seq.step_resolution = seq.step_resolution.cycle_next();
             }
@@ -418,16 +418,16 @@ pub(super) fn dispatch_sequencer(
     }
 }
 
-pub(super) fn dispatch_chopper(
-    action: &ChopperAction,
+pub(super) fn dispatch_sample_slicer(
+    action: &SampleSlicerAction,
     state: &mut AppState,
     audio: &mut AudioHandle,
 ) -> DispatchResult {
     match action {
-        ChopperAction::LoadSample => DispatchResult::with_nav(NavIntent::OpenFileBrowser(
-            crate::action::FileSelectAction::LoadChopperSample,
+        SampleSlicerAction::LoadSample => DispatchResult::with_nav(NavIntent::OpenFileBrowser(
+            crate::action::FileSelectAction::LoadSlicerSample,
         )),
-        ChopperAction::LoadSampleResult(path) => {
+        SampleSlicerAction::LoadSampleResult(path) => {
             let path_str = path.to_string_lossy().to_string();
             let name = path
                 .file_stem()
@@ -447,7 +447,7 @@ pub(super) fn dispatch_chopper(
                 }
 
                 let initial_slice = Slice::full(0);
-                seq.chopper = Some(crate::state::drum_sequencer::ChopperState {
+                seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                     buffer_id: Some(buffer_id),
                     path: Some(path_str),
                     name,
@@ -464,7 +464,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::AddSlice(cursor_pos) => {
+        SampleSlicerAction::AddSlice(cursor_pos) => {
             let cursor_pos = *cursor_pos;
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
@@ -489,7 +489,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::RemoveSlice => {
+        SampleSlicerAction::RemoveSlice => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if chopper.slices.len() > 1 {
@@ -511,7 +511,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::AssignToPad(pad_idx) => {
+        SampleSlicerAction::AssignToPad(pad_idx) => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 let assign_data = seq.chopper.as_ref().and_then(|c| {
                     c.slices
@@ -535,7 +535,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::AutoSlice(n) => {
+        SampleSlicerAction::AutoSlice(n) => {
             let n = *n;
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
@@ -554,7 +554,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::PreviewSlice => {
+        SampleSlicerAction::PreviewSlice => {
             if let Some(instrument) = state.instruments.selected_instrument() {
                 if let Some(seq) = instrument.drum_sequencer() {
                     if let Some(chopper) = &seq.chopper {
@@ -583,7 +583,7 @@ pub(super) fn dispatch_chopper(
             }
             DispatchResult::none()
         }
-        ChopperAction::SelectSlice(delta) => {
+        SampleSlicerAction::SelectSlice(delta) => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if !chopper.slices.is_empty() {
@@ -598,7 +598,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::NudgeSliceStart(delta) => {
+        SampleSlicerAction::NudgeSliceStart(delta) => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if let Some(slice) = chopper.slices.get_mut(chopper.selected_slice) {
@@ -610,7 +610,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::NudgeSliceEnd(delta) => {
+        SampleSlicerAction::NudgeSliceEnd(delta) => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if let Some(slice) = chopper.slices.get_mut(chopper.selected_slice) {
@@ -622,7 +622,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::CommitAll => {
+        SampleSlicerAction::CommitAll => {
             if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &seq.chopper {
                     let assignments: Vec<_> = chopper
@@ -656,7 +656,7 @@ pub(super) fn dispatch_chopper(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
-        ChopperAction::MoveCursor(_) => {
+        SampleSlicerAction::MoveCursor(_) => {
             // Cursor tracked locally in pane
             DispatchResult::none()
         }
@@ -750,7 +750,7 @@ mod tests {
         // Default: 16
         let expected_lengths = [32, 64, 8, 16];
         for expected in expected_lengths {
-            dispatch_sequencer(&SequencerAction::CyclePatternLength, &mut state, &mut audio);
+            dispatch_sequencer(&SequencerAction::NextPatternLength, &mut state, &mut audio);
             let len = state
                 .instruments
                 .selected_drum_sequencer()
@@ -816,10 +816,10 @@ mod tests {
     #[test]
     fn play_stop_toggles_and_resets() {
         let (mut state, mut audio) = setup();
-        dispatch_sequencer(&SequencerAction::PlayStop, &mut state, &mut audio);
+        dispatch_sequencer(&SequencerAction::TogglePlayback, &mut state, &mut audio);
         assert!(state.instruments.selected_drum_sequencer().unwrap().playing);
 
-        dispatch_sequencer(&SequencerAction::PlayStop, &mut state, &mut audio);
+        dispatch_sequencer(&SequencerAction::TogglePlayback, &mut state, &mut audio);
         let seq = state.instruments.selected_drum_sequencer().unwrap();
         assert!(!seq.playing);
         assert_eq!(seq.current_step, 0);

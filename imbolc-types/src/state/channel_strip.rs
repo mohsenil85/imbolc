@@ -11,7 +11,7 @@ use crate::{BusId, EffectId, ParamIndex};
 
 /// Unified channel strip: level, pan, mute, solo, routing, processing chain.
 ///
-/// Shared by `Instrument`, `MixerBus`, and `LayerGroupMixer` so that mixer
+/// Shared by `Instrument`, `MixerBus`, and `GroupMixer` so that mixer
 /// operations (level/pan/mute/solo, effect CRUD, EQ, filter) are written once.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelStrip {

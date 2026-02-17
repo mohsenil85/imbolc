@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use imbolc_types::{
     ArrangementAction, ArrangementState, AutomationAction, AutomationLane, AutomationLaneId,
-    AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, Instrument,
-    InstrumentAction, InstrumentId, InstrumentState, LayerGroupAction, MidiAction, MixerAction,
-    MixerBus, MixerState, PianoRollAction, PianoRollState, SequencerAction, ServerAction,
-    SessionAction, SessionState, Track, VstParamAction,
+    AutomationState, BusAction, BusId, GenerativeAction, GroupAction, Instrument, InstrumentAction,
+    InstrumentId, InstrumentState, MidiAction, MixerAction, MixerBus, MixerState, PianoRollAction,
+    PianoRollState, SampleSlicerAction, SequencerAction, ServerAction, SessionAction, SessionState,
+    Track, VstParamAction,
 };
 
 /// Unique identifier for a connected client.
@@ -94,11 +94,11 @@ pub enum NetworkAction {
     Server(ServerAction),
     Session(SessionAction),
     Sequencer(SequencerAction),
-    Chopper(ChopperAction),
+    SampleSlicer(SampleSlicerAction),
     Automation(AutomationAction),
     Midi(MidiAction),
     Bus(BusAction),
-    LayerGroup(LayerGroupAction),
+    Group(GroupAction),
     VstParam(VstParamAction),
     Generative(GenerativeAction),
     Undo,

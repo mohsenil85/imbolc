@@ -90,7 +90,7 @@ fn test_state_patch_broadcast() {
     use imbolc_net::protocol::NetworkAction;
     use imbolc_types::ServerAction;
     server.mark_dirty(
-        &NetworkAction::Server(ServerAction::RecordMaster),
+        &NetworkAction::Server(ServerAction::ToggleRecordMaster),
         &state.session,
     );
 
@@ -690,7 +690,7 @@ fn test_patch_rate_limiting() {
 
     // Second broadcast immediately after should be rate-limited (no reset_rate_limit)
     server.mark_dirty(
-        &NetworkAction::Server(ServerAction::RecordMaster),
+        &NetworkAction::Server(ServerAction::ToggleRecordMaster),
         &state.session,
     );
     let state = common::make_test_state(&server);

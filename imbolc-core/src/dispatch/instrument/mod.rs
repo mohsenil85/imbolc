@@ -24,7 +24,7 @@ pub(super) fn dispatch_instrument(
         InstrumentAction::Add(source_type) => crud::handle_add(state, *source_type),
         InstrumentAction::Delete(inst_id) => crud::handle_delete(state, audio, *inst_id),
         InstrumentAction::Edit(id) => crud::handle_edit(state, *id),
-        InstrumentAction::Update(update) => crud::handle_update(state, update),
+        InstrumentAction::SetState(update) => crud::handle_update(state, update),
         InstrumentAction::PlayNote(pitch, velocity) => {
             playback::handle_play_note(state, audio, *pitch, *velocity)
         }
@@ -55,7 +55,7 @@ pub(super) fn dispatch_instrument(
             effects::handle_toggle_effect_bypass(state, *id, *effect_id)
         }
         InstrumentAction::ToggleFilter(id) => filter::handle_toggle_filter(state, *id),
-        InstrumentAction::CycleFilterType(id) => filter::handle_cycle_filter_type(state, *id),
+        InstrumentAction::NextFilterType(id) => filter::handle_cycle_filter_type(state, *id),
         InstrumentAction::AdjustFilterCutoff(id, delta) => {
             filter::handle_adjust_filter_cutoff(state, *id, *delta)
         }
@@ -65,26 +65,26 @@ pub(super) fn dispatch_instrument(
         InstrumentAction::AdjustEffectParam(id, effect_id, param_idx, delta) => {
             effects::handle_adjust_effect_param(state, *id, *effect_id, *param_idx, *delta)
         }
-        InstrumentAction::ToggleArp(_)
-        | InstrumentAction::CycleArpDirection(_)
-        | InstrumentAction::CycleArpDirectionReverse(_)
-        | InstrumentAction::CycleArpRate(_)
-        | InstrumentAction::CycleArpRateReverse(_)
-        | InstrumentAction::AdjustArpOctaves(_, _)
-        | InstrumentAction::AdjustArpGate(_, _)
-        | InstrumentAction::CycleChordShape(_)
-        | InstrumentAction::CycleChordShapeReverse(_)
+        InstrumentAction::ToggleArpeggiator(_)
+        | InstrumentAction::NextArpeggiatorDirection(_)
+        | InstrumentAction::PrevArpeggiatorDirection(_)
+        | InstrumentAction::NextArpeggiatorRate(_)
+        | InstrumentAction::PrevArpeggiatorRate(_)
+        | InstrumentAction::AdjustArpeggiatorOctaves(_, _)
+        | InstrumentAction::AdjustArpeggiatorGate(_, _)
+        | InstrumentAction::NextChordShape(_)
+        | InstrumentAction::PrevChordShape(_)
         | InstrumentAction::ClearChordShape(_) => arpeggiator::dispatch(state, action),
         InstrumentAction::LoadIRResult(instrument_id, effect_id, ref path) => {
             effects::handle_load_ir_result(state, audio, *instrument_id, *effect_id, path)
         }
-        InstrumentAction::OpenVstEffectParams(instrument_id, effect_id) => {
+        InstrumentAction::ShowVstEffectParams(instrument_id, effect_id) => {
             effects::handle_open_vst_effect_params(*instrument_id, *effect_id)
         }
-        InstrumentAction::SetEqParam(instrument_id, band_idx, param, value) => {
+        InstrumentAction::SetEqualizerParam(instrument_id, band_idx, param, value) => {
             eq::handle_set_eq_param(state, audio, *instrument_id, *band_idx, *param, *value)
         }
-        InstrumentAction::ToggleEq(instrument_id) => {
+        InstrumentAction::ToggleEqualizer(instrument_id) => {
             eq::handle_toggle_eq(state, *instrument_id)
         }
         InstrumentAction::LinkLayer(a, b) => layer::handle_link_layer(state, *a, *b),
@@ -105,7 +105,7 @@ pub(super) fn dispatch_instrument(
         | InstrumentAction::ResetTrackGroove(_)
         // Per-track time signature
         | InstrumentAction::SetTrackTimeSignature(_, _)
-        | InstrumentAction::CycleTrackTimeSignature(_) => groove::dispatch(state, action),
+        | InstrumentAction::NextTrackTimeSignature(_) => groove::dispatch(state, action),
         // LFO actions
         InstrumentAction::ToggleLfo(id) => lfo::handle_toggle_lfo(state, *id),
         InstrumentAction::AdjustLfoRate(id, delta) => {

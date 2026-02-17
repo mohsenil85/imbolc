@@ -20,7 +20,7 @@ fn test_reject_unprivileged_transport() {
     // Alice sends a server action (requires privilege)
     alice
         .send(&ClientMessage::Action(NetworkAction::Server(
-            ServerAction::RecordMaster,
+            ServerAction::ToggleRecordMaster,
         )))
         .unwrap();
 

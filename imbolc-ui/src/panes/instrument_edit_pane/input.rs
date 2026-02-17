@@ -286,7 +286,7 @@ impl InstrumentEditPane {
                 if self.source.is_sample() && section == InstrumentSection::Source && local_idx == 0
                 {
                     if let Some(id) = self.instrument_id {
-                        return Action::Session(SessionAction::OpenFileBrowser(
+                        return Action::Session(SessionAction::RequestFileBrowser(
                             FileSelectAction::LoadPitchedSample(id),
                         ));
                     }
@@ -336,7 +336,7 @@ impl InstrumentEditPane {
                 }
                 self.emit_update()
             }
-            InstrumentEditActionId::CycleFilterType => {
+            InstrumentEditActionId::NextFilterType => {
                 // Find filter to cycle: prefer the one the cursor is on, else first in chain
                 let filter_idx = if let InstrumentSection::Processing(i) = self.current_section() {
                     if self.processing_chain.get(i).is_some_and(|s| s.is_filter()) {
@@ -402,7 +402,7 @@ impl InstrumentEditPane {
             InstrumentEditActionId::LoadSample => {
                 if self.source.is_sample() {
                     if let Some(id) = self.instrument_id {
-                        Action::Session(SessionAction::OpenFileBrowser(
+                        Action::Session(SessionAction::RequestFileBrowser(
                             FileSelectAction::LoadPitchedSample(id),
                         ))
                     } else {
@@ -465,7 +465,7 @@ impl InstrumentEditPane {
                     if let Some(ProcessingStage::Effect(effect)) = self.processing_chain.get(i) {
                         if effect.effect_type.is_vst() {
                             if let Some(instrument_id) = self.instrument_id {
-                                Action::Instrument(InstrumentAction::OpenVstEffectParams(
+                                Action::Instrument(InstrumentAction::ShowVstEffectParams(
                                     instrument_id,
                                     effect.id,
                                 ))

@@ -136,7 +136,7 @@ impl Pane for ProjectBrowserPane {
                 Action::Session(SessionAction::NewProject)
             }
             crate::ui::KeyCode::Char('i') | crate::ui::KeyCode::Char('I') => Action::Session(
-                SessionAction::OpenFileBrowser(crate::ui::FileSelectAction::ImportProject),
+                SessionAction::RequestFileBrowser(crate::ui::FileSelectAction::ImportProject),
             ),
             crate::ui::KeyCode::Char('d') | crate::ui::KeyCode::Char('D') => {
                 if let Some(entry) = self.entries.get(self.selected) {

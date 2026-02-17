@@ -163,10 +163,12 @@ impl DirtyFlags {
             NetworkAction::Bus(a) => {
                 self.mark_bus_action(a);
             }
-            NetworkAction::LayerGroup(_) => {
+            NetworkAction::Group(_) => {
                 self.mixer_structural = true;
             }
-            NetworkAction::Session(_) | NetworkAction::Server(_) | NetworkAction::Chopper(_) => {
+            NetworkAction::Session(_)
+            | NetworkAction::Server(_)
+            | NetworkAction::SampleSlicer(_) => {
                 self.session = true;
             }
             NetworkAction::Generative(_) => {
@@ -230,13 +232,13 @@ impl DirtyFlags {
             PianoRollAction::ToggleLoop
             | PianoRollAction::SetLoopStart(_)
             | PianoRollAction::SetLoopEnd(_)
-            | PianoRollAction::CycleTimeSig
+            | PianoRollAction::NextTimeSig
             | PianoRollAction::AdjustSwing(_) => {
                 self.piano_roll_structural = true;
             }
             // Audio-only / transient — no state change to broadcast
-            PianoRollAction::PlayStop
-            | PianoRollAction::PlayStopRecord
+            PianoRollAction::TogglePlayback
+            | PianoRollAction::ToggleRecordPlayback
             | PianoRollAction::ReleaseNote { .. }
             | PianoRollAction::ReleaseNotes { .. }
             | PianoRollAction::BounceToWav
@@ -1146,7 +1148,7 @@ impl NetServer {
                     );
                 }
             }
-            NetworkAction::Bus(_) | NetworkAction::LayerGroup(_) => {
+            NetworkAction::Bus(_) | NetworkAction::Group(_) => {
                 if !self.is_privileged(client_id) {
                     return Err("Bus controls require privilege (use 'Request Privilege')".into());
                 }
@@ -1156,7 +1158,7 @@ impl NetServer {
             NetworkAction::Mixer(_) => {}
             NetworkAction::Automation(_) => {}
             NetworkAction::Arrangement(_) => {}
-            NetworkAction::Chopper(_) => {}
+            NetworkAction::SampleSlicer(_) => {}
             NetworkAction::Midi(_) => {}
             NetworkAction::VstParam(_) => {}
             NetworkAction::Undo | NetworkAction::Redo => {}
@@ -1604,10 +1606,10 @@ mod tests {
     use super::*;
     use crate::protocol::NetworkAction;
     use imbolc_types::{
-        ArrangementAction, AutomationAction, AutomationTarget, BusAction, ChopperAction,
-        GenerativeAction, InstrumentAction, InstrumentParameter, MidiAction, MixerAction,
-        ParameterTarget, PianoRollAction, SequencerAction, ServerAction, SessionAction, SourceType,
-        VstParamAction, VstTarget,
+        ArrangementAction, AutomationAction, AutomationTarget, BusAction, GenerativeAction,
+        InstrumentAction, InstrumentParameter, MidiAction, MixerAction, ParameterTarget,
+        PianoRollAction, SampleSlicerAction, SequencerAction, ServerAction, SessionAction,
+        SourceType, VstParamAction, VstTarget,
     };
 
     /// Helper: check that dirty flags indicate instruments are dirty in some way
@@ -1675,7 +1677,7 @@ mod tests {
         let cases: Vec<NetworkAction> = vec![
             NetworkAction::Session(SessionAction::Save),
             NetworkAction::Server(ServerAction::Connect),
-            NetworkAction::Chopper(ChopperAction::LoadSample),
+            NetworkAction::SampleSlicer(SampleSlicerAction::LoadSample),
             NetworkAction::Generative(GenerativeAction::ToggleEnabled),
         ];
         for action in &cases {
@@ -1699,7 +1701,10 @@ mod tests {
 
         // PianoRoll audio-only → no flags
         let mut d = DirtyFlags::default();
-        d.mark_from_action(&NetworkAction::PianoRoll(PianoRollAction::PlayStop), None);
+        d.mark_from_action(
+            &NetworkAction::PianoRoll(PianoRollAction::TogglePlayback),
+            None,
+        );
         assert!(!d.any(), "PlayStop should not dirty anything");
 
         // Arrangement → arrangement flag
@@ -2034,7 +2039,7 @@ mod tests {
     fn dirty_layer_group_is_mixer_structural() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::LayerGroup(imbolc_types::LayerGroupAction::AddEffect(
+            &NetworkAction::Group(imbolc_types::GroupAction::AddEffect(
                 0,
                 imbolc_types::EffectType::Delay,
             )),

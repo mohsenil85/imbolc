@@ -1,5 +1,5 @@
 use crate::{
-    BusAction, EqParamKind, InstrumentState, LayerGroupAction, MixerSelection, OutputTarget,
+    BusAction, EqualizerParamKind, GroupAction, InstrumentState, MixerSelection, OutputTarget,
     SessionState,
 };
 
@@ -87,27 +87,27 @@ pub(super) fn reduce_bus(
     }
 }
 
-pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut SessionState) -> bool {
+pub(super) fn reduce_group(action: &GroupAction, session: &mut SessionState) -> bool {
     match action {
-        LayerGroupAction::AddEffect(group_id, effect_type) => {
+        GroupAction::AddEffect(group_id, effect_type) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 gm.channel_strip.add_effect(*effect_type);
             }
             true
         }
-        LayerGroupAction::RemoveEffect(group_id, effect_id) => {
+        GroupAction::RemoveEffect(group_id, effect_id) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 gm.channel_strip.remove_effect(*effect_id);
             }
             true
         }
-        LayerGroupAction::MoveEffect(group_id, effect_id, direction) => {
+        GroupAction::MoveEffect(group_id, effect_id, direction) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 gm.channel_strip.move_effect(*effect_id, *direction);
             }
             true
         }
-        LayerGroupAction::ToggleEffectBypass(group_id, effect_id) => {
+        GroupAction::ToggleEffectBypass(group_id, effect_id) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 if let Some(effect) = gm.channel_strip.effect_by_id_mut(*effect_id) {
                     effect.enabled = !effect.enabled;
@@ -115,7 +115,7 @@ pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut Sessio
             }
             true
         }
-        LayerGroupAction::AdjustEffectParam(group_id, effect_id, param_idx, delta) => {
+        GroupAction::AdjustEffectParam(group_id, effect_id, param_idx, delta) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 if let Some(effect) = gm.channel_strip.effect_by_id_mut(*effect_id) {
                     if let Some(param) = effect.params.get_mut(param_idx.get()) {
@@ -125,28 +125,28 @@ pub(super) fn reduce_layer_group(action: &LayerGroupAction, session: &mut Sessio
             }
             true
         }
-        LayerGroupAction::ToggleEq(group_id) => {
+        GroupAction::ToggleEqualizer(group_id) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 gm.toggle_eq();
             }
             true
         }
-        LayerGroupAction::SetEqParam(group_id, band_idx, param, value) => {
+        GroupAction::SetEqualizerParam(group_id, band_idx, param, value) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 if let Some(eq) = gm.eq_mut() {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
                         match param {
-                            EqParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
-                            EqParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
-                            EqParamKind::Q => band.q = value.clamp(0.1, 10.0),
-                            EqParamKind::Enabled => band.enabled = *value > 0.5,
+                            EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
+                            EqualizerParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
+                            EqualizerParamKind::Q => band.q = value.clamp(0.1, 10.0),
+                            EqualizerParamKind::Enabled => band.enabled = *value > 0.5,
                         }
                     }
                 }
             }
             true
         }
-        LayerGroupAction::Rename(group_id, name) => {
+        GroupAction::Rename(group_id, name) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 gm.name = name.clone();
             }

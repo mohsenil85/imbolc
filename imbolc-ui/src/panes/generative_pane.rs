@@ -208,21 +208,21 @@ impl Pane for GenerativePane {
             }
             ActionId::Generative(GenerativeActionId::CycleRate) => {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
-                    Action::Generative(GenerativeAction::CycleVoiceRate(voice.id))
+                    Action::Generative(GenerativeAction::NextVoiceRate(voice.id))
                 } else {
                     Action::None
                 }
             }
             ActionId::Generative(GenerativeActionId::CycleRateReverse) => {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
-                    Action::Generative(GenerativeAction::CycleVoiceRateReverse(voice.id))
+                    Action::Generative(GenerativeAction::PrevVoiceRate(voice.id))
                 } else {
                     Action::None
                 }
             }
             ActionId::Generative(GenerativeActionId::CyclePitchMode) => {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
-                    Action::Generative(GenerativeAction::CycleEuclideanPitchMode(voice.id))
+                    Action::Generative(GenerativeAction::NextEuclideanPitchMode(voice.id))
                 } else {
                     Action::None
                 }
@@ -434,9 +434,9 @@ impl GenerativePane {
                         }
                         VOICE_RATE => {
                             if increase {
-                                Action::Generative(GenerativeAction::CycleVoiceRate(id))
+                                Action::Generative(GenerativeAction::NextVoiceRate(id))
                             } else {
-                                Action::Generative(GenerativeAction::CycleVoiceRateReverse(id))
+                                Action::Generative(GenerativeAction::PrevVoiceRate(id))
                             }
                         }
                         p if p >= VOICE_ALG_PARAM_START => {
@@ -481,7 +481,7 @@ impl GenerativePane {
                 }
                 3 => {
                     // pitch mode
-                    Action::Generative(GenerativeAction::CycleEuclideanPitchMode(id))
+                    Action::Generative(GenerativeAction::NextEuclideanPitchMode(id))
                 }
                 _ => Action::None,
             },
@@ -493,7 +493,7 @@ impl GenerativePane {
                 }
                 1 => {
                     // duration mode
-                    Action::Generative(GenerativeAction::CycleMarkovDurationMode(id))
+                    Action::Generative(GenerativeAction::NextMarkovDurationMode(id))
                 }
                 2 => {
                     // randomize matrix

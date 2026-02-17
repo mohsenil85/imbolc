@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::action::{BusAction, LayerGroupAction};
+use crate::action::{BusAction, GroupAction};
 use crate::state::{AppState, EffectType, EffectTypeExt, VstPluginRegistry};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
@@ -15,7 +15,7 @@ use imbolc_types::{BusId, VstPluginId};
 pub enum EffectTarget {
     Instrument,
     Bus(BusId),
-    LayerGroup(u32),
+    Group(u32),
 }
 
 /// Options available in the Add Effect menu
@@ -176,8 +176,8 @@ impl AddEffectPane {
                 EffectTarget::Bus(bus_id) => {
                     Action::Bus(BusAction::AddEffect(bus_id, *effect_type))
                 }
-                EffectTarget::LayerGroup(group_id) => {
-                    Action::LayerGroup(LayerGroupAction::AddEffect(group_id, *effect_type))
+                EffectTarget::Group(group_id) => {
+                    Action::Group(GroupAction::AddEffect(group_id, *effect_type))
                 }
                 EffectTarget::Instrument => {
                     if let Some(inst) = state.instruments.selected_instrument() {
@@ -187,7 +187,7 @@ impl AddEffectPane {
                     }
                 }
             },
-            AddEffectOption::ImportVst => Action::Session(SessionAction::OpenFileBrowser(
+            AddEffectOption::ImportVst => Action::Session(SessionAction::RequestFileBrowser(
                 FileSelectAction::ImportVstEffect,
             )),
             AddEffectOption::Separator(_) => Action::None,

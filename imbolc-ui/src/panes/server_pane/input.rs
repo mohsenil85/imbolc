@@ -94,7 +94,7 @@ impl ServerPane {
             ServerActionId::Compile => Action::Server(ServerAction::CompileSynthDefs),
             ServerActionId::CompileVst => Action::Server(ServerAction::CompileVstSynthDefs),
             ServerActionId::LoadSynthDefs => Action::Server(ServerAction::LoadSynthDefs),
-            ServerActionId::RecordMaster => Action::Server(ServerAction::RecordMaster),
+            ServerActionId::ToggleRecordMaster => Action::Server(ServerAction::ToggleRecordMaster),
             ServerActionId::RefreshDevices => {
                 self.refresh_devices();
                 self.refresh_diagnostics();

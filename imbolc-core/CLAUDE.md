@@ -99,10 +99,10 @@ Top-level dispatch is in `src/dispatch/mod.rs`. Each `Action` variant routes to 
 | `Arrangement(a)` | `arrangement.rs` | Clip CRUD, timeline placement |
 | `Session(a)` | `session.rs` | Save/load, BPM, key, scale |
 | `Sequencer(a)` | `sequencer.rs` | Drum sequencer pad/step editing |
-| `Chopper(a)` | `sequencer.rs` | Sample chopper slice config |
+| `SampleSlicer(a)` | `sequencer.rs` | Sample slicer slice config |
 | `Automation(a)` | `automation.rs` | Automation lane/point CRUD |
 | `Bus(a)` | `bus.rs` | Bus add/delete, bus effects |
-| `LayerGroup(a)` | `bus.rs` | Layer group effects/mixer |
+| `Group(a)` | `bus.rs` | Group effects/mixer |
 | `Server(a)` | `server.rs` | SC server start/stop, device config |
 | `Midi(a)` | `midi.rs` | MIDI CC mapping |
 | `VstParam(a)` | `vst_param.rs` | VST parameter editing |
@@ -112,15 +112,15 @@ Top-level dispatch is in `src/dispatch/mod.rs`. Each `Action` variant routes to 
 
 | Module | Handles |
 |---|---|
-| `crud.rs` | Add, Delete, Edit, Update |
+| `crud.rs` | Add, Delete, Edit, SetState |
 | `playback.rs` | PlayNote, PlayNotes, PlayDrumPad |
 | `selection.rs` | Select, SelectNext/Prev/First/Last |
 | `effects.rs` | AddEffect, RemoveEffect, ToggleBypass, AdjustParam |
-| `filter.rs` | SetFilter, ToggleFilter, CycleFilterType, AdjustCutoff/Resonance |
+| `filter.rs` | SetFilter, ToggleFilter, NextFilterType, AdjustCutoff/Resonance |
 | `lfo.rs` | ToggleLfo, AdjustRate/Depth, SetShape/Target |
 | `envelope.rs` | AdjustAttack/Decay/Sustain/Release |
-| `eq.rs` | SetEqParam, ToggleEq |
-| `arpeggiator.rs` | ToggleArp, CycleDirection/Rate, AdjustOctaves/Gate, ChordShape |
+| `eq.rs` | SetEqualizerParam, ToggleEqualizer |
+| `arpeggiator.rs` | ToggleArpeggiator, Next/PrevArpeggiatorDirection/Rate, AdjustArpeggiatorOctaves/Gate, ChordShape |
 | `groove.rs` | Swing, humanize, timing offset, time signature |
 | `layer.rs` | LinkLayer, UnlinkLayer |
 | `sample.rs` | LoadSampleResult |
@@ -195,7 +195,7 @@ Musical defaults (`[defaults]` section): `bpm`, `key`, `scale`, `tuning_a4`, `ti
 - Format: SQLite database (`.imbolc` / `.sqlite`)
 - Save/load: `save_project()` / `load_project()` in `src/state/persistence/mod.rs`
 - Default path: `~/.config/imbolc/default.sqlite`
-- Persists: session settings, instruments + processing chains, mixer/buses/layer groups, piano roll + arrangement, automation lanes, sampler + drum sequencer + chopper, MIDI mappings, custom synthdefs, VST registry + param/state values, checkpoints
+- Persists: session settings, instruments + processing chains, mixer/buses/groups, piano roll + arrangement, automation lanes, sampler + drum sequencer + sample slicer, MIDI mappings, custom synthdefs, VST registry + param/state values, checkpoints
 
 ## SynthDefs
 

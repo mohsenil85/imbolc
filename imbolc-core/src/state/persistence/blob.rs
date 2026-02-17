@@ -135,7 +135,7 @@ mod tests {
                 seq.pattern_mut().steps[0][0].active = true;
                 seq.pattern_mut().steps[0][0].velocity = 110;
 
-                seq.chopper = Some(crate::state::drum_sequencer::ChopperState {
+                seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                     buffer_id: Some(55),
                     path: Some("/tmp/chop.wav".to_string()),
                     name: "Chop".to_string(),

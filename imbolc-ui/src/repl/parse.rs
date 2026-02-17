@@ -292,13 +292,13 @@ impl ReplParseable for CurveType {
     }
 }
 
-impl ReplParseable for EqParamKind {
+impl ReplParseable for EqualizerParamKind {
     fn parse_repl(s: &str) -> Result<Self, String> {
         match s {
-            "freq" => Ok(EqParamKind::Freq),
-            "gain" => Ok(EqParamKind::Gain),
-            "q" => Ok(EqParamKind::Q),
-            "on" | "enabled" => Ok(EqParamKind::Enabled),
+            "freq" => Ok(EqualizerParamKind::Freq),
+            "gain" => Ok(EqualizerParamKind::Gain),
+            "q" => Ok(EqualizerParamKind::Q),
+            "on" | "enabled" => Ok(EqualizerParamKind::Enabled),
             _ => Err(format!("unknown eq param: {s} (try: freq, gain, q, on)")),
         }
     }
@@ -338,7 +338,7 @@ impl ReplParseable for MixerSelection {
             let id: u32 = rest
                 .parse()
                 .map_err(|_| format!("invalid group id: {rest}"))?;
-            return Ok(MixerSelection::LayerGroup(id));
+            return Ok(MixerSelection::Group(id));
         }
         Err(format!(
             "invalid mixer selection: {s} (try: master, instrument:0, bus:1, group:0)"

@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 /// Unique identifier for a clip in the arrangement.
 pub type ClipId = u32;
 
-/// Unique identifier for a clip placement on the timeline.
-pub type PlacementId = u32;
+/// Unique identifier for a clip instance on the timeline.
+pub type ClipInstanceId = u32;
 
 /// Unique identifier for an audio clip (recorded audio)
 pub type AudioClipId = u32;
@@ -57,17 +57,17 @@ pub struct Clip {
     pub automation_lanes: Vec<AutomationLane>,
 }
 
-/// A placement of a clip on the timeline. Multiple placements can share a clip.
+/// An instance of a clip on the timeline. Multiple instances can share a clip.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClipPlacement {
-    pub id: PlacementId,
+pub struct ClipInstance {
+    pub id: ClipInstanceId,
     pub clip_id: ClipId,
     pub instrument_id: InstrumentId,
     pub start_tick: u32,              // Absolute position on timeline
     pub length_override: Option<u32>, // Trim shorter than clip, None = use clip.length_ticks
 }
 
-impl ClipPlacement {
+impl ClipInstance {
     pub fn effective_length(&self, clip: &Clip) -> u32 {
         self.length_override.unwrap_or(clip.length_ticks)
     }
@@ -98,7 +98,7 @@ pub struct ClipEditContext {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArrangementState {
     pub clips: Vec<Clip>,
-    pub placements: Vec<ClipPlacement>,
+    pub placements: Vec<ClipInstance>,
     pub play_mode: PlayMode,
     #[serde(skip)]
     pub editing_clip: Option<ClipEditContext>,
@@ -111,7 +111,7 @@ pub struct ArrangementState {
     pub cursor_tick: u32,
 
     pub(crate) next_clip_id: ClipId,
-    pub(crate) next_placement_id: PlacementId,
+    pub(crate) next_placement_id: ClipInstanceId,
     pub(crate) next_clip_automation_lane_id: AutomationLaneId,
 }
 
@@ -188,10 +188,10 @@ impl ArrangementState {
         clip_id: ClipId,
         instrument_id: InstrumentId,
         start_tick: u32,
-    ) -> PlacementId {
+    ) -> ClipInstanceId {
         let id = self.next_placement_id;
         self.next_placement_id += 1;
-        self.placements.push(ClipPlacement {
+        self.placements.push(ClipInstance {
             id,
             clip_id,
             instrument_id,
@@ -201,27 +201,27 @@ impl ArrangementState {
         id
     }
 
-    pub fn remove_placement(&mut self, id: PlacementId) {
+    pub fn remove_placement(&mut self, id: ClipInstanceId) {
         if let Some(pos) = self.placements.iter().position(|p| p.id == id) {
             self.placements.remove(pos);
             self.selected_placement = None;
         }
     }
 
-    pub fn move_placement(&mut self, id: PlacementId, new_start_tick: u32) {
+    pub fn move_placement(&mut self, id: ClipInstanceId, new_start_tick: u32) {
         if let Some(p) = self.placements.iter_mut().find(|p| p.id == id) {
             p.start_tick = new_start_tick;
         }
     }
 
-    pub fn resize_placement(&mut self, id: PlacementId, new_length: Option<u32>) {
+    pub fn resize_placement(&mut self, id: ClipInstanceId, new_length: Option<u32>) {
         if let Some(p) = self.placements.iter_mut().find(|p| p.id == id) {
             p.length_override = new_length;
         }
     }
 
-    pub fn placements_for_instrument(&self, instrument_id: InstrumentId) -> Vec<&ClipPlacement> {
-        let mut placements: Vec<&ClipPlacement> = self
+    pub fn placements_for_instrument(&self, instrument_id: InstrumentId) -> Vec<&ClipInstance> {
+        let mut placements: Vec<&ClipInstance> = self
             .placements
             .iter()
             .filter(|p| p.instrument_id == instrument_id)
@@ -230,7 +230,7 @@ impl ArrangementState {
         placements
     }
 
-    pub fn placement_at(&self, instrument_id: InstrumentId, tick: u32) -> Option<&ClipPlacement> {
+    pub fn placement_at(&self, instrument_id: InstrumentId, tick: u32) -> Option<&ClipInstance> {
         for placement in self.placements_for_instrument(instrument_id) {
             if let Some(clip) = self.clip(placement.clip_id) {
                 if tick >= placement.start_tick && tick < placement.end_tick(clip) {
@@ -245,7 +245,7 @@ impl ArrangementState {
         let mut result: HashMap<InstrumentId, Vec<Note>> = HashMap::new();
 
         // Sort placements by start_tick to ensure somewhat ordered output, though we sort at the end anyway
-        let mut sorted_placements: Vec<&ClipPlacement> = self.placements.iter().collect();
+        let mut sorted_placements: Vec<&ClipInstance> = self.placements.iter().collect();
         sorted_placements.sort_by_key(|p| p.start_tick);
 
         for placement in sorted_placements {
@@ -300,7 +300,7 @@ impl ArrangementState {
         // Track min/max per target so merged lanes keep correct ranges
         let mut ranges: HashMap<AutomationTarget, (f32, f32)> = HashMap::new();
 
-        let mut sorted_placements: Vec<&ClipPlacement> = self.placements.iter().collect();
+        let mut sorted_placements: Vec<&ClipInstance> = self.placements.iter().collect();
         sorted_placements.sort_by_key(|p| p.start_tick);
 
         for placement in sorted_placements {
@@ -371,7 +371,7 @@ impl ArrangementState {
     }
 
     /// Get the next placement ID counter (for persistence)
-    pub fn next_placement_id(&self) -> PlacementId {
+    pub fn next_placement_id(&self) -> ClipInstanceId {
         self.next_placement_id
     }
 

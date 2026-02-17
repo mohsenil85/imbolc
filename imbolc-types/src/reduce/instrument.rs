@@ -1,5 +1,5 @@
 use crate::{
-    BusId, EqParamKind, FilterType, InstrumentAction, InstrumentId, InstrumentState, Param,
+    BusId, EqualizerParamKind, FilterType, InstrumentAction, InstrumentId, InstrumentState, Param,
     ParamValue, SessionState, SourceType,
 };
 
@@ -26,7 +26,7 @@ pub(super) fn reduce(
             instruments.editing_instrument_id = Some(*id);
             true
         }
-        InstrumentAction::Update(update) => {
+        InstrumentAction::SetState(update) => {
             if let Some(instrument) = instruments.instrument_mut(update.id) {
                 instrument.source = update.source;
                 instrument.source_params = update.source_params.clone();
@@ -76,7 +76,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::CycleFilterType(id) => {
+        InstrumentAction::NextFilterType(id) => {
             if let Some(instrument) = instruments.instrument_mut(*id) {
                 if let Some(filter) = instrument.filter_mut() {
                     filter.filter_type = match filter.filter_type {
@@ -166,53 +166,53 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::ToggleArp(id) => {
+        InstrumentAction::ToggleArpeggiator(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.enabled = !inst.note_input.arpeggiator.enabled;
             }
             true
         }
-        InstrumentAction::CycleArpDirection(id) => {
+        InstrumentAction::NextArpeggiatorDirection(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.direction =
                     inst.note_input.arpeggiator.direction.next();
             }
             true
         }
-        InstrumentAction::CycleArpDirectionReverse(id) => {
+        InstrumentAction::PrevArpeggiatorDirection(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.direction =
                     inst.note_input.arpeggiator.direction.prev();
             }
             true
         }
-        InstrumentAction::CycleArpRate(id) => {
+        InstrumentAction::NextArpeggiatorRate(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.rate = inst.note_input.arpeggiator.rate.next();
             }
             true
         }
-        InstrumentAction::CycleArpRateReverse(id) => {
+        InstrumentAction::PrevArpeggiatorRate(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.rate = inst.note_input.arpeggiator.rate.prev();
             }
             true
         }
-        InstrumentAction::AdjustArpOctaves(id, delta) => {
+        InstrumentAction::AdjustArpeggiatorOctaves(id, delta) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.octaves =
                     (inst.note_input.arpeggiator.octaves as i8 + delta).clamp(1, 4) as u8;
             }
             true
         }
-        InstrumentAction::AdjustArpGate(id, delta) => {
+        InstrumentAction::AdjustArpeggiatorGate(id, delta) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.arpeggiator.gate =
                     (inst.note_input.arpeggiator.gate + delta).clamp(0.1, 1.0);
             }
             true
         }
-        InstrumentAction::CycleChordShape(id) => {
+        InstrumentAction::NextChordShape(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.chord_shape = match inst.note_input.chord_shape {
                     None => Some(crate::ChordShape::Major),
@@ -221,7 +221,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::CycleChordShapeReverse(id) => {
+        InstrumentAction::PrevChordShape(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.note_input.chord_shape = match inst.note_input.chord_shape {
                     None => Some(crate::ChordShape::Octave),
@@ -250,25 +250,25 @@ pub(super) fn reduce(
             }
             true
         }
-        // OpenVstEffectParams: navigation only, no state mutation
-        InstrumentAction::OpenVstEffectParams(_, _) => true,
+        // ShowVstEffectParams: navigation only, no state mutation
+        InstrumentAction::ShowVstEffectParams(_, _) => true,
 
-        InstrumentAction::SetEqParam(instrument_id, band_idx, param, value) => {
+        InstrumentAction::SetEqualizerParam(instrument_id, band_idx, param, value) => {
             if let Some(instrument) = instruments.instrument_mut(*instrument_id) {
                 if let Some(eq) = instrument.eq_mut() {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
                         match param {
-                            EqParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
-                            EqParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
-                            EqParamKind::Q => band.q = value.clamp(0.1, 10.0),
-                            EqParamKind::Enabled => band.enabled = *value > 0.5,
+                            EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
+                            EqualizerParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
+                            EqualizerParamKind::Q => band.q = value.clamp(0.1, 10.0),
+                            EqualizerParamKind::Enabled => band.enabled = *value > 0.5,
                         }
                     }
                 }
             }
             true
         }
-        InstrumentAction::ToggleEq(instrument_id) => {
+        InstrumentAction::ToggleEqualizer(instrument_id) => {
             if let Some(instrument) = instruments.instrument_mut(*instrument_id) {
                 instrument.toggle_eq();
             }
@@ -368,7 +368,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::CycleTrackTimeSignature(id) => {
+        InstrumentAction::NextTrackTimeSignature(id) => {
             if let Some(inst) = instruments.instrument_mut(*id) {
                 inst.groove.time_signature = match inst.groove.time_signature {
                     None => Some((4, 4)),
@@ -521,7 +521,7 @@ fn reduce_link_layer(
     if let Some(inst) = instruments.instrument_mut(b) {
         inst.layer.group = Some(group_id);
     }
-    // Auto-create LayerGroupMixer if new group
+    // Auto-create GroupMixer if new group
     let bus_ids: Vec<BusId> = session.mixer.bus_ids().collect();
     if session.mixer.layer_group_mixer(group_id).is_none() {
         session.mixer.add_layer_group_mixer(group_id, &bus_ids);

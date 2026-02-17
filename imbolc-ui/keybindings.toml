@@ -159,7 +159,7 @@ bindings = [
   { key = "Right", action = "right", description = "Next step" },
   { key = "Enter", action = "toggle", description = "Toggle step" },
   { key = "s", action = "load_sample", description = "Load sample for pad" },
-  { key = "c", action = "chopper", description = "Sample chopper" },
+  { key = "c", action = "chopper", description = "Sample slicer" },
   { key = "x", action = "clear_pad", description = "Clear pad steps" },
   { key = "X", action = "clear_pattern", description = "Clear entire pattern" },
   { key = "[", action = "prev_pattern", description = "Previous pattern" },
@@ -321,7 +321,7 @@ bindings = [
   { key = "&", action = "toggle_hidden", description = "Toggle hidden files" },
 ]
 
-[layers.sample_chopper]
+[layers.sample_slicer]
 transparent = false
 bindings = [
   { key = "Left", action = "move_left", description = "Move cursor left" },

@@ -452,9 +452,11 @@ pub(crate) fn handle_global_action(
                 pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
                 apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
             }
-            GlobalActionId::RecordMaster => {
-                let mut r = dispatcher
-                    .dispatch_domain(&DomainAction::Server(ui::ServerAction::RecordMaster), audio);
+            GlobalActionId::ToggleRecordMaster => {
+                let mut r = dispatcher.dispatch_domain(
+                    &DomainAction::Server(ui::ServerAction::ToggleRecordMaster),
+                    audio,
+                );
                 if r.needs_full_sync {
                     *needs_full_sync = true;
                 }
@@ -792,7 +794,7 @@ pub(crate) fn handle_global_action(
                 panes.push_to(NavPaneId::PaneSwitcher, dispatcher.state());
                 layer_stack.push("pane_switcher");
             }
-            GlobalActionId::PlayStop => {
+            GlobalActionId::TogglePlayback => {
                 // Skip during export/render
                 if dispatcher.state().io.pending_export.is_some()
                     || dispatcher.state().io.pending_render.is_some()
@@ -834,9 +836,9 @@ pub(crate) fn handle_global_action(
             GlobalActionId::RefreshScreen => {
                 return GlobalResult::RefreshScreen;
             }
-            GlobalActionId::CycleTheme => {
+            GlobalActionId::NextTheme => {
                 let mut r = dispatcher
-                    .dispatch_domain(&DomainAction::Session(SessionAction::CycleTheme), audio);
+                    .dispatch_domain(&DomainAction::Session(SessionAction::NextTheme), audio);
                 pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
                 apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
             }

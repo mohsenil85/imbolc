@@ -6,7 +6,7 @@ use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style,
 };
-use imbolc_types::EqParamKind;
+use imbolc_types::EqualizerParamKind;
 
 use crate::state::instrument::EqBand;
 
@@ -82,16 +82,16 @@ impl Pane for EqPane {
                 action,
             ),
             ActionId::Eq(EqActionId::ToggleEq) => {
-                Action::Instrument(InstrumentAction::ToggleEq(instrument_id))
+                Action::Instrument(InstrumentAction::ToggleEqualizer(instrument_id))
             }
             ActionId::Eq(EqActionId::ToggleBand) => {
                 if let Some(eq) = instrument.eq() {
                     let band = &eq.bands[self.selected_band];
                     let new_val = if band.enabled { 0.0 } else { 1.0 };
-                    Action::Instrument(InstrumentAction::SetEqParam(
+                    Action::Instrument(InstrumentAction::SetEqualizerParam(
                         instrument_id,
                         self.selected_band,
-                        EqParamKind::Enabled,
+                        EqualizerParamKind::Enabled,
                         new_val,
                     ))
                 } else {
@@ -225,9 +225,9 @@ fn adjust_param(
     let band = &eq.bands[band_idx];
 
     let (param, current, min, max) = match param_idx {
-        0 => (EqParamKind::Freq, band.freq, 20.0, 20000.0),
-        1 => (EqParamKind::Gain, band.gain, -24.0, 24.0),
-        2 => (EqParamKind::Q, band.q, 0.1, 10.0),
+        0 => (EqualizerParamKind::Freq, band.freq, 20.0, 20000.0),
+        1 => (EqualizerParamKind::Gain, band.gain, -24.0, 24.0),
+        2 => (EqualizerParamKind::Q, band.q, 0.1, 10.0),
         3 => return Action::None, // toggle handled by toggle_band
         _ => return Action::None,
     };
@@ -265,7 +265,7 @@ fn adjust_param(
         (current - delta).max(min)
     };
 
-    Action::Instrument(InstrumentAction::SetEqParam(
+    Action::Instrument(InstrumentAction::SetEqualizerParam(
         instrument_id,
         band_idx,
         param,

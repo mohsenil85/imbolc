@@ -85,7 +85,7 @@ impl Default for DrumStep {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChopperState {
+pub struct SampleSlicerState {
     pub buffer_id: Option<BufferId>,
     pub path: Option<String>,
     pub name: String,
@@ -180,7 +180,7 @@ pub struct DrumSequencerState {
     pub step_accumulator: f64,
     #[serde(skip)]
     pub last_played_step: Option<usize>,
-    pub chopper: Option<ChopperState>,
+    pub chopper: Option<SampleSlicerState>,
     /// Swing amount: 0.0 = no swing, 1.0 = max swing (delays odd-numbered steps)
     pub swing_amount: f32,
     /// Pattern chain: ordered list of pattern indices to cycle through

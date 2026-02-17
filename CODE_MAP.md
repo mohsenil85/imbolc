@@ -17,11 +17,11 @@ Comprehensive code map for agents. Read this first to avoid re-exploring.
 | `Server(a)` | `server::dispatch_server` | SC server start/stop, device config |
 | `Session(a)` | `session::dispatch_session` | Save/load, BPM, key, scale, tuning |
 | `Sequencer(a)` | `sequencer::dispatch_sequencer` | Drum sequencer pad/step editing |
-| `Chopper(a)` | `sequencer::dispatch_chopper` | Sample chopper slice config |
+| `SampleSlicer(a)` | `sequencer::dispatch_sample_slicer` | Sample slicer slice config |
 | `Automation(a)` | `automation::dispatch_automation` | Automation lane/point CRUD |
 | `Midi(a)` | `midi::dispatch_midi` | MIDI CC mapping, channel config |
 | `Bus(a)` | `bus::dispatch_bus` | Bus add/delete, bus effects |
-| `LayerGroup(a)` | `bus::dispatch_layer_group` | Layer group effects, mixer params |
+| `Group(a)` | `bus::dispatch_group` | Group effects, mixer params |
 | `VstParam(a)` | `vst_param::dispatch_vst_param` | VST parameter value editing |
 | `Click(a)` | `dispatch_click` (inline) | Click track toggle/volume |
 | `Tuner(a)` | `dispatch_tuner` (inline) | Reference pitch play/stop |
@@ -40,16 +40,16 @@ Comprehensive code map for agents. Read this first to avoid re-exploring.
 
 | Module | InstrumentAction Variants | Purpose |
 |---|---|---|
-| `crud.rs` | Add, Delete, Edit, Update | Instrument lifecycle, source params |
+| `crud.rs` | Add, Delete, Edit, SetState | Instrument lifecycle, source params |
 | `playback.rs` | PlayNote, PlayNotes, PlayDrumPad | Voice triggering via audio side-effects |
 | `selection.rs` | Select, SelectNext/Prev/First/Last | Instrument selection state |
-| `effects.rs` | AddEffect, RemoveEffect, ToggleEffectBypass, AdjustEffectParam, LoadIRResult, OpenVstEffectParams | Effect chain management |
-| `filter.rs` | SetFilter, ToggleFilter, CycleFilterType, AdjustFilterCutoff/Resonance | Filter configuration |
+| `effects.rs` | AddEffect, RemoveEffect, ToggleEffectBypass, AdjustEffectParam, LoadIRResult, ShowVstEffectParams | Effect chain management |
+| `filter.rs` | SetFilter, ToggleFilter, NextFilterType, AdjustFilterCutoff/Resonance | Filter configuration |
 | `lfo.rs` | ToggleLfo, AdjustLfoRate/Depth, SetLfoShape/Target | LFO modulation |
 | `envelope.rs` | AdjustEnvelopeAttack/Decay/Sustain/Release | ADSR envelope |
-| `eq.rs` | SetEqParam, ToggleEq | 12-Band EQ |
-| `arpeggiator.rs` | ToggleArp, CycleArpDirection/Rate, AdjustArpOctaves/Gate, CycleChordShape, ClearChordShape | Arpeggiator + chord |
-| `groove.rs` | SetTrackSwing/SwingGrid, AdjustTrackSwing, SetTrackHumanize*, SetTrackTimingOffset, ResetTrackGroove, Set/CycleTrackTimeSignature | Per-track groove/timing |
+| `eq.rs` | SetEqualizerParam, ToggleEqualizer | 12-Band EQ |
+| `arpeggiator.rs` | ToggleArpeggiator, NextArpeggiatorDirection/Rate, AdjustArpeggiatorOctaves/Gate, NextChordShape, ClearChordShape | Arpeggiator + chord |
+| `groove.rs` | SetTrackSwing/SwingGrid, AdjustTrackSwing, SetTrackHumanize*, SetTrackTimingOffset, ResetTrackGroove, Set/NextTrackTimeSignature | Per-track groove/timing |
 | `layer.rs` | LinkLayer, UnlinkLayer | Layer group membership |
 | `sample.rs` | LoadSampleResult | Sample buffer loading |
 
@@ -71,7 +71,7 @@ AppState (imbolc-core/src/state/mod.rs)
 ├── session: SessionState
 │   ├── Musical: key, scale, bpm, tuning_a4, snap, time_signature
 │   ├── piano_roll: PianoRollState (tracks, notes, grid)
-│   ├── arrangement: ArrangementState (clips, placements)
+│   ├── arrangement: ArrangementState (clips, clip instances)
 │   ├── automation: AutomationState (lanes, points)
 │   ├── midi_recording: MidiRecordingState
 │   ├── custom_synthdefs: CustomSynthDefRegistry
@@ -79,8 +79,8 @@ AppState (imbolc-core/src/state/mod.rs)
 │   ├── mixer: MixerState
 │   │   ├── buses: Vec<MixerBus> (id, name, level, pan, mute, solo, effects)
 │   │   ├── master_level, master_mute
-│   │   ├── selection: MixerSelection (Instrument | LayerGroup | Bus | Master)
-│   │   └── layer_group_mixers: Vec<LayerGroupMixer>
+│   │   ├── selection: MixerSelection (Instrument | Group | Bus | Master)
+│   │   └── layer_group_mixers: Vec<GroupMixer>
 │   ├── humanize: HumanizeSettings
 │   ├── click_track: ClickTrackState
 │   └── theme: Theme
@@ -135,7 +135,7 @@ AppState (imbolc-core/src/state/mod.rs)
 | `SetEffectParam(InstrumentId, EffectId, ParamIndex, f32)` | Direct effect node update |
 | `SetLfoParam(InstrumentId, LfoParamKind, f32)` | Direct LFO node update |
 | `SetBusEffectParam(BusId, EffectId, ParamIndex, f32)` | Direct bus effect update |
-| `SetLayerGroupEffectParam(u32, EffectId, ParamIndex, f32)` | Direct layer group effect update |
+| `SetGroupEffectParam(u32, EffectId, ParamIndex, f32)` | Direct group effect update |
 
 Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and applied by the runtime after dispatch returns.
 
@@ -163,11 +163,11 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `instrument/sample.rs` | Sample load results |
 | `piano_roll.rs` | Note editing actions |
 | `automation.rs` | Automation lane/point actions |
-| `sequencer.rs` | Drum sequencer + chopper actions |
+| `sequencer.rs` | Drum sequencer + sample slicer actions |
 | `mixer.rs` | Mixer level/pan/mute/solo/send actions |
 | `session.rs` | Save/load/BPM/key/scale/tuning |
 | `server.rs` | SC server control |
-| `bus.rs` | Bus + layer group CRUD/effects |
+| `bus.rs` | Bus + group CRUD/effects |
 | `midi.rs` | MIDI CC mapping |
 | `vst_param.rs` | VST parameter editing |
 | `arrangement.rs` | Clip/arrangement actions |
@@ -258,7 +258,7 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `add_effect_pane.rs` | add_effect | Effect type selector |
 | `file_browser_pane.rs` | file_browser | File/directory navigator |
 | `project_browser_pane.rs` | project_browser | Recent projects |
-| `sample_chopper_pane.rs` | sample_chopper | Sample slicing into pads |
+| `sample_chopper_pane.rs` | sample_slicer | Sample slicing into pads |
 | `save_as_pane.rs` | save_as | Save dialog with text input |
 | `confirm_pane.rs` | confirm | Yes/No confirmation |
 | `quit_prompt_pane.rs` | quit_prompt | Save/Don't Save/Cancel |
@@ -330,7 +330,7 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 
 ```
 Instrument(usize) — index into instruments vec
-LayerGroup(u32)   — layer group ID
+Group(u32)        — group ID
 Bus(u8)           — bus 1-8
 Master            — master fader
 ```

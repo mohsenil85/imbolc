@@ -98,7 +98,7 @@ impl MixerPane {
         };
 
         let group_scroll = match state.session.mixer.selection {
-            MixerSelection::LayerGroup(gid) => {
+            MixerSelection::Group(gid) => {
                 let group_idx = active_groups.iter().position(|&g| g == gid).unwrap_or(0);
                 Self::calc_scroll_offset(group_idx, active_groups.len(), NUM_VISIBLE_GROUPS)
             }
@@ -176,7 +176,7 @@ impl MixerPane {
                     break;
                 }
                 let group_id = active_groups[gidx];
-                let is_selected = matches!(state.session.mixer.selection, MixerSelection::LayerGroup(g) if g == group_id);
+                let is_selected = matches!(state.session.mixer.selection, MixerSelection::Group(g) if g == group_id);
 
                 if let Some(gm) = state.session.mixer.layer_group_mixer(group_id) {
                     let label = format!("G{}", group_id);
@@ -283,7 +283,7 @@ impl MixerPane {
                                 format!("Send→B{}: {:.0}% [{}]", bus_id, send.level * 100.0, status)
                             })
                         }),
-                    MixerSelection::LayerGroup(gid) => {
+                    MixerSelection::Group(gid) => {
                         state.session.mixer.layer_group_mixer(gid).and_then(|gm| {
                             gm.channel_strip.sends.get(&bus_id).map(|send| {
                                 let status = if send.enabled { "ON" } else { "OFF" };

@@ -41,7 +41,7 @@ impl Default for ClickTrackState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MixerSelection {
     Instrument(usize), // index into instruments vec
-    LayerGroup(u32),   // layer group ID
+    Group(u32),        // layer group ID
     Bus(BusId),
     Master,
 }

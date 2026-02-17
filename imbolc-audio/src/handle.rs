@@ -503,7 +503,7 @@ impl AudioHandle {
                         }
                     }
                 }
-                AudioEffect::SetLayerGroupEffectParam(group_id, effect_id, param_idx, value) => {
+                AudioEffect::SetGroupEffectParam(group_id, effect_id, param_idx, value) => {
                     if let Some(gm) = state.session().mixer.layer_group_mixer(*group_id) {
                         if let Some(effect) = gm.channel_strip.effect_by_id(*effect_id) {
                             if let Some(param) = effect.params.get(param_idx.get()) {

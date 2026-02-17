@@ -237,8 +237,8 @@ impl AutomationPane {
             }
 
             // Play/stop (pass through to piano roll)
-            ActionId::Automation(AutomationActionId::PlayStop) => {
-                Action::PianoRoll(crate::ui::PianoRollAction::PlayStop)
+            ActionId::Automation(AutomationActionId::TogglePlayback) => {
+                Action::PianoRoll(crate::ui::PianoRollAction::TogglePlayback)
             }
 
             _ => Action::None,

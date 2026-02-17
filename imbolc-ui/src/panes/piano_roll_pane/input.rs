@@ -97,7 +97,7 @@ impl PianoRollPane {
                 Action::None
             }
             ActionId::Mode(ModeActionId::PianoSpace) => {
-                Action::PianoRoll(PianoRollAction::PlayStopRecord)
+                Action::PianoRoll(PianoRollAction::ToggleRecordPlayback)
             }
             ActionId::Mode(ModeActionId::PianoKey) => {
                 if let KeyCode::Char(c) = event.key {
@@ -212,14 +212,14 @@ impl PianoRollPane {
                 self.seq_cursor_step = 0;
                 Action::None
             }
-            ActionId::PianoRoll(PianoRollActionId::PlayStop) => {
-                Action::PianoRoll(PianoRollAction::PlayStop)
+            ActionId::PianoRoll(PianoRollActionId::TogglePlayback) => {
+                Action::PianoRoll(PianoRollAction::TogglePlayback)
             }
-            ActionId::PianoRoll(PianoRollActionId::CyclePatternLength) => {
-                Action::Sequencer(SequencerAction::CyclePatternLength)
+            ActionId::PianoRoll(PianoRollActionId::NextPatternLength) => {
+                Action::Sequencer(SequencerAction::NextPatternLength)
             }
-            ActionId::PianoRoll(PianoRollActionId::CycleStepResolution) => {
-                Action::Sequencer(SequencerAction::CycleStepResolution)
+            ActionId::PianoRoll(PianoRollActionId::NextStepResolution) => {
+                Action::Sequencer(SequencerAction::NextStepResolution)
             }
             // Actions that still make sense in sequencer view
             ActionId::PianoRoll(PianoRollActionId::Loop) => {
@@ -345,8 +345,8 @@ impl PianoRollPane {
                 self.adjust_default_velocity(-10);
                 Action::None
             }
-            ActionId::PianoRoll(PianoRollActionId::PlayStop) => {
-                Action::PianoRoll(PianoRollAction::PlayStop)
+            ActionId::PianoRoll(PianoRollActionId::TogglePlayback) => {
+                Action::PianoRoll(PianoRollAction::TogglePlayback)
             }
             ActionId::PianoRoll(PianoRollActionId::Loop) => {
                 Action::PianoRoll(PianoRollAction::ToggleLoop)
@@ -397,7 +397,7 @@ impl PianoRollPane {
                 Action::None
             }
             ActionId::PianoRoll(PianoRollActionId::TimeSig) => {
-                Action::PianoRoll(PianoRollAction::CycleTimeSig)
+                Action::PianoRoll(PianoRollAction::NextTimeSig)
             }
             ActionId::PianoRoll(PianoRollActionId::TogglePoly) => {
                 Action::PianoRoll(PianoRollAction::TogglePolyMode(self.current_track))

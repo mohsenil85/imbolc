@@ -63,7 +63,7 @@ pub(super) fn dispatch_server(
 
             result.push_status(audio.status(), "Loading synthdefs...");
         }
-        ServerAction::RecordMaster => {
+        ServerAction::ToggleRecordMaster => {
             if audio.is_recording() {
                 // Stop recording — path comes back via AudioFeedback::RecordingStopped
                 let _ = audio.stop_recording();
@@ -97,7 +97,7 @@ pub(super) fn dispatch_server(
                 );
             }
         }
-        ServerAction::RecordInput => {
+        ServerAction::ToggleRecordInput => {
             if audio.is_recording() {
                 // Stop recording — path comes back via AudioFeedback::RecordingStopped
                 let _ = audio.stop_recording();

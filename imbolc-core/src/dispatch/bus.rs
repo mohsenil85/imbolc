@@ -1,5 +1,5 @@
 use crate::action::{
-    AudioEffect, BusAction, DispatchResult, EqParamKind, LayerGroupAction, NavIntent,
+    AudioEffect, BusAction, DispatchResult, EqualizerParamKind, GroupAction, NavIntent,
 };
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
@@ -83,17 +83,17 @@ pub fn dispatch_bus(action: &BusAction, state: &mut AppState) -> DispatchResult 
     result
 }
 
-fn reduce_lg(state: &mut AppState, action: &LayerGroupAction) {
+fn reduce_lg(state: &mut AppState, action: &GroupAction) {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::LayerGroup(action.clone()),
+        &DomainAction::Group(action.clone()),
         &mut state.instruments,
         &mut state.session,
     );
 }
 
 /// Dispatch layer group actions
-pub fn dispatch_layer_group(
-    action: &LayerGroupAction,
+pub fn dispatch_group(
+    action: &GroupAction,
     state: &mut AppState,
     audio: &mut AudioHandle,
 ) -> DispatchResult {
@@ -104,28 +104,28 @@ pub fn dispatch_layer_group(
     let mut result = DispatchResult::none();
 
     match action {
-        LayerGroupAction::AddEffect(_, _) => {
+        GroupAction::AddEffect(_, _) => {
             result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
             result.nav.push(NavIntent::Pop);
         }
 
-        LayerGroupAction::RemoveEffect(_, _) => {
+        GroupAction::RemoveEffect(_, _) => {
             result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        LayerGroupAction::MoveEffect(_, _, _) => {
+        GroupAction::MoveEffect(_, _, _) => {
             result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        LayerGroupAction::ToggleEffectBypass(_, _) => {
+        GroupAction::ToggleEffectBypass(_, _) => {
             result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        LayerGroupAction::AdjustEffectParam(group_id, effect_id, param_idx, _delta) => {
+        GroupAction::AdjustEffectParam(group_id, effect_id, param_idx, _delta) => {
             result.audio_effects.push(AudioEffect::RebuildSession);
             // Read back the param value after reducer mutation for targeted audio update
             let targeted_value = state
@@ -136,24 +136,22 @@ pub fn dispatch_layer_group(
                 .and_then(|effect| effect.params.get(param_idx.get()))
                 .map(|param| param.value.to_f32());
             if let Some(value) = targeted_value {
-                result
-                    .audio_effects
-                    .push(AudioEffect::SetLayerGroupEffectParam(
-                        *group_id, *effect_id, *param_idx, value,
-                    ));
+                result.audio_effects.push(AudioEffect::SetGroupEffectParam(
+                    *group_id, *effect_id, *param_idx, value,
+                ));
             }
         }
 
-        LayerGroupAction::ToggleEq(_) => {
+        GroupAction::ToggleEqualizer(_) => {
             result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        LayerGroupAction::SetEqParam(group_id, band_idx, param, value) => {
+        GroupAction::SetEqualizerParam(group_id, band_idx, param, value) => {
             // Send real-time param update to audio engine
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", band_idx, param.as_str());
-                let sc_value = if *param == EqParamKind::Q {
+                let sc_value = if *param == EqualizerParamKind::Q {
                     1.0 / value
                 } else {
                     *value
@@ -163,7 +161,7 @@ pub fn dispatch_layer_group(
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        LayerGroupAction::Rename(_, _) => {}
+        GroupAction::Rename(_, _) => {}
     }
 
     result
@@ -465,8 +463,8 @@ mod tests {
             .mixer
             .add_layer_group_mixer(1, &[BusId::new(1), BusId::new(2)]);
 
-        let result = dispatch_layer_group(
-            &LayerGroupAction::AddEffect(1, EffectType::TapeComp),
+        let result = dispatch_group(
+            &GroupAction::AddEffect(1, EffectType::TapeComp),
             &mut state,
             &mut audio,
         );
@@ -502,8 +500,8 @@ mod tests {
             .effects_vec()[0]
             .id;
 
-        dispatch_layer_group(
-            &LayerGroupAction::RemoveEffect(1, effect_id),
+        dispatch_group(
+            &GroupAction::RemoveEffect(1, effect_id),
             &mut state,
             &mut audio,
         );
@@ -538,8 +536,8 @@ mod tests {
             .effects_vec()[0]
             .id;
 
-        dispatch_layer_group(
-            &LayerGroupAction::ToggleEffectBypass(1, effect_id),
+        dispatch_group(
+            &GroupAction::ToggleEffectBypass(1, effect_id),
             &mut state,
             &mut audio,
         );
@@ -567,7 +565,7 @@ mod tests {
             .eq()
             .is_some());
 
-        let result = dispatch_layer_group(&LayerGroupAction::ToggleEq(1), &mut state, &mut audio);
+        let result = dispatch_group(&GroupAction::ToggleEqualizer(1), &mut state, &mut audio);
         assert!(state
             .session
             .mixer
@@ -580,7 +578,7 @@ mod tests {
             .contains(&AudioEffect::RebuildBusProcessing));
         assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
 
-        dispatch_layer_group(&LayerGroupAction::ToggleEq(1), &mut state, &mut audio);
+        dispatch_group(&GroupAction::ToggleEqualizer(1), &mut state, &mut audio);
         assert!(state
             .session
             .mixer
@@ -595,8 +593,8 @@ mod tests {
         let (mut state, mut audio) = setup_with_audio();
         state.session.mixer.add_layer_group_mixer(1, &[]);
 
-        let result = dispatch_layer_group(
-            &LayerGroupAction::SetEqParam(1, 0, EqParamKind::Gain, 6.0),
+        let result = dispatch_group(
+            &GroupAction::SetEqualizerParam(1, 0, EqualizerParamKind::Gain, 6.0),
             &mut state,
             &mut audio,
         );

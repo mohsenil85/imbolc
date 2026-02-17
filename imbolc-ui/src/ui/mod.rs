@@ -29,9 +29,9 @@ pub use keymap::Keymap;
 pub use layer::{LayerResult, LayerStack};
 pub use list_selector::ListSelector;
 pub use pane::{
-    Action, ArrangementAction, AutomationAction, BusAction, ChopperAction, DispatchResult,
-    FileSelectAction, GenerativeAction, InstrumentAction, InstrumentUpdate, LayerGroupAction,
-    MixerAction, NavAction, NavIntent, Pane, PaneId, PaneManager, PianoRollAction, SequencerAction,
+    Action, ArrangementAction, AutomationAction, BusAction, DispatchResult, FileSelectAction,
+    GenerativeAction, GroupAction, InstrumentAction, InstrumentUpdate, MixerAction, NavAction,
+    NavIntent, Pane, PaneId, PaneManager, PianoRollAction, SampleSlicerAction, SequencerAction,
     ServerAction, SessionAction, StatusEvent, ToggleResult, VstParamAction,
 };
 pub use piano_keyboard::{translate_key, PianoKeyboard};

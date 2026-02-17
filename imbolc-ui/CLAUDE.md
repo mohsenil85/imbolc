@@ -55,7 +55,7 @@ Single-file panes (23):
 - `pane_switcher_pane.rs` — Global pane navigation
 - `project_browser_pane.rs` — Project browser
 - `quit_prompt_pane.rs` — Quit confirmation
-- `sample_chopper_pane.rs` — Sample slicing
+- `sample_chopper_pane.rs` — Sample slicer
 - `save_as_pane.rs` — Save as dialog
 - `sequencer_pane.rs` — Drum sequencer
 - `track_pane.rs` — Track view

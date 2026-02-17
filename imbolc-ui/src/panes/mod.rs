@@ -59,7 +59,7 @@ pub use pane_switcher_pane::PaneSwitcherPane;
 pub use piano_roll_pane::{PianoRollPane, ViewMode};
 pub use project_browser_pane::ProjectBrowserPane;
 pub use quit_prompt_pane::QuitPromptPane;
-pub use sample_chopper_pane::SampleChopperPane;
+pub use sample_chopper_pane::SampleSlicerPane;
 pub use save_as_pane::SaveAsPane;
 pub use sequencer_pane::SequencerPane;
 pub use server_pane::ServerPane;

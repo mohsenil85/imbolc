@@ -24,7 +24,7 @@ pub(super) fn dispatch_piano_roll(
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result
         }
-        PianoRollAction::PlayStop => {
+        PianoRollAction::TogglePlayback => {
             // Ignore play/stop while exporting — user must cancel first
             if state.io.pending_export.is_some() || state.io.pending_render.is_some() {
                 return DispatchResult::none();
@@ -45,7 +45,7 @@ pub(super) fn dispatch_piano_roll(
             state.session.piano_roll.recording = false;
             DispatchResult::none()
         }
-        PianoRollAction::PlayStopRecord => {
+        PianoRollAction::ToggleRecordPlayback => {
             let was_playing = state.audio.playing;
             reduce(action, state);
 
@@ -84,7 +84,7 @@ pub(super) fn dispatch_piano_roll(
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result
         }
-        PianoRollAction::CycleTimeSig => {
+        PianoRollAction::NextTimeSig => {
             reduce(action, state);
             let mut result = DispatchResult::none();
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
@@ -534,7 +534,7 @@ mod tests {
         let (mut state, mut audio) = setup();
         state.session.piano_roll.recording = true;
 
-        let action = PianoRollAction::PlayStop;
+        let action = PianoRollAction::TogglePlayback;
         dispatch_piano_roll(&action, &mut state, &mut audio);
         assert!(state.session.piano_roll.playing);
 
@@ -551,7 +551,7 @@ mod tests {
             was_looping: false,
             paths: vec![],
         });
-        let action = PianoRollAction::PlayStop;
+        let action = PianoRollAction::TogglePlayback;
         dispatch_piano_roll(&action, &mut state, &mut audio);
         assert!(!state.session.piano_roll.playing);
     }
@@ -572,7 +572,7 @@ mod tests {
         let (mut state, mut audio) = setup();
         let expected = vec![(3, 4), (6, 8), (5, 4), (7, 8), (4, 4)];
         for ts in expected {
-            dispatch_piano_roll(&PianoRollAction::CycleTimeSig, &mut state, &mut audio);
+            dispatch_piano_roll(&PianoRollAction::NextTimeSig, &mut state, &mut audio);
             assert_eq!(state.session.time_signature, ts);
             assert_eq!(state.session.piano_roll.time_signature, ts);
         }

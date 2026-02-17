@@ -5,8 +5,8 @@ use super::{
     VST_UGEN_INDEX,
 };
 use imbolc_types::{
-    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, Instrument, InstrumentId,
-    InstrumentState, LayerGroupMixer, MixerBus, ParamValue, ParameterTarget, SendTapPoint,
+    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, GroupMixer, Instrument,
+    InstrumentId, InstrumentState, MixerBus, ParamValue, ParameterTarget, SendTapPoint,
     SessionState, SourceType, SourceTypeExt,
 };
 use std::collections::HashMap;
@@ -679,7 +679,7 @@ impl AudioEngine {
     /// If no enabled effects, returns `group_bus` unchanged.
     fn build_layer_group_effect_chain(
         &mut self,
-        gm: &LayerGroupMixer,
+        gm: &GroupMixer,
         group_bus: i32,
         session: &SessionState,
     ) -> Result<i32, String> {

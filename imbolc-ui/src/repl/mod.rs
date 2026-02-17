@@ -381,7 +381,7 @@ fn handle_set_pure(args: &[&str], state: &AppState) -> Result<CommandResult, Str
     }
 
     Ok(CommandResult::Action(DomainAction::Session(
-        SessionAction::UpdateSession(settings),
+        SessionAction::SetSession(settings),
     )))
 }
 

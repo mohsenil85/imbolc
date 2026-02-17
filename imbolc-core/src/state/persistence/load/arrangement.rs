@@ -469,7 +469,7 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
     )?;
     session.arrangement.placements = place_stmt
         .query_map([], |row| {
-            Ok(ClipPlacement {
+            Ok(ClipInstance {
                 id: row.get(0)?,
                 clip_id: row.get(1)?,
                 instrument_id: imbolc_types::InstrumentId::new(row.get::<_, u32>(2)?),

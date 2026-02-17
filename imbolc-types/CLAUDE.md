@@ -84,7 +84,7 @@ AppState (defined in imbolc-core, composed of types from here)
 │   │   ├── buses: Vec<MixerBus> (effects, level, pan, sends)
 │   │   ├── master_level, master_mute
 │   │   ├── selection: MixerSelection
-│   │   └── layer_group_mixers: Vec<LayerGroupMixer>
+│   │   └── layer_group_mixers: Vec<GroupMixer>
 │   └── humanize, click_track, theme
 │
 └── instruments: InstrumentState
@@ -137,7 +137,7 @@ AppState (defined in imbolc-core, composed of types from here)
 
 ### Other Key Enums
 
-- **MixerSelection**: `Instrument(usize)` | `LayerGroup(u32)` | `Bus(u8)` | `Master`
+- **MixerSelection**: `Instrument(usize)` | `Group(u32)` | `Bus(u8)` | `Master`
 - **OutputTarget**: `Master` | `Bus(u8)`
 - **FilterType**: LowPass, HighPass, BandPass, Notch
 - **LfoShape**: Sin, Tri, Saw, Sqr, SampleAndHold, Random

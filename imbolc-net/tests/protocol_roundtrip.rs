@@ -382,7 +382,7 @@ fn test_roundtrip_network_action_variants() {
         NetworkAction::None,
         NetworkAction::Quit,
         NetworkAction::Instrument(InstrumentAction::Select(0)),
-        NetworkAction::Server(ServerAction::RecordMaster),
+        NetworkAction::Server(ServerAction::ToggleRecordMaster),
         NetworkAction::Undo,
         NetworkAction::Redo,
     ];

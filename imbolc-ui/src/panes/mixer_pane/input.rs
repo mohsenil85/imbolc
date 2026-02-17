@@ -6,7 +6,7 @@ use crate::state::{AppState, InstrumentId, MixerSelection};
 use crate::ui::action_id::{ActionId, MixerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, InputEvent, InstrumentAction, LayerGroupAction, MixerAction, MouseButton,
+    Action, BusAction, GroupAction, InputEvent, InstrumentAction, MixerAction, MouseButton,
     MouseEvent, MouseEventKind, NavAction, PaneId, Rect,
 };
 use imbolc_types::{BusId, EffectId};
@@ -22,7 +22,7 @@ impl MixerPane {
         if let Some(DetailTarget::Bus(_)) = self.detail_mode {
             return self.handle_bus_detail_action(action, state);
         }
-        if let Some(DetailTarget::LayerGroup(_)) = self.detail_mode {
+        if let Some(DetailTarget::Group(_)) = self.detail_mode {
             return self.handle_group_detail_action(action, state);
         }
         if self.detail_mode.is_some() {
@@ -71,13 +71,11 @@ impl MixerPane {
             }
             ActionId::Mixer(MixerActionId::Mute) => Action::Mixer(MixerAction::ToggleMute),
             ActionId::Mixer(MixerActionId::Solo) => Action::Mixer(MixerAction::ToggleSolo),
-            ActionId::Mixer(MixerActionId::Output) => Action::Mixer(MixerAction::CycleOutput),
-            ActionId::Mixer(MixerActionId::OutputRev) => {
-                Action::Mixer(MixerAction::CycleOutputReverse)
-            }
+            ActionId::Mixer(MixerActionId::Output) => Action::Mixer(MixerAction::NextOutput),
+            ActionId::Mixer(MixerActionId::OutputRev) => Action::Mixer(MixerAction::PrevOutput),
             ActionId::Mixer(MixerActionId::Section) => {
                 self.send_target = None;
-                Action::Mixer(MixerAction::CycleSection)
+                Action::Mixer(MixerAction::NextSection)
             }
             ActionId::Mixer(MixerActionId::SendNext) => {
                 self.send_target = match self.send_target {
@@ -116,8 +114,8 @@ impl MixerPane {
                             self.effect_scroll = 0;
                         }
                     }
-                    MixerSelection::LayerGroup(gid) => {
-                        self.detail_mode = Some(DetailTarget::LayerGroup(gid));
+                    MixerSelection::Group(gid) => {
+                        self.detail_mode = Some(DetailTarget::Group(gid));
                         self.group_detail_section = GroupDetailSection::Effects;
                         self.detail_cursor = 0;
                         self.effect_scroll = 0;
@@ -211,9 +209,9 @@ impl MixerPane {
                         if channel < active_groups.len() {
                             let gid = active_groups[channel];
                             self.send_target = None;
-                            return Action::Mixer(MixerAction::SelectAt(
-                                MixerSelection::LayerGroup(gid),
-                            ));
+                            return Action::Mixer(MixerAction::SelectAt(MixerSelection::Group(
+                                gid,
+                            )));
                         }
                     }
                     next_x = group_end_x + 2; // +2 for separator after groups
@@ -308,10 +306,8 @@ impl MixerPane {
             }
             ActionId::Mixer(MixerActionId::Mute) => Action::Mixer(MixerAction::ToggleMute),
             ActionId::Mixer(MixerActionId::Solo) => Action::Mixer(MixerAction::ToggleSolo),
-            ActionId::Mixer(MixerActionId::Output) => Action::Mixer(MixerAction::CycleOutput),
-            ActionId::Mixer(MixerActionId::OutputRev) => {
-                Action::Mixer(MixerAction::CycleOutputReverse)
-            }
+            ActionId::Mixer(MixerActionId::Output) => Action::Mixer(MixerAction::NextOutput),
+            ActionId::Mixer(MixerActionId::OutputRev) => Action::Mixer(MixerAction::PrevOutput),
             ActionId::Mixer(MixerActionId::AddEffect) => {
                 Action::Nav(NavAction::PushPane(PaneId::AddEffect))
             }
@@ -340,8 +336,8 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::ToggleFilter) => {
                 Action::Instrument(InstrumentAction::ToggleFilter(inst_id))
             }
-            ActionId::Mixer(MixerActionId::CycleFilterType) => {
-                Action::Instrument(InstrumentAction::CycleFilterType(inst_id))
+            ActionId::Mixer(MixerActionId::NextFilterType) => {
+                Action::Instrument(InstrumentAction::NextFilterType(inst_id))
             }
             ActionId::Mixer(MixerActionId::MoveUp) => {
                 if self.detail_section == MixerSection::Effects {
@@ -600,7 +596,7 @@ impl MixerPane {
                         if self.detail_cursor > max_after {
                             self.detail_cursor = max_after;
                         }
-                        return Action::LayerGroup(LayerGroupAction::RemoveEffect(gid, ei));
+                        return Action::Group(GroupAction::RemoveEffect(gid, ei));
                     }
                 }
                 Action::None
@@ -608,7 +604,7 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::ToggleEffect) => {
                 if self.group_detail_section == GroupDetailSection::Effects {
                     if let Some((ei, _)) = self.decode_group_effect_cursor(state) {
-                        return Action::LayerGroup(LayerGroupAction::ToggleEffectBypass(gid, ei));
+                        return Action::Group(GroupAction::ToggleEffectBypass(gid, ei));
                     }
                 }
                 Action::None
@@ -617,7 +613,7 @@ impl MixerPane {
                 if self.group_detail_section == GroupDetailSection::Effects {
                     if let Some((ei, _)) = self.decode_group_effect_cursor(state) {
                         if ei > EffectId::new(0) {
-                            return Action::LayerGroup(LayerGroupAction::MoveEffect(gid, ei, -1));
+                            return Action::Group(GroupAction::MoveEffect(gid, ei, -1));
                         }
                     }
                 }
@@ -626,7 +622,7 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::MoveDown) => {
                 if self.group_detail_section == GroupDetailSection::Effects {
                     if let Some((ei, _)) = self.decode_group_effect_cursor(state) {
-                        return Action::LayerGroup(LayerGroupAction::MoveEffect(gid, ei, 1));
+                        return Action::Group(GroupAction::MoveEffect(gid, ei, 1));
                     }
                 }
                 Action::None
@@ -635,10 +631,8 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::Solo) => Action::Mixer(MixerAction::ToggleSolo),
             ActionId::Mixer(MixerActionId::PanLeft) => Action::Mixer(MixerAction::AdjustPan(-0.05)),
             ActionId::Mixer(MixerActionId::PanRight) => Action::Mixer(MixerAction::AdjustPan(0.05)),
-            ActionId::Mixer(MixerActionId::Output) => Action::Mixer(MixerAction::CycleOutput),
-            ActionId::Mixer(MixerActionId::OutputRev) => {
-                Action::Mixer(MixerAction::CycleOutputReverse)
-            }
+            ActionId::Mixer(MixerActionId::Output) => Action::Mixer(MixerAction::NextOutput),
+            ActionId::Mixer(MixerActionId::OutputRev) => Action::Mixer(MixerAction::PrevOutput),
             ActionId::Mixer(MixerActionId::SendNext) => {
                 if self.group_detail_section == GroupDetailSection::Sends {
                     let max = self.group_max_cursor(state);
@@ -689,7 +683,7 @@ impl MixerPane {
                 Action::None
             }
             MixerSection::Filter => match self.detail_cursor {
-                0 => Action::Instrument(InstrumentAction::CycleFilterType(inst_id)),
+                0 => Action::Instrument(InstrumentAction::NextFilterType(inst_id)),
                 1 => Action::Instrument(InstrumentAction::AdjustFilterCutoff(inst_id, delta)),
                 2 => Action::Instrument(InstrumentAction::AdjustFilterResonance(inst_id, delta)),
                 _ => Action::None,
@@ -700,9 +694,9 @@ impl MixerPane {
                 1 => Action::Mixer(MixerAction::AdjustLevel(delta * 0.01)),
                 2 => {
                     if delta > 0.0 {
-                        Action::Mixer(MixerAction::CycleOutput)
+                        Action::Mixer(MixerAction::NextOutput)
                     } else {
-                        Action::Mixer(MixerAction::CycleOutputReverse)
+                        Action::Mixer(MixerAction::PrevOutput)
                     }
                 }
                 _ => Action::None,
@@ -730,9 +724,7 @@ impl MixerPane {
         match self.group_detail_section {
             GroupDetailSection::Effects => {
                 if let Some((ei, Some(pi))) = self.decode_group_effect_cursor(state) {
-                    return Action::LayerGroup(LayerGroupAction::AdjustEffectParam(
-                        gid, ei, pi, delta,
-                    ));
+                    return Action::Group(GroupAction::AdjustEffectParam(gid, ei, pi, delta));
                 }
                 Action::None
             }

@@ -143,14 +143,14 @@ impl Pane for SequencerPane {
             ActionId::Sequencer(SequencerActionId::Toggle) => Action::Sequencer(
                 SequencerAction::ToggleStep(self.cursor_pad, self.cursor_step),
             ),
-            ActionId::Sequencer(SequencerActionId::PlayStop) => {
-                Action::Sequencer(SequencerAction::PlayStop)
+            ActionId::Sequencer(SequencerActionId::TogglePlayback) => {
+                Action::Sequencer(SequencerAction::TogglePlayback)
             }
             ActionId::Sequencer(SequencerActionId::LoadSample) => {
                 Action::Sequencer(SequencerAction::LoadSample(self.cursor_pad))
             }
             ActionId::Sequencer(SequencerActionId::Chopper) => {
-                Action::Nav(NavAction::PushPane(PaneId::SampleChopper))
+                Action::Nav(NavAction::PushPane(PaneId::SampleSlicer))
             }
             ActionId::Sequencer(SequencerActionId::ClearPad) => {
                 Action::Sequencer(SequencerAction::ClearPad(self.cursor_pad))
@@ -165,7 +165,7 @@ impl Pane for SequencerPane {
                 Action::Sequencer(SequencerAction::NextPattern)
             }
             ActionId::Sequencer(SequencerActionId::CycleLength) => {
-                Action::Sequencer(SequencerAction::CyclePatternLength)
+                Action::Sequencer(SequencerAction::NextPatternLength)
             }
             ActionId::Sequencer(SequencerActionId::ToggleReverse) => {
                 Action::Sequencer(SequencerAction::ToggleReverse(self.cursor_pad))
@@ -189,7 +189,7 @@ impl Pane for SequencerPane {
                 SequencerAction::AdjustStepPitch(self.cursor_pad, self.cursor_step, -1),
             ),
             ActionId::Sequencer(SequencerActionId::AssignInstrument) => {
-                Action::Sequencer(SequencerAction::OpenInstrumentPicker(self.cursor_pad))
+                Action::Sequencer(SequencerAction::SelectEditingPad(self.cursor_pad))
             }
             ActionId::Sequencer(SequencerActionId::ClearInstrument) => {
                 Action::Sequencer(SequencerAction::ClearPadInstrument(self.cursor_pad))
@@ -221,7 +221,7 @@ impl Pane for SequencerPane {
                 Action::None
             }
             ActionId::Sequencer(SequencerActionId::CycleGrid) => {
-                Action::Sequencer(SequencerAction::CycleStepResolution)
+                Action::Sequencer(SequencerAction::NextStepResolution)
             }
             _ => Action::None,
         }
@@ -660,7 +660,7 @@ mod tests {
     }
 
     #[test]
-    fn chopper_pushes_sample_chopper() {
+    fn chopper_pushes_sample_slicer() {
         let mut state = AppState::new();
         state.add_instrument(SourceType::Kit);
         let mut pane = SequencerPane::new(Keymap::new());
@@ -672,9 +672,9 @@ mod tests {
         );
         match action {
             Action::Nav(NavAction::PushPane(id)) => {
-                assert_eq!(id, crate::ui::PaneId::SampleChopper)
+                assert_eq!(id, crate::ui::PaneId::SampleSlicer)
             }
-            _ => panic!("Expected PushPane(sample_chopper)"),
+            _ => panic!("Expected PushPane(sample_slicer)"),
         }
     }
 }

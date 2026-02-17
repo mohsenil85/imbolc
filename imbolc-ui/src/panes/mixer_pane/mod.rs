@@ -23,7 +23,7 @@ const BLOCK_CHARS: [char; 8] = [
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DetailTarget {
     Instrument(usize),
-    LayerGroup(u32),
+    Group(u32),
     Bus(BusId),
 }
 
@@ -168,7 +168,7 @@ impl MixerPane {
                 .instruments
                 .get(idx)
                 .map(|inst| (idx, inst)),
-            DetailTarget::LayerGroup(_) | DetailTarget::Bus(_) => None,
+            DetailTarget::Group(_) | DetailTarget::Bus(_) => None,
         }
     }
 
@@ -179,7 +179,7 @@ impl MixerPane {
     /// Get the layer group ID if in group detail mode
     fn detail_group_id(&self) -> Option<u32> {
         match self.detail_mode? {
-            DetailTarget::LayerGroup(gid) => Some(gid),
+            DetailTarget::Group(gid) => Some(gid),
             _ => None,
         }
     }
@@ -283,7 +283,7 @@ impl MixerPane {
     pub fn effect_target(&self) -> EffectTarget {
         match self.detail_mode {
             Some(DetailTarget::Bus(id)) => EffectTarget::Bus(id),
-            Some(DetailTarget::LayerGroup(gid)) => EffectTarget::LayerGroup(gid),
+            Some(DetailTarget::Group(gid)) => EffectTarget::Group(gid),
             _ => EffectTarget::Instrument,
         }
     }
@@ -319,9 +319,7 @@ impl Pane for MixerPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         match self.detail_mode {
             Some(DetailTarget::Instrument(_)) => self.render_detail_buf(buf, area, state),
-            Some(DetailTarget::LayerGroup(gid)) => {
-                self.render_group_detail_buf(buf, area, state, gid)
-            }
+            Some(DetailTarget::Group(gid)) => self.render_group_detail_buf(buf, area, state, gid),
             Some(DetailTarget::Bus(id)) => self.render_bus_detail_buf(buf, area, state, id),
             None => self.render_mixer_buf(buf, area, state),
         }
@@ -342,7 +340,7 @@ mod tests {
     use crate::state::{AppState, MixerSelection};
     use crate::ui::action_id::MixerActionId;
     use crate::ui::{
-        BusAction, InputEvent, KeyCode, LayerGroupAction, MixerAction, Modifiers, NavAction,
+        BusAction, GroupAction, InputEvent, KeyCode, MixerAction, Modifiers, NavAction,
     };
     use imbolc_types::BusId;
 
@@ -435,7 +433,7 @@ mod tests {
         let mut pane = MixerPane::new(Keymap::new());
         let mut state = AppState::new();
         state.session.mixer.add_layer_group_mixer(1, &[]);
-        state.session.mixer.selection = MixerSelection::LayerGroup(1);
+        state.session.mixer.selection = MixerSelection::Group(1);
 
         let action = pane.handle_action(
             ActionId::Mixer(MixerActionId::EnterDetail),
@@ -443,7 +441,7 @@ mod tests {
             &state,
         );
         assert!(matches!(action, Action::None));
-        assert_eq!(pane.detail_mode, Some(DetailTarget::LayerGroup(1)));
+        assert_eq!(pane.detail_mode, Some(DetailTarget::Group(1)));
         assert_eq!(pane.group_detail_section, GroupDetailSection::Effects);
     }
 
@@ -541,7 +539,7 @@ mod tests {
         let mut pane = MixerPane::new(Keymap::new());
         let mut state = AppState::new();
         state.session.mixer.add_layer_group_mixer(1, &[]);
-        state.session.mixer.selection = MixerSelection::LayerGroup(1);
+        state.session.mixer.selection = MixerSelection::Group(1);
 
         pane.handle_action(
             ActionId::Mixer(MixerActionId::EnterDetail),
@@ -593,7 +591,7 @@ mod tests {
             .effects_vec()[0]
             .id;
 
-        state.session.mixer.selection = MixerSelection::LayerGroup(1);
+        state.session.mixer.selection = MixerSelection::Group(1);
         pane.handle_action(
             ActionId::Mixer(MixerActionId::EnterDetail),
             &dummy_event(),
@@ -606,7 +604,7 @@ mod tests {
             &state,
         );
         assert!(
-            matches!(action, Action::LayerGroup(LayerGroupAction::RemoveEffect(1, id)) if id == effect_id)
+            matches!(action, Action::Group(GroupAction::RemoveEffect(1, id)) if id == effect_id)
         );
     }
 
@@ -618,7 +616,7 @@ mod tests {
         pane.detail_mode = Some(DetailTarget::Bus(BusId::new(2)));
         assert_eq!(pane.effect_target(), EffectTarget::Bus(BusId::new(2)));
 
-        pane.detail_mode = Some(DetailTarget::LayerGroup(5));
-        assert_eq!(pane.effect_target(), EffectTarget::LayerGroup(5));
+        pane.detail_mode = Some(DetailTarget::Group(5));
+        assert_eq!(pane.effect_target(), EffectTarget::Group(5));
     }
 }

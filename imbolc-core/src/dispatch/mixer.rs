@@ -29,7 +29,7 @@ pub(super) fn dispatch_mixer(
         MixerAction::Move(_)
         | MixerAction::Jump(_)
         | MixerAction::SelectAt(_)
-        | MixerAction::CycleSection => {}
+        | MixerAction::NextSection => {}
 
         MixerAction::AdjustLevel(_delta) => match selection {
             MixerSelection::Instrument(idx) => {
@@ -46,7 +46,7 @@ pub(super) fn dispatch_mixer(
                     }
                 }
             }
-            MixerSelection::LayerGroup(group_id) => {
+            MixerSelection::Group(group_id) => {
                 result.audio_effects.push(AudioEffect::RebuildSession);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 if let Some(gm) = state.session.mixer.layer_group_mixer(group_id) {
@@ -87,7 +87,7 @@ pub(super) fn dispatch_mixer(
                 result.audio_effects.push(AudioEffect::RebuildInstruments);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
             }
-            MixerSelection::LayerGroup(group_id) => {
+            MixerSelection::Group(group_id) => {
                 result.audio_effects.push(AudioEffect::RebuildSession);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 if let Some(gm) = state.session.mixer.layer_group_mixer(group_id) {
@@ -121,7 +121,7 @@ pub(super) fn dispatch_mixer(
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 }
-                MixerSelection::LayerGroup(_) => {
+                MixerSelection::Group(_) => {
                     result.audio_effects.push(AudioEffect::RebuildSession);
                     result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 }
@@ -153,7 +153,7 @@ pub(super) fn dispatch_mixer(
             }
         }
 
-        MixerAction::CycleOutput | MixerAction::CycleOutputReverse => match selection {
+        MixerAction::NextOutput | MixerAction::PrevOutput => match selection {
             MixerSelection::Instrument(idx) => {
                 if let Some(inst) = state.instruments.instruments.get(idx) {
                     result
@@ -161,7 +161,7 @@ pub(super) fn dispatch_mixer(
                         .push(AudioEffect::RebuildRoutingForInstrument(inst.id));
                 }
             }
-            MixerSelection::LayerGroup(_) => {
+            MixerSelection::Group(_) => {
                 result.audio_effects.push(AudioEffect::RebuildRouting);
             }
             _ => {}
@@ -185,7 +185,7 @@ pub(super) fn dispatch_mixer(
                         }
                     }
                 }
-                MixerSelection::LayerGroup(_) => {
+                MixerSelection::Group(_) => {
                     result.audio_effects.push(AudioEffect::RebuildSession);
                     result.audio_effects.push(AudioEffect::RebuildRouting);
                 }
@@ -202,14 +202,14 @@ pub(super) fn dispatch_mixer(
                         .push(AudioEffect::RebuildRoutingForInstrument(instrument.id));
                 }
             }
-            MixerSelection::LayerGroup(_) => {
+            MixerSelection::Group(_) => {
                 result.audio_effects.push(AudioEffect::RebuildSession);
                 result.audio_effects.push(AudioEffect::RebuildRouting);
             }
             _ => {}
         },
 
-        MixerAction::CycleSendTapPoint(_bus_id) => match selection {
+        MixerAction::NextSendTapPoint(_bus_id) => match selection {
             MixerSelection::Instrument(idx) => {
                 if let Some(instrument) = state.instruments.instruments.get(idx) {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -218,7 +218,7 @@ pub(super) fn dispatch_mixer(
                         .push(AudioEffect::RebuildRoutingForInstrument(instrument.id));
                 }
             }
-            MixerSelection::LayerGroup(_) => {
+            MixerSelection::Group(_) => {
                 result.audio_effects.push(AudioEffect::RebuildSession);
                 result.audio_effects.push(AudioEffect::RebuildRouting);
             }
@@ -237,7 +237,7 @@ pub(super) fn dispatch_mixer(
                     }
                 }
             }
-            MixerSelection::LayerGroup(group_id) => {
+            MixerSelection::Group(group_id) => {
                 result.audio_effects.push(AudioEffect::RebuildSession);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 if let Some(gm) = state.session.mixer.layer_group_mixer(group_id) {
@@ -398,16 +398,16 @@ mod tests {
         let (mut state, mut audio) = setup();
 
         state.session.mixer.selection = MixerSelection::Instrument(0);
-        dispatch_mixer(&MixerAction::CycleSection, &mut state, &mut audio);
+        dispatch_mixer(&MixerAction::NextSection, &mut state, &mut audio);
         assert!(
             matches!(state.session.mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1))
         );
-        dispatch_mixer(&MixerAction::CycleSection, &mut state, &mut audio);
+        dispatch_mixer(&MixerAction::NextSection, &mut state, &mut audio);
         assert!(matches!(
             state.session.mixer.selection,
             MixerSelection::Master
         ));
-        dispatch_mixer(&MixerAction::CycleSection, &mut state, &mut audio);
+        dispatch_mixer(&MixerAction::NextSection, &mut state, &mut audio);
         assert!(matches!(
             state.session.mixer.selection,
             MixerSelection::Instrument(_)

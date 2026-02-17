@@ -24,7 +24,7 @@ use panes::{
     CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane,
     GenerativePane, GroovePane, HelpPane, HomePane, InstrumentEditPane, InstrumentPane,
     InstrumentPickerPane, MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane,
-    ProjectBrowserPane, QuitPromptPane, SampleChopperPane, SaveAsPane, SequencerPane, ServerPane,
+    ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane, ServerPane,
     TagPickerPane, TagViewPane, TrackPane, TunerPane, VstParamPane, WaveformPane,
 };
 use ui::{Keymap, PaneManager, RatatuiBackend};
@@ -146,7 +146,7 @@ pub(crate) fn pane_keymap(
 pub(crate) fn register_all_panes(
     keymaps: &mut std::collections::HashMap<String, Keymap>,
 ) -> PaneManager {
-    // file_browser keymap is used by both FileBrowserPane and SampleChopperPane's internal browser
+    // file_browser keymap is used by both FileBrowserPane and SampleSlicerPane's internal browser
     let file_browser_km = keymaps
         .get("file_browser")
         .cloned()
@@ -177,8 +177,8 @@ pub(crate) fn register_all_panes(
         keymaps,
         "frame_edit",
     ))));
-    panes.add_pane(Box::new(SampleChopperPane::new(
-        pane_keymap(keymaps, "sample_chopper"),
+    panes.add_pane(Box::new(SampleSlicerPane::new(
+        pane_keymap(keymaps, "sample_slicer"),
         file_browser_km,
     )));
     panes.add_pane(Box::new(AddEffectPane::new(pane_keymap(

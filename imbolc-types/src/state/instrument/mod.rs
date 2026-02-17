@@ -175,13 +175,13 @@ impl MixerBus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LayerGroupMixer {
+pub struct GroupMixer {
     pub group_id: u32,
     pub name: String,
     pub channel_strip: ChannelStrip,
 }
 
-impl LayerGroupMixer {
+impl GroupMixer {
     pub fn new(group_id: u32, _bus_ids: &[BusId]) -> Self {
         Self {
             group_id,
@@ -260,7 +260,7 @@ impl ProcessingStage {
 }
 
 /// Decode an effect cursor position into (EffectId, Option<param_index>).
-/// Returns None if cursor is out of range. Used by Instrument, MixerBus, and LayerGroupMixer.
+/// Returns None if cursor is out of range. Used by Instrument, MixerBus, and GroupMixer.
 pub fn decode_effect_cursor_from_slice(
     effects: &[EffectSlot],
     cursor: usize,
@@ -917,7 +917,7 @@ mod tests {
 
     #[test]
     fn layer_group_mixer_new_has_eq() {
-        let gm = LayerGroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
+        let gm = GroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
         assert!(gm.eq().is_some());
         let eq = gm.eq().unwrap();
         assert!(eq.enabled);
@@ -929,7 +929,7 @@ mod tests {
 
     #[test]
     fn layer_group_mixer_toggle_eq() {
-        let mut gm = LayerGroupMixer::new(1, &[]);
+        let mut gm = GroupMixer::new(1, &[]);
         assert!(gm.eq().is_some());
         gm.toggle_eq();
         assert!(gm.eq().is_none());
@@ -939,7 +939,7 @@ mod tests {
 
     #[test]
     fn layer_group_mixer_eq_mut() {
-        let mut gm = LayerGroupMixer::new(1, &[]);
+        let mut gm = GroupMixer::new(1, &[]);
         if let Some(eq) = gm.eq_mut() {
             eq.bands[0].gain = 3.0;
         }
