@@ -1,4 +1,4 @@
-use crate::action::{Action, AutomationAction, InstrumentAction};
+use crate::action::{Action, AutomationAction, InstrumentAction, MidiAction};
 use crate::midi::{MidiEvent, MidiEventKind};
 use crate::state::AppState;
 use imbolc_types::state::drum_sequencer::NUM_PADS;
@@ -10,6 +10,20 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
     let midi_rec = &state.session.midi_recording;
 
     match &event.kind {
+        MidiEventKind::ControlChange {
+            channel,
+            controller,
+            value: _,
+        } if midi_rec.is_learning() => {
+            // Learn mode intercept: create mapping from the incoming CC
+            let target = midi_rec.learn_target.clone().unwrap();
+            Some(Action::Midi(MidiAction::LearnedCc {
+                cc: *controller,
+                channel: *channel,
+                target,
+            }))
+        }
+
         MidiEventKind::ControlChange {
             channel,
             controller,
@@ -281,5 +295,76 @@ mod tests {
             }
             other => panic!("Expected PlayNote(60, 100), got {:?}", other),
         }
+    }
+
+    #[test]
+    fn test_learn_mode_intercepts_cc() {
+        let mut state = test_state();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        state.session.midi_recording.start_learning(target.clone());
+
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::ControlChange {
+                channel: 2,
+                controller: 74,
+                value: 64,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        match action {
+            Some(Action::Midi(MidiAction::LearnedCc {
+                cc,
+                channel,
+                target: t,
+            })) => {
+                assert_eq!(cc, 74);
+                assert_eq!(channel, 2);
+                assert_eq!(t, target);
+            }
+            other => panic!("Expected LearnedCc, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_learn_mode_bypasses_channel_filter() {
+        let mut state = test_state();
+        state.session.midi_recording.channel_filter = Some(1); // Only channel 1
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        state.session.midi_recording.start_learning(target);
+
+        // CC on channel 0 (would normally be filtered) — learn mode ignores filter
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::ControlChange {
+                channel: 0,
+                controller: 7,
+                value: 100,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        assert!(matches!(
+            action,
+            Some(Action::Midi(MidiAction::LearnedCc { .. }))
+        ));
+    }
+
+    #[test]
+    fn test_no_learn_mode_cc_works_normally() {
+        let state = test_state();
+        // Not in learn mode — CC 1 has a mapping, should produce RecordValue
+        let event = MidiEvent::new(
+            0,
+            MidiEventKind::ControlChange {
+                channel: 0,
+                controller: 1,
+                value: 64,
+            },
+        );
+        let action = process_midi_event(&event, &state);
+        assert!(matches!(
+            action,
+            Some(Action::Automation(AutomationAction::RecordValue(..)))
+        ));
     }
 }

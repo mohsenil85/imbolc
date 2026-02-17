@@ -114,6 +114,9 @@ pub struct MidiRecordingState {
     pub note_passthrough: bool,
     /// MIDI channel filter (None = all channels)
     pub channel_filter: Option<u8>,
+    /// MIDI Learn target — when Some, next CC event creates a mapping to this target
+    #[serde(skip)]
+    pub learn_target: Option<AutomationTarget>,
 }
 
 impl MidiRecordingState {
@@ -125,6 +128,7 @@ impl MidiRecordingState {
             live_input_instrument: None,
             note_passthrough: true,
             channel_filter: None,
+            learn_target: None,
         }
     }
 
@@ -200,6 +204,21 @@ impl MidiRecordingState {
     /// Check if a MIDI channel should be processed
     pub fn should_process_channel(&self, channel: u8) -> bool {
         self.channel_filter.is_none_or(|f| f == channel)
+    }
+
+    /// Enter learn mode for a target parameter
+    pub fn start_learning(&mut self, target: AutomationTarget) {
+        self.learn_target = Some(target);
+    }
+
+    /// Cancel learn mode without creating a mapping
+    pub fn cancel_learning(&mut self) {
+        self.learn_target = None;
+    }
+
+    /// Check if learn mode is active
+    pub fn is_learning(&self) -> bool {
+        self.learn_target.is_some()
     }
 }
 
@@ -282,5 +301,33 @@ mod tests {
         assert_eq!(state.record_mode, RecordMode::Recording);
         state.stop_recording();
         assert_eq!(state.record_mode, RecordMode::Off);
+    }
+
+    #[test]
+    fn test_learn_target_lifecycle() {
+        let mut state = MidiRecordingState::new();
+        assert!(!state.is_learning());
+        assert_eq!(state.learn_target, None);
+
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        state.start_learning(target.clone());
+        assert!(state.is_learning());
+        assert_eq!(state.learn_target, Some(target));
+
+        state.cancel_learning();
+        assert!(!state.is_learning());
+        assert_eq!(state.learn_target, None);
+    }
+
+    #[test]
+    fn test_learn_target_cleared_after_use() {
+        let mut state = MidiRecordingState::new();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        state.start_learning(target);
+        assert!(state.is_learning());
+
+        // Simulate learn completion by clearing manually (dispatch handler does this)
+        state.learn_target = None;
+        assert!(!state.is_learning());
     }
 }

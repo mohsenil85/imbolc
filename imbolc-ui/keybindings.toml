@@ -506,13 +506,15 @@ bindings = [
   { key = "Tab", action = "switch_section", description = "Switch section" },
   { key = "Up", action = "up", description = "Move up" },
   { key = "Down", action = "down", description = "Move down" },
-  { key = "Enter", action = "connect", description = "Connect to port" },
+  { key = "Enter", action = "connect", description = "Connect / Confirm" },
   { key = "d", action = "disconnect", description = "Disconnect MIDI" },
   { key = "x", action = "remove_mapping", description = "Remove CC mapping" },
   { key = "n", action = "toggle_passthrough", description = "Toggle note passthrough" },
   { key = "c", action = "set_channel_all", description = "Clear channel filter" },
   { key = "i", action = "set_live_instrument", description = "Set live input to selected" },
   { key = "I", action = "clear_live_instrument", description = "Clear live input instrument" },
+  { key = "l", action = "learn", description = "MIDI Learn" },
+  { key = "Escape", action = "cancel", description = "Cancel learn" },
 ]
 
 [layers.tag_view]

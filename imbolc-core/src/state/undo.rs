@@ -537,7 +537,10 @@ pub fn is_undoable(action: &DomainAction) -> bool {
         ),
         DomainAction::Midi(a) => !matches!(
             a,
-            crate::action::MidiAction::ConnectPort(_) | crate::action::MidiAction::DisconnectPort
+            crate::action::MidiAction::ConnectPort(_)
+                | crate::action::MidiAction::DisconnectPort
+                | crate::action::MidiAction::StartLearn(_)
+                | crate::action::MidiAction::CancelLearn
         ),
         DomainAction::Arrangement(a) => !matches!(
             a,

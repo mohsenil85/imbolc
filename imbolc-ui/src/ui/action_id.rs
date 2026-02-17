@@ -758,6 +758,9 @@ define_action_enum! {
         SetChannelAll => "set_channel_all",
         SetLiveInstrument => "set_live_instrument",
         ClearLiveInstrument => "clear_live_instrument",
+        Learn => "learn",
+        Confirm => "confirm",
+        Cancel => "cancel",
     }
 }
 

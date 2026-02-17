@@ -1,6 +1,6 @@
 # Imbolc: Road to Public Alpha/Beta
 
-_Last updated: 2026-02-13_
+_Last updated: 2026-02-16_
 
 ## Context
 
@@ -18,7 +18,7 @@ Current product posture for alpha:
 
 ---
 
-## Status Snapshot (2026-02-13)
+## Status Snapshot (2026-02-16)
 
 | Phase | Status | Notes |
 |------|--------|-------|
@@ -27,7 +27,7 @@ Current product posture for alpha:
 | Phase 2: CI/CD | IN PROGRESS | Workflow files are added; first successful CI/release runs still pending verification on GitHub. |
 | Phase 3: Onboarding/docs | PARTIAL | Installation and getting-started docs are added; broader docs audit is still pending. |
 | Phase 4: Core alpha features | DONE | Export, automation recording/playback, and autosave/recovery are now implemented. |
-| Phase 5: Polish/quality | PARTIAL | Sequencer grid selection is done; test expansion and MIDI learn workflow remain. |
+| Phase 5: Polish/quality | PARTIAL | Sequencer grid selection and MIDI learn are done; test expansion remains. |
 | Phase 6: Pre-release | NOT STARTED | Packaging/versioning/release assets not yet prepared. |
 
 ---
@@ -148,12 +148,18 @@ Required before inviting broader testers.
 **Key files:** `imbolc-ui/src/panes/sequencer_pane.rs`,
 `imbolc-ui/keybindings.toml`, `imbolc-ui/src/ui/action_id.rs`
 
-### 5.3 MIDI Learn workflow -- PARTIAL
+### 5.3 MIDI Learn workflow -- DONE
 
 - [x] CC mapping data model + persistence + mapping management actions
 - [x] MIDI settings pane shows current CC mappings
-- [ ] Learn mode: "next incoming CC binds selected target"
-- [ ] Clear in-flow UX for selecting target then arming learn
+- [x] Learn mode: "next incoming CC binds selected target"
+- [x] Clear in-flow UX for selecting target then arming learn
+
+**Key files:** `imbolc-types/src/state/midi_recording.rs` (learn_target state),
+`imbolc-types/src/action.rs` (StartLearn/CancelLearn/LearnedCc),
+`imbolc-core/src/dispatch/midi.rs` (learn dispatch handlers),
+`imbolc-ui/src/midi_dispatch.rs` (CC intercept during learn),
+`imbolc-ui/src/panes/midi_settings_pane.rs` (target picker UI + learn banner)
 
 ---
 

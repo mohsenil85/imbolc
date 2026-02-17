@@ -1,6 +1,7 @@
 use crate::action::{DispatchResult, MidiAction};
 use crate::state::midi_recording::MidiCcMapping;
 use crate::state::AppState;
+use imbolc_audio::ServerStatus;
 
 pub(super) fn dispatch_midi(action: &MidiAction, state: &mut AppState) -> DispatchResult {
     match action {
@@ -42,6 +43,31 @@ pub(super) fn dispatch_midi(action: &MidiAction, state: &mut AppState) -> Dispat
             state.session.midi_recording.note_passthrough =
                 !state.session.midi_recording.note_passthrough;
             DispatchResult::none()
+        }
+        MidiAction::StartLearn(target) => {
+            state.session.midi_recording.start_learning(target.clone());
+            DispatchResult::with_status(
+                ServerStatus::Running,
+                format!("MIDI Learn: move a CC knob for {}", target.name()),
+            )
+        }
+        MidiAction::CancelLearn => {
+            state.session.midi_recording.cancel_learning();
+            DispatchResult::with_status(ServerStatus::Running, "MIDI Learn cancelled")
+        }
+        MidiAction::LearnedCc {
+            cc,
+            channel,
+            target,
+        } => {
+            let mut mapping = MidiCcMapping::new(*cc, target.clone());
+            mapping.channel = Some(*channel);
+            state.session.midi_recording.add_cc_mapping(mapping);
+            state.session.midi_recording.cancel_learning();
+            DispatchResult::with_status(
+                ServerStatus::Running,
+                format!("CC{} mapped to {}", cc, target.name()),
+            )
         }
     }
 }
@@ -321,7 +347,7 @@ mod tests {
     // ── DispatchResult ───────────────────────────────────────────────
 
     #[test]
-    fn all_actions_return_dispatch_result_none() {
+    fn all_actions_return_no_audio_effects() {
         let mut state = setup();
         let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
 
@@ -331,7 +357,7 @@ mod tests {
             MidiAction::AddCcMapping {
                 cc: 1,
                 channel: None,
-                target,
+                target: target.clone(),
             },
             MidiAction::RemoveCcMapping {
                 cc: 1,
@@ -340,6 +366,13 @@ mod tests {
             MidiAction::SetChannelFilter(Some(0)),
             MidiAction::SetLiveInputInstrument(None),
             MidiAction::ToggleNotePassthrough,
+            MidiAction::StartLearn(target.clone()),
+            MidiAction::CancelLearn,
+            MidiAction::LearnedCc {
+                cc: 1,
+                channel: 0,
+                target,
+            },
         ];
 
         for action in &actions {
@@ -350,5 +383,86 @@ mod tests {
                 action
             );
         }
+    }
+
+    // ── StartLearn ──────────────────────────────────────────────────
+
+    #[test]
+    fn start_learn_sets_learn_target() {
+        let mut state = setup();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+
+        dispatch_midi(&MidiAction::StartLearn(target.clone()), &mut state);
+
+        assert!(state.session.midi_recording.is_learning());
+        assert_eq!(state.session.midi_recording.learn_target, Some(target));
+    }
+
+    #[test]
+    fn start_learn_returns_status_message() {
+        let mut state = setup();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+
+        let result = dispatch_midi(&MidiAction::StartLearn(target), &mut state);
+        assert_eq!(result.status.len(), 1);
+        assert!(result.status[0].message.contains("MIDI Learn"));
+    }
+
+    // ── CancelLearn ─────────────────────────────────────────────────
+
+    #[test]
+    fn cancel_learn_clears_learn_target() {
+        let mut state = setup();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        state.session.midi_recording.start_learning(target);
+
+        dispatch_midi(&MidiAction::CancelLearn, &mut state);
+
+        assert!(!state.session.midi_recording.is_learning());
+    }
+
+    // ── LearnedCc ───────────────────────────────────────────────────
+
+    #[test]
+    fn learned_cc_creates_mapping_and_clears_learn() {
+        let mut state = setup();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+        state.session.midi_recording.start_learning(target.clone());
+
+        dispatch_midi(
+            &MidiAction::LearnedCc {
+                cc: 74,
+                channel: 0,
+                target: target.clone(),
+            },
+            &mut state,
+        );
+
+        // Mapping created
+        assert_eq!(state.session.midi_recording.cc_mappings.len(), 1);
+        let m = &state.session.midi_recording.cc_mappings[0];
+        assert_eq!(m.cc_number, 74);
+        assert_eq!(m.channel, Some(0));
+        assert_eq!(m.target, target);
+
+        // Learn mode cleared
+        assert!(!state.session.midi_recording.is_learning());
+    }
+
+    #[test]
+    fn learned_cc_returns_status_message() {
+        let mut state = setup();
+        let target = AutomationTarget::filter_cutoff(InstrumentId::new(0));
+
+        let result = dispatch_midi(
+            &MidiAction::LearnedCc {
+                cc: 74,
+                channel: 0,
+                target,
+            },
+            &mut state,
+        );
+        assert_eq!(result.status.len(), 1);
+        assert!(result.status[0].message.contains("CC74"));
     }
 }

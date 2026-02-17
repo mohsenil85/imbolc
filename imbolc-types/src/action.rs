@@ -583,6 +583,16 @@ pub enum MidiAction {
     SetChannelFilter(Option<u8>),
     SetLiveInputInstrument(Option<InstrumentId>),
     ToggleNotePassthrough,
+    /// Enter learn mode — next CC event will create a mapping to this target
+    StartLearn(AutomationTarget),
+    /// Cancel learn mode without creating a mapping
+    CancelLearn,
+    /// A CC arrived during learn mode — create mapping and exit learn mode
+    LearnedCc {
+        cc: u8,
+        channel: u8,
+        target: AutomationTarget,
+    },
 }
 
 /// Automation actions.
