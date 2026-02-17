@@ -69,9 +69,9 @@ impl KeyPattern {
         match self {
             KeyPattern::Char(' ') => "\u{2423}".to_string(), // ␣
             KeyPattern::Char(ch) => ch.to_string(),
-            KeyPattern::Key(KeyCode::Up) => "\u{2191}".to_string(),    // ↑
-            KeyPattern::Key(KeyCode::Down) => "\u{2193}".to_string(),  // ↓
-            KeyPattern::Key(KeyCode::Left) => "\u{2190}".to_string(),  // ←
+            KeyPattern::Key(KeyCode::Up) => "\u{2191}".to_string(), // ↑
+            KeyPattern::Key(KeyCode::Down) => "\u{2193}".to_string(), // ↓
+            KeyPattern::Key(KeyCode::Left) => "\u{2190}".to_string(), // ←
             KeyPattern::Key(KeyCode::Right) => "\u{2192}".to_string(), // →
             KeyPattern::Key(KeyCode::Enter) => "\u{23ce}".to_string(), // ⏎
             KeyPattern::Key(KeyCode::Escape) => "Esc".to_string(),

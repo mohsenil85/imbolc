@@ -393,11 +393,11 @@ bindings = [
 
 [layers.tuner]
 bindings = [
-  { key = "Up", action = "prev_string", description = "Previous string" },
-  { key = "Down", action = "next_string", description = "Next string" },
-  { key = "Left", action = "prev_instrument", description = "Previous instrument" },
-  { key = "Right", action = "next_instrument", description = "Next instrument" },
-  { key = "Enter", action = "play_stop", description = "Play / Stop tone" },
+  { key = "Up", action = "prev_string", description = "Previous string", hint = "string" },
+  { key = "Down", action = "next_string", description = "Next string", hint = "string" },
+  { key = "Left", action = "prev_instrument", description = "Previous instrument", hint = "instrument" },
+  { key = "Right", action = "next_instrument", description = "Next instrument", hint = "instrument" },
+  { key = "Enter", action = "play_stop", description = "Play / Stop tone", hint = "play" },
 ]
 
 [layers.groove]
@@ -421,10 +421,10 @@ bindings = [
   { key = "Down", action = "next_param", description = "Next parameter" },
   { key = "Left", action = "decrease", description = "Decrease / Cycle back" },
   { key = "Right", action = "increase", description = "Increase / Cycle forward" },
-  { key = "Space", action = "toggle", description = "Toggle arp on/off" },
-  { key = "Enter", action = "toggle", description = "Toggle arp on/off" },
-  { key = "Backspace", action = "clear_chord", description = "Clear chord shape" },
-  { key = "x", action = "clear_chord", description = "Clear chord shape" },
+  { key = "Space", action = "toggle", description = "Toggle arp on/off", hint = "on/off" },
+  { key = "Enter", action = "toggle", description = "Toggle arp on/off", hint = "on/off" },
+  { key = "Backspace", action = "clear_chord", description = "Clear chord shape", hint = "clear" },
+  { key = "x", action = "clear_chord", description = "Clear chord shape", hint = "clear" },
 ]
 
 [layers.generative]
@@ -487,10 +487,10 @@ bindings = [
   { key = "Right", action = "right", description = "Adjust value up (fine)" },
   { key = "Shift+Left", action = "coarse_left", description = "Adjust value down (coarse)" },
   { key = "Shift+Right", action = "coarse_right", description = "Adjust value up (coarse)" },
-  { key = "/", action = "search", description = "Search params" },
-  { key = "r", action = "reset", description = "Reset to default" },
-  { key = "a", action = "automate", description = "Add automation lane" },
-  { key = "d", action = "discover", description = "Re-discover params" },
+  { key = "/", action = "search", description = "Search params", hint = "search" },
+  { key = "r", action = "reset", description = "Reset to default", hint = "reset" },
+  { key = "a", action = "automate", description = "Add automation lane", hint = "automate" },
+  { key = "d", action = "discover", description = "Re-discover params", hint = "discover" },
   { key = "g", action = "goto_top", description = "Go to top" },
   { key = "G", action = "goto_bottom", description = "Go to bottom" },
   { key = "Escape", action = "cancel", description = "Exit search / go back" },
@@ -498,22 +498,22 @@ bindings = [
 
 [layers.waveform]
 bindings = [
-  { key = "Tab", action = "cycle_mode", description = "Cycle display mode" },
+  { key = "Tab", action = "cycle_mode", description = "Cycle display mode", hint = "mode" },
 ]
 
 [layers.midi_settings]
 bindings = [
-  { key = "Tab", action = "switch_section", description = "Switch section" },
+  { key = "Tab", action = "switch_section", description = "Switch section", hint = "section" },
   { key = "Up", action = "up", description = "Move up" },
   { key = "Down", action = "down", description = "Move down" },
-  { key = "Enter", action = "connect", description = "Connect / Confirm" },
-  { key = "d", action = "disconnect", description = "Disconnect MIDI" },
-  { key = "x", action = "remove_mapping", description = "Remove CC mapping" },
-  { key = "n", action = "toggle_passthrough", description = "Toggle note passthrough" },
+  { key = "Enter", action = "connect", description = "Connect / Confirm", hint = "connect" },
+  { key = "d", action = "disconnect", description = "Disconnect MIDI", hint = "disconnect" },
+  { key = "x", action = "remove_mapping", description = "Remove CC mapping", hint = "remove" },
+  { key = "n", action = "toggle_passthrough", description = "Toggle note passthrough", hint = "passthrough" },
   { key = "c", action = "set_channel_all", description = "Clear channel filter" },
-  { key = "i", action = "set_live_instrument", description = "Set live input to selected" },
+  { key = "i", action = "set_live_instrument", description = "Set live input to selected", hint = "live input" },
   { key = "I", action = "clear_live_instrument", description = "Clear live input instrument" },
-  { key = "l", action = "learn", description = "MIDI Learn" },
+  { key = "l", action = "learn", description = "MIDI Learn", hint = "learn" },
   { key = "Escape", action = "cancel", description = "Cancel learn" },
 ]
 
@@ -527,12 +527,12 @@ bindings = [
   { key = "PageDown", action = "decrease_big", description = "Decrease -10%" },
   { key = "Ctrl+Right", action = "increase_tiny", description = "Fine increase" },
   { key = "Ctrl+Left", action = "decrease_tiny", description = "Fine decrease" },
-  { key = "Tab", action = "next_tag", description = "Next tag" },
-  { key = "Shift+Tab", action = "prev_tag", description = "Previous tag" },
-  { key = "d", action = "remove_target", description = "Remove param from tag" },
-  { key = "x", action = "delete_tag", description = "Delete current tag" },
-  { key = "n", action = "create_tag", description = "Create new tag" },
-  { key = "r", action = "rename_tag", description = "Rename current tag" },
+  { key = "Tab", action = "next_tag", description = "Next tag", hint = "tag" },
+  { key = "Shift+Tab", action = "prev_tag", description = "Previous tag", hint = "tag" },
+  { key = "d", action = "remove_target", description = "Remove param from tag", hint = "remove" },
+  { key = "x", action = "delete_tag", description = "Delete current tag", hint = "delete tag" },
+  { key = "n", action = "create_tag", description = "Create new tag", hint = "new tag" },
+  { key = "r", action = "rename_tag", description = "Rename current tag", hint = "rename" },
 ]
 
 # --- Mode layers ---
