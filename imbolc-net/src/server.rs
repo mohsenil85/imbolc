@@ -191,7 +191,7 @@ impl DirtyFlags {
     /// Resolve a piano roll track index to an `InstrumentId` using session state.
     /// Falls back to structural if session is unavailable or index is out of bounds.
     fn resolve_track_id(&mut self, track: usize, session: Option<&SessionState>) {
-        match session.and_then(|s| s.piano_roll.track_order.get(track).copied()) {
+        match session.and_then(|s| s.piano_roll.sequence_order.get(track).copied()) {
             Some(id) => {
                 self.dirty_piano_roll_tracks.insert(id);
             }
@@ -1262,7 +1262,7 @@ impl NetServer {
             )
         } else {
             // Piano roll: threshold coalescing (same pattern as instruments)
-            let pr_total = state.session.piano_roll.tracks.len();
+            let pr_total = state.session.piano_roll.sequences.len();
             let use_full_pr = self.dirty.piano_roll_structural
                 || (pr_total > 0 && self.dirty.dirty_piano_roll_tracks.len() > pr_total / 2);
 
@@ -1278,8 +1278,8 @@ impl NetServer {
             let pr_patches = if !use_full_pr && !self.dirty.dirty_piano_roll_tracks.is_empty() {
                 let mut patches = HashMap::new();
                 for &id in &self.dirty.dirty_piano_roll_tracks {
-                    if let Some(track) = state.session.piano_roll.tracks.get(&id) {
-                        patches.insert(id, track.clone());
+                    if let Some(seq) = state.session.piano_roll.sequences.get(&id) {
+                        patches.insert(id, seq.clone());
                     }
                 }
                 if patches.is_empty() {

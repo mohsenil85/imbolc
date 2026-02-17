@@ -421,7 +421,7 @@ mod tests {
             source: imbolc_types::SourceType,
         ) -> imbolc_types::InstrumentId {
             let id = self.instruments.add_instrument(source);
-            self.session.piano_roll.add_track(id);
+            self.session.piano_roll.add_sequence(id);
             id
         }
     }

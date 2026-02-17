@@ -29,7 +29,7 @@ fn round_trip_drum_sequencer() {
         }
     }
 
-    session.piano_roll.add_track(kit_id);
+    session.piano_roll.add_sequence(kit_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -75,7 +75,7 @@ fn round_trip_sampler_config() {
         }
     }
 
-    session.piano_roll.add_track(sampler_id);
+    session.piano_roll.add_sequence(sampler_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -110,7 +110,7 @@ fn round_trip_vst_plugins() {
         };
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -194,8 +194,8 @@ fn round_trip_layer_octave_offset() {
         inst.layer.octave_offset = -2;
     }
 
-    session.piano_roll.add_track(id1);
-    session.piano_roll.add_track(id2);
+    session.piano_roll.add_sequence(id1);
+    session.piano_roll.add_sequence(id2);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");

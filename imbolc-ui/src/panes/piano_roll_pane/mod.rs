@@ -209,7 +209,7 @@ impl Pane for PianoRollPane {
                 if let Some(track_idx) = state
                     .session
                     .piano_roll
-                    .track_order
+                    .sequence_order
                     .iter()
                     .position(|&id| id == inst.id)
                 {
@@ -237,7 +237,7 @@ impl Pane for PianoRollPane {
         let instrument_id = state
             .session
             .piano_roll
-            .track_order
+            .sequence_order
             .get(self.current_track)
             .copied()
             .unwrap_or(InstrumentId::new(0));

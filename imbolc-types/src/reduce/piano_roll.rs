@@ -58,8 +58,8 @@ pub(super) fn reduce(action: &PianoRollAction, session: &mut SessionState) -> bo
             true
         }
         PianoRollAction::TogglePolyMode(track_idx) => {
-            if let Some(track) = session.piano_roll.track_at_mut(*track_idx) {
-                track.polyphonic = !track.polyphonic;
+            if let Some(seq) = session.piano_roll.sequence_at_mut(*track_idx) {
+                seq.polyphonic = !seq.polyphonic;
             }
             true
         }
@@ -75,7 +75,7 @@ pub(super) fn reduce(action: &PianoRollAction, session: &mut SessionState) -> bo
             start_pitch,
             end_pitch,
         } => {
-            if let Some(t) = session.piano_roll.track_at_mut(*track) {
+            if let Some(t) = session.piano_roll.sequence_at_mut(*track) {
                 t.notes.retain(|n| {
                     !(n.pitch >= *start_pitch
                         && n.pitch <= *end_pitch
@@ -91,7 +91,7 @@ pub(super) fn reduce(action: &PianoRollAction, session: &mut SessionState) -> bo
             anchor_pitch,
             notes,
         } => {
-            if let Some(t) = session.piano_roll.track_at_mut(*track) {
+            if let Some(t) = session.piano_roll.sequence_at_mut(*track) {
                 for cn in notes {
                     let tick = *anchor_tick + cn.tick_offset;
                     let pitch_i16 = *anchor_pitch as i16 + cn.pitch_offset;

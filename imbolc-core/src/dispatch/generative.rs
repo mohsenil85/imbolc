@@ -34,14 +34,14 @@ pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> D
             // Commit captured events to piano roll
             let events: Vec<_> = state.session.generative.captured_events.drain(..).collect();
             for event in &events {
-                // Add note to the track for this instrument
-                if let Some(track) = state
+                // Add note to the sequence for this instrument
+                if let Some(seq) = state
                     .session
                     .piano_roll
-                    .tracks
+                    .sequences
                     .get_mut(&event.instrument_id)
                 {
-                    track.notes.push(imbolc_types::Note {
+                    seq.notes.push(imbolc_types::Note {
                         pitch: event.pitch,
                         tick: event.tick,
                         duration: event.duration_ticks,

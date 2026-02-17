@@ -152,9 +152,9 @@ mod tests {
             }
         }
 
-        // Piano roll tracks and notes
-        session.piano_roll.add_track(saw_id);
-        session.piano_roll.add_track(sampler_id);
+        // Piano roll sequences and notes
+        session.piano_roll.add_sequence(saw_id);
+        session.piano_roll.add_sequence(sampler_id);
         session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
         // Automation lane targeting effect param
@@ -232,7 +232,7 @@ mod tests {
         assert_eq!(loaded_synth.params[0].name, "cutoff");
 
         // Piano roll
-        assert_eq!(loaded_session.piano_roll.track_order.len(), 2);
+        assert_eq!(loaded_session.piano_roll.sequence_order.len(), 2);
         assert!(loaded_session.piano_roll.looping);
         assert_eq!(loaded_session.piano_roll.loop_start, 480);
 

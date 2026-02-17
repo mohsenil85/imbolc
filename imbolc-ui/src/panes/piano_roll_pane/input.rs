@@ -16,7 +16,7 @@ impl PianoRollPane {
         state
             .session
             .piano_roll
-            .track_order
+            .sequence_order
             .get(self.current_track)
             .copied()
             .unwrap_or(InstrumentId::new(0))

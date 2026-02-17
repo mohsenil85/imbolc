@@ -1,1 +1,1 @@
-pub use imbolc_types::{Note, PianoRollState, Track};
+pub use imbolc_types::{Note, NoteSequence, PianoRollState};

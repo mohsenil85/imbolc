@@ -120,7 +120,7 @@ fn round_trip_layer_group_effects() {
         }
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -181,7 +181,7 @@ fn round_trip_layer_group_eq() {
         eq.bands[11].gain = -6.0;
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -232,7 +232,7 @@ fn round_trip_layer_group_eq_disabled() {
     gm.toggle_eq(); // was Some → now None
     assert!(gm.eq().is_none());
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -287,7 +287,7 @@ fn round_trip_processing_chain_order() {
             ));
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");
@@ -360,7 +360,7 @@ fn round_trip_processing_chain_interleaved() {
             ));
     }
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save");

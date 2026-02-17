@@ -12,12 +12,12 @@ pub(super) fn reduce(
         InstrumentAction::Add(source_type) => {
             let id = instruments.add_instrument(*source_type);
             initialize_instrument_from_registries(id, *source_type, instruments, session);
-            session.piano_roll.add_track(id);
+            session.piano_roll.add_sequence(id);
             true
         }
         InstrumentAction::Delete(id) => {
             instruments.remove_instrument(*id);
-            session.piano_roll.remove_track(*id);
+            session.piano_roll.remove_sequence(*id);
             session.automation.remove_lanes_for_instrument(*id);
             session.arrangement.remove_instrument_data(*id);
             true

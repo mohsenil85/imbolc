@@ -354,8 +354,8 @@ impl AudioHandle {
             let (flattened, arr_len, _) = self
                 .arrangement_cache
                 .get_or_compute(&state.session().arrangement);
-            for (&instrument_id, track) in &mut flat_pr.tracks {
-                track.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
+            for (&instrument_id, seq) in &mut flat_pr.sequences {
+                seq.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
             }
             if arr_len > 0 {
                 flat_pr.loop_end = arr_len;
@@ -406,8 +406,8 @@ impl AudioHandle {
                 let (flattened, arr_len, _) = self
                     .arrangement_cache
                     .get_or_compute(&state.session().arrangement);
-                for (&instrument_id, track) in &mut flat_pr.tracks {
-                    track.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
+                for (&instrument_id, seq) in &mut flat_pr.sequences {
+                    seq.notes = flattened.get(&instrument_id).cloned().unwrap_or_default();
                 }
                 if arr_len > 0 {
                     flat_pr.loop_end = arr_len;

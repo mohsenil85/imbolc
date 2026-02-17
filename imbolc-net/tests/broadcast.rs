@@ -1114,8 +1114,8 @@ fn test_piano_roll_per_track_sends_track_patches() {
 
     // Build state with 2 piano roll tracks
     let mut state = common::make_test_state(&server);
-    state.session.piano_roll.add_track(InstrumentId::new(1));
-    state.session.piano_roll.add_track(InstrumentId::new(2));
+    state.session.piano_roll.add_sequence(InstrumentId::new(1));
+    state.session.piano_roll.add_sequence(InstrumentId::new(2));
     state.session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
     let mut alice = common::RawClient::connect(&addr).unwrap();
@@ -1167,7 +1167,7 @@ fn test_piano_roll_structural_sends_full() {
     let addr = server.local_addr().unwrap().to_string();
 
     let mut state = common::make_test_state(&server);
-    state.session.piano_roll.add_track(InstrumentId::new(1));
+    state.session.piano_roll.add_sequence(InstrumentId::new(1));
 
     let mut alice = common::RawClient::connect(&addr).unwrap();
     alice.send_hello("Alice", vec![], false).unwrap();
@@ -1204,7 +1204,7 @@ fn test_piano_roll_targeted_then_structural() {
     let addr = server.local_addr().unwrap().to_string();
 
     let mut state = common::make_test_state(&server);
-    state.session.piano_roll.add_track(InstrumentId::new(1));
+    state.session.piano_roll.add_sequence(InstrumentId::new(1));
 
     let mut alice = common::RawClient::connect(&addr).unwrap();
     alice.send_hello("Alice", vec![], false).unwrap();
@@ -1252,8 +1252,8 @@ fn test_piano_roll_threshold_coalescing() {
 
     // 2 tracks: threshold is >1, so dirtying both → full piano_roll
     let mut state = common::make_test_state(&server);
-    state.session.piano_roll.add_track(InstrumentId::new(1));
-    state.session.piano_roll.add_track(InstrumentId::new(2));
+    state.session.piano_roll.add_sequence(InstrumentId::new(1));
+    state.session.piano_roll.add_sequence(InstrumentId::new(2));
 
     let mut alice = common::RawClient::connect(&addr).unwrap();
     alice.send_hello("Alice", vec![], false).unwrap();

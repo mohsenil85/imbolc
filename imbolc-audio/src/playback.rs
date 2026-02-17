@@ -127,8 +127,8 @@ pub fn tick_playback(
 
             let mut note_ons: Vec<(InstrumentId, u8, u8, u32, u32, f32, f64)> = Vec::new();
             let any_solo = instruments.any_instrument_solo();
-            for &instrument_id in &piano_roll.track_order {
-                if let Some(track) = piano_roll.tracks.get(&instrument_id) {
+            for &instrument_id in &piano_roll.sequence_order {
+                if let Some(seq) = piano_roll.sequences.get(&instrument_id) {
                     // Expand layer group: collect all target IDs for this instrument
                     let targets = instruments.layer_group_members(instrument_id);
 
@@ -138,10 +138,10 @@ pub fn tick_playback(
                         }
                         // Binary search for efficiency
                         // Notes are expected to be sorted by tick
-                        let start_idx = track.notes.partition_point(|n| n.tick < range_start);
-                        let end_idx = track.notes.partition_point(|n| n.tick < range_end);
+                        let start_idx = seq.notes.partition_point(|n| n.tick < range_start);
+                        let end_idx = seq.notes.partition_point(|n| n.tick < range_end);
 
-                        for note in &track.notes[start_idx..end_idx] {
+                        for note in &seq.notes[start_idx..end_idx] {
                             let ticks_from_old = base_ticks + (note.tick - range_start) as f64;
                             for &target_id in &targets {
                                 // Skip muted/inactive siblings
@@ -399,7 +399,7 @@ mod tests {
 
         let mut piano_roll = PianoRollState::new();
         piano_roll.playing = true;
-        piano_roll.add_track(inst_id);
+        piano_roll.add_sequence(inst_id);
 
         let session = SessionState::new();
         let engine = AudioEngine::new();

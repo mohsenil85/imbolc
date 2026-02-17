@@ -64,7 +64,7 @@ fn save_and_load_round_trip_arrangement() {
     session.arrangement.selected_placement = Some(1);
 
     // Add piano roll track (required for persistence)
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let path = temp_db_path();
     save_project(&path, &session, &instruments).expect("save_project");
@@ -133,7 +133,7 @@ fn round_trip_arrangement_clips() {
     let mut session = SessionState::new();
     let mut instruments = InstrumentState::new();
     let inst_id = instruments.add_instrument(SourceType::Saw);
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
 
     let clip_id = session
         .arrangement

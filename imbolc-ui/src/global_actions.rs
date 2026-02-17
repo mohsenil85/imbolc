@@ -73,7 +73,7 @@ pub(crate) fn sync_piano_roll_to_selection(
             if let Some(track_idx) = state
                 .session
                 .piano_roll
-                .track_order
+                .sequence_order
                 .iter()
                 .position(|&id| id == inst_id)
             {
@@ -1172,16 +1172,16 @@ fn select_all_in_active_pane(state: &mut AppState, panes: &mut PaneManager) {
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
-                if let Some(track) = state.session.piano_roll.track_at(pane.current_track) {
-                    if let Some(min_tick) = track.notes.iter().map(|n| n.tick).min() {
-                        let max_tick = track
+                if let Some(seq) = state.session.piano_roll.sequence_at(pane.current_track) {
+                    if let Some(min_tick) = seq.notes.iter().map(|n| n.tick).min() {
+                        let max_tick = seq
                             .notes
                             .iter()
                             .map(|n| n.tick + n.duration)
                             .max()
                             .unwrap_or(min_tick);
-                        let min_pitch = track.notes.iter().map(|n| n.pitch).min().unwrap_or(0);
-                        let max_pitch = track.notes.iter().map(|n| n.pitch).max().unwrap_or(127);
+                        let min_pitch = seq.notes.iter().map(|n| n.pitch).min().unwrap_or(0);
+                        let max_pitch = seq.notes.iter().map(|n| n.pitch).max().unwrap_or(127);
 
                         pane.selection_anchor = Some((min_tick, min_pitch));
                         pane.cursor_tick = max_tick;

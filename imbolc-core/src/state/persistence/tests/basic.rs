@@ -41,7 +41,7 @@ fn save_and_load_round_trip_basic() {
     inst.channel_strip.output_target = OutputTarget::Bus(BusId::new(2));
     inst.add_effect(EffectType::Delay);
 
-    session.piano_roll.add_track(inst_id);
+    session.piano_roll.add_sequence(inst_id);
     session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
     let lane_id = session
@@ -84,12 +84,12 @@ fn save_and_load_round_trip_basic() {
         EffectType::Delay
     );
 
-    assert_eq!(loaded_session.piano_roll.track_order.len(), 1);
-    assert_eq!(loaded_session.piano_roll.track_order[0], inst_id);
+    assert_eq!(loaded_session.piano_roll.sequence_order.len(), 1);
+    assert_eq!(loaded_session.piano_roll.sequence_order[0], inst_id);
     assert_eq!(
         loaded_session
             .piano_roll
-            .track_at(0)
+            .sequence_at(0)
             .map(|t| t.notes.len())
             .unwrap_or(0),
         1
@@ -224,9 +224,9 @@ fn save_and_load_round_trip_complex() {
         }
     }
 
-    // Piano roll tracks and notes
-    session.piano_roll.add_track(saw_id);
-    session.piano_roll.add_track(sampler_id);
+    // Piano roll sequences and notes
+    session.piano_roll.add_sequence(saw_id);
+    session.piano_roll.add_sequence(sampler_id);
     session.piano_roll.toggle_note(0, 60, 0, 480, 100);
 
     // Automation lane targeting effect param

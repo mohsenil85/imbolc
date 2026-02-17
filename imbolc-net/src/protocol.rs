@@ -10,8 +10,8 @@ use imbolc_types::{
     ArrangementAction, ArrangementState, AutomationAction, AutomationLane, AutomationLaneId,
     AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, Instrument,
     InstrumentAction, InstrumentId, InstrumentState, LayerGroupAction, MidiAction, MixerAction,
-    MixerBus, MixerState, PianoRollAction, PianoRollState, SequencerAction, ServerAction,
-    SessionAction, SessionState, Track, VstParamAction,
+    MixerBus, MixerState, NoteSequence, PianoRollAction, PianoRollState, SequencerAction,
+    ServerAction, SessionAction, SessionState, VstParamAction,
 };
 
 /// Unique identifier for a connected client.
@@ -131,7 +131,7 @@ pub struct StatePatch {
     /// Granular session subsystem patches (only used when `session` is `None`).
     pub piano_roll: Option<PianoRollState>,
     /// Per-track delta patches (mutually exclusive with `piano_roll`).
-    pub piano_roll_track_patches: Option<HashMap<InstrumentId, Track>>,
+    pub piano_roll_track_patches: Option<HashMap<InstrumentId, NoteSequence>>,
     pub arrangement: Option<ArrangementState>,
     pub automation: Option<AutomationState>,
     /// Per-lane delta patches (mutually exclusive with `automation`).

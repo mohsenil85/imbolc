@@ -124,7 +124,7 @@ impl AppState {
         }
     }
 
-    /// Add an instrument, with custom synthdef param setup and piano roll track auto-creation.
+    /// Add an instrument, with custom synthdef param setup and piano roll sequence auto-creation.
     pub fn add_instrument(&mut self, source: SourceType) -> InstrumentId {
         let id = self.instruments.add_instrument(source);
         imbolc_types::reduce::initialize_instrument_from_registries(
@@ -133,14 +133,14 @@ impl AppState {
             &mut self.instruments,
             &self.session,
         );
-        self.session.piano_roll.add_track(id);
+        self.session.piano_roll.add_sequence(id);
         id
     }
 
-    /// Remove an instrument and its piano roll track.
+    /// Remove an instrument and its piano roll sequence.
     pub fn remove_instrument(&mut self, id: InstrumentId) {
         self.instruments.remove_instrument(id);
-        self.session.piano_roll.remove_track(id);
+        self.session.piano_roll.remove_sequence(id);
         self.session.automation.remove_lanes_for_instrument(id);
         self.session.arrangement.remove_instrument_data(id);
     }
@@ -173,8 +173,8 @@ mod tests {
         let mut state = AppState::new();
         let instrument_id = state.add_instrument(SourceType::Saw);
 
-        assert_eq!(state.session.piano_roll.track_order.len(), 1);
-        assert_eq!(state.session.piano_roll.track_order[0], instrument_id);
+        assert_eq!(state.session.piano_roll.sequence_order.len(), 1);
+        assert_eq!(state.session.piano_roll.sequence_order[0], instrument_id);
 
         state
             .session
@@ -201,7 +201,7 @@ mod tests {
             .automation
             .lanes_for_instrument(instrument_id)
             .is_empty());
-        assert!(state.session.piano_roll.track_order.is_empty());
+        assert!(state.session.piano_roll.sequence_order.is_empty());
     }
 
     #[test]
@@ -242,8 +242,8 @@ mod tests {
     fn add_instrument_creates_piano_roll_track() {
         let mut state = AppState::new();
         let id = state.add_instrument(SourceType::Saw);
-        assert_eq!(state.session.piano_roll.track_order.len(), 1);
-        assert!(state.session.piano_roll.tracks.contains_key(&id));
+        assert_eq!(state.session.piano_roll.sequence_order.len(), 1);
+        assert!(state.session.piano_roll.sequences.contains_key(&id));
     }
 
     #[test]
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(state.session.automation.lanes.len(), 1);
 
         state.remove_instrument(id);
-        assert!(state.session.piano_roll.track_order.is_empty());
+        assert!(state.session.piano_roll.sequence_order.is_empty());
         assert!(state.session.automation.lanes.is_empty());
     }
 }

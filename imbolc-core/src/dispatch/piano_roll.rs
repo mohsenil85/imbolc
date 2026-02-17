@@ -429,7 +429,7 @@ pub(super) fn dispatch_piano_roll(
             start_pitch,
             end_pitch,
         } => {
-            if let Some(t) = state.session.piano_roll.track_at(*track) {
+            if let Some(t) = state.session.piano_roll.sequence_at(*track) {
                 let mut notes = Vec::new();
                 for note in &t.notes {
                     if note.tick >= *start_tick
@@ -515,7 +515,10 @@ mod tests {
         };
         let result = dispatch_piano_roll(&action, &mut state, &mut audio);
         assert!(result.audio_effects.contains(&AudioEffect::UpdatePianoRoll));
-        assert_eq!(state.session.piano_roll.track_at(0).unwrap().notes.len(), 1);
+        assert_eq!(
+            state.session.piano_roll.sequence_at(0).unwrap().notes.len(),
+            1
+        );
 
         // Toggle again removes
         let result = dispatch_piano_roll(&action, &mut state, &mut audio);
@@ -523,7 +526,7 @@ mod tests {
         assert!(state
             .session
             .piano_roll
-            .track_at(0)
+            .sequence_at(0)
             .unwrap()
             .notes
             .is_empty());
@@ -605,7 +608,7 @@ mod tests {
             end_pitch: 64,
         };
         dispatch_piano_roll(&action, &mut state, &mut audio);
-        let notes = &state.session.piano_roll.track_at(0).unwrap().notes;
+        let notes = &state.session.piano_roll.sequence_at(0).unwrap().notes;
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].pitch, 72);
     }
@@ -647,7 +650,7 @@ mod tests {
             notes: clipboard_notes,
         };
         dispatch_piano_roll(&action, &mut state, &mut audio);
-        let notes = &state.session.piano_roll.track_at(0).unwrap().notes;
+        let notes = &state.session.piano_roll.sequence_at(0).unwrap().notes;
         // Original + one valid paste (duplicate and out-of-range skipped)
         assert_eq!(notes.len(), 2);
     }

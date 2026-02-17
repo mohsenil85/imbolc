@@ -195,9 +195,9 @@ pub(super) fn load_musical_settings(
 pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> SqlResult<()> {
     use crate::state::piano_roll::Note;
 
-    // Clear existing tracks
-    session.piano_roll.tracks.clear();
-    session.piano_roll.track_order.clear();
+    // Clear existing sequences
+    session.piano_roll.sequences.clear();
+    session.piano_roll.sequence_order.clear();
 
     // Load tracks ordered by position
     let mut track_stmt =
@@ -212,9 +212,9 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
         .collect::<SqlResult<_>>()?;
 
     for (inst_id, polyphonic) in &tracks {
-        session.piano_roll.add_track(*inst_id);
-        if let Some(track) = session.piano_roll.tracks.get_mut(inst_id) {
-            track.polyphonic = *polyphonic;
+        session.piano_roll.add_sequence(*inst_id);
+        if let Some(seq) = session.piano_roll.sequences.get_mut(inst_id) {
+            seq.polyphonic = *polyphonic;
         }
     }
 
@@ -239,8 +239,8 @@ pub(super) fn load_piano_roll(conn: &Connection, session: &mut SessionState) -> 
         .collect::<SqlResult<_>>()?;
 
     for (inst_id, note) in notes {
-        if let Some(track) = session.piano_roll.tracks.get_mut(&inst_id) {
-            track.notes.push(note);
+        if let Some(seq) = session.piano_roll.sequences.get_mut(&inst_id) {
+            seq.notes.push(note);
         }
     }
 

@@ -197,26 +197,26 @@ pub fn format_mixer(state: &AppState) -> String {
 }
 
 pub fn format_notes(state: &AppState, track_idx: usize) -> String {
-    let track_order = &state.session.piano_roll.track_order;
-    if track_idx >= track_order.len() {
+    let sequence_order = &state.session.piano_roll.sequence_order;
+    if track_idx >= sequence_order.len() {
         return format!(
             "Track index {} out of range (0..{})",
             track_idx,
-            track_order.len()
+            sequence_order.len()
         );
     }
-    let inst_id = track_order[track_idx];
-    let track = match state.session.piano_roll.tracks.get(&inst_id) {
+    let inst_id = sequence_order[track_idx];
+    let seq = match state.session.piano_roll.sequences.get(&inst_id) {
         Some(t) => t,
         None => return format!("No track for instrument {}", inst_id),
     };
 
-    if track.notes.is_empty() {
+    if seq.notes.is_empty() {
         return format!("Track {} (instrument {}): no notes", track_idx, inst_id);
     }
 
     let mut lines = vec![format!("Track {} (instrument {}):", track_idx, inst_id)];
-    for note in &track.notes {
+    for note in &seq.notes {
         lines.push(format!(
             "  pitch:{:>3}  tick:{:>6}  dur:{:>5}  vel:{:>3}",
             note.pitch, note.tick, note.duration, note.velocity,

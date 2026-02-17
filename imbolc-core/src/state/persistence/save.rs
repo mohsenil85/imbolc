@@ -856,15 +856,15 @@ fn save_piano_roll(conn: &Connection, session: &SessionState) -> SqlResult<()> {
     let pr = &session.piano_roll;
     let mut note_id: i64 = 0;
 
-    for (pos, &inst_id) in pr.track_order.iter().enumerate() {
-        if let Some(track) = pr.tracks.get(&inst_id) {
+    for (pos, &inst_id) in pr.sequence_order.iter().enumerate() {
+        if let Some(seq) = pr.sequences.get(&inst_id) {
             conn.execute(
                 "INSERT INTO piano_roll_tracks (instrument_id, position, polyphonic)
                  VALUES (?1, ?2, ?3)",
-                params![inst_id.get(), pos as i32, track.polyphonic as i32],
+                params![inst_id.get(), pos as i32, seq.polyphonic as i32],
             )?;
 
-            for note in &track.notes {
+            for note in &seq.notes {
                 conn.execute(
                     "INSERT INTO piano_roll_notes (id, track_instrument_id, tick, duration, pitch, velocity, probability)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
