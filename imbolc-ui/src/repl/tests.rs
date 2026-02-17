@@ -28,10 +28,10 @@ fn test_initial_state() {
     let (mut d, mut a) = test_setup();
 
     // No instruments on fresh state
-    match exec("show instruments", &mut d, &mut a).unwrap() {
+    match exec("show tracks", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => assert!(
-            text.contains("No instruments"),
-            "expected 'No instruments', got: {text}"
+            text.contains("No tracks"),
+            "expected 'No tracks', got: {text}"
         ),
         other => panic!("expected Output, got: {other:?}"),
     }
@@ -54,14 +54,14 @@ fn test_quit_command() {
 }
 
 #[test]
-fn test_add_instrument() {
+fn test_add_track() {
     let (mut d, mut a) = test_setup();
 
-    exec("instrument add saw", &mut d, &mut a).unwrap();
+    exec("track add saw", &mut d, &mut a).unwrap();
     assert_eq!(d.state().tracks.tracks.len(), 1);
     assert_eq!(d.state().tracks.tracks[0].source.short_name(), "saw");
 
-    match exec("show instruments", &mut d, &mut a).unwrap() {
+    match exec("show tracks", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => assert!(text.contains("saw"), "expected saw in: {text}"),
         other => panic!("expected Output, got: {other:?}"),
     }
@@ -91,18 +91,18 @@ fn test_session_settings() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_instrument_lifecycle() {
+fn test_track_lifecycle() {
     let (mut d, mut a) = test_setup();
 
-    exec("instrument add saw", &mut d, &mut a).unwrap();
-    exec("instrument add sin", &mut d, &mut a).unwrap();
+    exec("track add saw", &mut d, &mut a).unwrap();
+    exec("track add sin", &mut d, &mut a).unwrap();
     assert_eq!(d.state().tracks.tracks.len(), 2);
 
-    exec("instrument select 0", &mut d, &mut a).unwrap();
+    exec("track select 0", &mut d, &mut a).unwrap();
     assert_eq!(d.state().tracks.selected, Some(0));
 
     let id = d.state().tracks.tracks[0].id;
-    exec(&format!("instrument delete {}", id), &mut d, &mut a).unwrap();
+    exec(&format!("track delete {}", id), &mut d, &mut a).unwrap();
     assert_eq!(d.state().tracks.tracks.len(), 1);
 }
 
@@ -110,18 +110,18 @@ fn test_instrument_lifecycle() {
 fn test_mixer_operations() {
     let (mut d, mut a) = test_setup();
 
-    exec("instrument add saw", &mut d, &mut a).unwrap();
-    // Mixer selection starts at channel 0 (first instrument)
+    exec("track add saw", &mut d, &mut a).unwrap();
+    // Mixer selection starts at channel 0 (first track)
     exec("mixer toggle-mute", &mut d, &mut a).unwrap();
     assert!(
         d.state().tracks.tracks[0].channel_strip.mute,
-        "instrument should be muted"
+        "track should be muted"
     );
 
     exec("mixer toggle-mute", &mut d, &mut a).unwrap();
     assert!(
         !d.state().tracks.tracks[0].channel_strip.mute,
-        "instrument should be unmuted"
+        "track should be unmuted"
     );
 }
 
@@ -129,7 +129,7 @@ fn test_mixer_operations() {
 fn test_undo_redo() {
     let (mut d, mut a) = test_setup();
 
-    exec("instrument add saw", &mut d, &mut a).unwrap();
+    exec("track add saw", &mut d, &mut a).unwrap();
     assert_eq!(d.state().tracks.tracks.len(), 1);
 
     exec("undo", &mut d, &mut a).unwrap();
@@ -143,11 +143,11 @@ fn test_undo_redo() {
 fn test_show_all_targets() {
     let (mut d, mut a) = test_setup();
 
-    // Add an instrument + select it so sequencer/notes have something to display
-    exec("instrument add saw", &mut d, &mut a).unwrap();
+    // Add a track + select it so sequencer/notes have something to display
+    exec("track add saw", &mut d, &mut a).unwrap();
 
     let targets = [
-        "instruments",
+        "tracks",
         "transport",
         "mixer",
         "buses",
@@ -209,12 +209,9 @@ fn test_help_system() {
         other => panic!("expected Output, got: {other:?}"),
     }
 
-    match exec("help instrument", &mut d, &mut a).unwrap() {
+    match exec("help track", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => {
-            assert!(
-                text.contains("add"),
-                "help instrument should list 'add': {text}"
-            );
+            assert!(text.contains("add"), "help track should list 'add': {text}");
         }
         other => panic!("expected Output, got: {other:?}"),
     }
@@ -234,16 +231,13 @@ fn test_help_system() {
 fn test_status_command() {
     let (mut d, mut a) = test_setup();
 
-    exec("instrument add saw", &mut d, &mut a).unwrap();
-    exec("instrument add sin", &mut d, &mut a).unwrap();
+    exec("track add saw", &mut d, &mut a).unwrap();
+    exec("track add sin", &mut d, &mut a).unwrap();
     exec("set bpm 160", &mut d, &mut a).unwrap();
 
     match exec("status", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => {
-            assert!(
-                text.contains("Instruments: 2"),
-                "expected instrument count: {text}"
-            );
+            assert!(text.contains("Tracks: 2"), "expected track count: {text}");
             assert!(text.contains("BPM: 160"), "expected bpm: {text}");
             assert!(text.contains("STOPPED"), "expected stopped: {text}");
         }
@@ -260,7 +254,7 @@ fn test_trailing_tokens_rejected() {
     let (mut d, mut a) = test_setup();
 
     // Registry commands should reject trailing tokens
-    let err = exec("instrument add saw garbage", &mut d, &mut a).unwrap_err();
+    let err = exec("track add saw garbage", &mut d, &mut a).unwrap_err();
     assert!(
         err.contains("unexpected trailing"),
         "expected trailing error, got: {err}"

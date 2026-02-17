@@ -148,7 +148,7 @@ impl Pane for TagViewPane {
         let inactive_tab = Style::new().fg(Color::new(160, 160, 160));
 
         if tags.tags.is_empty() {
-            let msg = "No tags. Press 'T' in instrument edit to tag a parameter.";
+            let msg = "No tags. Press 'T' in track edit to tag a parameter.";
             let x = area.x + (area.width.saturating_sub(msg.len() as u16)) / 2;
             let y = area.y + area.height / 2;
             buf.draw_str(x, y, msg, dim);
@@ -191,7 +191,7 @@ impl Pane for TagViewPane {
         };
 
         if selected_tag.targets.is_empty() {
-            let msg = "No parameters tagged. Press 'T' on a param in instrument edit.";
+            let msg = "No parameters tagged. Press 'T' on a param in track edit.";
             let x = area.x + (area.width.saturating_sub(msg.len() as u16)) / 2;
             buf.draw_str(x, content_y + 1, msg, dim);
             return;

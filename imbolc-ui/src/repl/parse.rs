@@ -174,13 +174,11 @@ impl ReplParseable for PathBuf {
 
 impl ReplParseable for TrackId {
     fn parse_repl(s: &str) -> Result<Self, String> {
-        let id: u32 = s
-            .parse()
-            .map_err(|_| format!("invalid instrument id: {s}"))?;
+        let id: u32 = s.parse().map_err(|_| format!("invalid track id: {s}"))?;
         Ok(TrackId::new(id))
     }
     fn type_hint() -> &'static str {
-        "<instrument_id>"
+        "<track_id>"
     }
 }
 
@@ -322,10 +320,10 @@ impl ReplParseable for MixerSelection {
         if s == "master" {
             return Ok(MixerSelection::Master);
         }
-        if let Some(rest) = s.strip_prefix("instrument:") {
+        if let Some(rest) = s.strip_prefix("track:") {
             let idx: usize = rest
                 .parse()
-                .map_err(|_| format!("invalid instrument index: {rest}"))?;
+                .map_err(|_| format!("invalid track index: {rest}"))?;
             return Ok(MixerSelection::Track(idx));
         }
         if let Some(rest) = s.strip_prefix("bus:") {
@@ -341,7 +339,7 @@ impl ReplParseable for MixerSelection {
             return Ok(MixerSelection::LayerGroup(id));
         }
         Err(format!(
-            "invalid mixer selection: {s} (try: master, instrument:0, bus:1, group:0)"
+            "invalid mixer selection: {s} (try: master, track:0, bus:1, group:0)"
         ))
     }
     fn type_hint() -> &'static str {
@@ -370,9 +368,9 @@ impl ReplParseable for VstTarget {
 impl ReplParseable for VstPluginKind {
     fn parse_repl(s: &str) -> Result<Self, String> {
         match s {
-            "instrument" => Ok(VstPluginKind::Track),
+            "track" => Ok(VstPluginKind::Track),
             "effect" => Ok(VstPluginKind::Effect),
-            _ => Err(format!("invalid vst kind: {s} (try: instrument, effect)")),
+            _ => Err(format!("invalid vst kind: {s} (try: track, effect)")),
         }
     }
     fn type_hint() -> &'static str {
@@ -488,7 +486,7 @@ mod tests {
             MixerSelection::Master
         );
         assert_eq!(
-            MixerSelection::parse_repl("instrument:0").unwrap(),
+            MixerSelection::parse_repl("track:0").unwrap(),
             MixerSelection::Track(0)
         );
         assert_eq!(
@@ -519,8 +517,8 @@ mod tests {
     #[test]
     fn tokenize_simple() {
         assert_eq!(
-            tokenize("instrument add saw").unwrap(),
-            vec!["instrument", "add", "saw"]
+            tokenize("track add saw").unwrap(),
+            vec!["track", "add", "saw"]
         );
     }
 
@@ -546,8 +544,8 @@ mod tests {
     #[test]
     fn tokenize_extra_whitespace() {
         assert_eq!(
-            tokenize("  instrument   add   saw  ").unwrap(),
-            vec!["instrument", "add", "saw"]
+            tokenize("  track   add   saw  ").unwrap(),
+            vec!["track", "add", "saw"]
         );
     }
 }

@@ -16,8 +16,8 @@ use crate::ui::{
     RenderBuf, SessionAction, StatusEvent, ToggleResult, ViewState,
 };
 
-/// Two-digit instrument selection state machine
-pub(crate) enum InstrumentSelectMode {
+/// Two-digit track selection state machine
+pub(crate) enum TrackSelectMode {
     Normal,
     WaitingFirstDigit,
     WaitingSecondDigit(u8),
@@ -281,7 +281,7 @@ pub(crate) fn handle_global_action(
     panes: &mut PaneManager,
     audio: &mut AudioHandle,
     app_frame: &mut Frame,
-    select_mode: &mut InstrumentSelectMode,
+    select_mode: &mut TrackSelectMode,
     pending_audio_effects: &mut Vec<AudioEffect>,
     needs_full_sync: &mut bool,
     layer_stack: &mut LayerStack,
@@ -668,7 +668,7 @@ pub(crate) fn handle_global_action(
                     let current_id = panes.active().id();
                     let current_keymap = panes.active().keymap().clone();
                     let title = match current_id {
-                        "instrument" => "Instruments",
+                        "instrument" => "Tracks",
                         "mixer" => "Mixer",
                         "server" => "Server",
                         "piano_roll" => "Piano Roll",
@@ -730,7 +730,7 @@ pub(crate) fn handle_global_action(
                 sync_instrument_edit(dispatcher.state(), panes);
             }
             GlobalActionId::SelectTwoDigit => {
-                *select_mode = InstrumentSelectMode::WaitingFirstDigit;
+                *select_mode = TrackSelectMode::WaitingFirstDigit;
             }
             GlobalActionId::TogglePianoMode => {
                 let result = panes

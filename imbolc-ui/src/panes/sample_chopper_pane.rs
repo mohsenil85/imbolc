@@ -143,7 +143,7 @@ impl Pane for SampleChopperPane {
             buf.draw_line(
                 Rect::new(inner.x + 1, inner.y + 1, inner.width.saturating_sub(2), 1),
                 &[(
-                    "No drum machine instrument selected.",
+                    "No drum machine track selected.",
                     Style::new().fg(Color::DARK_GRAY),
                 )],
             );

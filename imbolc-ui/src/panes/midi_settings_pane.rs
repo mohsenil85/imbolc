@@ -427,7 +427,7 @@ impl Pane for MidiSettingsPane {
                     }
                 ),
                 format!(
-                    "  Live input instrument: {}",
+                    "  Live input track: {}",
                     match state.session.midi_recording.live_input_instrument {
                         Some(id) => {
                             state

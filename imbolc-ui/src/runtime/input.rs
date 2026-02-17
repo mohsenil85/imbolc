@@ -49,22 +49,21 @@ impl AppRuntime {
                     self.dispatcher.state(),
                 ),
                 AppEvent::Key(event) => {
-                    // Two-digit instrument selection state machine (pre-layer)
+                    // Two-digit track selection state machine (pre-layer)
                     match &self.select_mode {
-                        InstrumentSelectMode::WaitingFirstDigit => {
+                        TrackSelectMode::WaitingFirstDigit => {
                             if let KeyCode::Char(c) = event.key {
                                 if let Some(d) = c.to_digit(10) {
-                                    self.select_mode =
-                                        InstrumentSelectMode::WaitingSecondDigit(d as u8);
+                                    self.select_mode = TrackSelectMode::WaitingSecondDigit(d as u8);
                                     if events_processed >= 16 {
                                         break;
                                     }
                                     continue 'events;
                                 }
                             }
-                            self.select_mode = InstrumentSelectMode::Normal;
+                            self.select_mode = TrackSelectMode::Normal;
                         }
-                        InstrumentSelectMode::WaitingSecondDigit(first) => {
+                        TrackSelectMode::WaitingSecondDigit(first) => {
                             let first = *first;
                             if let KeyCode::Char(c) = event.key {
                                 if let Some(d) = c.to_digit(10) {
@@ -76,16 +75,16 @@ impl AppRuntime {
                                         &mut self.panes,
                                         &mut self.audio,
                                     );
-                                    self.select_mode = InstrumentSelectMode::Normal;
+                                    self.select_mode = TrackSelectMode::Normal;
                                     if events_processed >= 16 {
                                         break;
                                     }
                                     continue 'events;
                                 }
                             }
-                            self.select_mode = InstrumentSelectMode::Normal;
+                            self.select_mode = TrackSelectMode::Normal;
                         }
-                        InstrumentSelectMode::Normal => {}
+                        TrackSelectMode::Normal => {}
                     }
 
                     // Layer resolution

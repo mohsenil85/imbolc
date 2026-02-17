@@ -28,9 +28,9 @@ impl AudioEngine {
     ) -> Result<(), String> {
         let instrument = state
             .track(instrument_id)
-            .ok_or_else(|| format!("No instrument with id {}", instrument_id))?;
+            .ok_or_else(|| format!("No track with id {}", instrument_id))?;
 
-        // AudioIn, BusIn, and VSTi instruments don't use voice spawning - they have persistent synths
+        // AudioIn, BusIn, and VSTi tracks don't use voice spawning - they have persistent synths
         if instrument.source.is_audio_input() || instrument.source.is_bus_in() {
             return Ok(());
         }
@@ -311,11 +311,11 @@ impl AudioEngine {
     ) -> Result<(), String> {
         let instrument = state
             .track(instrument_id)
-            .ok_or_else(|| format!("No instrument with id {}", instrument_id))?;
+            .ok_or_else(|| format!("No track with id {}", instrument_id))?;
 
         let sampler_config = instrument
             .sampler_config()
-            .ok_or("Sampler instrument has no sampler config")?;
+            .ok_or("Sampler track has no sampler config")?;
 
         let buffer_id = sampler_config
             .buffer_id
@@ -863,9 +863,9 @@ impl AudioEngine {
     ) -> Result<(), String> {
         let instrument = state
             .track(target_track_id)
-            .ok_or_else(|| format!("No instrument with id {}", target_track_id))?;
+            .ok_or_else(|| format!("No track with id {}", target_track_id))?;
 
-        // Skip unsupported instrument types
+        // Skip unsupported track types
         if instrument.source.is_audio_input()
             || instrument.source.is_bus_in()
             || instrument.source.is_vst()

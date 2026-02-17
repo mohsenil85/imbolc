@@ -275,7 +275,7 @@ impl Pane for TrackPane {
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         if state.tracks.tracks.is_empty() {
-            let text = "(no instruments)";
+            let text = "(no tracks)";
             let x = inner.x + (inner.width.saturating_sub(text.len() as u16)) / 2;
             let y = inner.y + inner.height / 2;
             buf.draw_line(

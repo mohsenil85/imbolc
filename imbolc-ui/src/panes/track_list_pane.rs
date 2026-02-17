@@ -316,14 +316,14 @@ impl Pane for TrackListPane {
         let rect = center_rect(area, 97, 29);
 
         let border_style = Style::new().fg(Color::CYAN);
-        let inner = buf.draw_block(rect, " Instruments ", border_style, border_style);
+        let inner = buf.draw_block(rect, " Tracks ", border_style, border_style);
 
         let content_x = inner.x + 1;
         let content_y = inner.y + 1;
 
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
-            &[("Instruments:", Style::new().fg(Color::CYAN).bold())],
+            &[("Tracks:", Style::new().fg(Color::CYAN).bold())],
         );
 
         let list_y = content_y + 2;
@@ -333,7 +333,7 @@ impl Pane for TrackListPane {
             buf.draw_line(
                 Rect::new(content_x + 2, list_y, inner.width.saturating_sub(4), 1),
                 &[(
-                    "(no instruments — press 'a' to add)",
+                    "(no tracks — press 'a' to add)",
                     Style::new().fg(Color::DARK_GRAY),
                 )],
             );

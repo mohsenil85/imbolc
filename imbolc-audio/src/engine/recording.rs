@@ -214,7 +214,7 @@ impl AudioEngine {
             return Err("Already recording".to_string());
         }
         if instrument_buses.is_empty() {
-            return Err("No instruments to export".to_string());
+            return Err("No tracks to export".to_string());
         }
         let backend = self.backend.as_ref().ok_or("Not connected")?;
 

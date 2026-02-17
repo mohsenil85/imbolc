@@ -3,7 +3,7 @@ use imbolc_types::*;
 
 pub fn format_instrument_list(state: &AppState) -> String {
     if state.tracks.tracks.is_empty() {
-        return "No instruments. Use 'instrument add <source>' to create one.".to_string();
+        return "No tracks. Use 'track add <source>' to create one.".to_string();
     }
 
     let selected = state.tracks.selected;
@@ -208,14 +208,14 @@ pub fn format_notes(state: &AppState, track_idx: usize) -> String {
     let inst_id = sequence_order[track_idx];
     let seq = match state.session.piano_roll.sequences.get(&inst_id) {
         Some(t) => t,
-        None => return format!("No track for instrument {}", inst_id),
+        None => return format!("No sequence for track {}", inst_id),
     };
 
     if seq.notes.is_empty() {
-        return format!("Track {} (instrument {}): no notes", track_idx, inst_id);
+        return format!("Track {} (id {}): no notes", track_idx, inst_id);
     }
 
-    let mut lines = vec![format!("Track {} (instrument {}):", track_idx, inst_id)];
+    let mut lines = vec![format!("Track {} (id {}):", track_idx, inst_id)];
     for note in &seq.notes {
         lines.push(format!(
             "  pitch:{:>3}  tick:{:>6}  dur:{:>5}  vel:{:>3}",
@@ -414,12 +414,12 @@ pub fn format_sequencer(state: &AppState) -> String {
     let inst = selected.and_then(|i| state.tracks.tracks.get(i));
     let inst = match inst {
         Some(i) => i,
-        None => return "No instrument selected".to_string(),
+        None => return "No track selected".to_string(),
     };
 
     let seq = match &inst.source_extra {
         imbolc_types::state::track::SourceExtra::Kit(seq) => seq,
-        _ => return "No drum sequencer on selected instrument".to_string(),
+        _ => return "No drum sequencer on selected track".to_string(),
     };
 
     let mut lines = vec![format!(

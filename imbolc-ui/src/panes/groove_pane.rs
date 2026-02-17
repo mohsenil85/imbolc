@@ -96,7 +96,7 @@ impl Pane for GroovePane {
         let instrument = match instrument {
             Some(i) => i,
             None => {
-                render_centered_text(inner, buf, "(no instrument selected)", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "(no track selected)", Color::DARK_GRAY);
                 return;
             }
         };

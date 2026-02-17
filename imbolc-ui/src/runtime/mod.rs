@@ -19,7 +19,7 @@ use crate::action::{AudioEffect, IoFeedback};
 use crate::audio::AudioHandle;
 use crate::config;
 use crate::dispatch::LocalDispatcher;
-use crate::global_actions::{apply_status_events, InstrumentSelectMode};
+use crate::global_actions::{apply_status_events, TrackSelectMode};
 use crate::midi;
 use crate::panes::{ConfirmPane, PendingAction};
 use crate::setup;
@@ -49,7 +49,7 @@ pub struct AppRuntime {
     pub(crate) ui_log: Option<InteractionLog>,
 
     // Per-frame state
-    pub(crate) select_mode: InstrumentSelectMode,
+    pub(crate) select_mode: TrackSelectMode,
     pub(crate) pending_audio_effects: Vec<AudioEffect>,
     pub(crate) needs_full_sync: bool,
     pub(crate) quit_after_save: bool,
@@ -179,7 +179,7 @@ impl AppRuntime {
             io_rx,
             recent_projects,
             ui_log: InteractionLog::ui(),
-            select_mode: InstrumentSelectMode::Normal,
+            select_mode: TrackSelectMode::Normal,
             pending_audio_effects,
             needs_full_sync,
             quit_after_save: false,

@@ -241,7 +241,7 @@ impl Pane for SequencerPane {
                 buf.draw_line(
                     Rect::new(inner.x + 11, cy, inner.width.saturating_sub(12), 1),
                     &[(
-                        "No drum machine instrument selected.",
+                        "No drum machine track selected.",
                         Style::new().fg(Color::DARK_GRAY),
                     )],
                 );

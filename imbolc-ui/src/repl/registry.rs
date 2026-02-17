@@ -5,16 +5,16 @@ use imbolc_types::*;
 use super::macro_def::repl_actions;
 
 repl_actions! {
-    group "instrument" => DomainAction::Track, TrackAction {
-        "add"                      => Add(source: SourceType);                                         "Add instrument with given source type"
-        "delete"                   => Delete(id: TrackId);                                        "Delete instrument by ID"
-        "select"                   => Select(idx: usize);                                              "Select instrument by index"
-        "select-next"              => SelectNext;                                                      "Select next instrument"
-        "select-prev"              => SelectPrev;                                                      "Select previous instrument"
-        "select-first"             => SelectFirst;                                                     "Select first instrument"
-        "select-last"              => SelectLast;                                                      "Select last instrument"
-        "add-effect"               => AddEffect(id: TrackId, fx: EffectType);                     "Add effect to instrument"
-        "remove-effect"            => RemoveEffect(id: TrackId, fx_id: EffectId);                 "Remove effect from instrument"
+    group "track" => DomainAction::Track, TrackAction {
+        "add"                      => Add(source: SourceType);                                         "Add track with given source type"
+        "delete"                   => Delete(id: TrackId);                                        "Delete track by ID"
+        "select"                   => Select(idx: usize);                                              "Select track by index"
+        "select-next"              => SelectNext;                                                      "Select next track"
+        "select-prev"              => SelectPrev;                                                      "Select previous track"
+        "select-first"             => SelectFirst;                                                     "Select first track"
+        "select-last"              => SelectLast;                                                      "Select last track"
+        "add-effect"               => AddEffect(id: TrackId, fx: EffectType);                     "Add effect to track"
+        "remove-effect"            => RemoveEffect(id: TrackId, fx_id: EffectId);                 "Remove effect from track"
         "move-stage"               => MoveStage(id: TrackId, idx: usize, dir: i8);                "Move processing stage up/down"
         "set-filter"               => SetFilter(id: TrackId, ft: Option<FilterType>);             "Set filter type (or none)"
         "toggle-effect-bypass"     => ToggleEffectBypass(id: TrackId, fx_id: EffectId);           "Toggle effect bypass"
@@ -35,8 +35,8 @@ repl_actions! {
         "clear-chord-shape"        => ClearChordShape(id: TrackId);                               "Clear chord shape"
         "set-eq-param"             => SetEqParam(id: TrackId, band: usize, kind: EqParamKind, v: f32); "Set EQ band parameter"
         "toggle-eq"                => ToggleEq(id: TrackId);                                      "Toggle EQ on/off"
-        "link-layer"               => LinkLayer(id: TrackId, target: TrackId);               "Link instrument to layer group"
-        "unlink-layer"             => UnlinkLayer(id: TrackId);                                   "Unlink instrument from layer group"
+        "link-layer"               => LinkLayer(id: TrackId, target: TrackId);               "Link track to layer group"
+        "unlink-layer"             => UnlinkLayer(id: TrackId);                                   "Unlink track from layer group"
         "adjust-layer-octave"      => AdjustLayerOctaveOffset(id: TrackId, d: i8);                "Adjust layer octave offset"
         "adjust-track-swing"       => AdjustTrackSwing(id: TrackId, d: f32);                      "Adjust per-track swing"
         "adjust-track-hum-vel"     => AdjustTrackHumanizeVelocity(id: TrackId, d: f32);           "Adjust track velocity humanization"
@@ -291,8 +291,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_instrument_add() {
-        let action = parse_action("instrument add saw").unwrap();
+    fn parse_track_add() {
+        let action = parse_action("track add saw").unwrap();
         assert!(matches!(
             action,
             DomainAction::Track(TrackAction::Add(SourceType::Saw))
@@ -300,8 +300,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_instrument_select_next() {
-        let action = parse_action("instrument select-next").unwrap();
+    fn parse_track_select_next() {
+        let action = parse_action("track select-next").unwrap();
         assert!(matches!(
             action,
             DomainAction::Track(TrackAction::SelectNext)
@@ -309,8 +309,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_instrument_adjust_filter_cutoff() {
-        let action = parse_action("instrument adjust-filter-cutoff 1 0.5").unwrap();
+    fn parse_track_adjust_filter_cutoff() {
+        let action = parse_action("track adjust-filter-cutoff 1 0.5").unwrap();
         match action {
             DomainAction::Track(TrackAction::AdjustFilterCutoff(id, d)) => {
                 assert_eq!(id, TrackId::new(1));
@@ -342,12 +342,12 @@ mod tests {
 
     #[test]
     fn parse_unknown_subcommand() {
-        assert!(parse_action("instrument nonexistent").is_err());
+        assert!(parse_action("track nonexistent").is_err());
     }
 
     #[test]
     fn parse_missing_args() {
-        assert!(parse_action("instrument add").is_err());
+        assert!(parse_action("track add").is_err());
     }
 
     #[test]
@@ -358,13 +358,13 @@ mod tests {
 
     #[test]
     fn complete_groups() {
-        let completions = complete_command("ins");
-        assert!(completions.contains(&"instrument".to_string()));
+        let completions = complete_command("tra");
+        assert!(completions.contains(&"track".to_string()));
     }
 
     #[test]
     fn complete_subcommands() {
-        let completions = complete_command("instrument tog");
+        let completions = complete_command("track tog");
         assert!(completions.iter().any(|c| c.contains("toggle")));
     }
 }

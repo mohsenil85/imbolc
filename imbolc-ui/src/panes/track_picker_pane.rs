@@ -189,7 +189,7 @@ impl Pane for TrackPickerPane {
             .unwrap_or(0);
 
         // Title
-        let title = format!("Select instrument for Pad {}:", pad_num);
+        let title = format!("Select track for Pad {}:", pad_num);
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
             &[(&title, Style::new().fg(Color::CYAN).bold())],
@@ -201,15 +201,12 @@ impl Pane for TrackPickerPane {
         if self.cached_instruments.is_empty() {
             buf.draw_line(
                 Rect::new(content_x, list_y, inner.width.saturating_sub(2), 1),
-                &[(
-                    "No instruments available.",
-                    Style::new().fg(Color::DARK_GRAY),
-                )],
+                &[("No tracks available.", Style::new().fg(Color::DARK_GRAY))],
             );
             buf.draw_line(
                 Rect::new(content_x, list_y + 1, inner.width.saturating_sub(2), 1),
                 &[(
-                    "Add a synth instrument first.",
+                    "Add a synth track first.",
                     Style::new().fg(Color::DARK_GRAY),
                 )],
             );

@@ -88,10 +88,7 @@ pub fn run(project_arg: Option<String>) -> ! {
 
     // Print initial state summary
     if !dispatcher.state().tracks.tracks.is_empty() {
-        println!(
-            "{} instruments loaded",
-            dispatcher.state().tracks.tracks.len()
-        );
+        println!("{} tracks loaded", dispatcher.state().tracks.tracks.len());
     }
 
     loop {
@@ -229,7 +226,7 @@ pub fn parse_command(input: &str, state: &AppState) -> Result<CommandResult, Str
             };
             let n_inst = state.tracks.tracks.len();
             Ok(CommandResult::Output(format!(
-                "Server: {}  Transport: {}  Instruments: {}  BPM: {}",
+                "Server: {}  Transport: {}  Tracks: {}  BPM: {}",
                 server, playing, n_inst, state.session.bpm,
             )))
         }
@@ -257,20 +254,18 @@ fn parse_and_execute(
 
 fn handle_show(args: &[&str], state: &AppState) -> Result<CommandResult, String> {
     if args.is_empty() {
-        return Err(
-            "show what? Try: show instruments, show transport, show mixer, ...".to_string(),
-        );
+        return Err("show what? Try: show tracks, show transport, show mixer, ...".to_string());
     }
 
     let output = match args[0] {
-        "instruments" => display::format_instrument_list(state),
-        "instrument" => {
+        "tracks" => display::format_instrument_list(state),
+        "track" => {
             if args.len() < 2 {
-                return Err("show instrument <id>".to_string());
+                return Err("show track <id>".to_string());
             }
             let id: u32 = args[1]
                 .parse()
-                .map_err(|_| format!("invalid instrument id: {}", args[1]))?;
+                .map_err(|_| format!("invalid track id: {}", args[1]))?;
             display::format_instrument_detail(state, TrackId::new(id))
         }
         "transport" => display::format_transport(state),
@@ -286,11 +281,11 @@ fn handle_show(args: &[&str], state: &AppState) -> Result<CommandResult, String>
         }
         "effects" => {
             if args.len() < 2 {
-                return Err("show effects <instrument_id>".to_string());
+                return Err("show effects <track_id>".to_string());
             }
             let id: u32 = args[1]
                 .parse()
-                .map_err(|_| format!("invalid instrument id: {}", args[1]))?;
+                .map_err(|_| format!("invalid track id: {}", args[1]))?;
             display::format_effects(state, TrackId::new(id))
         }
         "buses" => display::format_buses(state),
@@ -395,7 +390,7 @@ fn format_help(args: &[&str]) -> String {
             String::new(),
             "Meta commands:".to_string(),
             "  help [group] [command]  Show help".to_string(),
-            "  show <target>           Show state (instruments, mixer, transport, ...)".to_string(),
+            "  show <target>           Show state (tracks, mixer, transport, ...)".to_string(),
             "  set <param> <value>     Set session parameter (bpm, key, scale, ...)".to_string(),
             "  undo                    Undo last action".to_string(),
             "  redo                    Redo last undone action".to_string(),

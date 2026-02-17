@@ -914,7 +914,7 @@ impl AudioThread {
                             });
                         })
                     } else {
-                        Err(format!("No audio bus for instrument {}", instrument_id))
+                        Err(format!("No audio bus for track {}", instrument_id))
                     };
                 let _ = reply.send(result);
             }
@@ -950,7 +950,7 @@ impl AudioThread {
                     .collect();
 
                 if instrument_buses.is_empty() {
-                    let _ = reply.send(Err("No instrument buses available".to_string()));
+                    let _ = reply.send(Err("No track buses available".to_string()));
                 } else {
                     let paths: Vec<PathBuf> = stems.iter().map(|(_, p)| p.clone()).collect();
                     let result = self.engine.start_export_stems(&instrument_buses).map(|_| {

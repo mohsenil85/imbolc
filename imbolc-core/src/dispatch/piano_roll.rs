@@ -304,7 +304,7 @@ pub(super) fn dispatch_piano_roll(
             if state.tracks.tracks.is_empty() {
                 return DispatchResult::with_status(
                     imbolc_audio::ServerStatus::Stopped,
-                    "No instruments",
+                    "No tracks",
                 );
             }
 
@@ -354,7 +354,7 @@ pub(super) fn dispatch_piano_roll(
             if state.tracks.tracks.is_empty() {
                 return DispatchResult::with_status(
                     imbolc_audio::ServerStatus::Stopped,
-                    "No instruments",
+                    "No tracks",
                 );
             }
 

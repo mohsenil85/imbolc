@@ -473,7 +473,7 @@ impl PianoRollPane {
                 buf.draw_line(
                     Rect::new(inner.x + 11, cy, inner.width.saturating_sub(12), 1),
                     &[(
-                        "No drum machine instrument selected. Press t for note editor.",
+                        "No drum machine track selected. Press t for note editor.",
                         Style::new().fg(Color::DARK_GRAY),
                     )],
                 );

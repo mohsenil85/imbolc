@@ -249,7 +249,7 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
 
     let mut remote = RemoteDispatcher::connect(addr, &client_name, requested_instruments)?;
     log::info!(
-        "Connected to server as {:?}, owning {} instruments",
+        "Connected to server as {:?}, owning {} tracks",
         remote.client_id(),
         remote.owned_instruments().len()
     );
