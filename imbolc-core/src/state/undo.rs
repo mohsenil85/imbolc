@@ -29,7 +29,7 @@ pub enum UndoScope {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CoalesceKey {
     /// Parameter tweaks on the same instrument (filter, LFO, envelope, effects, etc.)
-    InstrumentParam(TrackId),
+    TrackParam(TrackId),
     /// Session-level parameter tweaks (BPM, master level, humanize, etc.)
     SessionParam,
     /// No coalescing — structural changes always get their own snapshot.
@@ -407,7 +407,7 @@ pub fn coalesce_key(
             | TrackAction::AdjustTrackHumanizeVelocity(id, _)
             | TrackAction::AdjustTrackHumanizeTiming(id, _)
             | TrackAction::AdjustTrackTimingOffset(id, _),
-        ) => CoalesceKey::InstrumentParam(*id),
+        ) => CoalesceKey::TrackParam(*id),
         DomainAction::Track(_) => CoalesceKey::None,
 
         // Mixer level/pan/send — coalesce by mixer selection target
@@ -415,7 +415,7 @@ pub fn coalesce_key(
             MixerAction::AdjustLevel(_) | MixerAction::AdjustPan(_) | MixerAction::AdjustSend(_, _),
         ) => match session.mixer.selection {
             super::session::MixerSelection::Track(idx) => match instruments.tracks.get(idx) {
-                Some(inst) => CoalesceKey::InstrumentParam(inst.id),
+                Some(inst) => CoalesceKey::TrackParam(inst.id),
                 None => CoalesceKey::None,
             },
             _ => CoalesceKey::SessionParam,
@@ -425,7 +425,7 @@ pub fn coalesce_key(
         // VST param tweaks
         DomainAction::VstParam(
             VstParamAction::SetParam(id, _, _, _) | VstParamAction::AdjustParam(id, _, _, _),
-        ) => CoalesceKey::InstrumentParam(*id),
+        ) => CoalesceKey::TrackParam(*id),
         DomainAction::VstParam(_) => CoalesceKey::None,
 
         // Sequencer continuous adjustments — operate on selected instrument
@@ -437,7 +437,7 @@ pub fn coalesce_key(
             | SequencerAction::AdjustPadPitch(_, _)
             | SequencerAction::AdjustStepPitch(_, _, _),
         ) => match instruments.selected_track() {
-            Some(inst) => CoalesceKey::InstrumentParam(inst.id),
+            Some(inst) => CoalesceKey::TrackParam(inst.id),
             None => CoalesceKey::None,
         },
         DomainAction::Sequencer(_) => CoalesceKey::None,

@@ -1605,8 +1605,8 @@ mod tests {
     use crate::protocol::NetworkAction;
     use imbolc_types::{
         ArrangementAction, AutomationAction, AutomationTarget, BusAction, ChopperAction,
-        GenerativeAction, InstrumentParameter, MidiAction, MixerAction, ParameterTarget,
-        PianoRollAction, SequencerAction, ServerAction, SessionAction, SourceType, TrackAction,
+        GenerativeAction, MidiAction, MixerAction, ParameterTarget, PianoRollAction,
+        SequencerAction, ServerAction, SessionAction, SourceType, TrackAction, TrackParameter,
         VstParamAction, VstTarget,
     };
 
@@ -1713,7 +1713,7 @@ mod tests {
         d.mark_from_action(
             &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Track(
                 TrackId::new(0),
-                InstrumentParameter::Standard(ParameterTarget::Level),
+                TrackParameter::Standard(ParameterTarget::Level),
             ))),
             None,
         );
@@ -1972,7 +1972,7 @@ mod tests {
         d.mark_from_action(
             &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Track(
                 TrackId::new(0),
-                InstrumentParameter::Standard(ParameterTarget::Level),
+                TrackParameter::Standard(ParameterTarget::Level),
             ))),
             None,
         );

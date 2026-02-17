@@ -3,8 +3,8 @@ mod common;
 use imbolc_net::protocol::{NetworkAction, ServerMessage};
 use imbolc_net::server::NetServer;
 use imbolc_types::{
-    ArrangementAction, AutomationAction, AutomationTarget, BusAction, InstrumentParameter,
-    MixerAction, ParameterTarget, PianoRollAction, ServerAction, SourceType, TrackAction, TrackId,
+    ArrangementAction, AutomationAction, AutomationTarget, BusAction, MixerAction, ParameterTarget,
+    PianoRollAction, ServerAction, SourceType, TrackAction, TrackId, TrackParameter,
     VstParamAction, VstTarget,
 };
 use std::time::{Duration, Instant};
@@ -1062,7 +1062,7 @@ fn test_mixed_subsystems_no_full_session() {
     server.mark_dirty(
         &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Track(
             TrackId::new(0),
-            InstrumentParameter::Standard(ParameterTarget::Level),
+            TrackParameter::Standard(ParameterTarget::Level),
         ))),
         &state.session,
     );

@@ -1,7 +1,7 @@
 use super::backend::{build_n_set_message, AudioBackend, BackendMessage, RawArg};
 use super::AudioEngine;
 use imbolc_types::{AutomationTarget, SessionState, TrackId, TrackState};
-use imbolc_types::{BusParameter, GlobalParameter, InstrumentParameter, ParameterTarget};
+use imbolc_types::{BusParameter, GlobalParameter, ParameterTarget, TrackParameter};
 
 impl AudioEngine {
     /// Apply an automation value to a target parameter
@@ -57,13 +57,13 @@ impl AudioEngine {
         &self,
         backend: &dyn AudioBackend,
         instrument_id: TrackId,
-        param: &InstrumentParameter,
+        param: &TrackParameter,
         value: f32,
         state: &mut TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         match param {
-            InstrumentParameter::Standard(pt) => {
+            TrackParameter::Standard(pt) => {
                 self.apply_parameter_target(backend, instrument_id, pt, value, state, session)
             }
         }
@@ -392,13 +392,13 @@ impl AudioEngine {
         &self,
         msgs: &mut Vec<BackendMessage>,
         instrument_id: TrackId,
-        param: &InstrumentParameter,
+        param: &TrackParameter,
         value: f32,
         state: &mut TrackState,
         session: &SessionState,
     ) {
         match param {
-            InstrumentParameter::Standard(pt) => {
+            TrackParameter::Standard(pt) => {
                 self.collect_parameter_target_messages(
                     msgs,
                     instrument_id,

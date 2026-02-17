@@ -575,11 +575,11 @@ fn save_modulation(
                     ],
                 )?;
             }
-            ModSource::InstrumentParam(src_id, param_name) => {
+            ModSource::TrackParam(src_id, param_name) => {
                 conn.execute(
                     "INSERT INTO instrument_modulations (instrument_id, target_param, mod_type,
                         source_instrument_id, source_param_name)
-                     VALUES (?1, ?2, 'InstrumentParam', ?3, ?4)",
+                     VALUES (?1, ?2, 'TrackParam', ?3, ?4)",
                     params![instrument_id, target_param, src_id.get(), param_name],
                 )?;
             }
@@ -1244,10 +1244,10 @@ pub fn encode_automation_target(
     Option<String>,
 ) {
     use crate::state::instrument::ParameterTarget;
-    use imbolc_types::{AutomationTarget, BusParameter, GlobalParameter, InstrumentParameter};
+    use imbolc_types::{AutomationTarget, BusParameter, GlobalParameter, TrackParameter};
 
     match target {
-        AutomationTarget::Track(inst_id, InstrumentParameter::Standard(param_target)) => {
+        AutomationTarget::Track(inst_id, TrackParameter::Standard(param_target)) => {
             let target_extra = match param_target {
                 ParameterTarget::EffectParam(eid, pidx) => Some(format!("{}:{}", eid, pidx)),
                 ParameterTarget::EffectBypass(eid) => Some(format!("{}", eid)),

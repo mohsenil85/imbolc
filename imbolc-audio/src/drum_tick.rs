@@ -3,11 +3,11 @@ use std::time::Duration;
 
 use super::commands::AudioFeedback;
 use super::engine::AudioEngine;
-use super::snapshot::{InstrumentSnapshot, SessionSnapshot};
+use super::snapshot::{SessionSnapshot, TrackSnapshot};
 use imbolc_types::{SourceExtra, TrackId};
 
 pub fn tick_drum_sequencer(
-    instruments: &mut InstrumentSnapshot,
+    instruments: &mut TrackSnapshot,
     session: &SessionSnapshot,
     bpm: f32,
     engine: &mut AudioEngine,

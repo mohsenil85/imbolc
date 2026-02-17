@@ -11,7 +11,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 
 use imbolc_types::DomainAction;
 
-use super::snapshot::{AutomationSnapshot, InstrumentSnapshot, PianoRollSnapshot, SessionSnapshot};
+use super::snapshot::{AutomationSnapshot, PianoRollSnapshot, SessionSnapshot, TrackSnapshot};
 use imbolc_types::TrackId;
 
 /// A single entry in the event log.
@@ -39,7 +39,7 @@ pub enum LogEntryKind {
     },
     /// Full state checkpoint (replaces AudioCmd::FullStateSync).
     Checkpoint {
-        instruments: InstrumentSnapshot,
+        instruments: TrackSnapshot,
         session: SessionSnapshot,
         piano_roll: PianoRollSnapshot,
         automation_lanes: AutomationSnapshot,

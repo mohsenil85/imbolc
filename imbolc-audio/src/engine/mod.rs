@@ -83,7 +83,7 @@ pub struct VoiceChain {
 }
 
 #[derive(Debug, Clone)]
-pub struct InstrumentNodes {
+pub struct TrackNodes {
     pub source: Option<i32>,
     pub lfo: Option<i32>,
     pub filter: Option<i32>,
@@ -94,7 +94,7 @@ pub struct InstrumentNodes {
     pub output: i32,
 }
 
-impl InstrumentNodes {
+impl TrackNodes {
     pub fn all_node_ids(&self) -> Vec<i32> {
         let mut ids = Vec::new();
         if let Some(id) = self.source {
@@ -121,7 +121,7 @@ impl InstrumentNodes {
 
 pub struct AudioEngine {
     backend: Option<Box<dyn AudioBackend>>,
-    pub(crate) node_map: HashMap<TrackId, InstrumentNodes>,
+    pub(crate) node_map: HashMap<TrackId, TrackNodes>,
     next_node_id: i32,
     pub(crate) is_running: bool,
     scsynth_process: Option<Child>,

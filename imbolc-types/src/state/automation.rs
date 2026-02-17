@@ -94,7 +94,7 @@ impl AutomationPoint {
 
 /// Per-instrument parameter automation target.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum InstrumentParameter {
+pub enum TrackParameter {
     /// Standard modulatable parameter (reuses ParameterTarget)
     Standard(ParameterTarget),
 }
@@ -135,7 +135,7 @@ pub enum GenerativeParameter {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AutomationTarget {
     /// Per-instrument parameter automation
-    Track(TrackId, InstrumentParameter),
+    Track(TrackId, TrackParameter),
     /// Bus output level
     Bus(BusId, BusParameter),
     /// Global session parameters
@@ -152,7 +152,7 @@ impl AutomationTarget {
     /// Create an instrument target with a standard parameter.
     #[inline]
     pub fn instrument(id: TrackId, param: ParameterTarget) -> Self {
-        Self::Track(id, InstrumentParameter::Standard(param))
+        Self::Track(id, TrackParameter::Standard(param))
     }
 
     /// Create a bus level target.
@@ -343,7 +343,7 @@ impl AutomationTarget {
     /// Get the underlying ParameterTarget if this is an instrument target with a standard param.
     pub fn parameter_target(&self) -> Option<&ParameterTarget> {
         match self {
-            AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => Some(param),
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => Some(param),
             _ => None,
         }
     }
@@ -351,7 +351,7 @@ impl AutomationTarget {
     /// Get a human-readable name for this target.
     pub fn name(&self) -> String {
         match self {
-            AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => param.name(),
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.name(),
             AutomationTarget::Bus(bus_id, BusParameter::Level) => format!("Bus {} Level", bus_id),
             AutomationTarget::Global(GlobalParameter::Bpm) => "BPM".to_string(),
             AutomationTarget::Global(GlobalParameter::TimeSignature) => {
@@ -369,7 +369,7 @@ impl AutomationTarget {
     /// Get a short name for compact display.
     pub fn short_name(&self) -> &'static str {
         match self {
-            AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => param.short_name(),
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.short_name(),
             AutomationTarget::Bus(_, BusParameter::Level) => "BusLv",
             AutomationTarget::Global(GlobalParameter::Bpm) => "BPM",
             AutomationTarget::Global(GlobalParameter::TimeSignature) => "TSig",
@@ -427,9 +427,7 @@ impl AutomationTarget {
     /// Get the default min/max range for this target type.
     pub fn default_range(&self) -> (f32, f32) {
         match self {
-            AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => {
-                param.default_range()
-            }
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.default_range(),
             AutomationTarget::Bus(_, BusParameter::Level) => (0.0, 1.0),
             AutomationTarget::Global(GlobalParameter::Bpm) => (30.0, 300.0),
             AutomationTarget::Global(GlobalParameter::TimeSignature) => (0.0, 1.0),
@@ -440,7 +438,7 @@ impl AutomationTarget {
     /// Get the value kind for this target (continuous or discrete).
     pub fn value_kind(&self) -> ValueKind {
         match self {
-            AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => match param {
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => match param {
                 ParameterTarget::FilterBypass
                 | ParameterTarget::EffectBypass(_)
                 | ParameterTarget::TimeSignature => ValueKind::Discrete,
@@ -459,7 +457,7 @@ impl AutomationTarget {
             AutomationTarget::Global(GlobalParameter::TimeSignature) => {
                 Some(DiscreteValueKind::TimeSignature)
             }
-            AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => match param {
+            AutomationTarget::Track(_, TrackParameter::Standard(param)) => match param {
                 ParameterTarget::TimeSignature => Some(DiscreteValueKind::TimeSignature),
                 ParameterTarget::FilterBypass | ParameterTarget::EffectBypass(_) => {
                     Some(DiscreteValueKind::Bool)

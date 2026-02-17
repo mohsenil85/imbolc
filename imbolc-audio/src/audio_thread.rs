@@ -10,7 +10,7 @@ use super::engine::server::ServerSpawnResult;
 use super::engine::AudioEngine;
 use super::event_log::{EventLogReader, LogEntry, LogEntryKind};
 use super::osc_client::AudioMonitor;
-use super::snapshot::{AutomationSnapshot, InstrumentSnapshot, PianoRollSnapshot, SessionSnapshot};
+use super::snapshot::{AutomationSnapshot, PianoRollSnapshot, SessionSnapshot, TrackSnapshot};
 use super::telemetry::AudioTelemetry;
 use super::ServerStatus;
 use crate::arp_state::ArpPlayState;
@@ -86,7 +86,7 @@ pub(crate) struct AudioThread {
     event_log: EventLogReader,
     feedback_tx: Sender<AudioFeedback>,
     monitor: AudioMonitor,
-    tracks: InstrumentSnapshot,
+    tracks: TrackSnapshot,
     session: SessionSnapshot,
     piano_roll: PianoRollSnapshot,
     automation_lanes: AutomationSnapshot,

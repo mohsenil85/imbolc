@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use super::engine::AudioEngine;
-use super::snapshot::{InstrumentSnapshot, SessionSnapshot};
+use super::snapshot::{SessionSnapshot, TrackSnapshot};
 use crate::arp_state::ArpPlayState;
 use imbolc_types::{ArpDirection, TrackId};
 
 pub fn tick_arpeggiator(
-    instruments: &InstrumentSnapshot,
+    instruments: &TrackSnapshot,
     session: &SessionSnapshot,
     bpm: f32,
     arp_states: &mut HashMap<TrackId, ArpPlayState>,

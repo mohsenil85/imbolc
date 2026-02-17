@@ -12,7 +12,7 @@
 //! - Send audio commands
 
 mod instrument;
-pub use instrument::initialize_instrument_from_registries;
+pub use instrument::initialize_track_from_registries;
 mod automation;
 mod bus;
 mod click;

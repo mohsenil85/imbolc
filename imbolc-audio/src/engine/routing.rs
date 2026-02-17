@@ -1,8 +1,7 @@
 use super::backend::RawArg;
 use super::AudioEngine;
 use super::{
-    InstrumentNodes, GROUP_BUS_PROCESSING, GROUP_OUTPUT, GROUP_PROCESSING, GROUP_SOURCES,
-    VST_UGEN_INDEX,
+    TrackNodes, GROUP_BUS_PROCESSING, GROUP_OUTPUT, GROUP_PROCESSING, GROUP_SOURCES, VST_UGEN_INDEX,
 };
 use imbolc_types::{
     BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, LayerGroupMixer, MixerBus,
@@ -458,7 +457,7 @@ impl AudioEngine {
         self.instrument_final_buses
             .insert(instrument.id, current_bus);
 
-        let inst_nodes = InstrumentNodes {
+        let inst_nodes = TrackNodes {
             source: source_node,
             lfo: lfo_node,
             filter: filter_node,

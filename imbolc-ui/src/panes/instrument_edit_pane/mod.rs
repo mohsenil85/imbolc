@@ -5,8 +5,8 @@ mod rendering;
 use std::any::Any;
 
 use crate::state::{
-    instrument::{instrument_row_count, instrument_row_info, instrument_section_for_row},
-    AppState, EnvConfig, InstrumentSection, LfoConfig, Param, SourceType, TrackId,
+    instrument::{track_row_count, track_row_info, track_section_for_row},
+    AppState, EnvConfig, LfoConfig, Param, SourceType, TrackId, TrackSection,
 };
 use crate::ui::action_id::ActionId;
 use crate::ui::performance::PerformanceController;
@@ -113,10 +113,10 @@ impl InstrumentEditPane {
     pub fn tab_index(&self) -> u8 {
         let n = self.processing_chain.len();
         match self.current_section() {
-            InstrumentSection::Source => 0,
-            InstrumentSection::Processing(i) => (i + 1) as u8,
-            InstrumentSection::Lfo => (n + 1) as u8,
-            InstrumentSection::Envelope => (n + 2) as u8,
+            TrackSection::Source => 0,
+            TrackSection::Processing(i) => (i + 1) as u8,
+            TrackSection::Lfo => (n + 1) as u8,
+            TrackSection::Envelope => (n + 2) as u8,
         }
     }
 
@@ -125,13 +125,13 @@ impl InstrumentEditPane {
     pub fn set_tab_index(&mut self, idx: u8) {
         let n = self.processing_chain.len();
         let target = if idx == 0 {
-            InstrumentSection::Source
+            TrackSection::Source
         } else if (idx as usize) <= n {
-            InstrumentSection::Processing(idx as usize - 1)
+            TrackSection::Processing(idx as usize - 1)
         } else if idx as usize == n + 1 {
-            InstrumentSection::Lfo
+            TrackSection::Lfo
         } else {
-            InstrumentSection::Envelope
+            TrackSection::Envelope
         };
         for i in 0..self.total_rows() {
             if self.section_for_row(i) == target {
@@ -155,7 +155,7 @@ impl InstrumentEditPane {
 
     /// Total number of selectable rows across all sections
     fn total_rows(&self) -> usize {
-        instrument_row_count(self.source, &self.source_params, &self.processing_chain)
+        track_row_count(self.source, &self.source_params, &self.processing_chain)
     }
 
     /// Calculate non-selectable visual lines (headers + separators)
@@ -184,8 +184,8 @@ impl InstrumentEditPane {
     }
 
     /// Which section does a given row belong to?
-    fn section_for_row(&self, row: usize) -> InstrumentSection {
-        instrument_section_for_row(
+    fn section_for_row(&self, row: usize) -> TrackSection {
+        track_section_for_row(
             row,
             self.source,
             &self.source_params,
@@ -194,8 +194,8 @@ impl InstrumentEditPane {
     }
 
     /// Get section and local index for a row
-    fn row_info(&self, row: usize) -> (InstrumentSection, usize) {
-        instrument_row_info(
+    fn row_info(&self, row: usize) -> (TrackSection, usize) {
+        track_row_info(
             row,
             self.source,
             &self.source_params,
@@ -203,7 +203,7 @@ impl InstrumentEditPane {
         )
     }
 
-    fn current_section(&self) -> InstrumentSection {
+    fn current_section(&self) -> TrackSection {
         self.section_for_row(self.selected_row)
     }
 
@@ -229,11 +229,11 @@ impl InstrumentEditPane {
     /// Build an AutomationTarget for the currently selected row.
     fn build_automation_target(&self, id: TrackId) -> Option<imbolc_types::AutomationTarget> {
         use imbolc_types::{
-            AutomationTarget, InstrumentParameter, ParamIndex, ParameterTarget, ProcessingStage,
+            AutomationTarget, ParamIndex, ParameterTarget, ProcessingStage, TrackParameter,
         };
         let (section, local_idx) = self.row_info(self.selected_row);
         let param = match section {
-            InstrumentSection::Source => {
+            TrackSection::Source => {
                 let param_idx = if self.source.is_sample() {
                     if local_idx == 0 {
                         return None; // sample file row, not a parameter
@@ -244,7 +244,7 @@ impl InstrumentEditPane {
                 };
                 ParameterTarget::SourceParam(ParamIndex::new(param_idx))
             }
-            InstrumentSection::Processing(i) => {
+            TrackSection::Processing(i) => {
                 match self.processing_chain.get(i)? {
                     ProcessingStage::Filter(f) => match local_idx {
                         0 => return None, // filter type header
@@ -273,12 +273,12 @@ impl InstrumentEditPane {
                     }
                 }
             }
-            InstrumentSection::Lfo => match local_idx {
+            TrackSection::Lfo => match local_idx {
                 0 => ParameterTarget::LfoRate,
                 1 => ParameterTarget::LfoDepth,
                 _ => return None,
             },
-            InstrumentSection::Envelope => match local_idx {
+            TrackSection::Envelope => match local_idx {
                 0 => ParameterTarget::Attack,
                 1 => ParameterTarget::Decay,
                 2 => ParameterTarget::Sustain,
@@ -286,10 +286,7 @@ impl InstrumentEditPane {
                 _ => return None,
             },
         };
-        Some(AutomationTarget::Track(
-            id,
-            InstrumentParameter::Standard(param),
-        ))
+        Some(AutomationTarget::Track(id, TrackParameter::Standard(param)))
     }
 }
 
@@ -410,14 +407,14 @@ mod tests {
 
         // First processing row should be Processing(0) = Effect
         let row = source_rows;
-        assert_eq!(pane.section_for_row(row), InstrumentSection::Processing(0));
+        assert_eq!(pane.section_for_row(row), TrackSection::Processing(0));
 
         // Effect header + params, then filter starts at Processing(1)
         let effect_rows = 1 + EffectType::Delay.default_params().len();
         let filter_row = source_rows + effect_rows;
         assert_eq!(
             pane.section_for_row(filter_row),
-            InstrumentSection::Processing(1)
+            TrackSection::Processing(1)
         );
     }
 
@@ -434,7 +431,7 @@ mod tests {
         let event = dummy_event();
 
         // Start at Source
-        assert_eq!(pane.current_section(), InstrumentSection::Source);
+        assert_eq!(pane.current_section(), TrackSection::Source);
 
         // Tab → Processing(0)
         pane.handle_action_impl(
@@ -442,7 +439,7 @@ mod tests {
             &event,
             &state,
         );
-        assert_eq!(pane.current_section(), InstrumentSection::Processing(0));
+        assert_eq!(pane.current_section(), TrackSection::Processing(0));
 
         // Tab → Processing(1)
         pane.handle_action_impl(
@@ -450,7 +447,7 @@ mod tests {
             &event,
             &state,
         );
-        assert_eq!(pane.current_section(), InstrumentSection::Processing(1));
+        assert_eq!(pane.current_section(), TrackSection::Processing(1));
 
         // Tab → Lfo
         pane.handle_action_impl(
@@ -458,7 +455,7 @@ mod tests {
             &event,
             &state,
         );
-        assert_eq!(pane.current_section(), InstrumentSection::Lfo);
+        assert_eq!(pane.current_section(), TrackSection::Lfo);
 
         // Tab → Envelope
         pane.handle_action_impl(
@@ -466,7 +463,7 @@ mod tests {
             &event,
             &state,
         );
-        assert_eq!(pane.current_section(), InstrumentSection::Envelope);
+        assert_eq!(pane.current_section(), TrackSection::Envelope);
 
         // Tab → Source (wrap)
         pane.handle_action_impl(
@@ -474,7 +471,7 @@ mod tests {
             &event,
             &state,
         );
-        assert_eq!(pane.current_section(), InstrumentSection::Source);
+        assert_eq!(pane.current_section(), TrackSection::Source);
     }
 
     #[test]
@@ -492,7 +489,7 @@ mod tests {
         // Navigate to filter's cutoff row (local_idx=1 within filter stage)
         let source_rows = pane.source_params.len().max(1);
         pane.selected_row = source_rows + 1; // Type=0, Cutoff=1
-        assert_eq!(pane.current_section(), InstrumentSection::Processing(0));
+        assert_eq!(pane.current_section(), TrackSection::Processing(0));
         let (_, local_idx) = pane.row_info(pane.selected_row);
         assert_eq!(local_idx, 1); // cutoff
 
@@ -504,7 +501,7 @@ mod tests {
         );
 
         // Filter is now at chain index 1, cursor should be on cutoff at new position
-        assert_eq!(pane.current_section(), InstrumentSection::Processing(1));
+        assert_eq!(pane.current_section(), TrackSection::Processing(1));
         let (_, new_local) = pane.row_info(pane.selected_row);
         assert_eq!(new_local, 1); // still cutoff
     }

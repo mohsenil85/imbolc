@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use super::commands::AudioFeedback;
 use super::engine::AudioEngine;
-use super::snapshot::{AutomationSnapshot, InstrumentSnapshot, PianoRollSnapshot, SessionSnapshot};
+use super::snapshot::{AutomationSnapshot, PianoRollSnapshot, SessionSnapshot, TrackSnapshot};
 use crate::arp_state::ArpPlayState;
 use imbolc_types::SwingGrid;
 use imbolc_types::{AutomationTarget, TrackId};
@@ -19,7 +19,7 @@ fn next_random(state: &mut u64) -> f32 {
 #[allow(clippy::too_many_arguments)]
 pub fn tick_playback(
     piano_roll: &mut PianoRollSnapshot,
-    instruments: &mut InstrumentSnapshot,
+    instruments: &mut TrackSnapshot,
     session: &mut SessionSnapshot,
     automation_lanes: &AutomationSnapshot,
     engine: &mut AudioEngine,

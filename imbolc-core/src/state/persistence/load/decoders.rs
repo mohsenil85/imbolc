@@ -549,8 +549,7 @@ pub(crate) fn decode_automation_target(
     _target_extra: Option<&str>,
 ) -> crate::state::AutomationTarget {
     use imbolc_types::{
-        AutomationTarget, BusId, BusParameter, GenerativeParameter, GlobalParameter,
-        InstrumentParameter,
+        AutomationTarget, BusId, BusParameter, GenerativeParameter, GlobalParameter, TrackParameter,
     };
 
     match target_type {
@@ -568,7 +567,7 @@ pub(crate) fn decode_automation_target(
             // It's an instrument parameter target
             let inst_id = imbolc_types::TrackId::new(target_inst_id.unwrap_or(0) as u32);
             let param_target = decode_parameter_target(target_type);
-            AutomationTarget::Track(inst_id, InstrumentParameter::Standard(param_target))
+            AutomationTarget::Track(inst_id, TrackParameter::Standard(param_target))
         }
     }
 }

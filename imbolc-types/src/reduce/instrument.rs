@@ -11,7 +11,7 @@ pub(super) fn reduce(
     match action {
         TrackAction::Add(source_type) => {
             let id = instruments.add_track(*source_type);
-            initialize_instrument_from_registries(id, *source_type, instruments, session);
+            initialize_track_from_registries(id, *source_type, instruments, session);
             session.piano_roll.add_sequence(id);
             true
         }
@@ -457,7 +457,7 @@ pub(super) fn reduce(
 
 /// Initialize instrument name and source_params from Custom/VST registries.
 /// Called by the reducer and by `AppState::add_instrument()` to keep them aligned.
-pub fn initialize_instrument_from_registries(
+pub fn initialize_track_from_registries(
     id: TrackId,
     source_type: SourceType,
     instruments: &mut TrackState,
@@ -685,7 +685,7 @@ mod tests {
         // Path B: via helper directly
         let mut instruments_b = TrackState::new();
         let id = instruments_b.add_track(SourceType::Custom(custom_id));
-        initialize_instrument_from_registries(
+        initialize_track_from_registries(
             id,
             SourceType::Custom(custom_id),
             &mut instruments_b,
@@ -719,12 +719,7 @@ mod tests {
         // Path B: via helper directly
         let mut instruments_b = TrackState::new();
         let id = instruments_b.add_track(SourceType::Vst(vst_id));
-        initialize_instrument_from_registries(
-            id,
-            SourceType::Vst(vst_id),
-            &mut instruments_b,
-            &session,
-        );
+        initialize_track_from_registries(id, SourceType::Vst(vst_id), &mut instruments_b, &session);
 
         let a = &instruments_a.tracks[0];
         let b = &instruments_b.tracks[0];

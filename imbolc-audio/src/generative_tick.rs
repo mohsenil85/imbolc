@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use super::engine::AudioEngine;
 use super::generative_state::{GenerativePlayState, VoicePlayState};
-use super::snapshot::{InstrumentSnapshot, SessionSnapshot};
+use super::snapshot::{SessionSnapshot, TrackSnapshot};
 use imbolc_types::state::drum_sequencer::euclidean_rhythm;
 use imbolc_types::state::generative::*;
 use imbolc_types::state::music::{Key, Scale};
@@ -54,7 +54,7 @@ fn algorithm_fingerprint(algorithm: &GenerativeAlgorithm) -> u64 {
 /// Main tick function for the generative engine.
 #[allow(clippy::too_many_arguments)]
 pub fn tick_generative(
-    instruments: &InstrumentSnapshot,
+    instruments: &TrackSnapshot,
     session: &SessionSnapshot,
     bpm: f32,
     gen_states: &mut GenerativePlayState,

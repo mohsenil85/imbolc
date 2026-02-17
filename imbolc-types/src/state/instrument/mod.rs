@@ -223,7 +223,7 @@ pub struct ModulatedParam {
 pub enum ModSource {
     Lfo(LfoConfig),
     Envelope(EnvConfig),
-    InstrumentParam(TrackId, String),
+    TrackParam(TrackId, String),
 }
 
 /// A single stage in the instrument's processing chain.
@@ -292,7 +292,7 @@ pub fn effects_max_cursor(effects: &[EffectSlot]) -> usize {
 
 /// Which section of an instrument a given editing row belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InstrumentSection {
+pub enum TrackSection {
     Source,
     Processing(usize), // chain index
     Lfo,
@@ -304,7 +304,7 @@ pub enum InstrumentSection {
 /// Free function variant: accepts decomposed fields so callers holding
 /// cloned/shadow copies of instrument fields (e.g. InstrumentEditPane)
 /// can call without constructing a temporary Track.
-pub fn instrument_row_count(
+pub fn track_row_count(
     source: SourceType,
     source_params: &[Param],
     processing_chain: &[ProcessingStage],
@@ -328,25 +328,25 @@ pub fn instrument_row_count(
 /// Which section a given row belongs to.
 ///
 /// Free function variant for use with decomposed fields.
-pub fn instrument_section_for_row(
+pub fn track_section_for_row(
     row: usize,
     source: SourceType,
     source_params: &[Param],
     processing_chain: &[ProcessingStage],
-) -> InstrumentSection {
-    let (section, _) = instrument_row_info(row, source, source_params, processing_chain);
+) -> TrackSection {
+    let (section, _) = track_row_info(row, source, source_params, processing_chain);
     section
 }
 
 /// Get section and local index for a given row.
 ///
 /// Free function variant for use with decomposed fields.
-pub fn instrument_row_info(
+pub fn track_row_info(
     row: usize,
     source: SourceType,
     source_params: &[Param],
     processing_chain: &[ProcessingStage],
-) -> (InstrumentSection, usize) {
+) -> (TrackSection, usize) {
     let sample_row = if source.is_sample() || source.is_time_stretch() {
         1
     } else {
@@ -355,7 +355,7 @@ pub fn instrument_row_info(
     let source_rows = sample_row + source_params.len().max(1);
 
     if row < source_rows {
-        return (InstrumentSection::Source, row);
+        return (TrackSection::Source, row);
     }
     let mut offset = source_rows;
 
@@ -363,14 +363,14 @@ pub fn instrument_row_info(
     if processing_chain.is_empty() {
         // One placeholder row mapped to Processing(0)
         if row < offset + 1 {
-            return (InstrumentSection::Processing(0), 0);
+            return (TrackSection::Processing(0), 0);
         }
         offset += 1;
     } else {
         for (i, stage) in processing_chain.iter().enumerate() {
             let rc = stage.row_count();
             if row < offset + rc {
-                return (InstrumentSection::Processing(i), row - offset);
+                return (TrackSection::Processing(i), row - offset);
             }
             offset += rc;
         }
@@ -378,11 +378,11 @@ pub fn instrument_row_info(
 
     let lfo_rows = 4;
     if row < offset + lfo_rows {
-        return (InstrumentSection::Lfo, row - offset);
+        return (TrackSection::Lfo, row - offset);
     }
     offset += lfo_rows;
 
-    (InstrumentSection::Envelope, row - offset)
+    (TrackSection::Envelope, row - offset)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -545,7 +545,7 @@ impl Track {
 
     /// Total number of selectable rows for instrument editing.
     pub fn total_editable_rows(&self) -> usize {
-        instrument_row_count(
+        track_row_count(
             self.source,
             &self.source_params,
             &self.channel_strip.processing_chain,
@@ -553,8 +553,8 @@ impl Track {
     }
 
     /// Which section a given row belongs to.
-    pub fn section_for_row(&self, row: usize) -> InstrumentSection {
-        instrument_section_for_row(
+    pub fn section_for_row(&self, row: usize) -> TrackSection {
+        track_section_for_row(
             row,
             self.source,
             &self.source_params,
@@ -563,8 +563,8 @@ impl Track {
     }
 
     /// Get section and local index for a given row.
-    pub fn row_info(&self, row: usize) -> (InstrumentSection, usize) {
-        instrument_row_info(
+    pub fn row_info(&self, row: usize) -> (TrackSection, usize) {
+        track_row_info(
             row,
             self.source,
             &self.source_params,
@@ -701,7 +701,7 @@ mod tests {
     #[test]
     fn section_for_row_first_is_source() {
         let inst = Track::new(TrackId::new(1), SourceType::Saw);
-        assert_eq!(inst.section_for_row(0), InstrumentSection::Source);
+        assert_eq!(inst.section_for_row(0), TrackSection::Source);
     }
 
     #[test]
@@ -710,7 +710,7 @@ mod tests {
         let source_rows = inst.source_params.len().max(1);
         // First row after source section should be Processing(0) with local_idx 0
         let (section, local_idx) = inst.row_info(source_rows);
-        assert_eq!(section, InstrumentSection::Processing(0));
+        assert_eq!(section, TrackSection::Processing(0));
         assert_eq!(local_idx, 0);
     }
 
@@ -726,10 +726,10 @@ mod tests {
         let mut has_envelope = false;
         for i in 0..total {
             match inst.section_for_row(i) {
-                InstrumentSection::Source => has_source = true,
-                InstrumentSection::Processing(_) => has_processing = true,
-                InstrumentSection::Lfo => has_lfo = true,
-                InstrumentSection::Envelope => has_envelope = true,
+                TrackSection::Source => has_source = true,
+                TrackSection::Processing(_) => has_processing = true,
+                TrackSection::Lfo => has_lfo = true,
+                TrackSection::Envelope => has_envelope = true,
             }
         }
         assert!(has_source);
@@ -743,7 +743,7 @@ mod tests {
         let inst = Track::new(TrackId::new(1), SourceType::Vst(VstPluginId::new(0)));
         let total = inst.total_editable_rows();
         for i in 0..total {
-            assert_ne!(inst.section_for_row(i), InstrumentSection::Envelope);
+            assert_ne!(inst.section_for_row(i), TrackSection::Envelope);
         }
     }
 
@@ -1139,7 +1139,7 @@ mod tests {
         let inst = Track::new(TrackId::new(1), SourceType::Saw);
         let source_rows = inst.source_params.len().max(1);
         let (section, local) = inst.row_info(source_rows);
-        assert_eq!(section, InstrumentSection::Processing(0));
+        assert_eq!(section, TrackSection::Processing(0));
         assert_eq!(local, 0);
     }
 
@@ -1149,12 +1149,12 @@ mod tests {
         inst.toggle_filter();
         let source_rows = inst.source_params.len().max(1);
         let (section, local) = inst.row_info(source_rows);
-        assert_eq!(section, InstrumentSection::Processing(0));
+        assert_eq!(section, TrackSection::Processing(0));
         assert_eq!(local, 0);
         let (section2, _) = inst.row_info(source_rows + 2);
-        assert_eq!(section2, InstrumentSection::Processing(0));
+        assert_eq!(section2, TrackSection::Processing(0));
         let (section3, _) = inst.row_info(source_rows + 3);
-        assert_eq!(section3, InstrumentSection::Lfo);
+        assert_eq!(section3, TrackSection::Lfo);
     }
 
     #[test]
@@ -1164,10 +1164,10 @@ mod tests {
         let source_rows = inst.source_params.len().max(1);
         let delay_rows = 1 + EffectType::Delay.default_params().len();
         let (section, local) = inst.row_info(source_rows);
-        assert_eq!(section, InstrumentSection::Processing(0));
+        assert_eq!(section, TrackSection::Processing(0));
         assert_eq!(local, 0);
         let (section2, _) = inst.row_info(source_rows + delay_rows);
-        assert_eq!(section2, InstrumentSection::Lfo);
+        assert_eq!(section2, TrackSection::Lfo);
     }
 
     #[test]
@@ -1187,13 +1187,13 @@ mod tests {
         let eq_rows = 1;
 
         let (s, _) = inst.row_info(source_rows);
-        assert_eq!(s, InstrumentSection::Processing(0));
+        assert_eq!(s, TrackSection::Processing(0));
         let (s, _) = inst.row_info(source_rows + delay_rows);
-        assert_eq!(s, InstrumentSection::Processing(1));
+        assert_eq!(s, TrackSection::Processing(1));
         let (s, _) = inst.row_info(source_rows + delay_rows + filter_rows);
-        assert_eq!(s, InstrumentSection::Processing(2));
+        assert_eq!(s, TrackSection::Processing(2));
         let (s, _) = inst.row_info(source_rows + delay_rows + filter_rows + eq_rows);
-        assert_eq!(s, InstrumentSection::Lfo);
+        assert_eq!(s, TrackSection::Lfo);
     }
 
     #[test]
@@ -1215,13 +1215,13 @@ mod tests {
         let vowel_rows = 4;
 
         let (s, local) = inst.row_info(source_rows + vowel_rows - 1);
-        assert_eq!(s, InstrumentSection::Processing(0));
+        assert_eq!(s, TrackSection::Processing(0));
         assert_eq!(local, 3);
         let (s, local) = inst.row_info(source_rows + vowel_rows);
-        assert_eq!(s, InstrumentSection::Processing(1));
+        assert_eq!(s, TrackSection::Processing(1));
         assert_eq!(local, 0);
         let (s, _) = inst.row_info(source_rows + vowel_rows + 1);
-        assert_eq!(s, InstrumentSection::Lfo);
+        assert_eq!(s, TrackSection::Lfo);
     }
 
     #[test]
@@ -1248,10 +1248,10 @@ mod tests {
         let mut has_envelope = false;
         for i in 0..total {
             match inst.section_for_row(i) {
-                InstrumentSection::Source => has_source = true,
-                InstrumentSection::Processing(_) => has_processing = true,
-                InstrumentSection::Lfo => has_lfo = true,
-                InstrumentSection::Envelope => has_envelope = true,
+                TrackSection::Source => has_source = true,
+                TrackSection::Processing(_) => has_processing = true,
+                TrackSection::Lfo => has_lfo = true,
+                TrackSection::Envelope => has_envelope = true,
             }
         }
         assert!(has_source);

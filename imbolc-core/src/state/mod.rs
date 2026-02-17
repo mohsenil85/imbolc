@@ -26,9 +26,7 @@ pub use automation::AutomationTarget;
 pub use clipboard::{Clipboard, ClipboardContents, ClipboardNote};
 pub use custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
 pub use instrument::*;
-pub use instrument::{
-    instrument_row_count, instrument_row_info, instrument_section_for_row, InstrumentSection,
-};
+pub use instrument::{track_row_count, track_row_info, track_section_for_row, TrackSection};
 pub use instrument::{EffectTypeExt, SourceTypeExt};
 pub use instrument_state::TrackState;
 pub use midi_connection::MidiConnectionState;
@@ -127,7 +125,7 @@ impl AppState {
     /// Add a track, with custom synthdef param setup and piano roll sequence auto-creation.
     pub fn add_track(&mut self, source: SourceType) -> TrackId {
         let id = self.tracks.add_track(source);
-        imbolc_types::reduce::initialize_instrument_from_registries(
+        imbolc_types::reduce::initialize_track_from_registries(
             id,
             source,
             &mut self.tracks,

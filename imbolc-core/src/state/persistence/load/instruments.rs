@@ -537,12 +537,9 @@ fn load_modulation(
                 sustain: env_s.unwrap_or(0.7),
                 release: env_r.unwrap_or(0.3),
             })),
-            "InstrumentParam" => {
+            "TrackParam" => {
                 if let (Some(id), Some(param)) = (src_id, src_param) {
-                    Some(ModSource::InstrumentParam(
-                        imbolc_types::TrackId::new(id),
-                        param,
-                    ))
+                    Some(ModSource::TrackParam(imbolc_types::TrackId::new(id), param))
                 } else {
                     None
                 }

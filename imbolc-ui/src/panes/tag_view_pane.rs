@@ -6,8 +6,7 @@ use crate::ui::pane::*;
 use crate::ui::style::{Color, Style};
 use crate::ui::{InputEvent, Keymap, MouseEvent, Rect, RenderBuf};
 use imbolc_types::{
-    AutomationTarget, BusParameter, GlobalParameter, InstrumentParameter, ParameterTarget,
-    TagAction,
+    AutomationTarget, BusParameter, GlobalParameter, ParameterTarget, TagAction, TrackParameter,
 };
 
 /// Pane showing tagged parameters as adjustable sliders.
@@ -371,9 +370,7 @@ fn target_instrument_name(target: &AutomationTarget, state: &AppState) -> String
 
 fn target_param_name(target: &AutomationTarget) -> String {
     match target {
-        AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => {
-            param.name().to_string()
-        }
+        AutomationTarget::Track(_, TrackParameter::Standard(param)) => param.name().to_string(),
         AutomationTarget::Bus(_, BusParameter::Level) => "Level".to_string(),
         AutomationTarget::Global(GlobalParameter::Bpm) => "BPM".to_string(),
         AutomationTarget::Global(GlobalParameter::TimeSignature) => "Time Sig".to_string(),
@@ -386,7 +383,7 @@ fn target_param_name(target: &AutomationTarget) -> String {
 fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32, f32, f32)> {
     let (min, max) = target.default_range();
     let value = match target {
-        AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(id, TrackParameter::Standard(param)) => {
             let inst = state.tracks.track(*id)?;
             match param {
                 ParameterTarget::Level => inst.channel_strip.level,
@@ -439,7 +436,7 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
 fn action_for_target_adjust(target: &AutomationTarget, delta: f32) -> Option<Action> {
     use imbolc_types::TrackAction;
     match target {
-        AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(id, TrackParameter::Standard(param)) => {
             let id = *id;
             let action = match param {
                 ParameterTarget::FilterCutoff => {
