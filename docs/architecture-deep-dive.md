@@ -84,7 +84,7 @@ Dispatch is split cleanly:
 
 A key architectural decision is the shared pure reducer in `imbolc-types/src/reduce/mod.rs`.
 
-- `reduce_action()` mutates only `InstrumentState` + `SessionState`.
+- `reduce_action()` mutates only `TrackState` + `SessionState`.
 - `is_reducible()` identifies actions safe for incremental audio-thread projection.
 - Both `imbolc-core` and `imbolc-audio` use this reducer.
 
@@ -95,7 +95,7 @@ This avoids divergent mutation logic between main and audio threads.
 `AppState` (`imbolc-core/src/state/mod.rs`) aggregates:
 
 - `session` (global timeline/mixer/music settings),
-- `instruments`,
+- `tracks`,
 - clipboard,
 - I/O status,
 - recording/audio feedback mirrors,
@@ -108,7 +108,7 @@ This avoids divergent mutation logic between main and audio threads.
 
 Undo snapshots are scope-aware (`UndoScope`):
 
-- single instrument,
+- single track,
 - session,
 - full state.
 
@@ -209,21 +209,21 @@ Execution ordering uses fixed SC groups:
 
 Routing is in `engine/routing.rs`.
 
-Per instrument chain:
+Per track chain:
 
 `source -> lfo(optional) -> filter(optional) -> eq(optional) -> effects* -> output`
 
 Additional graph pieces:
 
-- instrument sends (pre/post insert tap point),
+- track sends (pre/post insert tap point),
 - bus effect chains + bus outputs,
 - layer-group effect chains + outputs + sends.
 
 Incremental routing ops exist for:
 
-- add instrument,
-- delete instrument,
-- rebuild single instrument,
+- add track,
+- delete track,
+- rebuild single track,
 - rebuild bus processing.
 
 Full rebuild also has phased mode (`RoutingRebuildPhase`) to amortize work across ticks.
@@ -234,7 +234,7 @@ Voice logic: `engine/voices.rs` + `engine/voice_allocator.rs`.
 
 Important details:
 
-- max 64 active voices/instrument,
+- max 64 active voices/track,
 - same-pitch retrigger steals prior voice,
 - steal scoring prefers released voices, then quiet/old active voices,
 - control bus triples are pooled and reused,
@@ -245,7 +245,7 @@ Important details:
 
 VST is hosted through SuperCollider VSTPlugin wrappers:
 
-- source instrument wrapper: `imbolc_vst_instrument`,
+- source track wrapper: `imbolc_vst_instrument`,
 - effect wrapper: `imbolc_vst_effect`,
 - commands via `/u_cmd` (`/open`, `/set`, `/midi_msg`, program read/write),
 - parameter discovery through `/param_query` + `/vst_param` replies.
@@ -307,7 +307,7 @@ Networking is split between `imbolc-net` and UI integration in `imbolc-ui/src/ne
 
 `DirtyFlags` in server tracks granular deltas:
 
-- per-instrument,
+- per-track,
 - per-track piano roll,
 - per-lane automation,
 - per-bus mixer,

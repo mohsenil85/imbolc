@@ -4,7 +4,7 @@ Guide for AI agents working on this codebase.
 
 ## What This Is
 
-A terminal-based DAW (Digital Audio Workstation) in Rust. Uses ratatui for TUI rendering and SuperCollider via OSC for audio synthesis. Instruments combine a source, processing chain (filters/EQ/effects), LFO, envelope, and mixer controls into a single unit. Instruments are sequenced via piano roll.
+A terminal-based DAW (Digital Audio Workstation) in Rust. Uses ratatui for TUI rendering and SuperCollider via OSC for audio synthesis. Tracks combine a source, processing chain (filters/EQ/effects), LFO, envelope, and mixer controls into a single unit. Tracks are sequenced via piano roll.
 
 ## Directory Structure
 
@@ -23,12 +23,12 @@ Core library lives in `../imbolc-core/`. Types are in `../imbolc-types/`. See th
 | Type | Location | What It Is |
 |------|----------|------------|
 | `AppState` | `imbolc-core/src/state/mod.rs` | Top-level state, owned by `main.rs`, passed to panes as `&AppState` |
-| `Instrument` | `imbolc-types/src/state/instrument/` | One instrument: source + processing chain + LFO + envelope + mixer |
-| `InstrumentState` | `imbolc-types/src/state/instrument_state.rs` | Collection of instruments and selection state |
+| `Track` | `imbolc-types/src/state/track/` | One track: source + processing chain + LFO + envelope + mixer |
+| `TrackState` | `imbolc-types/src/state/track_state.rs` | Collection of tracks and selection state |
 | `SessionState` | `imbolc-types/src/state/session.rs` | Global session data: arrangement, mixer, piano roll, automation |
-| `InstrumentId` | `imbolc-types/src/lib.rs` | `u32` — unique identifier for instruments |
-| `SourceType` | `imbolc-types/src/state/instrument/source_type.rs` | Oscillator/Source types (Saw/Sin/etc, AudioIn, BusIn, PitchedSampler, Kit, Custom, VST) |
-| `EffectSlot` | `imbolc-types/src/state/instrument/effect.rs` | One effect in the chain: type + params + enabled + VST param values/state path |
+| `TrackId` | `imbolc-types/src/lib.rs` | `u32` — unique identifier for tracks |
+| `SourceType` | `imbolc-types/src/state/track/source_type.rs` | Oscillator/Source types (Saw/Sin/etc, AudioIn, BusIn, PitchedSampler, Kit, Custom, VST) |
+| `EffectSlot` | `imbolc-types/src/state/track/effect.rs` | One effect in the chain: type + params + enabled + VST param values/state path |
 | `Action` | `imbolc-types/src/action.rs` | Action enum (re-exported in `src/ui/pane.rs`) |
 | `Pane` | `src/ui/pane.rs` | Trait: `id()`, `handle_action()`, `handle_raw_input()`, `handle_mouse()`, `render()`, `keymap()` |
 | `PaneManager` | `src/ui/pane.rs` | Owns all panes, manages active pane, coordinates input |
@@ -39,7 +39,7 @@ Core library lives in `../imbolc-core/`. Types are in `../imbolc-types/`. See th
 
 Single-file panes (23):
 - `add_effect_pane.rs` — Effect selector modal
-- `add_pane.rs` — Add instrument/bus modal
+- `add_pane.rs` — Add track/bus modal
 - `checkpoint_list_pane.rs` — Checkpoint list
 - `command_palette_pane.rs` — Command palette
 - `confirm_pane.rs` — Confirmation dialog
@@ -49,8 +49,8 @@ Single-file panes (23):
 - `groove_pane.rs` — Groove settings
 - `help_pane.rs` — Help overlay
 - `home_pane.rs` — Home/welcome screen
-- `instrument_pane.rs` — Instrument list
-- `instrument_picker_pane.rs` — Instrument selection for actions
+- `track_list_pane.rs` — Track list
+- `track_picker_pane.rs` — Track selection for actions
 - `midi_settings_pane.rs` — MIDI configuration
 - `pane_switcher_pane.rs` — Global pane navigation
 - `project_browser_pane.rs` — Project browser
@@ -65,7 +65,7 @@ Single-file panes (23):
 Module panes (input/rendering split, 7):
 - `automation_pane/` — Automation lane editor
 - `docs_pane/` — Built-in documentation viewer
-- `instrument_edit_pane/` — Instrument parameter editor
+- `track_edit_pane/` — Track parameter editor
 - `mixer_pane/` — Mixer view
 - `piano_roll_pane/` — Note editor
 - `server_pane/` — SuperCollider server status
@@ -143,9 +143,9 @@ When adding a new action:
 
 ### Navigation
 
-Pane switching uses function keys: `F1`=instrument, `F2`=piano roll / sequencer / waveform (context-driven), `F3`=track, `F4`=mixer, `F5`=server, `F6`=docs, `F7`=automation, `F8`=EQ, `F9`=groove, `F10`=tuner. `` ` ``/`~` for back/forward. `?` for context-sensitive help. `Ctrl+f` opens the frame settings.
+Pane switching uses function keys: `F1`=track list, `F2`=piano roll / sequencer / waveform (context-driven), `F3`=track, `F4`=mixer, `F5`=server, `F6`=docs, `F7`=automation, `F8`=EQ, `F9`=groove, `F10`=tuner. `` ` ``/`~` for back/forward. `?` for context-sensitive help. `Ctrl+f` opens the frame settings.
 
-Number keys select instruments: `1`-`9` select instruments 1-9, `0` selects 10, `_` enters two-digit instrument selection.
+Number keys select tracks: `1`-`9` select tracks 1-9, `0` selects 10, `_` enters two-digit track selection.
 
 ### Pane Registration
 
@@ -214,7 +214,7 @@ Configured as MCP server at workspace root (`.mcp.json` + `cclsp.json`). Provide
 ## Detailed Documentation
 
 See `../docs/` for all documentation:
-- [../docs/architecture.md](../docs/architecture.md) — state ownership, instrument model, pane rendering, action dispatch
+- [../docs/architecture.md](../docs/architecture.md) — state ownership, track model, pane rendering, action dispatch
 - [../docs/audio-routing.md](../docs/audio-routing.md) — bus model, insert vs send, node ordering
 - [../docs/keybindings.md](../docs/keybindings.md) — keybinding philosophy and conventions
 

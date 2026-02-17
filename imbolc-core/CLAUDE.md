@@ -39,7 +39,7 @@ src/
     mod.rs           — Main dispatch_action(), re-exports
     local.rs         — LocalDispatcher implementation
     helpers.rs       — Dispatch utilities
-    instrument/      — Instrument-related dispatch
+    track/           — Track-related dispatch
     piano_roll.rs    — Note editing actions
     automation.rs    — Automation actions
     sequencer.rs     — Sequencer/transport actions
@@ -71,18 +71,18 @@ src/
     (other state files re-export from imbolc-types)
 ```
 
-**Note:** State types (Instrument, SessionState, etc.) are defined in `imbolc-types`. Audio engine is in `imbolc-audio` (re-exported here as `pub use imbolc_audio as audio`). This crate re-exports both and provides the dispatch/persistence implementation.
+**Note:** State types (Track, SessionState, etc.) are defined in `imbolc-types`. Audio engine is in `imbolc-audio` (re-exported here as `pub use imbolc_audio as audio`). This crate re-exports both and provides the dispatch/persistence implementation.
 
 ## Key Types
 
 | Type | Location | What It Is |
 |------|----------|------------|
 | `AppState` | `src/state/mod.rs` | Top-level state, passed to panes as `&AppState` |
-| `Instrument` | `imbolc-types/src/state/instrument/` | One instrument: source + processing chain + LFO + envelope + mixer |
-| `InstrumentState` | `imbolc-types/src/state/instrument_state.rs` | Collection of instruments and selection state |
+| `Track` | `imbolc-types/src/state/track/` | One track: source + processing chain + LFO + envelope + mixer |
+| `TrackState` | `imbolc-types/src/state/track_state.rs` | Collection of tracks and selection state |
 | `SessionState` | `imbolc-types/src/state/session.rs` | Global session data: arrangement, mixer, automation, transport |
-| `SourceType` | `imbolc-types/src/state/instrument/source_type.rs` | Oscillator/Source types (Saw/Sin/etc, AudioIn, BusIn, etc.) |
-| `EffectSlot` | `imbolc-types/src/state/instrument/effect.rs` | One effect in the chain |
+| `SourceType` | `imbolc-types/src/state/track/source_type.rs` | Oscillator/Source types (Saw/Sin/etc, AudioIn, BusIn, etc.) |
+| `EffectSlot` | `imbolc-types/src/state/track/effect.rs` | One effect in the chain |
 | `Action` | `imbolc-types/src/action.rs` | Action enum dispatched by the TUI binary |
 | `LocalDispatcher` | `src/dispatch/local.rs` | Owns state, dispatches actions |
 | `AudioHandle` | `imbolc-audio/src/handle.rs` | Main-thread interface; sends AudioCmd to audio thread |
@@ -93,7 +93,7 @@ Top-level dispatch is in `src/dispatch/mod.rs`. Each `Action` variant routes to 
 
 | Action | Handler file | Purpose |
 |---|---|---|
-| `Instrument(a)` | `instrument/mod.rs` → sub-modules | See instrument table below |
+| `Track(a)` | `track/mod.rs` → sub-modules | See track table below |
 | `Mixer(a)` | `mixer.rs` | Level/pan/mute/solo, bus/group params |
 | `PianoRoll(a)` | `piano_roll.rs` | Note add/delete/move, selection |
 | `Arrangement(a)` | `arrangement.rs` | Clip CRUD, timeline placement |
@@ -108,7 +108,7 @@ Top-level dispatch is in `src/dispatch/mod.rs`. Each `Action` variant routes to 
 | `VstParam(a)` | `vst_param.rs` | VST parameter editing |
 | `Undo/Redo` | inline in `mod.rs` | Pop undo/redo stack, audio dirty based on scope |
 
-**Instrument sub-handlers** (`src/dispatch/instrument/`):
+**Track sub-handlers** (`src/dispatch/track/`):
 
 | Module | Handles |
 |---|---|
@@ -134,22 +134,22 @@ The audio engine now lives in the `imbolc-audio` crate. See [../imbolc-audio/CLA
 ### Undo Integration
 
 Every undoable action pushes a scoped snapshot before mutation:
-- `SingleInstrument(id)` — snapshot one instrument
-- `Instruments` — all instruments
+- `SingleTrack(id)` — snapshot one track
+- `Tracks` — all tracks
 - `Session` — session state only
-- `Full` — both session + instruments
+- `Full` — both session + tracks
 
-Undo/Redo pops the stack, swaps state, and sets audio dirty based on scope (`SingleInstrument` → targeted routing; others → full rebuild).
+Undo/Redo pops the stack, swaps state, and sets audio dirty based on scope (`SingleTrack` → targeted routing; others → full rebuild).
 
 ### Dirty Flags (AudioDirty)
 
 `AudioDirty` is `Copy` (must stay Copy). Boolean flags OR on merge. Targeted param flags use `Option<(...)>`.
 
-- **Structural**: `instruments`, `session`, `piano_roll`, `automation`, `routing`, `mixer_params`
+- **Structural**: `tracks`, `session`, `piano_roll`, `automation`, `routing`, `mixer_params`
 - **Targeted routing**:
-  - `routing_instruments: [Option<InstrumentId>; 4]` (up to 4 per frame)
-  - `routing_add_instrument: Option<InstrumentId>`
-  - `routing_delete_instrument: Option<InstrumentId>`
+  - `routing_tracks: [Option<TrackId>; 4]` (up to 4 per frame)
+  - `routing_add_track: Option<TrackId>`
+  - `routing_delete_track: Option<TrackId>`
   - `routing_bus_processing: bool`
 - **Real-time /n_set**: `filter_param`, `effect_param`, `lfo_param`, `bus_effect_param`, `layer_group_effect_param`
 
@@ -195,7 +195,7 @@ Musical defaults (`[defaults]` section): `bpm`, `key`, `scale`, `tuning_a4`, `ti
 - Format: SQLite database (`.imbolc` / `.sqlite`)
 - Save/load: `save_project()` / `load_project()` in `src/state/persistence/mod.rs`
 - Default path: `~/.config/imbolc/default.sqlite`
-- Persists: session settings, instruments + processing chains, mixer/buses/layer groups, piano roll + arrangement, automation lanes, sampler + drum sequencer + chopper, MIDI mappings, custom synthdefs, VST registry + param/state values, checkpoints
+- Persists: session settings, tracks + processing chains, mixer/buses/layer groups, piano roll + arrangement, automation lanes, sampler + drum sequencer + chopper, MIDI mappings, custom synthdefs, VST registry + param/state values, checkpoints
 
 ## SynthDefs
 
@@ -223,7 +223,7 @@ SynthDef(\imbolc_example, { |out=1024, freq_in=(-1), gate_in=(-1), vel_in=(-1),
 1. Create file in appropriate subdirectory: `synthdefs/defs/<category>/<name>.scd`
 2. Follow the template above (note `dirname.dirname.dirname` for correct output path)
 3. Compile: `../bin/compile-synthdefs` (or `cd synthdefs && sclang compile.scd`)
-4. Add corresponding `SourceType` variant in `imbolc-types/src/state/instrument/source_type.rs`
+4. Add corresponding `SourceType` variant in `imbolc-types/src/state/track/source_type.rs`
 
 ### SuperCollider var declaration rule
 
