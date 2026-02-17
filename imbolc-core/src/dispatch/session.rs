@@ -142,7 +142,7 @@ pub(super) fn dispatch_session(
                 &mut state.instruments,
                 &mut state.session,
             );
-            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::Instrument));
+            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
             result.audio_effects.push(AudioEffect::RebuildSession);
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
         }
@@ -563,7 +563,7 @@ mod tests {
         let nav_dbg: Vec<String> = result.nav.iter().map(|n| format!("{:?}", n)).collect();
         assert!(nav_dbg
             .iter()
-            .any(|s| s.contains("PopOrSwitchTo") && s.contains("Instrument")));
+            .any(|s| s.contains("PopOrSwitchTo") && s.contains("Track")));
     }
 
     // -----------------------------------------------------------------------

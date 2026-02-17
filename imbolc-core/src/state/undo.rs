@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-use super::instrument::Instrument;
+use super::instrument::Track;
 use super::{InstrumentState, SessionState};
 use crate::action::{
     BusAction, DomainAction, InstrumentAction, MixerAction, SequencerAction, SessionAction,
@@ -43,7 +43,7 @@ const COALESCE_WINDOW: std::time::Duration = std::time::Duration::from_millis(50
 enum UndoEntry {
     SingleInstrument {
         id: TrackId,
-        instrument: Box<Instrument>,
+        instrument: Box<Track>,
     },
     Instruments(Box<InstrumentState>),
     Session(Box<SessionState>),
@@ -86,7 +86,7 @@ impl UndoHistory {
                         id,
                         instrument: Box::new(inst.clone()),
                     },
-                    // Instrument not found — fall back to full instruments snapshot
+                    // Track not found — fall back to full instruments snapshot
                     None => UndoEntry::Instruments(Box::new(instruments.clone())),
                 }
             }
@@ -218,7 +218,7 @@ fn create_inverse(
                     id: *id,
                     instrument: Box::new(inst.clone()),
                 },
-                // Instrument was deleted between push and undo — snapshot everything
+                // Track was deleted between push and undo — snapshot everything
                 None => UndoEntry::Instruments(Box::new(instruments.clone())),
             }
         }
@@ -272,16 +272,16 @@ pub fn undo_scope(
     let recording = automation_recording;
 
     match action {
-        // Instrument add/delete always touch both state trees
-        DomainAction::Instrument(InstrumentAction::Add(_))
-        | DomainAction::Instrument(InstrumentAction::Delete(_)) => UndoScope::Full,
+        // Track add/delete always touch both state trees
+        DomainAction::Track(InstrumentAction::Add(_))
+        | DomainAction::Track(InstrumentAction::Delete(_)) => UndoScope::Full,
 
         // Layer link/unlink modifies instruments + session.mixer.layer_group_mixers
-        DomainAction::Instrument(InstrumentAction::LinkLayer(_, _))
-        | DomainAction::Instrument(InstrumentAction::UnlinkLayer(_)) => UndoScope::Full,
+        DomainAction::Track(InstrumentAction::LinkLayer(_, _))
+        | DomainAction::Track(InstrumentAction::UnlinkLayer(_)) => UndoScope::Full,
 
-        // Instrument Update carries an explicit id
-        DomainAction::Instrument(InstrumentAction::Update(update)) => {
+        // Track Update carries an explicit id
+        DomainAction::Track(InstrumentAction::Update(update)) => {
             if recording {
                 UndoScope::Full
             } else {
@@ -290,7 +290,7 @@ pub fn undo_scope(
         }
 
         // Other instrument actions — use target_instrument_id()
-        DomainAction::Instrument(a) => {
+        DomainAction::Track(a) => {
             match a.target_instrument_id() {
                 Some(id) => {
                     if recording {
@@ -357,7 +357,7 @@ fn mixer_scope(
     recording: bool,
 ) -> UndoScope {
     match session.mixer.selection {
-        super::session::MixerSelection::Instrument(idx) => match instruments.instruments.get(idx) {
+        super::session::MixerSelection::Track(idx) => match instruments.instruments.get(idx) {
             Some(inst) => {
                 if recording {
                     UndoScope::Full
@@ -388,8 +388,8 @@ pub fn coalesce_key(
     instruments: &InstrumentState,
 ) -> CoalesceKey {
     match action {
-        // Instrument parameter tweaks — coalesce by instrument ID
-        DomainAction::Instrument(
+        // Track parameter tweaks — coalesce by instrument ID
+        DomainAction::Track(
             InstrumentAction::AdjustFilterCutoff(id, _)
             | InstrumentAction::AdjustFilterResonance(id, _)
             | InstrumentAction::AdjustEffectParam(id, _, _, _)
@@ -407,18 +407,16 @@ pub fn coalesce_key(
             | InstrumentAction::AdjustTrackHumanizeTiming(id, _)
             | InstrumentAction::AdjustTrackTimingOffset(id, _),
         ) => CoalesceKey::InstrumentParam(*id),
-        DomainAction::Instrument(_) => CoalesceKey::None,
+        DomainAction::Track(_) => CoalesceKey::None,
 
         // Mixer level/pan/send — coalesce by mixer selection target
         DomainAction::Mixer(
             MixerAction::AdjustLevel(_) | MixerAction::AdjustPan(_) | MixerAction::AdjustSend(_, _),
         ) => match session.mixer.selection {
-            super::session::MixerSelection::Instrument(idx) => {
-                match instruments.instruments.get(idx) {
-                    Some(inst) => CoalesceKey::InstrumentParam(inst.id),
-                    None => CoalesceKey::None,
-                }
-            }
+            super::session::MixerSelection::Track(idx) => match instruments.instruments.get(idx) {
+                Some(inst) => CoalesceKey::InstrumentParam(inst.id),
+                None => CoalesceKey::None,
+            },
             _ => CoalesceKey::SessionParam,
         },
         DomainAction::Mixer(_) => CoalesceKey::None,
@@ -469,7 +467,7 @@ pub fn coalesce_key(
 
 pub fn is_undoable(action: &DomainAction) -> bool {
     match action {
-        DomainAction::Instrument(a) => !matches!(
+        DomainAction::Track(a) => !matches!(
             a,
             InstrumentAction::PlayNote(_, _)
                 | InstrumentAction::PlayNotes(_, _)
@@ -687,13 +685,13 @@ mod tests {
 
     #[test]
     fn is_undoable_instrument_add() {
-        let action = DomainAction::Instrument(InstrumentAction::Add(SourceType::Saw));
+        let action = DomainAction::Track(InstrumentAction::Add(SourceType::Saw));
         assert!(is_undoable(&action));
     }
 
     #[test]
     fn is_undoable_select_is_not() {
-        let action = DomainAction::Instrument(InstrumentAction::Select(0));
+        let action = DomainAction::Track(InstrumentAction::Select(0));
         assert!(!is_undoable(&action));
     }
 
@@ -718,13 +716,13 @@ mod tests {
 
         // Undo should only revert instrument 1
         assert!(history.undo(&mut session, &mut instruments).is_some());
-        // Instrument 1 reverted to default (0.8)
+        // Track 1 reverted to default (0.8)
         assert!(
             (instruments.instrument(id1).unwrap().channel_strip.level - 0.8).abs() < f32::EPSILON,
             "instrument 1 level should be reverted to 0.8, got {}",
             instruments.instrument(id1).unwrap().channel_strip.level
         );
-        // Instrument 2 unchanged
+        // Track 2 unchanged
         assert!(
             (instruments.instrument(id2).unwrap().channel_strip.level - 0.7).abs() < f32::EPSILON,
             "instrument 2 level should remain 0.7, got {}",
@@ -755,7 +753,7 @@ mod tests {
             "master_level should be reverted to 1.0, got {}",
             session.mixer.master_level
         );
-        // Instrument unchanged
+        // Track unchanged
         assert!(
             (instruments.instrument(id1).unwrap().channel_strip.level - 0.1).abs() < f32::EPSILON,
             "instrument level should remain 0.1, got {}",
@@ -769,28 +767,28 @@ mod tests {
         let mut instruments = InstrumentState::new();
         let id1 = instruments.add_instrument(SourceType::Saw);
 
-        // Instrument Add => Full
-        let action = DomainAction::Instrument(InstrumentAction::Add(SourceType::Saw));
+        // Track Add => Full
+        let action = DomainAction::Track(InstrumentAction::Add(SourceType::Saw));
         assert_eq!(
             undo_scope(&action, &session, &instruments, false),
             UndoScope::Full
         );
 
-        // Instrument Delete => Full
-        let action = DomainAction::Instrument(InstrumentAction::Delete(id1));
+        // Track Delete => Full
+        let action = DomainAction::Track(InstrumentAction::Delete(id1));
         assert_eq!(
             undo_scope(&action, &session, &instruments, false),
             UndoScope::Full
         );
 
-        // Instrument param tweak => SingleInstrument (no automation recording)
-        let action = DomainAction::Instrument(InstrumentAction::AdjustFilterCutoff(id1, 0.1));
+        // Track param tweak => SingleInstrument (no automation recording)
+        let action = DomainAction::Track(InstrumentAction::AdjustFilterCutoff(id1, 0.1));
         assert_eq!(
             undo_scope(&action, &session, &instruments, false),
             UndoScope::SingleInstrument(id1)
         );
 
-        // Instrument param tweak => Full (automation recording active)
+        // Track param tweak => Full (automation recording active)
         assert_eq!(
             undo_scope(&action, &session, &instruments, true),
             UndoScope::Full

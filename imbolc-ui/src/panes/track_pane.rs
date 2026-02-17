@@ -333,7 +333,7 @@ impl Pane for TrackPane {
             }
         }
 
-        // --- Instrument lanes ---
+        // --- Track lanes ---
         for (vi, i) in (scroll..num_instruments).enumerate() {
             if vi >= max_visible {
                 break;
@@ -371,7 +371,7 @@ impl Pane for TrackPane {
                 );
             }
 
-            // Instrument number + name
+            // Track number + name
             let num_str = format!("{:>2} ", i + 1);
             let name_str = &instrument.name[..instrument.name.len().min(11)];
             let src_short = format!(" {}", instrument.source.name());

@@ -95,10 +95,10 @@ fn test_roundtrip_client_hello_with_token() {
 
 #[test]
 fn test_roundtrip_client_action() {
-    let msg = ClientMessage::Action(NetworkAction::Instrument(InstrumentAction::Select(2)));
+    let msg = ClientMessage::Action(NetworkAction::Track(InstrumentAction::Select(2)));
     let rt = roundtrip_client(&msg);
     match rt {
-        ClientMessage::Action(NetworkAction::Instrument(InstrumentAction::Select(id))) => {
+        ClientMessage::Action(NetworkAction::Track(InstrumentAction::Select(id))) => {
             assert_eq!(id, 2);
         }
         _ => panic!("Roundtrip failed"),
@@ -362,7 +362,7 @@ fn test_roundtrip_network_action_variants() {
     let actions: Vec<NetworkAction> = vec![
         NetworkAction::None,
         NetworkAction::Quit,
-        NetworkAction::Instrument(InstrumentAction::Select(0)),
+        NetworkAction::Track(InstrumentAction::Select(0)),
         NetworkAction::Server(ServerAction::RecordMaster),
         NetworkAction::Undo,
         NetworkAction::Redo,

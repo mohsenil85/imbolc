@@ -116,13 +116,13 @@ impl DirtyFlags {
     /// Pass `None` in unit tests — PianoRoll actions will fall back to structural.
     pub fn mark_from_action(&mut self, action: &NetworkAction, session: Option<&SessionState>) {
         match action {
-            NetworkAction::Instrument(a) => {
+            NetworkAction::Track(a) => {
                 match a.target_instrument_id() {
                     Some(id) => {
                         // Delete changes the instrument Vec structurally
                         if matches!(a, InstrumentAction::Delete(_)) {
                             self.instruments_structural = true;
-                            // Instrument deletion also affects piano roll track list
+                            // Track deletion also affects piano roll track list
                             self.piano_roll_structural = true;
                         } else {
                             self.dirty_instruments.insert(id);
@@ -131,7 +131,7 @@ impl DirtyFlags {
                     None => {
                         // Add, Select*, PlayNote, PlayDrumPad — structural
                         self.instruments_structural = true;
-                        // Instrument addition also affects piano roll track list
+                        // Track addition also affects piano roll track list
                         if matches!(a, InstrumentAction::Add(_)) {
                             self.piano_roll_structural = true;
                         }
@@ -1104,7 +1104,7 @@ impl NetServer {
     fn validate_action(&self, client_id: ClientId, action: &NetworkAction) -> Result<(), String> {
         match action {
             // Per-instrument actions — require ownership
-            NetworkAction::Instrument(a) => {
+            NetworkAction::Track(a) => {
                 if let Some(id) = a.target_instrument_id() {
                     if !self.is_owner(client_id, id) {
                         return Err(format!("You don't own instrument {}", id));
@@ -1622,7 +1622,7 @@ mod tests {
     fn dirty_instrument_structural_actions() {
         // Add and Sequencer are structural
         let cases: Vec<NetworkAction> = vec![
-            NetworkAction::Instrument(InstrumentAction::Add(SourceType::Saw)),
+            NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
             NetworkAction::Sequencer(SequencerAction::ToggleStep(0, 0)),
         ];
         for action in &cases {
@@ -1647,7 +1647,7 @@ mod tests {
                 0,
                 0.5,
             )),
-            NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(5), 0.1)),
+            NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(5), 0.1)),
         ];
         for action in &cases {
             let mut d = DirtyFlags::default();
@@ -1711,7 +1711,7 @@ mod tests {
         // Automation (structural) → automation_structural flag
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Instrument(
+            &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Track(
                 TrackId::new(0),
                 InstrumentParameter::Standard(ParameterTarget::Level),
             ))),
@@ -1773,7 +1773,7 @@ mod tests {
     fn dirty_instrument_targeted_vs_structural() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(5), 0.1)),
+            &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(5), 0.1)),
             None,
         );
         assert_eq!(d.dirty_instruments, HashSet::from([TrackId::new(5)]));
@@ -1784,7 +1784,7 @@ mod tests {
     fn dirty_instrument_delete_is_structural() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::Delete(TrackId::new(5))),
+            &NetworkAction::Track(InstrumentAction::Delete(TrackId::new(5))),
             None,
         );
         assert!(d.instruments_structural);
@@ -1798,7 +1798,7 @@ mod tests {
     fn dirty_instrument_add_is_structural() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::Add(SourceType::Saw)),
+            &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
             None,
         );
         assert!(d.instruments_structural);
@@ -1836,11 +1836,11 @@ mod tests {
     fn dirty_accumulated_instruments() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(2), 0.1)),
+            &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(2), 0.1)),
             None,
         );
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::AdjustFilterCutoff(TrackId::new(7), 0.2)),
+            &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(7), 0.2)),
             None,
         );
         assert_eq!(
@@ -1930,7 +1930,7 @@ mod tests {
         assert!(!instruments_dirty(&d));
         // Second: instruments (structural) — session stays dirty
         d.mark_from_action(
-            &NetworkAction::Instrument(InstrumentAction::Add(SourceType::Saw)),
+            &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
             None,
         );
         assert!(d.session);
@@ -1941,7 +1941,7 @@ mod tests {
     fn ownership_not_set_by_actions() {
         // ownership is only set by mark_ownership_dirty(), never by mark_from_action()
         let all: Vec<NetworkAction> = vec![
-            NetworkAction::Instrument(InstrumentAction::Add(SourceType::Saw)),
+            NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
             NetworkAction::Mixer(MixerAction::Move(1)),
             NetworkAction::Undo,
             NetworkAction::Server(ServerAction::Connect),
@@ -1970,7 +1970,7 @@ mod tests {
         // AddLane → structural
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Instrument(
+            &NetworkAction::Automation(AutomationAction::AddLane(AutomationTarget::Track(
                 TrackId::new(0),
                 InstrumentParameter::Standard(ParameterTarget::Level),
             ))),

@@ -41,7 +41,7 @@ pub(crate) fn select_instrument(
     if idx < dispatcher.state().instruments.instruments.len() {
         dispatch_side_effect_free(
             dispatcher,
-            &DomainAction::Instrument(ui::InstrumentAction::Select(idx)),
+            &DomainAction::Track(ui::InstrumentAction::Select(idx)),
             audio,
         );
         sync_piano_roll_to_selection(dispatcher, panes, audio);
@@ -85,10 +85,10 @@ pub(crate) fn sync_piano_roll_to_selection(
             // Sync mixer selection via dispatch
             let active = panes.active().id();
             if active == "mixer" {
-                if let MixerSelection::Instrument(_) = dispatcher.state().session.mixer.selection {
+                if let MixerSelection::Track(_) = dispatcher.state().session.mixer.selection {
                     dispatch_side_effect_free(
                         dispatcher,
-                        &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Instrument(
+                        &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Track(
                             selected_idx,
                         ))),
                         audio,
@@ -342,7 +342,7 @@ pub(crate) fn handle_global_action(
             if let Some(selected_idx) = dispatcher.state().instruments.selected {
                 dispatch_side_effect_free(
                     dispatcher,
-                    &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Instrument(
+                    &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Track(
                         selected_idx,
                     ))),
                     audio,
@@ -497,9 +497,9 @@ pub(crate) fn handle_global_action(
                 };
                 switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
             }
-            GlobalActionId::SwitchPane(NavPaneId::Instrument) => {
+            GlobalActionId::SwitchPane(NavPaneId::TrackList) => {
                 switch_to_pane(
-                    NavPaneId::Instrument,
+                    NavPaneId::TrackList,
                     panes,
                     dispatcher,
                     audio,
@@ -673,8 +673,8 @@ pub(crate) fn handle_global_action(
                         "server" => "Server",
                         "piano_roll" => "Piano Roll",
                         "sequencer" => "Step Sequencer",
-                        "add" => "Add Instrument",
-                        "instrument_edit" => "Edit Instrument",
+                        "add" => "Add Track",
+                        "instrument_edit" => "Edit Track",
                         "track" => "Track",
                         "waveform" => "Waveform",
                         "automation" => "Automation",
@@ -714,7 +714,7 @@ pub(crate) fn handle_global_action(
             GlobalActionId::SelectPrevInstrument => {
                 dispatch_side_effect_free(
                     dispatcher,
-                    &DomainAction::Instrument(ui::InstrumentAction::SelectPrev),
+                    &DomainAction::Track(ui::InstrumentAction::SelectPrev),
                     audio,
                 );
                 sync_piano_roll_to_selection(dispatcher, panes, audio);
@@ -723,7 +723,7 @@ pub(crate) fn handle_global_action(
             GlobalActionId::SelectNextInstrument => {
                 dispatch_side_effect_free(
                     dispatcher,
-                    &DomainAction::Instrument(ui::InstrumentAction::SelectNext),
+                    &DomainAction::Track(ui::InstrumentAction::SelectNext),
                     audio,
                 );
                 sync_piano_roll_to_selection(dispatcher, panes, audio);
@@ -764,7 +764,7 @@ pub(crate) fn handle_global_action(
                 if let Some(instrument) = dispatcher.state().instruments.selected_instrument() {
                     let id = instrument.id;
                     let mut r = dispatcher.dispatch_domain(
-                        &DomainAction::Instrument(ui::InstrumentAction::Delete(id)),
+                        &DomainAction::Track(ui::InstrumentAction::Delete(id)),
                         audio,
                     );
                     pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));

@@ -19,7 +19,7 @@ impl AudioEngine {
         let backend = self.backend.as_ref().ok_or("Not connected")?;
 
         match target {
-            AutomationTarget::Instrument(instrument_id, param) => {
+            AutomationTarget::Track(instrument_id, param) => {
                 self.apply_instrument_automation(
                     &**backend,
                     *instrument_id,
@@ -358,7 +358,7 @@ impl AudioEngine {
         let mut msgs = Vec::new();
 
         match target {
-            AutomationTarget::Instrument(instrument_id, param) => {
+            AutomationTarget::Track(instrument_id, param) => {
                 self.collect_instrument_messages(
                     &mut msgs,
                     *instrument_id,

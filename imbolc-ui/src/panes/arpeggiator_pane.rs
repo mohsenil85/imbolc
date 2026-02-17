@@ -58,7 +58,7 @@ impl Pane for ArpeggiatorPane {
                 Action::None
             }
             ActionId::Arpeggiator(ArpeggiatorActionId::Toggle) => {
-                Action::Instrument(InstrumentAction::ToggleArp(id))
+                Action::Track(InstrumentAction::ToggleArp(id))
             }
             ActionId::Arpeggiator(ArpeggiatorActionId::Increase) => {
                 adjust_param(id, self.selected_param, true)
@@ -67,7 +67,7 @@ impl Pane for ArpeggiatorPane {
                 adjust_param(id, self.selected_param, false)
             }
             ActionId::Arpeggiator(ArpeggiatorActionId::ClearChord) => {
-                Action::Instrument(InstrumentAction::ClearChordShape(id))
+                Action::Track(InstrumentAction::ClearChordShape(id))
             }
             _ => Action::None,
         }
@@ -257,34 +257,34 @@ fn render_param_row(
 
 fn adjust_param(id: TrackId, param_idx: usize, increase: bool) -> Action {
     match param_idx {
-        PARAM_ENABLED => Action::Instrument(InstrumentAction::ToggleArp(id)),
+        PARAM_ENABLED => Action::Track(InstrumentAction::ToggleArp(id)),
         PARAM_DIRECTION => {
             if increase {
-                Action::Instrument(InstrumentAction::CycleArpDirection(id))
+                Action::Track(InstrumentAction::CycleArpDirection(id))
             } else {
-                Action::Instrument(InstrumentAction::CycleArpDirectionReverse(id))
+                Action::Track(InstrumentAction::CycleArpDirectionReverse(id))
             }
         }
         PARAM_RATE => {
             if increase {
-                Action::Instrument(InstrumentAction::CycleArpRate(id))
+                Action::Track(InstrumentAction::CycleArpRate(id))
             } else {
-                Action::Instrument(InstrumentAction::CycleArpRateReverse(id))
+                Action::Track(InstrumentAction::CycleArpRateReverse(id))
             }
         }
         PARAM_OCTAVES => {
             let delta = if increase { 1 } else { -1 };
-            Action::Instrument(InstrumentAction::AdjustArpOctaves(id, delta))
+            Action::Track(InstrumentAction::AdjustArpOctaves(id, delta))
         }
         PARAM_GATE => {
             let delta = if increase { 0.1 } else { -0.1 };
-            Action::Instrument(InstrumentAction::AdjustArpGate(id, delta))
+            Action::Track(InstrumentAction::AdjustArpGate(id, delta))
         }
         PARAM_CHORD => {
             if increase {
-                Action::Instrument(InstrumentAction::CycleChordShape(id))
+                Action::Track(InstrumentAction::CycleChordShape(id))
             } else {
-                Action::Instrument(InstrumentAction::CycleChordShapeReverse(id))
+                Action::Track(InstrumentAction::CycleChordShapeReverse(id))
             }
         }
         _ => Action::None,

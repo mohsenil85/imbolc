@@ -252,10 +252,10 @@ fn recalculate_next_lane_id() {
 #[test]
 fn targets_for_instrument_context_plain_oscillator() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{Instrument, SourceType};
+    use crate::state::instrument::{SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
-    let inst = Instrument::new(TrackId::new(1), SourceType::Saw);
+    let inst = Track::new(TrackId::new(1), SourceType::Saw);
     let vst_registry = VstPluginRegistry::new();
     let targets = AutomationTarget::targets_for_instrument_context(&inst, &vst_registry);
     // Plain oscillator: 16 static targets (10 original + 4 groove + 2 discrete: TrackTimeSignature, FilterBypass)
@@ -265,10 +265,10 @@ fn targets_for_instrument_context_plain_oscillator() {
 #[test]
 fn targets_for_instrument_context_with_effects() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{EffectType, Instrument, SourceType};
+    use crate::state::instrument::{EffectType, SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
-    let mut inst = Instrument::new(TrackId::new(1), SourceType::Saw);
+    let mut inst = Track::new(TrackId::new(1), SourceType::Saw);
     inst.add_effect(EffectType::Delay); // 3 params: time, feedback, mix
     inst.add_effect(EffectType::Reverb); // 3 params: room, damp, mix
     let vst_registry = VstPluginRegistry::new();
@@ -288,10 +288,10 @@ fn targets_for_instrument_context_with_effects() {
 #[test]
 fn targets_for_instrument_context_pitched_sampler() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{Instrument, SourceType};
+    use crate::state::instrument::{SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
-    let inst = Instrument::new(TrackId::new(1), SourceType::PitchedSampler);
+    let inst = Track::new(TrackId::new(1), SourceType::PitchedSampler);
     let vst_registry = VstPluginRegistry::new();
     let targets = AutomationTarget::targets_for_instrument_context(&inst, &vst_registry);
     // 16 static + SampleRate + SampleAmp = 18
@@ -308,10 +308,10 @@ fn targets_for_instrument_context_pitched_sampler() {
 #[test]
 fn targets_for_instrument_context_with_eq() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{Instrument, SourceType};
+    use crate::state::instrument::{SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
-    let mut inst = Instrument::new(TrackId::new(1), SourceType::Saw);
+    let mut inst = Track::new(TrackId::new(1), SourceType::Saw);
     inst.toggle_eq(); // adds EQ to processing_chain
     let vst_registry = VstPluginRegistry::new();
     let targets = AutomationTarget::targets_for_instrument_context(&inst, &vst_registry);

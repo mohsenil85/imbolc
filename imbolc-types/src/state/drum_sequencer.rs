@@ -102,7 +102,7 @@ pub struct DrumPad {
     pub buffer_id: Option<BufferId>,
     pub path: Option<String>,
 
-    // Instrument trigger (one-shot)
+    // Track trigger (one-shot)
     #[serde(default)]
     pub instrument_id: Option<TrackId>,
     #[serde(default = "default_trigger_freq")]

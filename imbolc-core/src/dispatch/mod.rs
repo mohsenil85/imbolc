@@ -84,7 +84,7 @@ pub fn dispatch_action(
     }
 
     match action {
-        DomainAction::Instrument(a) => instrument::dispatch_instrument(a, state, audio),
+        DomainAction::Track(a) => instrument::dispatch_instrument(a, state, audio),
         DomainAction::Mixer(a) => mixer::dispatch_mixer(a, state, audio),
         DomainAction::PianoRoll(a) => piano_roll::dispatch_piano_roll(a, state, audio),
         DomainAction::Arrangement(a) => arrangement::dispatch_arrangement(a, state, audio),

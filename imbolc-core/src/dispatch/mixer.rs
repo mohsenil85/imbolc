@@ -32,7 +32,7 @@ pub(super) fn dispatch_mixer(
         | MixerAction::CycleSection => {}
 
         MixerAction::AdjustLevel(_delta) => match selection {
-            MixerSelection::Instrument(idx) => {
+            MixerSelection::Track(idx) => {
                 result.audio_effects.push(AudioEffect::RebuildInstruments);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 if let Some(instrument) = state.instruments.instruments.get(idx) {
@@ -83,7 +83,7 @@ pub(super) fn dispatch_mixer(
         },
 
         MixerAction::ToggleMute => match selection {
-            MixerSelection::Instrument(_) => {
+            MixerSelection::Track(_) => {
                 result.audio_effects.push(AudioEffect::RebuildInstruments);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
             }
@@ -117,7 +117,7 @@ pub(super) fn dispatch_mixer(
 
         MixerAction::ToggleSolo => {
             match selection {
-                MixerSelection::Instrument(_) => {
+                MixerSelection::Track(_) => {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 }
@@ -154,7 +154,7 @@ pub(super) fn dispatch_mixer(
         }
 
         MixerAction::CycleOutput | MixerAction::CycleOutputReverse => match selection {
-            MixerSelection::Instrument(idx) => {
+            MixerSelection::Track(idx) => {
                 if let Some(inst) = state.instruments.instruments.get(idx) {
                     result
                         .audio_effects
@@ -170,7 +170,7 @@ pub(super) fn dispatch_mixer(
         MixerAction::AdjustSend(bus_id, _delta) => {
             let bus_id = *bus_id;
             match selection {
-                MixerSelection::Instrument(idx) => {
+                MixerSelection::Track(idx) => {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     if let Some(instrument) = state.instruments.instruments.get(idx) {
                         if let Some(send) = instrument.channel_strip.sends.get(&bus_id) {
@@ -194,7 +194,7 @@ pub(super) fn dispatch_mixer(
         }
 
         MixerAction::ToggleSend(_bus_id) => match selection {
-            MixerSelection::Instrument(idx) => {
+            MixerSelection::Track(idx) => {
                 if let Some(instrument) = state.instruments.instruments.get(idx) {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     result
@@ -210,7 +210,7 @@ pub(super) fn dispatch_mixer(
         },
 
         MixerAction::CycleSendTapPoint(_bus_id) => match selection {
-            MixerSelection::Instrument(idx) => {
+            MixerSelection::Track(idx) => {
                 if let Some(instrument) = state.instruments.instruments.get(idx) {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     result
@@ -226,7 +226,7 @@ pub(super) fn dispatch_mixer(
         },
 
         MixerAction::AdjustPan(_delta) => match selection {
-            MixerSelection::Instrument(idx) => {
+            MixerSelection::Track(idx) => {
                 result.audio_effects.push(AudioEffect::RebuildInstruments);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
                 if let Some(instrument) = state.instruments.instruments.get(idx) {
@@ -284,7 +284,7 @@ mod tests {
     fn adjust_level_instrument_clamps() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         dispatch_mixer(&MixerAction::AdjustLevel(2.0), &mut state, &mut audio);
         assert!((state.instruments.instruments[0].channel_strip.level - 1.0).abs() < f32::EPSILON);
 
@@ -325,7 +325,7 @@ mod tests {
     fn toggle_mute_instrument() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         assert!(!state.instruments.instruments[0].channel_strip.mute);
         let result = dispatch_mixer(&MixerAction::ToggleMute, &mut state, &mut audio);
         assert!(state.instruments.instruments[0].channel_strip.mute);
@@ -358,7 +358,7 @@ mod tests {
     fn toggle_solo_instrument() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         let result = dispatch_mixer(&MixerAction::ToggleSolo, &mut state, &mut audio);
         assert!(state.instruments.instruments[0].channel_strip.solo);
         assert!(result
@@ -379,7 +379,7 @@ mod tests {
     fn adjust_pan_clamps() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         dispatch_mixer(&MixerAction::AdjustPan(5.0), &mut state, &mut audio);
         assert!((state.instruments.instruments[0].channel_strip.pan - 1.0).abs() < f32::EPSILON);
         dispatch_mixer(&MixerAction::AdjustPan(-5.0), &mut state, &mut audio);
@@ -397,7 +397,7 @@ mod tests {
     fn cycle_section() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         dispatch_mixer(&MixerAction::CycleSection, &mut state, &mut audio);
         assert!(
             matches!(state.session.mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1))
@@ -410,7 +410,7 @@ mod tests {
         dispatch_mixer(&MixerAction::CycleSection, &mut state, &mut audio);
         assert!(matches!(
             state.session.mixer.selection,
-            MixerSelection::Instrument(_)
+            MixerSelection::Track(_)
         ));
     }
 
@@ -418,7 +418,7 @@ mod tests {
     fn toggle_send_auto_sets_level() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         // Sends start empty (lazily created)
         assert!(state.instruments.instruments[0]
             .channel_strip
@@ -458,7 +458,7 @@ mod tests {
         use imbolc_types::MixerSend;
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Instrument(0);
+        state.session.mixer.selection = MixerSelection::Track(0);
         state.instruments.instruments[0].channel_strip.sends.insert(
             BusId::new(1),
             MixerSend {

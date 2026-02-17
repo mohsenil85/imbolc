@@ -235,7 +235,7 @@ impl Pane for TagViewPane {
             let blank = " ".repeat(area.width as usize);
             buf.draw_str(area.x, y, &blank, row_style);
 
-            // Instrument name
+            // Track name
             let inst_name = target_instrument_name(target, state);
             let inst_truncated: String = inst_name.chars().take(inst_col_w as usize).collect();
             let inst_style = if is_selected {
@@ -358,7 +358,7 @@ fn format_value(v: f32) -> String {
 
 fn target_instrument_name(target: &AutomationTarget, state: &AppState) -> String {
     match target {
-        AutomationTarget::Instrument(id, _) => state
+        AutomationTarget::Track(id, _) => state
             .instruments
             .instrument(*id)
             .map(|i| i.name.clone())
@@ -371,7 +371,7 @@ fn target_instrument_name(target: &AutomationTarget, state: &AppState) -> String
 
 fn target_param_name(target: &AutomationTarget) -> String {
     match target {
-        AutomationTarget::Instrument(_, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(_, InstrumentParameter::Standard(param)) => {
             param.name().to_string()
         }
         AutomationTarget::Bus(_, BusParameter::Level) => "Level".to_string(),
@@ -386,7 +386,7 @@ fn target_param_name(target: &AutomationTarget) -> String {
 fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32, f32, f32)> {
     let (min, max) = target.default_range();
     let value = match target {
-        AutomationTarget::Instrument(id, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
             let inst = state.instruments.instrument(*id)?;
             match param {
                 ParameterTarget::Level => inst.channel_strip.level,
@@ -439,7 +439,7 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
 fn action_for_target_adjust(target: &AutomationTarget, delta: f32) -> Option<Action> {
     use imbolc_types::InstrumentAction;
     match target {
-        AutomationTarget::Instrument(id, InstrumentParameter::Standard(param)) => {
+        AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
             let id = *id;
             let action = match param {
                 ParameterTarget::FilterCutoff => {
@@ -485,7 +485,7 @@ fn action_for_target_adjust(target: &AutomationTarget, delta: f32) -> Option<Act
                 // VstParam, SourceParam, SendLevel: no direct adjust action
                 _ => return None,
             };
-            Some(Action::Instrument(action))
+            Some(Action::Track(action))
         }
         // Bus level, Global BPM: no direct delta actions exposed to UI
         _ => None,

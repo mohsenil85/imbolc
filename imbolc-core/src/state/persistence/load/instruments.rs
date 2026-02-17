@@ -214,7 +214,7 @@ pub(super) fn load_instruments(
         let chord_shape = r.chord_shape.as_deref().map(decode_chord_shape);
 
         // Create instrument with defaults, then override
-        let mut inst = Instrument::new(imbolc_types::TrackId::new(r.id), source);
+        let mut inst = Track::new(imbolc_types::TrackId::new(r.id), source);
         inst.name = r.name;
         inst.modulation.lfo = lfo;
         inst.modulation.amp_envelope = amp_envelope;

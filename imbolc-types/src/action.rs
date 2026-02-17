@@ -37,7 +37,7 @@ pub enum PaneId {
     Generative,
     Help,
     Home,
-    Instrument,
+    TrackList,
     InstrumentEdit,
     InstrumentPicker,
     MidiSettings,
@@ -77,7 +77,7 @@ impl PaneId {
             PaneId::Generative => "generative",
             PaneId::Help => "help",
             PaneId::Home => "home",
-            PaneId::Instrument => "instrument",
+            PaneId::TrackList => "track_list",
             PaneId::InstrumentEdit => "instrument_edit",
             PaneId::InstrumentPicker => "instrument_picker",
             PaneId::MidiSettings => "midi_settings",
@@ -118,7 +118,7 @@ impl PaneId {
             "generative" => Some(PaneId::Generative),
             "help" => Some(PaneId::Help),
             "home" => Some(PaneId::Home),
-            "instrument" => Some(PaneId::Instrument),
+            "track_list" => Some(PaneId::TrackList),
             "instrument_edit" => Some(PaneId::InstrumentEdit),
             "instrument_picker" => Some(PaneId::InstrumentPicker),
             "midi_settings" => Some(PaneId::MidiSettings),
@@ -835,7 +835,7 @@ pub struct InstrumentUpdate {
     pub active: bool,
 }
 
-/// Instrument actions.
+/// Track actions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InstrumentAction {
     Add(SourceType),
@@ -1078,7 +1078,7 @@ pub enum GenerativeAction {
 
 /// Actions returned from pane input handling. Contains both UI-layer mechanics
 /// (Nav, PushLayer, PopLayer, ExitPerformanceMode, Quit, SaveAndQuit) and
-/// domain mutations (Instrument, Mixer, etc.).
+/// domain mutations (Track, Mixer, etc.).
 ///
 /// Use `route()` to classify the action as UI-layer or domain-layer.
 #[derive(Debug, Clone, Serialize)]
@@ -1089,7 +1089,7 @@ pub enum Action {
     /// Panes emit this instead of `Quit` when the user hasn't confirmed.
     QuitIntent,
     Nav(NavAction),
-    Instrument(InstrumentAction),
+    Track(InstrumentAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -1161,7 +1161,7 @@ pub enum RoutedAction {
 /// audio projection operate on `DomainAction` exclusively.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DomainAction {
-    Instrument(InstrumentAction),
+    Track(InstrumentAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -1188,7 +1188,7 @@ impl Action {
     #[must_use = "Action::route() result must be matched; do not drop UI actions."]
     pub fn route(self) -> RoutedAction {
         match self {
-            Self::Instrument(a) => RoutedAction::Domain(DomainAction::Instrument(a)),
+            Self::Track(a) => RoutedAction::Domain(DomainAction::Track(a)),
             Self::Mixer(a) => RoutedAction::Domain(DomainAction::Mixer(a)),
             Self::PianoRoll(a) => RoutedAction::Domain(DomainAction::PianoRoll(a)),
             Self::Arrangement(a) => RoutedAction::Domain(DomainAction::Arrangement(a)),
@@ -1223,7 +1223,7 @@ impl Action {
 impl From<DomainAction> for Action {
     fn from(d: DomainAction) -> Self {
         match d {
-            DomainAction::Instrument(a) => Self::Instrument(a),
+            DomainAction::Track(a) => Self::Track(a),
             DomainAction::Mixer(a) => Self::Mixer(a),
             DomainAction::PianoRoll(a) => Self::PianoRoll(a),
             DomainAction::Arrangement(a) => Self::Arrangement(a),
@@ -1269,7 +1269,7 @@ mod tests {
             PaneId::Generative,
             PaneId::Help,
             PaneId::Home,
-            PaneId::Instrument,
+            PaneId::TrackList,
             PaneId::InstrumentEdit,
             PaneId::InstrumentPicker,
             PaneId::MidiSettings,

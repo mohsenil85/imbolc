@@ -89,7 +89,7 @@ impl MixerPane {
 
         // Calculate scroll offsets
         let instrument_scroll = match state.session.mixer.selection {
-            MixerSelection::Instrument(idx) => Self::calc_scroll_offset(
+            MixerSelection::Track(idx) => Self::calc_scroll_offset(
                 idx,
                 state.instruments.instruments.len(),
                 NUM_VISIBLE_CHANNELS,
@@ -121,7 +121,8 @@ impl MixerPane {
             let idx = instrument_scroll + i;
             if idx < state.instruments.instruments.len() {
                 let instrument = &state.instruments.instruments[idx];
-                let is_selected = matches!(state.session.mixer.selection, MixerSelection::Instrument(s) if s == idx);
+                let is_selected =
+                    matches!(state.session.mixer.selection, MixerSelection::Track(s) if s == idx);
 
                 let label = if instrument.layer.group.is_some() {
                     format!("I{}L", instrument.id)
@@ -271,9 +272,9 @@ impl MixerPane {
         // Send info line
         let send_y = output_y + 1;
         if let Some(bus_id) = self.send_target {
-            let send_info =
-                match state.session.mixer.selection {
-                    MixerSelection::Instrument(idx) => state
+            let send_info = match state.session.mixer.selection {
+                MixerSelection::Track(idx) => {
+                    state
                         .instruments
                         .instruments
                         .get(idx)
@@ -282,23 +283,24 @@ impl MixerPane {
                                 let status = if send.enabled { "ON" } else { "OFF" };
                                 format!("Send→B{}: {:.0}% [{}]", bus_id, send.level * 100.0, status)
                             })
-                        }),
-                    MixerSelection::LayerGroup(gid) => {
-                        state.session.mixer.layer_group_mixer(gid).and_then(|gm| {
-                            gm.channel_strip.sends.get(&bus_id).map(|send| {
-                                let status = if send.enabled { "ON" } else { "OFF" };
-                                format!(
-                                    "G{} Send→B{}: {:.0}% [{}]",
-                                    gid,
-                                    bus_id,
-                                    send.level * 100.0,
-                                    status
-                                )
-                            })
                         })
-                    }
-                    _ => None,
-                };
+                }
+                MixerSelection::LayerGroup(gid) => {
+                    state.session.mixer.layer_group_mixer(gid).and_then(|gm| {
+                        gm.channel_strip.sends.get(&bus_id).map(|send| {
+                            let status = if send.enabled { "ON" } else { "OFF" };
+                            format!(
+                                "G{} Send→B{}: {:.0}% [{}]",
+                                gid,
+                                bus_id,
+                                send.level * 100.0,
+                                status
+                            )
+                        })
+                    })
+                }
+                _ => None,
+            };
             if let Some(info) = send_info {
                 buf.draw_line(
                     Rect::new(base_x, send_y, rect.width.saturating_sub(4), 1),

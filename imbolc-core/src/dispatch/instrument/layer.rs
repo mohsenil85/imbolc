@@ -8,7 +8,7 @@ pub(super) fn handle_link_layer(state: &mut AppState, a: TrackId, b: TrackId) ->
         return DispatchResult::none();
     }
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::LinkLayer(a, b)),
+        &DomainAction::Track(InstrumentAction::LinkLayer(a, b)),
         &mut state.instruments,
         &mut state.session,
     );
@@ -26,7 +26,7 @@ pub(super) fn handle_unlink_layer(state: &mut AppState, id: TrackId) -> Dispatch
         .and_then(|i| i.layer.group)
         .is_some();
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::UnlinkLayer(id)),
+        &DomainAction::Track(InstrumentAction::UnlinkLayer(id)),
         &mut state.instruments,
         &mut state.session,
     );
@@ -45,7 +45,7 @@ pub(super) fn handle_adjust_layer_octave_offset(
     delta: i8,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::AdjustLayerOctaveOffset(id, delta)),
+        &DomainAction::Track(InstrumentAction::AdjustLayerOctaveOffset(id, delta)),
         &mut state.instruments,
         &mut state.session,
     );

@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use imbolc_types::{
     ArrangementAction, ArrangementState, AutomationAction, AutomationLane, AutomationLaneId,
-    AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, Instrument,
-    InstrumentAction, InstrumentState, LayerGroupAction, MidiAction, MixerAction, MixerBus,
-    MixerState, NoteSequence, PianoRollAction, PianoRollState, SequencerAction, ServerAction,
-    SessionAction, SessionState, TrackId, VstParamAction,
+    AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, InstrumentAction,
+    InstrumentState, LayerGroupAction, MidiAction, MixerAction, MixerBus, MixerState, NoteSequence,
+    PianoRollAction, PianoRollState, SequencerAction, ServerAction, SessionAction, SessionState,
+    Track, TrackId, VstParamAction,
 };
 
 /// Unique identifier for a connected client.
@@ -87,7 +87,7 @@ fn rand_u64() -> u64 {
 pub enum NetworkAction {
     None,
     Quit,
-    Instrument(InstrumentAction),
+    Track(InstrumentAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -141,7 +141,7 @@ pub struct StatePatch {
     pub mixer_bus_patches: Option<HashMap<BusId, MixerBus>>,
     pub instruments: Option<InstrumentState>,
     /// Per-instrument delta patches (mutually exclusive with `instruments`).
-    pub instrument_patches: Option<HashMap<TrackId, Instrument>>,
+    pub instrument_patches: Option<HashMap<TrackId, Track>>,
     pub ownership: Option<HashMap<TrackId, OwnerInfo>>,
     pub privileged_client: Option<Option<(ClientId, String)>>,
     pub seq: u64,

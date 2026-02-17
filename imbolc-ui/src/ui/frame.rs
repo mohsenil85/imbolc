@@ -210,7 +210,7 @@ impl Frame {
             cursor = arec_start;
         }
 
-        // Instrument indicator (to the left of REC)
+        // Track indicator (to the left of REC)
         if !inst_indicator.is_empty() {
             let inst_start = cursor.saturating_sub(inst_indicator.len() as u16);
             let inst_style = Style::new().fg(Color::WHITE).bold();

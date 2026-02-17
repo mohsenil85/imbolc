@@ -263,7 +263,7 @@ mod tests {
         // Add a Saw instrument
         writeln!(
             f,
-            r#"{{"t_ms":100,"pane":"instrument","action":{{"Instrument":{{"Add":"Saw"}}}},"effects":["RebuildInstruments"],"undoable":true}}"#
+            r#"{{"t_ms":100,"pane":"instrument","action":{{"Track":{{"Add":"Saw"}}}},"effects":["RebuildInstruments"],"undoable":true}}"#
         )
         .unwrap();
 
@@ -296,7 +296,7 @@ mod tests {
         writeln!(f).unwrap();
         writeln!(
             f,
-            r#"{{"t_ms":100,"pane":"instrument","action":{{"Instrument":{{"Add":"Sin"}}}},"effects":[],"undoable":true}}"#
+            r#"{{"t_ms":100,"pane":"instrument","action":{{"Track":{{"Add":"Sin"}}}},"effects":[],"undoable":true}}"#
         )
         .unwrap();
 

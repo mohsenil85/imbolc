@@ -15,7 +15,7 @@ pub(super) fn handle_set_eq_param(
     value: f32,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::SetEqParam(
+        &DomainAction::Track(InstrumentAction::SetEqParam(
             instrument_id,
             band_idx,
             param,
@@ -61,7 +61,7 @@ pub(super) fn handle_toggle_eq(
     instrument_id: crate::state::TrackId,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(InstrumentAction::ToggleEq(instrument_id)),
+        &DomainAction::Track(InstrumentAction::ToggleEq(instrument_id)),
         &mut state.instruments,
         &mut state.session,
     );

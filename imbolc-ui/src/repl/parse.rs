@@ -326,7 +326,7 @@ impl ReplParseable for MixerSelection {
             let idx: usize = rest
                 .parse()
                 .map_err(|_| format!("invalid instrument index: {rest}"))?;
-            return Ok(MixerSelection::Instrument(idx));
+            return Ok(MixerSelection::Track(idx));
         }
         if let Some(rest) = s.strip_prefix("bus:") {
             let id: u8 = rest
@@ -370,7 +370,7 @@ impl ReplParseable for VstTarget {
 impl ReplParseable for VstPluginKind {
     fn parse_repl(s: &str) -> Result<Self, String> {
         match s {
-            "instrument" => Ok(VstPluginKind::Instrument),
+            "instrument" => Ok(VstPluginKind::Track),
             "effect" => Ok(VstPluginKind::Effect),
             _ => Err(format!("invalid vst kind: {s} (try: instrument, effect)")),
         }
@@ -489,7 +489,7 @@ mod tests {
         );
         assert_eq!(
             MixerSelection::parse_repl("instrument:0").unwrap(),
-            MixerSelection::Instrument(0)
+            MixerSelection::Track(0)
         );
         assert_eq!(
             MixerSelection::parse_repl("bus:1").unwrap(),

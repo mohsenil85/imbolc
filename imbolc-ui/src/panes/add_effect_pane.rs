@@ -13,7 +13,7 @@ use imbolc_types::{BusId, VstPluginId};
 /// Target for the add-effect modal: which entity receives the new effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectTarget {
-    Instrument,
+    Track,
     Bus(BusId),
     LayerGroup(u32),
 }
@@ -43,7 +43,7 @@ impl AddEffectPane {
             selected: 0,
             scroll_offset: 0,
             cached_options: Self::build_options_static(),
-            effect_target: EffectTarget::Instrument,
+            effect_target: EffectTarget::Track,
         }
     }
 
@@ -179,9 +179,9 @@ impl AddEffectPane {
                 EffectTarget::LayerGroup(group_id) => {
                     Action::LayerGroup(LayerGroupAction::AddEffect(group_id, *effect_type))
                 }
-                EffectTarget::Instrument => {
+                EffectTarget::Track => {
                     if let Some(inst) = state.instruments.selected_instrument() {
-                        Action::Instrument(InstrumentAction::AddEffect(inst.id, *effect_type))
+                        Action::Track(InstrumentAction::AddEffect(inst.id, *effect_type))
                     } else {
                         Action::None
                     }
@@ -403,7 +403,7 @@ impl Pane for AddEffectPane {
     }
 
     fn on_exit(&mut self, _state: &AppState) {
-        self.effect_target = EffectTarget::Instrument;
+        self.effect_target = EffectTarget::Track;
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {

@@ -82,13 +82,13 @@ impl Pane for EqPane {
                 action,
             ),
             ActionId::Eq(EqActionId::ToggleEq) => {
-                Action::Instrument(InstrumentAction::ToggleEq(instrument_id))
+                Action::Track(InstrumentAction::ToggleEq(instrument_id))
             }
             ActionId::Eq(EqActionId::ToggleBand) => {
                 if let Some(eq) = instrument.eq() {
                     let band = &eq.bands[self.selected_band];
                     let new_val = if band.enabled { 0.0 } else { 1.0 };
-                    Action::Instrument(InstrumentAction::SetEqParam(
+                    Action::Track(InstrumentAction::SetEqParam(
                         instrument_id,
                         self.selected_band,
                         EqParamKind::Enabled,
@@ -265,7 +265,7 @@ fn adjust_param(
         (current - delta).max(min)
     };
 
-    Action::Instrument(InstrumentAction::SetEqParam(
+    Action::Track(InstrumentAction::SetEqParam(
         instrument_id,
         band_idx,
         param,

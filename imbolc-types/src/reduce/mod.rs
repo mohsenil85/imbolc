@@ -41,7 +41,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
 
         DomainAction::Undo | DomainAction::Redo => false,
 
-        DomainAction::Instrument(_) => true,
+        DomainAction::Track(_) => true,
         DomainAction::Mixer(_) => true,
         DomainAction::Bus(_) => true,
         DomainAction::LayerGroup(_) => true,
@@ -100,7 +100,7 @@ pub fn reduce_action(
         // Undo/Redo: not reducible (wholesale state replacement)
         DomainAction::Undo | DomainAction::Redo => false,
 
-        DomainAction::Instrument(a) => instrument::reduce(a, instruments, session),
+        DomainAction::Track(a) => instrument::reduce(a, instruments, session),
         DomainAction::Mixer(a) => mixer::reduce(a, instruments, session),
         DomainAction::PianoRoll(a) => piano_roll::reduce(a, session),
         DomainAction::Automation(a) => automation::reduce(a, session),

@@ -43,12 +43,12 @@ impl InstrumentEditPane {
                             ) {
                                 // NEW press - spawn voice(s)
                                 if new_pitches.len() == 1 {
-                                    return Action::Instrument(InstrumentAction::PlayNote(
+                                    return Action::Track(InstrumentAction::PlayNote(
                                         new_pitches[0],
                                         100,
                                     ));
                                 } else {
-                                    return Action::Instrument(InstrumentAction::PlayNotes(
+                                    return Action::Track(InstrumentAction::PlayNotes(
                                         new_pitches,
                                         100,
                                     ));
@@ -68,7 +68,7 @@ impl InstrumentEditPane {
                     if let KeyCode::Char(c) = event.key {
                         let c = translate_key(c, state.keyboard_layout);
                         if let Some(pad_idx) = self.perf.pad.key_to_pad(c) {
-                            return Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, 100));
+                            return Action::Track(InstrumentAction::PlayDrumPad(pad_idx, 100));
                         }
                     }
                     Action::None
@@ -395,7 +395,7 @@ impl InstrumentEditPane {
             InstrumentEditActionId::ToggleChannelConfig => {
                 if let Some(id) = self.instrument_id {
                     self.channel_config = self.channel_config.toggle();
-                    return Action::Instrument(InstrumentAction::ToggleChannelConfig(id));
+                    return Action::Track(InstrumentAction::ToggleChannelConfig(id));
                 }
                 Action::None
             }
@@ -465,7 +465,7 @@ impl InstrumentEditPane {
                     if let Some(ProcessingStage::Effect(effect)) = self.processing_chain.get(i) {
                         if effect.effect_type.is_vst() {
                             if let Some(instrument_id) = self.instrument_id {
-                                Action::Instrument(InstrumentAction::OpenVstEffectParams(
+                                Action::Track(InstrumentAction::OpenVstEffectParams(
                                     instrument_id,
                                     effect.id,
                                 ))

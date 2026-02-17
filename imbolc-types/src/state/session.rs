@@ -40,15 +40,15 @@ impl Default for ClickTrackState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MixerSelection {
-    Instrument(usize), // index into instruments vec
-    LayerGroup(u32),   // layer group ID
+    Track(usize),    // index into instruments vec
+    LayerGroup(u32), // layer group ID
     Bus(BusId),
     Master,
 }
 
 impl Default for MixerSelection {
     fn default() -> Self {
-        Self::Instrument(0)
+        Self::Track(0)
     }
 }
 
@@ -344,19 +344,13 @@ mod tests {
     #[test]
     fn mixer_cycle_section_full_cycle() {
         let mut session = SessionState::new();
-        assert!(matches!(
-            session.mixer.selection,
-            MixerSelection::Instrument(0)
-        ));
+        assert!(matches!(session.mixer.selection, MixerSelection::Track(0)));
         session.mixer_cycle_section();
         assert!(matches!(session.mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1)));
         session.mixer_cycle_section();
         assert!(matches!(session.mixer.selection, MixerSelection::Master));
         session.mixer_cycle_section();
-        assert!(matches!(
-            session.mixer.selection,
-            MixerSelection::Instrument(0)
-        ));
+        assert!(matches!(session.mixer.selection, MixerSelection::Track(0)));
     }
 
     #[test]

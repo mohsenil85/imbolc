@@ -476,7 +476,7 @@ pub fn network_action_to_action(net_action: imbolc_net::NetworkAction) -> Action
     match net_action {
         NetworkAction::None => Action::None,
         NetworkAction::Quit => Action::Quit,
-        NetworkAction::Instrument(a) => Action::Instrument(a),
+        NetworkAction::Track(a) => Action::Track(a),
         NetworkAction::Mixer(a) => Action::Mixer(a),
         NetworkAction::PianoRoll(a) => Action::PianoRoll(a),
         NetworkAction::Arrangement(a) => Action::Arrangement(a),
@@ -500,7 +500,7 @@ pub fn routed_to_network_action(action: &RoutedAction) -> Option<imbolc_net::Net
     use imbolc_net::NetworkAction;
     match action {
         RoutedAction::Domain(domain) => match domain {
-            DomainAction::Instrument(a) => Some(NetworkAction::Instrument(a.clone())),
+            DomainAction::Track(a) => Some(NetworkAction::Track(a.clone())),
             DomainAction::Mixer(a) => Some(NetworkAction::Mixer(a.clone())),
             DomainAction::PianoRoll(a) => Some(NetworkAction::PianoRoll(a.clone())),
             DomainAction::Arrangement(a) => Some(NetworkAction::Arrangement(a.clone())),

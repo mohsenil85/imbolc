@@ -22,7 +22,7 @@ const BLOCK_CHARS: [char; 8] = [
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DetailTarget {
-    Instrument(usize),
+    Track(usize),
     LayerGroup(u32),
     Bus(BusId),
 }
@@ -161,9 +161,9 @@ impl MixerPane {
     fn detail_instrument<'a>(
         &self,
         state: &'a AppState,
-    ) -> Option<(usize, &'a crate::state::Instrument)> {
+    ) -> Option<(usize, &'a crate::state::Track)> {
         match self.detail_mode? {
-            DetailTarget::Instrument(idx) => state
+            DetailTarget::Track(idx) => state
                 .instruments
                 .instruments
                 .get(idx)
@@ -284,7 +284,7 @@ impl MixerPane {
         match self.detail_mode {
             Some(DetailTarget::Bus(id)) => EffectTarget::Bus(id),
             Some(DetailTarget::LayerGroup(gid)) => EffectTarget::LayerGroup(gid),
-            _ => EffectTarget::Instrument,
+            _ => EffectTarget::Track,
         }
     }
 
@@ -318,7 +318,7 @@ impl Pane for MixerPane {
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         match self.detail_mode {
-            Some(DetailTarget::Instrument(_)) => self.render_detail_buf(buf, area, state),
+            Some(DetailTarget::Track(_)) => self.render_detail_buf(buf, area, state),
             Some(DetailTarget::LayerGroup(gid)) => {
                 self.render_group_detail_buf(buf, area, state, gid)
             }
@@ -613,7 +613,7 @@ mod tests {
     #[test]
     fn effect_target_reflects_detail_mode() {
         let mut pane = MixerPane::new(Keymap::new());
-        assert_eq!(pane.effect_target(), EffectTarget::Instrument);
+        assert_eq!(pane.effect_target(), EffectTarget::Track);
 
         pane.detail_mode = Some(DetailTarget::Bus(BusId::new(2)));
         assert_eq!(pane.effect_target(), EffectTarget::Bus(BusId::new(2)));

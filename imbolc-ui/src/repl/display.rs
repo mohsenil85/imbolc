@@ -35,11 +35,11 @@ pub fn format_instrument_list(state: &AppState) -> String {
 pub fn format_instrument_detail(state: &AppState, id: TrackId) -> String {
     let inst = match state.instruments.instrument(id) {
         Some(inst) => inst,
-        None => return format!("Instrument {} not found", id),
+        None => return format!("Track {} not found", id),
     };
 
     let mut lines = vec![
-        format!("Instrument: {} (id: {})", inst.name, id),
+        format!("Track: {} (id: {})", inst.name, id),
         format!(
             "  Source: {} ({})",
             inst.source.name(),
@@ -228,12 +228,12 @@ pub fn format_notes(state: &AppState, track_idx: usize) -> String {
 pub fn format_effects(state: &AppState, id: TrackId) -> String {
     let inst = match state.instruments.instrument(id) {
         Some(inst) => inst,
-        None => return format!("Instrument {} not found", id),
+        None => return format!("Track {} not found", id),
     };
 
     let effects: Vec<_> = inst.effects().collect();
     if effects.is_empty() {
-        return format!("Instrument {} ({}) has no effects", id, inst.name);
+        return format!("Track {} ({}) has no effects", id, inst.name);
     }
 
     let mut lines = vec![format!("Effects for {} (id: {}):", inst.name, id)];

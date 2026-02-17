@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::action::{DispatchResult, VstParamAction, VstTarget};
 use crate::dispatch::automation::record_automation_point;
 use crate::state::automation::AutomationTarget;
-use crate::state::instrument::Instrument;
+use crate::state::instrument::Track;
 use crate::state::vst_plugin::VstPluginId;
 use crate::state::AppState;
 use imbolc_audio::commands::AudioCmd;
@@ -56,7 +56,7 @@ fn vst_effect_state_path(
 }
 
 /// Get the VstPluginId for a given instrument and target
-fn get_vst_plugin_id(instrument: &Instrument, target: VstTarget) -> Option<VstPluginId> {
+fn get_vst_plugin_id(instrument: &Track, target: VstTarget) -> Option<VstPluginId> {
     match target {
         VstTarget::Source => {
             if let crate::state::SourceType::Vst(id) = instrument.source {
@@ -76,7 +76,7 @@ fn get_vst_plugin_id(instrument: &Instrument, target: VstTarget) -> Option<VstPl
 }
 
 /// Get param values slice for a given target
-fn get_param_values(instrument: &Instrument, target: VstTarget) -> &[(u32, f32)] {
+fn get_param_values(instrument: &Track, target: VstTarget) -> &[(u32, f32)] {
     match target {
         VstTarget::Source => instrument.vst_source_params(),
         VstTarget::Effect(effect_id) => instrument

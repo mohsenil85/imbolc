@@ -6,7 +6,7 @@ use crate::ui::action_id::{ActionId, TunerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style};
 
-// ── Instrument presets ──────────────────────────────────────────────────
+// ── Track presets ──────────────────────────────────────────────────
 
 struct TunerPreset {
     name: &'static str,
@@ -177,7 +177,7 @@ impl Pane for TunerPane {
         buf.draw_str(tx, y, title, Style::new().fg(Color::WHITE).bg(bg));
         y += 2;
 
-        // Instrument selector
+        // Track selector
         let inst_line = format!("<  {}  >", preset.name);
         let ix = inner.x + (inner.width.saturating_sub(inst_line.len() as u16)) / 2;
         buf.draw_str(

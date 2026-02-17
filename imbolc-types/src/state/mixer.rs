@@ -101,7 +101,7 @@ impl MixerState {
     /// Cycle between instrument/layer-group/bus/master sections
     pub fn cycle_section(&mut self) {
         self.selection = match self.selection {
-            MixerSelection::Instrument(_) => {
+            MixerSelection::Track(_) => {
                 // Select first layer group if any exist, otherwise skip to buses/master
                 if let Some(first) = self.layer_group_mixers.first() {
                     MixerSelection::LayerGroup(first.group_id)
@@ -119,7 +119,7 @@ impl MixerState {
                 }
             }
             MixerSelection::Bus(_) => MixerSelection::Master,
-            MixerSelection::Master => MixerSelection::Instrument(0),
+            MixerSelection::Master => MixerSelection::Track(0),
         };
     }
 
@@ -278,13 +278,13 @@ mod tests {
     #[test]
     fn cycle_section_full_cycle() {
         let mut mixer = MixerState::new();
-        assert!(matches!(mixer.selection, MixerSelection::Instrument(0)));
+        assert!(matches!(mixer.selection, MixerSelection::Track(0)));
         mixer.cycle_section();
         assert!(matches!(mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1)));
         mixer.cycle_section();
         assert!(matches!(mixer.selection, MixerSelection::Master));
         mixer.cycle_section();
-        assert!(matches!(mixer.selection, MixerSelection::Instrument(0)));
+        assert!(matches!(mixer.selection, MixerSelection::Track(0)));
     }
 
     #[test]

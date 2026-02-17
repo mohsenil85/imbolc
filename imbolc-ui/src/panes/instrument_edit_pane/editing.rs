@@ -189,7 +189,7 @@ impl InstrumentEditPane {
 
     pub(super) fn emit_update(&self) -> Action {
         if let Some(id) = self.instrument_id {
-            Action::Instrument(InstrumentAction::Update(Box::new(InstrumentUpdate {
+            Action::Track(InstrumentAction::Update(Box::new(InstrumentUpdate {
                 id,
                 source: self.source,
                 source_params: self.source_params.clone(),

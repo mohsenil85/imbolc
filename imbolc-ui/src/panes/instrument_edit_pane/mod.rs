@@ -63,7 +63,7 @@ impl InstrumentEditPane {
         self.perf.set_enhanced_keyboard(enabled);
     }
 
-    pub fn set_instrument(&mut self, instrument: &crate::state::Instrument) {
+    pub fn set_instrument(&mut self, instrument: &crate::state::Track) {
         self.instrument_id = Some(instrument.id);
         self.instrument_name = instrument.name.clone();
         self.source = instrument.source;
@@ -84,7 +84,7 @@ impl InstrumentEditPane {
     /// Re-sync data from an instrument without resetting cursor position.
     /// Used when returning from a sub-pane (e.g. add_effect) where the same
     /// instrument may have changed.
-    fn refresh_instrument(&mut self, instrument: &crate::state::Instrument) {
+    fn refresh_instrument(&mut self, instrument: &crate::state::Track) {
         self.instrument_id = Some(instrument.id);
         self.instrument_name = instrument.name.clone();
         self.source = instrument.source;
@@ -143,7 +143,7 @@ impl InstrumentEditPane {
 
     /// Apply edits back to an instrument
     #[allow(dead_code)]
-    pub fn apply_to(&self, instrument: &mut crate::state::Instrument) {
+    pub fn apply_to(&self, instrument: &mut crate::state::Track) {
         instrument.source = self.source;
         instrument.source_params = self.source_params.clone();
         instrument.channel_strip.processing_chain = self.processing_chain.clone();
@@ -286,7 +286,7 @@ impl InstrumentEditPane {
                 _ => return None,
             },
         };
-        Some(AutomationTarget::Instrument(
+        Some(AutomationTarget::Track(
             id,
             InstrumentParameter::Standard(param),
         ))

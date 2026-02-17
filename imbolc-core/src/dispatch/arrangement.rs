@@ -360,7 +360,7 @@ pub(super) fn dispatch_arrangement(
                 pr.looping = ctx.stashed_looping;
             }
 
-            let mut result = DispatchResult::with_nav(NavIntent::PopOrSwitchTo(PaneId::Track));
+            let mut result = DispatchResult::with_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
             result.audio_effects.push(AudioEffect::UpdateAutomation);
             result

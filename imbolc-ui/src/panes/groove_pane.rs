@@ -70,16 +70,16 @@ impl Pane for GroovePane {
             ActionId::Groove(GrooveActionId::CycleSwingGrid) => {
                 let current = groove.swing_grid.unwrap_or(SwingGrid::Eighths);
                 let next = current.next();
-                Action::Instrument(InstrumentAction::SetTrackSwingGrid(
+                Action::Track(InstrumentAction::SetTrackSwingGrid(
                     instrument_id,
                     Some(next),
                 ))
             }
             ActionId::Groove(GrooveActionId::CycleTimeSig) => {
-                Action::Instrument(InstrumentAction::CycleTrackTimeSignature(instrument_id))
+                Action::Track(InstrumentAction::CycleTrackTimeSignature(instrument_id))
             }
             ActionId::Groove(GrooveActionId::Reset) => {
-                Action::Instrument(InstrumentAction::ResetTrackGroove(instrument_id))
+                Action::Track(InstrumentAction::ResetTrackGroove(instrument_id))
             }
             _ => Action::None,
         }
@@ -295,7 +295,7 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Instrument(InstrumentAction::AdjustTrackSwing(
+            Action::Track(InstrumentAction::AdjustTrackSwing(
                 instrument_id,
                 signed_delta,
             ))
@@ -308,7 +308,7 @@ fn adjust_param(
             } else {
                 cycle_swing_grid_rev(current)
             };
-            Action::Instrument(InstrumentAction::SetTrackSwingGrid(
+            Action::Track(InstrumentAction::SetTrackSwingGrid(
                 instrument_id,
                 Some(next),
             ))
@@ -322,7 +322,7 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Instrument(InstrumentAction::AdjustTrackHumanizeVelocity(
+            Action::Track(InstrumentAction::AdjustTrackHumanizeVelocity(
                 instrument_id,
                 signed_delta,
             ))
@@ -336,7 +336,7 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Instrument(InstrumentAction::AdjustTrackHumanizeTiming(
+            Action::Track(InstrumentAction::AdjustTrackHumanizeTiming(
                 instrument_id,
                 signed_delta,
             ))
@@ -350,7 +350,7 @@ fn adjust_param(
                 _ => 1.0,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Instrument(InstrumentAction::AdjustTrackTimingOffset(
+            Action::Track(InstrumentAction::AdjustTrackTimingOffset(
                 instrument_id,
                 signed_delta,
             ))

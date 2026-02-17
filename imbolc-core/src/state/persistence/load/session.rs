@@ -307,7 +307,7 @@ pub(super) fn load_vst_plugins(conn: &Connection, session: &mut SessionState) ->
     for (id, name, plugin_path, kind_str) in plugins {
         let kind = match kind_str.as_str() {
             "Effect" => VstPluginKind::Effect,
-            _ => VstPluginKind::Instrument,
+            _ => VstPluginKind::Track,
         };
 
         let mut param_stmt = conn.prepare(

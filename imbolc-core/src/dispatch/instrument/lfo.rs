@@ -10,7 +10,7 @@ const LFO_RATE_MAX: f32 = 20.0;
 
 fn reduce(state: &mut AppState, action: &InstrumentAction) {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Instrument(action.clone()),
+        &DomainAction::Track(action.clone()),
         &mut state.instruments,
         &mut state.session,
     );

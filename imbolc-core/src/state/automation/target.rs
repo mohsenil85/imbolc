@@ -1,8 +1,8 @@
 // Re-export AutomationTarget from imbolc-types
 pub use imbolc_types::AutomationTarget;
 
-// Keep the context-aware methods that need Instrument and VstPluginRegistry
-use crate::state::instrument::{Instrument, SourceType};
+// Keep the context-aware methods that need Track and VstPluginRegistry
+use crate::state::instrument::{SourceType, Track};
 use crate::state::vst_plugin::VstPluginRegistry;
 use imbolc_types::{ParamIndex, ParameterTarget};
 
@@ -12,22 +12,18 @@ pub trait AutomationTargetExt {
     /// Includes the static 10 targets plus context-dependent ones based on
     /// the instrument's effects, source type, VST plugins, and EQ.
     fn targets_for_instrument_context(
-        inst: &Instrument,
+        inst: &Track,
         vst_registry: &VstPluginRegistry,
     ) -> Vec<AutomationTarget>;
 
     /// Get a context-aware display name using instrument data for richer labels.
     /// Falls back to `name()` for targets that don't benefit from context.
-    fn name_with_context(
-        &self,
-        inst: Option<&Instrument>,
-        vst_registry: &VstPluginRegistry,
-    ) -> String;
+    fn name_with_context(&self, inst: Option<&Track>, vst_registry: &VstPluginRegistry) -> String;
 }
 
 impl AutomationTargetExt for AutomationTarget {
     fn targets_for_instrument_context(
-        inst: &Instrument,
+        inst: &Track,
         vst_registry: &VstPluginRegistry,
     ) -> Vec<AutomationTarget> {
         let id = inst.id;
@@ -76,11 +72,7 @@ impl AutomationTargetExt for AutomationTarget {
         targets
     }
 
-    fn name_with_context(
-        &self,
-        inst: Option<&Instrument>,
-        vst_registry: &VstPluginRegistry,
-    ) -> String {
+    fn name_with_context(&self, inst: Option<&Track>, vst_registry: &VstPluginRegistry) -> String {
         match self.parameter_target() {
             Some(ParameterTarget::EffectParam(effect_id, param_idx)) => {
                 if let Some(inst) = inst {

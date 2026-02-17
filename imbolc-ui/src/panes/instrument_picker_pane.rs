@@ -10,7 +10,7 @@ use crate::ui::{
 
 const LIST_HEIGHT: usize = 12;
 
-/// Instrument picker for assigning instruments to drum pads.
+/// Track picker for assigning instruments to drum pads.
 /// Reads the target pad from DrumSequencerState.editing_pad.
 pub struct InstrumentPickerPane {
     keymap: Keymap,
@@ -175,7 +175,7 @@ impl Pane for InstrumentPickerPane {
         let rect = center_rect(area, 40, 18);
 
         let border_style = Style::new().fg(Color::CYAN);
-        let inner = buf.draw_block(rect, " Assign Instrument ", border_style, border_style);
+        let inner = buf.draw_block(rect, " Assign Track ", border_style, border_style);
 
         let content_x = inner.x + 1;
         let content_y = inner.y + 1;

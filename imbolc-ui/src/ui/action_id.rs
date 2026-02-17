@@ -115,7 +115,7 @@ impl GlobalActionId {
             GlobalActionId::OpenCheckpointList => "open_checkpoint_list",
             GlobalActionId::SwitchPane(pane) => match pane {
                 PaneId::InstrumentEdit => "switch:instrument",
-                PaneId::Instrument => "switch:instrument_list",
+                PaneId::TrackList => "switch:track_list",
                 PaneId::Track => "switch:track",
                 PaneId::Mixer => "switch:mixer",
                 PaneId::Server => "switch:server",
@@ -184,7 +184,7 @@ impl GlobalActionId {
             "request_privilege" => Some(GlobalActionId::RequestPrivilege),
             "open_checkpoint_list" => Some(GlobalActionId::OpenCheckpointList),
             "switch:instrument" => Some(GlobalActionId::SwitchPane(PaneId::InstrumentEdit)),
-            "switch:instrument_list" => Some(GlobalActionId::SwitchPane(PaneId::Instrument)),
+            "switch:track_list" => Some(GlobalActionId::SwitchPane(PaneId::TrackList)),
             "switch:piano_roll_or_sequencer" => Some(GlobalActionId::SwitchPianoRollOrSequencer),
             "switch:track" => Some(GlobalActionId::SwitchPane(PaneId::Track)),
             "switch:mixer" => Some(GlobalActionId::SwitchPane(PaneId::Mixer)),
@@ -214,7 +214,7 @@ impl GlobalActionId {
 }
 
 define_action_enum! {
-    /// Instrument list layer actions
+    /// Track list layer actions
     pub enum InstrumentListActionId {
         Quit => "quit",
         Next => "next",
@@ -235,7 +235,7 @@ define_action_enum! {
 }
 
 define_action_enum! {
-    /// Instrument edit layer actions
+    /// Track edit layer actions
     pub enum InstrumentEditActionId {
         Next => "next",
         Prev => "prev",
@@ -980,7 +980,7 @@ mod tests {
             GlobalActionId::SelectNextInstrument,
             GlobalActionId::SelectTwoDigit,
             GlobalActionId::SwitchPane(PaneId::InstrumentEdit),
-            GlobalActionId::SwitchPane(PaneId::Instrument),
+            GlobalActionId::SwitchPane(PaneId::TrackList),
             GlobalActionId::SwitchPianoRollOrSequencer,
             GlobalActionId::SwitchPane(PaneId::Track),
             GlobalActionId::SwitchPane(PaneId::Mixer),

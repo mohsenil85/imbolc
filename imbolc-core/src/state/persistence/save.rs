@@ -1247,7 +1247,7 @@ pub fn encode_automation_target(
     use imbolc_types::{AutomationTarget, BusParameter, GlobalParameter, InstrumentParameter};
 
     match target {
-        AutomationTarget::Instrument(inst_id, InstrumentParameter::Standard(param_target)) => {
+        AutomationTarget::Track(inst_id, InstrumentParameter::Standard(param_target)) => {
             let target_extra = match param_target {
                 ParameterTarget::EffectParam(eid, pidx) => Some(format!("{}:{}", eid, pidx)),
                 ParameterTarget::EffectBypass(eid) => Some(format!("{}", eid)),

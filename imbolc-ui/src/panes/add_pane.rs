@@ -11,7 +11,7 @@ use crate::ui::{
     SessionAction, Style,
 };
 
-/// Options available in the Add Instrument menu
+/// Options available in the Add Track menu
 #[derive(Debug, Clone)]
 pub enum AddOption {
     Source(SourceType),
@@ -188,7 +188,7 @@ impl AddPane {
     /// Convert the currently-selected option to an Action
     fn selected_option_action(&self) -> Action {
         match self.cached_options.get(self.selector.selected) {
-            Some(AddOption::Source(source)) => Action::Instrument(InstrumentAction::Add(*source)),
+            Some(AddOption::Source(source)) => Action::Track(InstrumentAction::Add(*source)),
             Some(AddOption::ImportCustom) => Action::Session(SessionAction::OpenFileBrowser(
                 FileSelectAction::ImportCustomSynthDef,
             )),
@@ -220,7 +220,7 @@ impl AddPane {
         let rect = center_rect(area, 97, 29);
 
         let border_style = Style::new().fg(Color::LIME);
-        let inner = buf.draw_block(rect, " Add Instrument ", border_style, border_style);
+        let inner = buf.draw_block(rect, " Add Track ", border_style, border_style);
 
         let content_x = inner.x + 1;
         let content_y = inner.y + 1;
@@ -363,7 +363,7 @@ impl AddPane {
                     };
                     buf.draw_line(
                         Rect::new(content_x + 2, y, inner.width.saturating_sub(4), 1),
-                        &[("+ Import VST Instrument...", text_style)],
+                        &[("+ Import VST Track...", text_style)],
                     );
 
                     if is_selected {
@@ -406,7 +406,7 @@ impl Pane for AddPane {
                 if state.instruments.instruments.is_empty() {
                     Action::Nav(NavAction::SwitchPane(PaneId::Server))
                 } else {
-                    Action::Nav(NavAction::SwitchPane(PaneId::Instrument))
+                    Action::Nav(NavAction::SwitchPane(PaneId::TrackList))
                 }
             }
             ActionId::Add(AddActionId::Next) => {

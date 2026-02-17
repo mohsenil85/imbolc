@@ -591,7 +591,7 @@ mod tests {
             id: VstPluginId::new(0),
             name: "TestSynth".to_string(),
             plugin_path: PathBuf::from("/tmp/test.vst3"),
-            kind: VstPluginKind::Instrument,
+            kind: VstPluginKind::Track,
             params: vec![
                 VstParamSpec {
                     index: 0,

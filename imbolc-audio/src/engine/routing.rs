@@ -5,9 +5,9 @@ use super::{
     VST_UGEN_INDEX,
 };
 use imbolc_types::{
-    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, Instrument, InstrumentState,
+    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, InstrumentState,
     LayerGroupMixer, MixerBus, ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType,
-    SourceTypeExt, TrackId,
+    SourceTypeExt, Track, TrackId,
 };
 use std::collections::HashMap;
 
@@ -70,7 +70,7 @@ impl AudioEngine {
     /// Allocates buses, creates synth nodes, and registers everything in node_map/node_registry.
     fn build_instrument_chain(
         &mut self,
-        instrument: &Instrument,
+        instrument: &Track,
         any_solo: bool,
         session: &SessionState,
     ) -> Result<(), String> {
@@ -476,7 +476,7 @@ impl AudioEngine {
     }
 
     /// Create send synths for a single instrument.
-    fn build_instrument_sends(&mut self, instrument: &Instrument) -> Result<(), String> {
+    fn build_instrument_sends(&mut self, instrument: &Track) -> Result<(), String> {
         let source_out_bus = self
             .bus_allocator
             .get_audio_bus(instrument.id, "source_out")
@@ -538,7 +538,7 @@ impl AudioEngine {
     }
 
     /// Restore saved VST param values for a single instrument's source and effects.
-    fn restore_instrument_vst_params(&self, instrument: &Instrument) {
+    fn restore_instrument_vst_params(&self, instrument: &Track) {
         let client = match self.backend.as_ref() {
             Some(c) => c,
             None => return,
@@ -1017,7 +1017,7 @@ impl AudioEngine {
 
         let instrument = match state.instruments.iter().find(|i| i.id == instrument_id) {
             Some(i) => i,
-            None => return Err(format!("Instrument {} not found", instrument_id)),
+            None => return Err(format!("Track {} not found", instrument_id)),
         };
 
         let any_solo = state.any_instrument_solo();
@@ -1242,7 +1242,7 @@ impl AudioEngine {
 
         let instrument = match state.instruments.iter().find(|i| i.id == instrument_id) {
             Some(i) => i,
-            None => return Err(format!("Instrument {} not found", instrument_id)),
+            None => return Err(format!("Track {} not found", instrument_id)),
         };
 
         // 1. Free existing nodes for this instrument

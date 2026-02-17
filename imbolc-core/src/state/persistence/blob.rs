@@ -263,7 +263,7 @@ mod tests {
         // Skipped fields should be default
         assert_eq!(
             loaded_session.mixer.selection,
-            crate::state::session::MixerSelection::Instrument(0)
+            crate::state::session::MixerSelection::Track(0)
         );
 
         // --- Assert instruments ---

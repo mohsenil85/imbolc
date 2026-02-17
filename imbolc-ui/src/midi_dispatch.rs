@@ -71,7 +71,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
                     if *note >= base {
                         let pad_idx = (*note - base) as usize;
                         if pad_idx < NUM_PADS {
-                            return Some(Action::Instrument(InstrumentAction::PlayDrumPad(
+                            return Some(Action::Track(InstrumentAction::PlayDrumPad(
                                 pad_idx, *velocity,
                             )));
                         }
@@ -82,9 +82,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             }
 
             // Non-Kit: PlayNote uses the selected instrument
-            Some(Action::Instrument(InstrumentAction::PlayNote(
-                *note, *velocity,
-            )))
+            Some(Action::Track(InstrumentAction::PlayNote(*note, *velocity)))
         }
 
         MidiEventKind::NoteOff { channel, .. } => {
@@ -233,7 +231,7 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         match action {
-            Some(Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, vel))) => {
+            Some(Action::Track(InstrumentAction::PlayDrumPad(pad_idx, vel))) => {
                 assert_eq!(pad_idx, 2);
                 assert_eq!(vel, 90);
             }
@@ -289,7 +287,7 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         match action {
-            Some(Action::Instrument(InstrumentAction::PlayNote(note, vel))) => {
+            Some(Action::Track(InstrumentAction::PlayNote(note, vel))) => {
                 assert_eq!(note, 60);
                 assert_eq!(vel, 100);
             }

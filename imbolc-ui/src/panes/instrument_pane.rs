@@ -74,14 +74,14 @@ impl InstrumentPane {
         self.perf.set_enhanced_keyboard(enabled);
     }
 
-    fn format_filter(instrument: &crate::state::instrument::Instrument) -> String {
+    fn format_filter(instrument: &crate::state::instrument::Track) -> String {
         match instrument.filter() {
             Some(f) => format!("[{}]", f.filter_type.name()),
             None => "---".to_string(),
         }
     }
 
-    fn format_eq(instrument: &crate::state::instrument::Instrument) -> &'static str {
+    fn format_eq(instrument: &crate::state::instrument::Track) -> &'static str {
         if instrument.eq().is_some() {
             "[EQ]"
         } else {
@@ -89,7 +89,7 @@ impl InstrumentPane {
         }
     }
 
-    fn format_effects(instrument: &crate::state::instrument::Instrument) -> String {
+    fn format_effects(instrument: &crate::state::instrument::Track) -> String {
         let effects: Vec<_> = instrument.effects().collect();
         if effects.is_empty() {
             return "---".to_string();
@@ -135,9 +135,7 @@ impl Pane for InstrumentPane {
                     if let Some(target) = state.instruments.selected_instrument() {
                         let target_id = target.id;
                         if target_id != from_id {
-                            return Action::Instrument(InstrumentAction::LinkLayer(
-                                from_id, target_id,
-                            ));
+                            return Action::Track(InstrumentAction::LinkLayer(from_id, target_id));
                         }
                     }
                     return Action::None;
@@ -159,30 +157,30 @@ impl Pane for InstrumentPane {
         match action {
             ActionId::InstrumentList(InstrumentListActionId::Quit) => Action::QuitIntent,
             ActionId::InstrumentList(InstrumentListActionId::Next) => {
-                Action::Instrument(InstrumentAction::SelectNext)
+                Action::Track(InstrumentAction::SelectNext)
             }
             ActionId::InstrumentList(InstrumentListActionId::Prev) => {
-                Action::Instrument(InstrumentAction::SelectPrev)
+                Action::Track(InstrumentAction::SelectPrev)
             }
             ActionId::InstrumentList(InstrumentListActionId::GotoTop) => {
-                Action::Instrument(InstrumentAction::SelectFirst)
+                Action::Track(InstrumentAction::SelectFirst)
             }
             ActionId::InstrumentList(InstrumentListActionId::GotoBottom) => {
-                Action::Instrument(InstrumentAction::SelectLast)
+                Action::Track(InstrumentAction::SelectLast)
             }
             ActionId::InstrumentList(InstrumentListActionId::Add) => {
                 Action::Nav(NavAction::SwitchPane(PaneId::Add))
             }
             ActionId::InstrumentList(InstrumentListActionId::Delete) => {
                 if let Some(instrument) = state.instruments.selected_instrument() {
-                    Action::Instrument(InstrumentAction::Delete(instrument.id))
+                    Action::Track(InstrumentAction::Delete(instrument.id))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::Edit) => {
                 if let Some(instrument) = state.instruments.selected_instrument() {
-                    Action::Instrument(InstrumentAction::Edit(instrument.id))
+                    Action::Track(InstrumentAction::Edit(instrument.id))
                 } else {
                     Action::None
                 }
@@ -201,21 +199,21 @@ impl Pane for InstrumentPane {
             }
             ActionId::InstrumentList(InstrumentListActionId::UnlinkLayer) => {
                 if let Some(instrument) = state.instruments.selected_instrument() {
-                    Action::Instrument(InstrumentAction::UnlinkLayer(instrument.id))
+                    Action::Track(InstrumentAction::UnlinkLayer(instrument.id))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::LayerOctaveUp) => {
                 if let Some(instrument) = state.instruments.selected_instrument() {
-                    Action::Instrument(InstrumentAction::AdjustLayerOctaveOffset(instrument.id, 1))
+                    Action::Track(InstrumentAction::AdjustLayerOctaveOffset(instrument.id, 1))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::LayerOctaveDown) => {
                 if let Some(instrument) = state.instruments.selected_instrument() {
-                    Action::Instrument(InstrumentAction::AdjustLayerOctaveOffset(instrument.id, -1))
+                    Action::Track(InstrumentAction::AdjustLayerOctaveOffset(instrument.id, -1))
                 } else {
                     Action::None
                 }
@@ -285,12 +283,12 @@ impl Pane for InstrumentPane {
                         ) {
                             // NEW press - spawn voice(s)
                             if new_pitches.len() == 1 {
-                                return Action::Instrument(InstrumentAction::PlayNote(
+                                return Action::Track(InstrumentAction::PlayNote(
                                     new_pitches[0],
                                     100,
                                 ));
                             } else {
-                                return Action::Instrument(InstrumentAction::PlayNotes(
+                                return Action::Track(InstrumentAction::PlayNotes(
                                     new_pitches,
                                     100,
                                 ));
@@ -311,7 +309,7 @@ impl Pane for InstrumentPane {
                 if let KeyCode::Char(c) = event.key {
                     let c = translate_key(c, state.keyboard_layout);
                     if let Some(pad_idx) = self.perf.pad.key_to_pad(c) {
-                        return Action::Instrument(InstrumentAction::PlayDrumPad(pad_idx, 100));
+                        return Action::Track(InstrumentAction::PlayDrumPad(pad_idx, 100));
                     }
                 }
                 Action::None
@@ -576,13 +574,13 @@ impl Pane for InstrumentPane {
                 if col >= inner_x && row >= list_y && row < list_y + max_visible as u16 {
                     let clicked_idx = scroll_offset + (row - list_y) as usize;
                     if clicked_idx < state.instruments.instruments.len() {
-                        return Action::Instrument(InstrumentAction::Select(clicked_idx));
+                        return Action::Track(InstrumentAction::Select(clicked_idx));
                     }
                 }
                 Action::None
             }
-            MouseEventKind::ScrollUp => Action::Instrument(InstrumentAction::SelectPrev),
-            MouseEventKind::ScrollDown => Action::Instrument(InstrumentAction::SelectNext),
+            MouseEventKind::ScrollUp => Action::Track(InstrumentAction::SelectPrev),
+            MouseEventKind::ScrollDown => Action::Track(InstrumentAction::SelectNext),
             _ => Action::None,
         }
     }
@@ -652,7 +650,7 @@ mod tests {
             &state,
         );
         match action {
-            Action::Instrument(InstrumentAction::Delete(got)) => assert_eq!(got, id),
+            Action::Track(InstrumentAction::Delete(got)) => assert_eq!(got, id),
             _ => panic!("Expected InstrumentAction::Delete"),
         }
     }
@@ -670,7 +668,7 @@ mod tests {
             &state,
         );
         match action {
-            Action::Instrument(InstrumentAction::Edit(got)) => assert_eq!(got, id),
+            Action::Track(InstrumentAction::Edit(got)) => assert_eq!(got, id),
             _ => panic!("Expected InstrumentAction::Edit"),
         }
     }
@@ -705,7 +703,7 @@ mod tests {
         );
         assert!(matches!(
             action,
-            Action::Instrument(InstrumentAction::SelectNext)
+            Action::Track(InstrumentAction::SelectNext)
         ));
 
         let action = pane.handle_action(
@@ -715,7 +713,7 @@ mod tests {
         );
         assert!(matches!(
             action,
-            Action::Instrument(InstrumentAction::SelectPrev)
+            Action::Track(InstrumentAction::SelectPrev)
         ));
     }
 
@@ -746,7 +744,7 @@ mod tests {
         );
         assert!(matches!(
             action,
-            Action::Instrument(InstrumentAction::SelectNext)
+            Action::Track(InstrumentAction::SelectNext)
         ));
         // Should still be in linking mode
         assert_eq!(pane.linking_from, Some(id0));
@@ -779,7 +777,7 @@ mod tests {
             &state,
         );
         match action {
-            Action::Instrument(InstrumentAction::LinkLayer(from, to)) => {
+            Action::Track(InstrumentAction::LinkLayer(from, to)) => {
                 assert_eq!(from, id0);
                 assert_eq!(to, id1);
             }
@@ -849,7 +847,7 @@ mod tests {
             &state,
         );
         match action {
-            Action::Instrument(InstrumentAction::AdjustLayerOctaveOffset(got_id, delta)) => {
+            Action::Track(InstrumentAction::AdjustLayerOctaveOffset(got_id, delta)) => {
                 assert_eq!(got_id, id);
                 assert_eq!(delta, 1);
             }
@@ -870,7 +868,7 @@ mod tests {
             &state,
         );
         match action {
-            Action::Instrument(InstrumentAction::AdjustLayerOctaveOffset(got_id, delta)) => {
+            Action::Track(InstrumentAction::AdjustLayerOctaveOffset(got_id, delta)) => {
                 assert_eq!(got_id, id);
                 assert_eq!(delta, -1);
             }

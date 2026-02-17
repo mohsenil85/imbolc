@@ -1,5 +1,5 @@
 use crate::{
-    EffectType, Instrument, InstrumentState, SessionState, SourceExtra, SourceType, VstParamAction,
+    EffectType, InstrumentState, SessionState, SourceExtra, SourceType, Track, VstParamAction,
     VstTarget,
 };
 
@@ -91,7 +91,7 @@ pub(super) fn reduce(
     }
 }
 
-fn get_vst_plugin_id(instrument: &Instrument, target: VstTarget) -> Option<crate::VstPluginId> {
+fn get_vst_plugin_id(instrument: &Track, target: VstTarget) -> Option<crate::VstPluginId> {
     match target {
         VstTarget::Source => {
             if let SourceType::Vst(id) = instrument.source {
@@ -110,10 +110,7 @@ fn get_vst_plugin_id(instrument: &Instrument, target: VstTarget) -> Option<crate
     }
 }
 
-fn get_param_values_mut(
-    instrument: &mut Instrument,
-    target: VstTarget,
-) -> Option<&mut Vec<(u32, f32)>> {
+fn get_param_values_mut(instrument: &mut Track, target: VstTarget) -> Option<&mut Vec<(u32, f32)>> {
     match target {
         VstTarget::Source => match &mut instrument.source_extra {
             SourceExtra::Vst {

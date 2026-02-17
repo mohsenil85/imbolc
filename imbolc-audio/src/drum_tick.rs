@@ -156,7 +156,7 @@ pub fn tick_drum_sequencer(
 
                         // Check if this pad triggers an instrument (one-shot synth)
                         if let Some(target_instrument_id) = pad.instrument_id {
-                            // Instrument trigger mode: collect for execution after loop
+                            // Track trigger mode: collect for execution after loop
                             let freq = pad.trigger_freq * 2.0_f32.powf(total_pitch as f32 / 12.0);
                             instrument_triggers.push((
                                 target_instrument_id,

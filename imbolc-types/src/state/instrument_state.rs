@@ -1,16 +1,16 @@
-//! Instrument collection state.
+//! Track collection state.
 
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
 use super::drum_sequencer::DrumSequencerState;
-use super::instrument::{Instrument, SourceType};
+use super::instrument::{SourceType, Track};
 use crate::TrackId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstrumentState {
-    pub instruments: Vec<Instrument>,
+    pub instruments: Vec<Track>,
     pub selected: Option<usize>,
     pub next_id: TrackId,
     #[serde(default = "default_sampler_buffer_id")]
@@ -52,7 +52,7 @@ impl InstrumentState {
     pub fn add_instrument(&mut self, source: SourceType) -> TrackId {
         let id = self.next_id;
         self.next_id = TrackId::new(self.next_id.get() + 1);
-        let instrument = Instrument::new(id, source);
+        let instrument = Track::new(id, source);
         self.instruments.push(instrument);
         self.selected = Some(self.instruments.len() - 1);
         self.id_index.insert(id, self.instruments.len() - 1);
@@ -97,7 +97,7 @@ impl InstrumentState {
         }
     }
 
-    pub fn instrument(&self, id: TrackId) -> Option<&Instrument> {
+    pub fn instrument(&self, id: TrackId) -> Option<&Track> {
         // Use index for O(1) lookup, fall back to linear scan if index is stale
         if let Some(&idx) = self.id_index.get(&id) {
             if let Some(inst) = self.instruments.get(idx) {
@@ -109,7 +109,7 @@ impl InstrumentState {
         self.instruments.iter().find(|s| s.id == id)
     }
 
-    pub fn instrument_mut(&mut self, id: TrackId) -> Option<&mut Instrument> {
+    pub fn instrument_mut(&mut self, id: TrackId) -> Option<&mut Track> {
         // Use index for O(1) lookup, fall back to linear scan if index is stale
         if let Some(&idx) = self.id_index.get(&id) {
             if let Some(inst) = self.instruments.get(idx) {
@@ -121,12 +121,12 @@ impl InstrumentState {
         self.instruments.iter_mut().find(|s| s.id == id)
     }
 
-    pub fn selected_instrument(&self) -> Option<&Instrument> {
+    pub fn selected_instrument(&self) -> Option<&Track> {
         self.selected.and_then(|idx| self.instruments.get(idx))
     }
 
     #[allow(dead_code)]
-    pub fn selected_instrument_mut(&mut self) -> Option<&mut Instrument> {
+    pub fn selected_instrument_mut(&mut self) -> Option<&mut Track> {
         self.selected.and_then(|idx| self.instruments.get_mut(idx))
     }
 

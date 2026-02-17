@@ -146,7 +146,7 @@ impl AppState {
     }
 
     /// Compute effective mute for an instrument, considering solo state and master mute.
-    pub fn effective_instrument_mute(&self, inst: &Instrument) -> bool {
+    pub fn effective_instrument_mute(&self, inst: &Track) -> bool {
         if self.instruments.any_instrument_solo() {
             !inst.channel_strip.solo
         } else {
