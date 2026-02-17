@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::action::{DispatchResult, VstParamAction, VstTarget};
 use crate::dispatch::automation::record_automation_point;
 use crate::state::automation::AutomationTarget;
-use crate::state::instrument::Track;
+use crate::state::track::Track;
 use crate::state::vst_plugin::VstPluginId;
 use crate::state::AppState;
 use imbolc_audio::commands::AudioCmd;
@@ -296,7 +296,7 @@ pub(super) fn dispatch_vst_param(
 #[allow(unused_must_use)]
 mod tests {
     use super::*;
-    use crate::state::instrument::SourceType;
+    use crate::state::track::SourceType;
     use imbolc_types::VstPluginId;
 
     fn setup() -> (AppState, AudioHandle) {

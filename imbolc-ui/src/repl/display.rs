@@ -418,7 +418,7 @@ pub fn format_sequencer(state: &AppState) -> String {
     };
 
     let seq = match &inst.source_extra {
-        imbolc_types::state::instrument::SourceExtra::Kit(seq) => seq,
+        imbolc_types::state::track::SourceExtra::Kit(seq) => seq,
         _ => return "No drum sequencer on selected instrument".to_string(),
     };
 

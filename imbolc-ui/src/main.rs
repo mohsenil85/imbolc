@@ -22,10 +22,10 @@ use std::fs::File;
 use panes::{
     AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane, CommandLinePane,
     CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane,
-    GenerativePane, GroovePane, HelpPane, HomePane, InstrumentEditPane, InstrumentPane,
-    InstrumentPickerPane, MidiSettingsPane, MixerPane, PaneSwitcherPane, PianoRollPane,
-    ProjectBrowserPane, QuitPromptPane, SampleChopperPane, SaveAsPane, SequencerPane, ServerPane,
-    TagPickerPane, TagViewPane, TrackPane, TunerPane, VstParamPane, WaveformPane,
+    GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PaneSwitcherPane,
+    PianoRollPane, ProjectBrowserPane, QuitPromptPane, SampleChopperPane, SaveAsPane,
+    SequencerPane, ServerPane, TagPickerPane, TagViewPane, TrackEditPane, TrackListPane, TrackPane,
+    TrackPickerPane, TunerPane, VstParamPane, WaveformPane,
 };
 use ui::{Keymap, PaneManager, RatatuiBackend};
 
@@ -152,13 +152,13 @@ pub(crate) fn register_all_panes(
         .cloned()
         .unwrap_or_else(Keymap::new);
 
-    let mut panes = PaneManager::new(Box::new(InstrumentEditPane::new(pane_keymap(
+    let mut panes = PaneManager::new(Box::new(TrackEditPane::new(pane_keymap(
         keymaps,
         "instrument_edit",
     ))));
     panes.add_pane(Box::new(HomePane::new(pane_keymap(keymaps, "home"))));
     panes.add_pane(Box::new(AddPane::new(pane_keymap(keymaps, "add"))));
-    panes.add_pane(Box::new(InstrumentPane::new(pane_keymap(
+    panes.add_pane(Box::new(TrackListPane::new(pane_keymap(
         keymaps,
         "instrument",
     ))));
@@ -185,9 +185,7 @@ pub(crate) fn register_all_panes(
         keymaps,
         "add_effect",
     ))));
-    panes.add_pane(Box::new(InstrumentPickerPane::new(pane_keymap(
-        keymaps, "add",
-    ))));
+    panes.add_pane(Box::new(TrackPickerPane::new(pane_keymap(keymaps, "add"))));
     panes.add_pane(Box::new(FileBrowserPane::new(pane_keymap(
         keymaps,
         "file_browser",

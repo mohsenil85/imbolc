@@ -1,5 +1,5 @@
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 pub fn serialize_session(session: &SessionState) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(session).map_err(|e| e.to_string())
@@ -21,12 +21,12 @@ pub fn deserialize_instruments(bytes: &[u8]) -> Result<TrackState, String> {
 mod tests {
     use super::*;
     use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
-    use crate::state::instrument::{
+    use crate::state::param::ParamValue;
+    use crate::state::sampler::Slice;
+    use crate::state::track::{
         EffectType, FilterType, LfoConfig, LfoShape, ModSource, OutputTarget, ParameterTarget,
         SourceType,
     };
-    use crate::state::param::ParamValue;
-    use crate::state::sampler::Slice;
     use crate::state::AutomationTarget;
     use imbolc_types::{BusId, CustomSynthDefId, EffectId, ParamIndex};
     use std::path::PathBuf;

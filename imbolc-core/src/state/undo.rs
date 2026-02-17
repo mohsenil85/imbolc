@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-use super::instrument::Track;
+use super::track::Track;
 use super::{SessionState, TrackState};
 use crate::action::{
     BusAction, DomainAction, MixerAction, SequencerAction, SessionAction, TrackAction,

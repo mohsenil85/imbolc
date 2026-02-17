@@ -252,7 +252,7 @@ fn recalculate_next_lane_id() {
 #[test]
 fn targets_for_instrument_context_plain_oscillator() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{SourceType, Track};
+    use crate::state::track::{SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
     let inst = Track::new(TrackId::new(1), SourceType::Saw);
@@ -265,7 +265,7 @@ fn targets_for_instrument_context_plain_oscillator() {
 #[test]
 fn targets_for_instrument_context_with_effects() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{EffectType, SourceType, Track};
+    use crate::state::track::{EffectType, SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
     let mut inst = Track::new(TrackId::new(1), SourceType::Saw);
@@ -288,7 +288,7 @@ fn targets_for_instrument_context_with_effects() {
 #[test]
 fn targets_for_instrument_context_pitched_sampler() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{SourceType, Track};
+    use crate::state::track::{SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
     let inst = Track::new(TrackId::new(1), SourceType::PitchedSampler);
@@ -308,7 +308,7 @@ fn targets_for_instrument_context_pitched_sampler() {
 #[test]
 fn targets_for_instrument_context_with_eq() {
     use crate::state::automation::target::AutomationTargetExt;
-    use crate::state::instrument::{SourceType, Track};
+    use crate::state::track::{SourceType, Track};
     use crate::state::vst_plugin::VstPluginRegistry;
 
     let mut inst = Track::new(TrackId::new(1), SourceType::Saw);

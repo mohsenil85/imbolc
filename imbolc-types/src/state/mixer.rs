@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use super::instrument::{LayerGroupMixer, MixerBus};
 use super::session::MixerSelection;
+use super::track::{LayerGroupMixer, MixerBus};
 use crate::BusId;
 
 /// Maximum number of buses allowed
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn bus_add_effect() {
-        use crate::state::instrument::EffectType;
+        use crate::state::track::EffectType;
         use crate::EffectId;
         let mut bus = MixerBus::new(BusId::new(1));
         let id = bus.channel_strip.add_effect(EffectType::Reverb);
@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn bus_add_multiple_effects() {
-        use crate::state::instrument::EffectType;
+        use crate::state::track::EffectType;
         use crate::EffectId;
         let mut bus = MixerBus::new(BusId::new(1));
         let id0 = bus.channel_strip.add_effect(EffectType::Reverb);
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn bus_effect_by_id() {
-        use crate::state::instrument::EffectType;
+        use crate::state::track::EffectType;
         use crate::EffectId;
         let mut bus = MixerBus::new(BusId::new(1));
         let id = bus.channel_strip.add_effect(EffectType::Reverb);
@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn bus_remove_effect() {
-        use crate::state::instrument::EffectType;
+        use crate::state::track::EffectType;
         let mut bus = MixerBus::new(BusId::new(1));
         let id = bus.channel_strip.add_effect(EffectType::Reverb);
         assert!(bus.channel_strip.remove_effect(id));
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn bus_move_effect() {
-        use crate::state::instrument::EffectType;
+        use crate::state::track::EffectType;
         let mut bus = MixerBus::new(BusId::new(1));
         let id0 = bus.channel_strip.add_effect(EffectType::Reverb);
         let id1 = bus.channel_strip.add_effect(EffectType::Delay);
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn bus_recalculate_next_effect_id() {
-        use crate::state::instrument::EffectType;
+        use crate::state::track::EffectType;
         use crate::EffectId;
         let mut bus = MixerBus::new(BusId::new(1));
         bus.channel_strip.add_effect(EffectType::Reverb);
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn layer_group_add_effect() {
-        use crate::state::instrument::{EffectType, LayerGroupMixer};
+        use crate::state::track::{EffectType, LayerGroupMixer};
         use crate::EffectId;
         let mut gm = LayerGroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
         let id = gm.channel_strip.add_effect(EffectType::TapeComp);
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn layer_group_remove_effect() {
-        use crate::state::instrument::{EffectType, LayerGroupMixer};
+        use crate::state::track::{EffectType, LayerGroupMixer};
         let mut gm = LayerGroupMixer::new(1, &[]);
         let id = gm.channel_strip.add_effect(EffectType::Limiter);
         assert!(gm.channel_strip.remove_effect(id));
@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn layer_group_move_effect() {
-        use crate::state::instrument::{EffectType, LayerGroupMixer};
+        use crate::state::track::{EffectType, LayerGroupMixer};
         let mut gm = LayerGroupMixer::new(1, &[]);
         let id0 = gm.channel_strip.add_effect(EffectType::Reverb);
         let id1 = gm.channel_strip.add_effect(EffectType::Delay);

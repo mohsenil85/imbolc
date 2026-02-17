@@ -2,14 +2,14 @@ use std::path::PathBuf;
 
 use rusqlite::{params, Connection, Result as SqlResult};
 
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 mod arrangement;
 pub(crate) mod decoders;
-mod instruments;
 mod mixer;
 mod session;
+mod tracks;
 
 /// Load project state from relational tables.
 pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState)> {
@@ -24,7 +24,7 @@ pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState
     session::load_piano_roll(conn, &mut session)?;
     session::load_custom_synthdefs(conn, &mut session)?;
     session::load_vst_plugins(conn, &mut session)?;
-    instruments::load_instruments(conn, &mut instruments)?;
+    tracks::load_instruments(conn, &mut instruments)?;
     arrangement::load_automation(conn, &mut session)?;
     arrangement::load_midi_recording(conn, &mut session)?;
     arrangement::load_param_tags(conn, &mut session)?;
@@ -95,8 +95,8 @@ pub(super) fn load_effects_from(
     vst_table: &str,
     owner_col: &str,
     owner_id: u32,
-) -> SqlResult<Vec<crate::state::instrument::EffectSlot>> {
-    use crate::state::instrument::EffectSlot;
+) -> SqlResult<Vec<crate::state::track::EffectSlot>> {
+    use crate::state::track::EffectSlot;
 
     let sql = format!(
         "SELECT effect_id, effect_type, enabled, vst_state_path FROM {} WHERE {} = ?1 ORDER BY position",

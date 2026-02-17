@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use super::{load_project, save_project, temp_db_path};
-use crate::state::instrument::{EffectType, FilterType, SourceType};
-use crate::state::instrument_state::TrackState;
 use crate::state::param::ParamValue;
 use crate::state::session::SessionState;
+use crate::state::track::{EffectType, FilterType, SourceType};
+use crate::state::track_state::TrackState;
 use imbolc_types::BusId;
 
 #[test]
@@ -273,18 +273,16 @@ fn round_trip_processing_chain_order() {
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(
-                crate::state::instrument::EffectSlot::new(effect_id, EffectType::Delay),
+                crate::state::track::EffectSlot::new(effect_id, EffectType::Delay),
             ));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Filter(
-                crate::state::instrument::FilterConfig::new(FilterType::Hpf),
+                crate::state::track::FilterConfig::new(FilterType::Hpf),
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(
-                crate::state::instrument::EqConfig::default(),
-            ));
+            .push(ProcessingStage::Eq(crate::state::track::EqConfig::default()));
     }
 
     session.piano_roll.add_sequence(inst_id);
@@ -337,22 +335,20 @@ fn round_trip_processing_chain_interleaved() {
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Filter(
-                crate::state::instrument::FilterConfig::new(FilterType::Lpf),
+                crate::state::track::FilterConfig::new(FilterType::Lpf),
             ));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(
-                crate::state::instrument::EffectSlot::new(delay_id, EffectType::Delay),
+                crate::state::track::EffectSlot::new(delay_id, EffectType::Delay),
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(
-                crate::state::instrument::EqConfig::default(),
-            ));
+            .push(ProcessingStage::Eq(crate::state::track::EqConfig::default()));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(
-                crate::state::instrument::EffectSlot::new(reverb_id, EffectType::Reverb),
+                crate::state::track::EffectSlot::new(reverb_id, EffectType::Reverb),
             ));
     }
 

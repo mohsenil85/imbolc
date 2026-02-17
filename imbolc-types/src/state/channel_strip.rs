@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::instrument::{
+use super::track::{
     decode_effect_cursor_from_slice, deserialize_sends, effects_max_cursor, ChannelConfig,
     EffectSlot, EffectType, EqConfig, FilterConfig, FilterType, MixerSend, OutputTarget,
     ProcessingStage,

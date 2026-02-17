@@ -4,7 +4,6 @@ mod automation;
 mod bus;
 mod generative;
 mod helpers;
-mod instrument;
 mod local;
 mod midi;
 mod mixer;
@@ -13,6 +12,7 @@ mod sequencer;
 mod server;
 mod session;
 mod tag;
+mod track;
 mod vst_param;
 
 pub use local::LocalDispatcher;
@@ -79,7 +79,7 @@ pub fn dispatch_action(
     }
 
     match action {
-        DomainAction::Track(a) => instrument::dispatch_instrument(a, state, audio),
+        DomainAction::Track(a) => track::dispatch_instrument(a, state, audio),
         DomainAction::Mixer(a) => mixer::dispatch_mixer(a, state, audio),
         DomainAction::PianoRoll(a) => piano_roll::dispatch_piano_roll(a, state, audio),
         DomainAction::Arrangement(a) => arrangement::dispatch_arrangement(a, state, audio),

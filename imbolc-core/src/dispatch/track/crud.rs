@@ -161,7 +161,7 @@ pub(super) fn handle_update(
 mod tests {
     use super::*;
     use crate::action::TrackUpdate;
-    use crate::state::instrument::SourceType;
+    use crate::state::track::SourceType;
     use imbolc_types::TrackId;
 
     fn setup_with_instrument() -> (AppState, TrackId) {

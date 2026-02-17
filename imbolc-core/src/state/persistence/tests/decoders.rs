@@ -35,7 +35,7 @@ fn roundtrip_scale() {
 
 #[test]
 fn roundtrip_source_type() {
-    use crate::state::instrument::SourceType::*;
+    use crate::state::track::SourceType::*;
     let all = [
         Saw,
         Sin,
@@ -123,7 +123,7 @@ fn roundtrip_source_type() {
 
 #[test]
 fn roundtrip_effect_type() {
-    use crate::state::instrument::EffectType::*;
+    use crate::state::track::EffectType::*;
     let all = [
         Delay,
         Reverb,
@@ -187,7 +187,7 @@ fn roundtrip_effect_type() {
 
 #[test]
 fn roundtrip_filter_type() {
-    use crate::state::instrument::FilterType::*;
+    use crate::state::track::FilterType::*;
     let all = [
         Lpf,
         Hpf,
@@ -211,7 +211,7 @@ fn roundtrip_filter_type() {
 
 #[test]
 fn roundtrip_eq_band_type() {
-    use crate::state::instrument::EqBandType::*;
+    use crate::state::track::EqBandType::*;
     let all = [LowShelf, Peaking, HighShelf];
     for &b in &all {
         match b {
@@ -225,7 +225,7 @@ fn roundtrip_eq_band_type() {
 
 #[test]
 fn roundtrip_lfo_shape() {
-    use crate::state::instrument::LfoShape::*;
+    use crate::state::track::LfoShape::*;
     let all = [Sine, Square, Saw, Triangle];
     for &s in &all {
         match s {
@@ -239,7 +239,7 @@ fn roundtrip_lfo_shape() {
 
 #[test]
 fn roundtrip_parameter_target() {
-    use crate::state::instrument::ParameterTarget::*;
+    use crate::state::track::ParameterTarget::*;
     use imbolc_types::{BusId, EffectId, ParamIndex};
     let all = [
         Level,
@@ -369,7 +369,7 @@ fn roundtrip_parameter_target() {
 
 #[test]
 fn roundtrip_output_target() {
-    use crate::state::instrument::OutputTarget::*;
+    use crate::state::track::OutputTarget::*;
     use imbolc_types::BusId;
     let all = [Master, Bus(BusId::new(1)), Bus(BusId::new(5))];
     for ot in &all {
@@ -387,7 +387,7 @@ fn roundtrip_output_target() {
 
 #[test]
 fn roundtrip_tap_point() {
-    use crate::state::instrument::SendTapPoint::*;
+    use crate::state::track::SendTapPoint::*;
     let all = [PreInsert, PostInsert];
     for &tp in &all {
         match tp {

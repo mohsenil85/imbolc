@@ -1,7 +1,7 @@
 use super::{load_project, save_project, temp_db_path};
-use crate::state::instrument::SourceType;
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track::SourceType;
+use crate::state::track_state::TrackState;
 use crate::state::AutomationTarget;
 
 #[test]

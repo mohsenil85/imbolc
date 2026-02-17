@@ -6,8 +6,8 @@
 use std::path::PathBuf;
 
 use crate::state::custom_synthdef::CustomSynthDef;
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 // Re-export all action types from imbolc-types
 pub use imbolc_types::{

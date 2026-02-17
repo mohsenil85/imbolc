@@ -11,8 +11,8 @@
 //! - Generate AudioEffect events
 //! - Send audio commands
 
-mod instrument;
-pub use instrument::initialize_track_from_registries;
+mod track;
+pub use track::initialize_track_from_registries;
 mod automation;
 mod bus;
 mod click;
@@ -100,7 +100,7 @@ pub fn reduce_action(
         // Undo/Redo: not reducible (wholesale state replacement)
         DomainAction::Undo | DomainAction::Redo => false,
 
-        DomainAction::Track(a) => instrument::reduce(a, instruments, session),
+        DomainAction::Track(a) => track::reduce(a, instruments, session),
         DomainAction::Mixer(a) => mixer::reduce(a, instruments, session),
         DomainAction::PianoRoll(a) => piano_roll::reduce(a, session),
         DomainAction::Automation(a) => automation::reduce(a, session),

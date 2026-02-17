@@ -2,14 +2,14 @@ use std::path::PathBuf;
 
 use super::{load_project, save_project, temp_db_path};
 use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
-use crate::state::instrument::{
-    EffectType, FilterType, LfoConfig, LfoShape, ModSource, OutputTarget, ParameterTarget,
-    SourceType,
-};
-use crate::state::instrument_state::TrackState;
 use crate::state::param::ParamValue;
 use crate::state::sampler::Slice;
 use crate::state::session::SessionState;
+use crate::state::track::{
+    EffectType, FilterType, LfoConfig, LfoShape, ModSource, OutputTarget, ParameterTarget,
+    SourceType,
+};
+use crate::state::track_state::TrackState;
 use crate::state::AutomationTarget;
 use imbolc_types::{BusId, CustomSynthDefId, EffectId, MixerSend, ParamIndex};
 

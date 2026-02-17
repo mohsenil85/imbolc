@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use crate::state::{AppState, OwnershipDisplayStatus, SourceType};
-use crate::ui::action_id::{ActionId, InstrumentListActionId, ModeActionId};
+use crate::ui::action_id::{ActionId, ModeActionId, TrackListActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::performance::PerformanceController;
 use crate::ui::widgets::TextInput;
@@ -44,7 +44,7 @@ fn source_color(source: SourceType) -> Color {
     }
 }
 
-pub struct InstrumentPane {
+pub struct TrackListPane {
     keymap: Keymap,
     perf: PerformanceController,
     /// When Some, we're waiting for the user to select a target instrument to link with
@@ -55,7 +55,7 @@ pub struct InstrumentPane {
     editing_group: Option<u32>,
 }
 
-impl InstrumentPane {
+impl TrackListPane {
     pub fn new(keymap: Keymap) -> Self {
         Self {
             keymap,
@@ -74,14 +74,14 @@ impl InstrumentPane {
         self.perf.set_enhanced_keyboard(enabled);
     }
 
-    fn format_filter(instrument: &crate::state::instrument::Track) -> String {
+    fn format_filter(instrument: &crate::state::track::Track) -> String {
         match instrument.filter() {
             Some(f) => format!("[{}]", f.filter_type.name()),
             None => "---".to_string(),
         }
     }
 
-    fn format_eq(instrument: &crate::state::instrument::Track) -> &'static str {
+    fn format_eq(instrument: &crate::state::track::Track) -> &'static str {
         if instrument.eq().is_some() {
             "[EQ]"
         } else {
@@ -89,7 +89,7 @@ impl InstrumentPane {
         }
     }
 
-    fn format_effects(instrument: &crate::state::instrument::Track) -> String {
+    fn format_effects(instrument: &crate::state::track::Track) -> String {
         let effects: Vec<_> = instrument.effects().collect();
         if effects.is_empty() {
             return "---".to_string();
@@ -108,7 +108,7 @@ impl InstrumentPane {
     }
 }
 
-impl Default for InstrumentPane {
+impl Default for TrackListPane {
     fn default() -> Self {
         Self {
             keymap: Keymap::new(),
@@ -120,7 +120,7 @@ impl Default for InstrumentPane {
     }
 }
 
-impl Pane for InstrumentPane {
+impl Pane for TrackListPane {
     fn id(&self) -> &'static str {
         "instrument"
     }
@@ -130,7 +130,7 @@ impl Pane for InstrumentPane {
         if let Some(from_id) = self.linking_from {
             match action {
                 // Press 'l' again to confirm the link
-                ActionId::InstrumentList(InstrumentListActionId::LinkLayer) => {
+                ActionId::TrackList(TrackListActionId::LinkLayer) => {
                     self.linking_from = None;
                     if let Some(target) = state.tracks.selected_track() {
                         let target_id = target.id;
@@ -141,10 +141,10 @@ impl Pane for InstrumentPane {
                     return Action::None;
                 }
                 // Navigation passes through to normal handling below
-                ActionId::InstrumentList(InstrumentListActionId::Next)
-                | ActionId::InstrumentList(InstrumentListActionId::Prev)
-                | ActionId::InstrumentList(InstrumentListActionId::GotoTop)
-                | ActionId::InstrumentList(InstrumentListActionId::GotoBottom) => {
+                ActionId::TrackList(TrackListActionId::Next)
+                | ActionId::TrackList(TrackListActionId::Prev)
+                | ActionId::TrackList(TrackListActionId::GotoTop)
+                | ActionId::TrackList(TrackListActionId::GotoBottom) => {
                     // Let navigation proceed normally
                 }
                 // Any other action cancels linking mode
@@ -155,70 +155,62 @@ impl Pane for InstrumentPane {
         }
 
         match action {
-            ActionId::InstrumentList(InstrumentListActionId::Quit) => Action::QuitIntent,
-            ActionId::InstrumentList(InstrumentListActionId::Next) => {
-                Action::Track(TrackAction::SelectNext)
-            }
-            ActionId::InstrumentList(InstrumentListActionId::Prev) => {
-                Action::Track(TrackAction::SelectPrev)
-            }
-            ActionId::InstrumentList(InstrumentListActionId::GotoTop) => {
+            ActionId::TrackList(TrackListActionId::Quit) => Action::QuitIntent,
+            ActionId::TrackList(TrackListActionId::Next) => Action::Track(TrackAction::SelectNext),
+            ActionId::TrackList(TrackListActionId::Prev) => Action::Track(TrackAction::SelectPrev),
+            ActionId::TrackList(TrackListActionId::GotoTop) => {
                 Action::Track(TrackAction::SelectFirst)
             }
-            ActionId::InstrumentList(InstrumentListActionId::GotoBottom) => {
+            ActionId::TrackList(TrackListActionId::GotoBottom) => {
                 Action::Track(TrackAction::SelectLast)
             }
-            ActionId::InstrumentList(InstrumentListActionId::Add) => {
+            ActionId::TrackList(TrackListActionId::Add) => {
                 Action::Nav(NavAction::SwitchPane(PaneId::Add))
             }
-            ActionId::InstrumentList(InstrumentListActionId::Delete) => {
+            ActionId::TrackList(TrackListActionId::Delete) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(TrackAction::Delete(instrument.id))
                 } else {
                     Action::None
                 }
             }
-            ActionId::InstrumentList(InstrumentListActionId::Edit) => {
+            ActionId::TrackList(TrackListActionId::Edit) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(TrackAction::Edit(instrument.id))
                 } else {
                     Action::None
                 }
             }
-            ActionId::InstrumentList(InstrumentListActionId::Save) => {
-                Action::Session(SessionAction::Save)
-            }
-            ActionId::InstrumentList(InstrumentListActionId::Load) => {
-                Action::Session(SessionAction::Load)
-            }
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer) => {
+            ActionId::TrackList(TrackListActionId::Save) => Action::Session(SessionAction::Save),
+            ActionId::TrackList(TrackListActionId::Load) => Action::Session(SessionAction::Load),
+            ActionId::TrackList(TrackListActionId::LinkLayer) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     self.linking_from = Some(instrument.id);
                 }
                 Action::None
             }
-            ActionId::InstrumentList(InstrumentListActionId::UnlinkLayer) => {
+            ActionId::TrackList(TrackListActionId::UnlinkLayer) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(TrackAction::UnlinkLayer(instrument.id))
                 } else {
                     Action::None
                 }
             }
-            ActionId::InstrumentList(InstrumentListActionId::LayerOctaveUp) => {
+            ActionId::TrackList(TrackListActionId::LayerOctaveUp) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(TrackAction::AdjustLayerOctaveOffset(instrument.id, 1))
                 } else {
                     Action::None
                 }
             }
-            ActionId::InstrumentList(InstrumentListActionId::LayerOctaveDown) => {
+            ActionId::TrackList(TrackListActionId::LayerOctaveDown) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(TrackAction::AdjustLayerOctaveOffset(instrument.id, -1))
                 } else {
                     Action::None
                 }
             }
-            ActionId::InstrumentList(InstrumentListActionId::RenameLayerGroup) => {
+            ActionId::TrackList(TrackListActionId::RenameLayerGroup) => {
                 if let Some(instrument) = state.tracks.selected_track() {
                     if let Some(group_id) = instrument.layer.group {
                         let current_name = state
@@ -627,13 +619,13 @@ mod tests {
 
     #[test]
     fn delete_returns_selected_instrument_id() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let id = state.add_track(SourceType::Saw);
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Delete),
+            ActionId::TrackList(TrackListActionId::Delete),
             &dummy_event(),
             &state,
         );
@@ -645,13 +637,13 @@ mod tests {
 
     #[test]
     fn edit_returns_selected_instrument_id() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let id = state.add_track(SourceType::Sin);
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Edit),
+            ActionId::TrackList(TrackListActionId::Edit),
             &dummy_event(),
             &state,
         );
@@ -663,12 +655,12 @@ mod tests {
 
     #[test]
     fn add_navigates_to_add_pane() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let state = AppState::new();
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Add),
+            ActionId::TrackList(TrackListActionId::Add),
             &dummy_event(),
             &state,
         );
@@ -680,19 +672,19 @@ mod tests {
 
     #[test]
     fn next_prev_return_select_actions() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let state = AppState::new();
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Next),
+            ActionId::TrackList(TrackListActionId::Next),
             &dummy_event(),
             &state,
         );
         assert!(matches!(action, Action::Track(TrackAction::SelectNext)));
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Prev),
+            ActionId::TrackList(TrackListActionId::Prev),
             &dummy_event(),
             &state,
         );
@@ -701,7 +693,7 @@ mod tests {
 
     #[test]
     fn link_mode_navigation_passes_through() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let id0 = state.add_track(SourceType::Saw);
         let _id1 = state.add_track(SourceType::Sin);
@@ -709,10 +701,10 @@ mod tests {
         // Select first instrument before entering link mode
         state.tracks.selected = Some(0);
 
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
         // Enter linking mode
         pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
+            ActionId::TrackList(TrackListActionId::LinkLayer),
             &dummy_event(),
             &state,
         );
@@ -720,7 +712,7 @@ mod tests {
 
         // Navigation should pass through (return SelectNext), not complete the link
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Next),
+            ActionId::TrackList(TrackListActionId::Next),
             &dummy_event(),
             &state,
         );
@@ -731,16 +723,16 @@ mod tests {
 
     #[test]
     fn link_mode_confirm_with_different_target() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let id0 = state.add_track(SourceType::Saw);
         let id1 = state.add_track(SourceType::Sin);
 
         // Select first instrument, enter linking mode
         state.tracks.selected = Some(0);
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
         pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
+            ActionId::TrackList(TrackListActionId::LinkLayer),
             &dummy_event(),
             &state,
         );
@@ -751,7 +743,7 @@ mod tests {
 
         // Press 'l' again to confirm
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
+            ActionId::TrackList(TrackListActionId::LinkLayer),
             &dummy_event(),
             &state,
         );
@@ -767,21 +759,21 @@ mod tests {
 
     #[test]
     fn link_mode_confirm_same_instrument_no_action() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let _id0 = state.add_track(SourceType::Saw);
 
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
         // Enter linking mode
         pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
+            ActionId::TrackList(TrackListActionId::LinkLayer),
             &dummy_event(),
             &state,
         );
 
         // Press 'l' again without moving — same instrument selected
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
+            ActionId::TrackList(TrackListActionId::LinkLayer),
             &dummy_event(),
             &state,
         );
@@ -791,14 +783,14 @@ mod tests {
 
     #[test]
     fn link_mode_cancelled_by_other_action() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let _id0 = state.add_track(SourceType::Saw);
 
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
         // Enter linking mode
         pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
+            ActionId::TrackList(TrackListActionId::LinkLayer),
             &dummy_event(),
             &state,
         );
@@ -806,7 +798,7 @@ mod tests {
 
         // Any non-nav, non-link action should cancel
         pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::Delete),
+            ActionId::TrackList(TrackListActionId::Delete),
             &dummy_event(),
             &state,
         );
@@ -815,13 +807,13 @@ mod tests {
 
     #[test]
     fn layer_octave_up_returns_adjust_action() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let id = state.add_track(SourceType::Saw);
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LayerOctaveUp),
+            ActionId::TrackList(TrackListActionId::LayerOctaveUp),
             &dummy_event(),
             &state,
         );
@@ -836,13 +828,13 @@ mod tests {
 
     #[test]
     fn layer_octave_down_returns_adjust_action() {
-        use crate::ui::action_id::{ActionId, InstrumentListActionId};
+        use crate::ui::action_id::{ActionId, TrackListActionId};
         let mut state = AppState::new();
         let id = state.add_track(SourceType::Saw);
-        let mut pane = InstrumentPane::new(Keymap::new());
+        let mut pane = TrackListPane::new(Keymap::new());
 
         let action = pane.handle_action(
-            ActionId::InstrumentList(InstrumentListActionId::LayerOctaveDown),
+            ActionId::TrackList(TrackListActionId::LayerOctaveDown),
             &dummy_event(),
             &state,
         );

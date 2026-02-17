@@ -6,8 +6,8 @@ use rusqlite::{params, Connection, DatabaseName, Result as SqlResult};
 use super::blob;
 use super::save;
 use super::schema;
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 /// Data tables to include in session diffs (all tables except metadata/checkpoint tables).
 const DIFF_TABLES: &[&str] = &[
@@ -271,7 +271,7 @@ pub fn delete_checkpoint(path: &Path, checkpoint_id: i64) -> SqlResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::instrument::SourceType;
+    use crate::state::track::SourceType;
     use tempfile::NamedTempFile;
 
     fn save_empty_project(path: &Path) {

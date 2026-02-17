@@ -1,4 +1,4 @@
-use super::InstrumentEditPane;
+use super::TrackEditPane;
 use crate::state::param::{adjust_freq_semitone, adjust_musical_step};
 use crate::state::TrackSection;
 use crate::ui::{Action, TrackAction, TrackUpdate};
@@ -12,7 +12,7 @@ pub(super) enum AdjustMode {
     Musical,
 }
 
-impl InstrumentEditPane {
+impl TrackEditPane {
     pub(super) fn adjust_value(&mut self, increase: bool, big: bool) {
         let mode = if big {
             AdjustMode::Big

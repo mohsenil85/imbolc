@@ -4,12 +4,12 @@ use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
 use super::{load_effects_from, load_params, table_exists};
-use crate::state::instrument_state::TrackState;
+use crate::state::track_state::TrackState;
 use imbolc_types::BusId;
 
 pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) -> SqlResult<()> {
     use crate::state::arpeggiator::ArpeggiatorConfig;
-    use crate::state::instrument::*;
+    use crate::state::track::*;
     use imbolc_types::state::groove::GrooveConfig;
     use imbolc_types::ProcessingStage;
 
@@ -136,7 +136,7 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
 
         // Build EQ
         let eq = if let Some(eq_enabled) = r.eq_enabled {
-            let mut eq_config = crate::state::instrument::EqConfig {
+            let mut eq_config = crate::state::track::EqConfig {
                 enabled: eq_enabled != 0,
                 ..Default::default()
             };
@@ -181,7 +181,7 @@ pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) 
             ),
         };
 
-        let amp_envelope = crate::state::instrument::EnvConfig {
+        let amp_envelope = crate::state::track::EnvConfig {
             attack: r.amp_attack,
             decay: r.amp_decay,
             sustain: r.amp_sustain,
@@ -415,7 +415,7 @@ struct InstrumentRow {
 fn load_effects(
     conn: &Connection,
     instrument_id: u32,
-) -> SqlResult<Vec<crate::state::instrument::EffectSlot>> {
+) -> SqlResult<Vec<crate::state::track::EffectSlot>> {
     load_effects_from(
         conn,
         "instrument_effects",
@@ -429,8 +429,8 @@ fn load_effects(
 fn load_sends(
     conn: &Connection,
     instrument_id: u32,
-) -> SqlResult<std::collections::BTreeMap<BusId, crate::state::instrument::MixerSend>> {
-    use crate::state::instrument::MixerSend;
+) -> SqlResult<std::collections::BTreeMap<BusId, crate::state::track::MixerSend>> {
+    use crate::state::track::MixerSend;
 
     // Try with tap_point column first; fall back for old schemas
     let has_tap_point = conn
@@ -476,9 +476,9 @@ fn load_modulation(
     conn: &Connection,
     instrument_id: u32,
     target_param: &str,
-    mod_source: &mut Option<crate::state::instrument::ModSource>,
+    mod_source: &mut Option<crate::state::track::ModSource>,
 ) -> SqlResult<()> {
-    use crate::state::instrument::{EnvConfig, LfoConfig, ModSource};
+    use crate::state::track::{EnvConfig, LfoConfig, ModSource};
 
     let result = conn
         .query_row(

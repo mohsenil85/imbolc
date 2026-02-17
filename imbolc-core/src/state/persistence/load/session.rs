@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 pub(super) fn load_session(
     conn: &Connection,

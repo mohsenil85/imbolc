@@ -6,7 +6,7 @@ use crate::ui::layout_helpers::center_rect;
 use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
 use imbolc_types::EqParamKind;
 
-use crate::state::instrument::EqBand;
+use crate::state::track::EqBand;
 
 pub struct EqPane {
     keymap: Keymap,

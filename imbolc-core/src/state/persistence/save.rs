@@ -1,7 +1,7 @@
 use rusqlite::{params, Connection, Result as SqlResult};
 
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track_state::TrackState;
 
 use super::schema;
 
@@ -428,7 +428,7 @@ fn save_params(
 fn save_effects(
     conn: &Connection,
     instrument_id: u32,
-    effects: &[crate::state::instrument::EffectSlot],
+    effects: &[crate::state::track::EffectSlot],
 ) -> SqlResult<()> {
     save_effects_to(
         conn,
@@ -448,7 +448,7 @@ fn save_effects_to(
     vst_table: &str,
     owner_col: &str,
     owner_id: u32,
-    effects: &[crate::state::instrument::EffectSlot],
+    effects: &[crate::state::track::EffectSlot],
 ) -> SqlResult<()> {
     for (pos, effect) in effects.iter().enumerate() {
         let effect_type = encode_effect_type(&effect.effect_type);
@@ -538,9 +538,9 @@ fn save_modulation(
     conn: &Connection,
     instrument_id: u32,
     target_param: &str,
-    mod_source: &Option<crate::state::instrument::ModSource>,
+    mod_source: &Option<crate::state::track::ModSource>,
 ) -> SqlResult<()> {
-    use crate::state::instrument::ModSource;
+    use crate::state::track::ModSource;
 
     if let Some(ms) = mod_source {
         match ms {
@@ -1184,8 +1184,8 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
 // Encoding helpers
 // ============================================================
 
-fn encode_source_type(source: &crate::state::instrument::SourceType) -> String {
-    use crate::state::instrument::SourceType;
+fn encode_source_type(source: &crate::state::track::SourceType) -> String {
+    use crate::state::track::SourceType;
     match source {
         SourceType::Custom(id) => format!("Custom:{}", id),
         SourceType::Vst(id) => format!("Vst:{}", id),
@@ -1193,32 +1193,32 @@ fn encode_source_type(source: &crate::state::instrument::SourceType) -> String {
     }
 }
 
-fn encode_effect_type(effect: &crate::state::instrument::EffectType) -> String {
-    use crate::state::instrument::EffectType;
+fn encode_effect_type(effect: &crate::state::track::EffectType) -> String {
+    use crate::state::track::EffectType;
     match effect {
         EffectType::Vst(id) => format!("Vst:{}", id),
         other => format!("{:?}", other),
     }
 }
 
-fn encode_tap_point(tap_point: crate::state::instrument::SendTapPoint) -> &'static str {
-    use crate::state::instrument::SendTapPoint;
+fn encode_tap_point(tap_point: crate::state::track::SendTapPoint) -> &'static str {
+    use crate::state::track::SendTapPoint;
     match tap_point {
         SendTapPoint::PreInsert => "PreInsert",
         SendTapPoint::PostInsert => "PostInsert",
     }
 }
 
-fn encode_output_target(target: &crate::state::instrument::OutputTarget) -> String {
-    use crate::state::instrument::OutputTarget;
+fn encode_output_target(target: &crate::state::track::OutputTarget) -> String {
+    use crate::state::track::OutputTarget;
     match target {
         OutputTarget::Master => "Master".to_string(),
         OutputTarget::Bus(id) => format!("Bus:{}", id),
     }
 }
 
-pub fn encode_parameter_target(target: &crate::state::instrument::ParameterTarget) -> String {
-    use crate::state::instrument::ParameterTarget;
+pub fn encode_parameter_target(target: &crate::state::track::ParameterTarget) -> String {
+    use crate::state::track::ParameterTarget;
     match target {
         ParameterTarget::SendLevel(bus_id) => format!("SendLevel:bus:{}", bus_id.get()),
         ParameterTarget::EffectParam(eid, pidx) => format!("EffectParam:{}:{}", eid, pidx),
@@ -1243,7 +1243,7 @@ pub fn encode_automation_target(
     Option<i64>,
     Option<String>,
 ) {
-    use crate::state::instrument::ParameterTarget;
+    use crate::state::track::ParameterTarget;
     use imbolc_types::{AutomationTarget, BusParameter, GlobalParameter, TrackParameter};
 
     match target {

@@ -78,8 +78,8 @@ pub(crate) fn decode_ji_flavor(s: &str) -> crate::state::music::JIFlavor {
     }
 }
 
-pub(crate) fn decode_source_type(s: &str) -> crate::state::instrument::SourceType {
-    use crate::state::instrument::SourceType;
+pub(crate) fn decode_source_type(s: &str) -> crate::state::track::SourceType {
+    use crate::state::track::SourceType;
     use imbolc_types::{CustomSynthDefId, VstPluginId};
     if let Some(rest) = s.strip_prefix("Custom:") {
         if let Ok(id) = rest.parse::<u32>() {
@@ -160,8 +160,8 @@ pub(crate) fn decode_source_type(s: &str) -> crate::state::instrument::SourceTyp
     }
 }
 
-pub(crate) fn decode_effect_type(s: &str) -> crate::state::instrument::EffectType {
-    use crate::state::instrument::EffectType;
+pub(crate) fn decode_effect_type(s: &str) -> crate::state::track::EffectType {
+    use crate::state::track::EffectType;
     use imbolc_types::VstPluginId;
     if let Some(rest) = s.strip_prefix("Vst:") {
         if let Ok(id) = rest.parse::<u32>() {
@@ -218,8 +218,8 @@ pub(crate) fn decode_effect_type(s: &str) -> crate::state::instrument::EffectTyp
     }
 }
 
-pub(crate) fn decode_filter_type(s: &str) -> crate::state::instrument::FilterType {
-    use crate::state::instrument::FilterType;
+pub(crate) fn decode_filter_type(s: &str) -> crate::state::track::FilterType {
+    use crate::state::track::FilterType;
     match s {
         "Lpf" => FilterType::Lpf,
         "Hpf" => FilterType::Hpf,
@@ -240,8 +240,8 @@ pub(crate) fn decode_filter_type(s: &str) -> crate::state::instrument::FilterTyp
     }
 }
 
-pub(crate) fn decode_eq_band_type(s: &str) -> crate::state::instrument::EqBandType {
-    use crate::state::instrument::EqBandType;
+pub(crate) fn decode_eq_band_type(s: &str) -> crate::state::track::EqBandType {
+    use crate::state::track::EqBandType;
     match s {
         "Peaking" => EqBandType::Peaking,
         "LowShelf" => EqBandType::LowShelf,
@@ -256,8 +256,8 @@ pub(crate) fn decode_eq_band_type(s: &str) -> crate::state::instrument::EqBandTy
     }
 }
 
-pub(crate) fn decode_lfo_shape(s: &str) -> crate::state::instrument::LfoShape {
-    use crate::state::instrument::LfoShape;
+pub(crate) fn decode_lfo_shape(s: &str) -> crate::state::track::LfoShape {
+    use crate::state::track::LfoShape;
     match s {
         "Sine" => LfoShape::Sine,
         "Square" => LfoShape::Square,
@@ -273,8 +273,8 @@ pub(crate) fn decode_lfo_shape(s: &str) -> crate::state::instrument::LfoShape {
     }
 }
 
-pub(crate) fn decode_parameter_target(s: &str) -> crate::state::instrument::ParameterTarget {
-    use crate::state::instrument::ParameterTarget;
+pub(crate) fn decode_parameter_target(s: &str) -> crate::state::track::ParameterTarget {
+    use crate::state::track::ParameterTarget;
 
     if let Some(rest) = s.strip_prefix("SendLevel:bus:") {
         // New format: "SendLevel:bus:N"
@@ -381,8 +381,8 @@ pub(crate) fn decode_parameter_target(s: &str) -> crate::state::instrument::Para
     }
 }
 
-pub(crate) fn decode_output_target(s: &str) -> crate::state::instrument::OutputTarget {
-    use crate::state::instrument::OutputTarget;
+pub(crate) fn decode_output_target(s: &str) -> crate::state::track::OutputTarget {
+    use crate::state::track::OutputTarget;
     use imbolc_types::BusId;
     if let Some(rest) = s.strip_prefix("Bus:") {
         if let Ok(id) = rest.parse::<u8>() {
@@ -392,8 +392,8 @@ pub(crate) fn decode_output_target(s: &str) -> crate::state::instrument::OutputT
     OutputTarget::Master
 }
 
-pub(crate) fn decode_tap_point(s: &str) -> crate::state::instrument::SendTapPoint {
-    use crate::state::instrument::SendTapPoint;
+pub(crate) fn decode_tap_point(s: &str) -> crate::state::track::SendTapPoint {
+    use crate::state::track::SendTapPoint;
     match s {
         "PostInsert" => SendTapPoint::PostInsert,
         "PreInsert" => SendTapPoint::PreInsert,

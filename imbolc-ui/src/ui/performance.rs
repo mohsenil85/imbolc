@@ -8,7 +8,7 @@ use imbolc_types::TrackId;
 
 /// Shared piano/pad keyboard lifecycle controller.
 ///
-/// Used by InstrumentPane, InstrumentEditPane, and (piano-only subset) PianoRollPane
+/// Used by TrackListPane, TrackEditPane, and (piano-only subset) PianoRollPane
 /// to eliminate duplicated toggle/activate/deactivate/tick logic.
 pub struct PerformanceController {
     pub piano: PianoKeyboard,

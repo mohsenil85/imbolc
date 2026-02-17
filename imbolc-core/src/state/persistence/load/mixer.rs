@@ -71,7 +71,7 @@ pub(super) fn load_layer_group_mixers(
     conn: &Connection,
     session: &mut SessionState,
 ) -> SqlResult<()> {
-    use crate::state::instrument::MixerSend;
+    use crate::state::track::MixerSend;
     use imbolc_types::LayerGroupMixer;
 
     session.mixer.layer_group_mixers.clear();
@@ -169,7 +169,7 @@ pub(super) fn load_layer_group_mixers(
                 )
                 .unwrap_or(0);
             if eq_enabled != 0 {
-                let mut eq = crate::state::instrument::EqConfig::default();
+                let mut eq = crate::state::track::EqConfig::default();
                 let mut band_stmt = conn.prepare(
                     "SELECT band_index, freq, gain, q, enabled FROM layer_group_eq_bands WHERE group_id = ?1 ORDER BY band_index"
                 )?;

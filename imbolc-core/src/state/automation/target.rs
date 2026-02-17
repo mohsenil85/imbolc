@@ -2,7 +2,7 @@
 pub use imbolc_types::AutomationTarget;
 
 // Keep the context-aware methods that need Track and VstPluginRegistry
-use crate::state::instrument::{SourceType, Track};
+use crate::state::track::{SourceType, Track};
 use crate::state::vst_plugin::VstPluginRegistry;
 use imbolc_types::{ParamIndex, ParameterTarget};
 

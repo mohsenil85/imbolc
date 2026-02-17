@@ -7,13 +7,13 @@ use super::automation::AutomationState;
 use super::custom_synthdef::CustomSynthDefRegistry;
 use super::generative::GenerativeState;
 use super::humanize::HumanizeSettings;
-use super::instrument::MixerBus;
 use super::midi_recording::MidiRecordingState;
 use super::mixer::{MixerState, DEFAULT_BUS_COUNT};
 use super::music::{JIFlavor, Key, Scale, Tuning};
 use super::param_tag::ParamTagState;
 use super::piano_roll::PianoRollState;
 use super::theme::Theme;
+use super::track::MixerBus;
 use super::vst::VstPluginRegistry;
 use crate::BusId;
 

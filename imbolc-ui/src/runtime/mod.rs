@@ -262,13 +262,13 @@ pub fn run(backend: &mut RatatuiBackend) -> std::io::Result<()> {
 
     // Propagate keyboard enhancement flag to all piano keyboards
     if backend.keyboard_enhancement_enabled() {
-        use crate::panes::{InstrumentEditPane, InstrumentPane, PianoRollPane};
-        if let Some(p) = runtime.panes.get_pane_mut::<InstrumentPane>("instrument") {
+        use crate::panes::{PianoRollPane, TrackEditPane, TrackListPane};
+        if let Some(p) = runtime.panes.get_pane_mut::<TrackListPane>("instrument") {
             p.set_enhanced_keyboard(true);
         }
         if let Some(p) = runtime
             .panes
-            .get_pane_mut::<InstrumentEditPane>("instrument_edit")
+            .get_pane_mut::<TrackEditPane>("instrument_edit")
         {
             p.set_enhanced_keyboard(true);
         }

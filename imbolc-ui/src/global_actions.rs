@@ -6,8 +6,8 @@ use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
 use crate::panes::{
     AutomationPane, CommandPalettePane, ConfirmPane, DocsPane, FileBrowserPane, FrameEditPane,
-    HelpPane, InstrumentEditPane, InstrumentPane, PaneSwitcherPane, PendingAction, PianoRollPane,
-    SaveAsPane, SequencerPane, ServerPane, VstParamPane,
+    HelpPane, PaneSwitcherPane, PendingAction, PianoRollPane, SaveAsPane, SequencerPane,
+    ServerPane, TrackEditPane, TrackListPane, VstParamPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -126,7 +126,7 @@ pub(crate) fn sync_piano_roll_to_selection(
 pub(crate) fn sync_instrument_edit(state: &AppState, panes: &mut PaneManager) {
     if panes.active().id() == "instrument_edit" {
         if let Some(inst) = state.tracks.selected_track() {
-            if let Some(edit_pane) = panes.get_pane_mut::<InstrumentEditPane>("instrument_edit") {
+            if let Some(edit_pane) = panes.get_pane_mut::<TrackEditPane>("instrument_edit") {
                 edit_pane.set_instrument(inst);
             }
         }
@@ -199,7 +199,7 @@ pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &
     if layer_stack.has_layer("text_edit") {
         let still_editing = match panes.active().id() {
             "instrument_edit" => panes
-                .get_pane_mut::<InstrumentEditPane>("instrument_edit")
+                .get_pane_mut::<TrackEditPane>("instrument_edit")
                 .is_some_and(|p| p.is_editing()),
             "frame_edit" => panes
                 .get_pane_mut::<FrameEditPane>("frame_edit")
@@ -208,7 +208,7 @@ pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &
                 .get_pane_mut::<ServerPane>("server")
                 .is_some_and(|p| p.is_editing_scsynth_args()),
             "instrument" => panes
-                .get_pane_mut::<InstrumentPane>("instrument")
+                .get_pane_mut::<TrackListPane>("instrument")
                 .is_some_and(|p| p.is_editing()),
             _ => false,
         };
@@ -291,7 +291,7 @@ pub(crate) fn handle_global_action(
         let pane_id = panes.active().id().to_string();
         let inst_selection = state.tracks.selected;
         let edit_tab = panes
-            .get_pane_mut::<InstrumentEditPane>("instrument_edit")
+            .get_pane_mut::<TrackEditPane>("instrument_edit")
             .map(|ep| ep.tab_index())
             .unwrap_or(0);
         ViewState {
@@ -305,7 +305,7 @@ pub(crate) fn handle_global_action(
     let restore_view =
         |panes: &mut PaneManager, dispatcher: &mut LocalDispatcher, view: &ViewState| {
             dispatcher.state_mut().tracks.selected = view.inst_selection;
-            if let Some(edit_pane) = panes.get_pane_mut::<InstrumentEditPane>("instrument_edit") {
+            if let Some(edit_pane) = panes.get_pane_mut::<TrackEditPane>("instrument_edit") {
                 edit_pane.set_tab_index(view.edit_tab);
             }
             if let Some(pane_id) = NavPaneId::from_str(&view.pane_id) {

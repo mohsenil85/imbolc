@@ -12,7 +12,7 @@ const LIST_HEIGHT: usize = 12;
 
 /// Track picker for assigning instruments to drum pads.
 /// Reads the target pad from DrumSequencerState.editing_pad.
-pub struct InstrumentPickerPane {
+pub struct TrackPickerPane {
     keymap: Keymap,
     selected: usize,
     scroll_offset: usize,
@@ -20,7 +20,7 @@ pub struct InstrumentPickerPane {
     cached_instruments: Vec<(TrackId, String)>,
 }
 
-impl InstrumentPickerPane {
+impl TrackPickerPane {
     pub fn new(keymap: Keymap) -> Self {
         Self {
             keymap,
@@ -114,13 +114,13 @@ impl InstrumentPickerPane {
     }
 }
 
-impl Default for InstrumentPickerPane {
+impl Default for TrackPickerPane {
     fn default() -> Self {
         Self::new(Keymap::new())
     }
 }
 
-impl Pane for InstrumentPickerPane {
+impl Pane for TrackPickerPane {
     fn id(&self) -> &'static str {
         "instrument_picker"
     }

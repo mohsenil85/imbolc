@@ -6,8 +6,8 @@ use crate::state::persistence::{load_project, save_project};
 mod arrangement;
 mod basic;
 mod decoders;
-mod instruments;
 mod mixer;
+mod tracks;
 
 fn temp_db_path() -> PathBuf {
     let mut path = std::env::temp_dir();

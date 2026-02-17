@@ -6,8 +6,6 @@ pub mod clipboard;
 pub mod custom_synthdef;
 pub mod drum_sequencer;
 pub mod grid;
-pub mod instrument;
-pub mod instrument_state;
 pub mod midi_connection;
 pub mod midi_recording;
 pub mod music;
@@ -17,6 +15,8 @@ pub mod piano_roll;
 pub mod recent_projects;
 pub mod sampler;
 pub mod session;
+pub mod track;
+pub mod track_state;
 pub mod undo;
 pub mod vst_plugin;
 
@@ -25,16 +25,16 @@ pub use audio_feedback::AudioFeedbackState;
 pub use automation::AutomationTarget;
 pub use clipboard::{Clipboard, ClipboardContents, ClipboardNote};
 pub use custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
-pub use instrument::*;
-pub use instrument::{track_row_count, track_row_info, track_section_for_row, TrackSection};
-pub use instrument::{EffectTypeExt, SourceTypeExt};
-pub use instrument_state::TrackState;
 pub use midi_connection::MidiConnectionState;
 pub use param::{adjust_freq_semitone, adjust_musical_step, is_freq_param, Param, ParamValue};
 pub use sampler::{BufferId, SampleBuffer, SampleRegistry, SamplerConfig, Slice, SliceId};
 pub use session::{
     MixerSelection, MixerState, MusicalSettings, SessionState, DEFAULT_BUS_COUNT, MAX_BUSES,
 };
+pub use track::*;
+pub use track::{track_row_count, track_row_info, track_section_for_row, TrackSection};
+pub use track::{EffectTypeExt, SourceTypeExt};
+pub use track_state::TrackState;
 pub use undo::UndoHistory;
 pub use vst_plugin::{VstParamSpec, VstPlugin, VstPluginId, VstPluginKind, VstPluginRegistry};
 

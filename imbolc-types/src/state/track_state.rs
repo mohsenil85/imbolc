@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use super::drum_sequencer::DrumSequencerState;
-use super::instrument::{SourceType, Track};
+use super::track::{SourceType, Track};
 use crate::TrackId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

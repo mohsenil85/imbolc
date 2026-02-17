@@ -302,7 +302,7 @@ pub enum TrackSection {
 /// Total number of selectable rows for instrument editing.
 ///
 /// Free function variant: accepts decomposed fields so callers holding
-/// cloned/shadow copies of instrument fields (e.g. InstrumentEditPane)
+/// cloned/shadow copies of instrument fields (e.g. TrackEditPane)
 /// can call without constructing a temporary Track.
 pub fn track_row_count(
     source: SourceType,

@@ -12,8 +12,8 @@ use std::path::Path;
 
 use rusqlite::{Connection as SqlConnection, Result as SqlResult};
 
-use super::instrument_state::TrackState;
 use super::session::SessionState;
+use super::track_state::TrackState;
 
 /// Save project using relational schema.
 ///

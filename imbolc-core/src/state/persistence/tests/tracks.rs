@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use super::{load_project, save_project, temp_db_path};
 use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
-use crate::state::instrument::{SourceExtra, SourceType};
-use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
+use crate::state::track::{SourceExtra, SourceType};
+use crate::state::track_state::TrackState;
 use imbolc_types::CustomSynthDefId;
 use imbolc_types::VstPluginId;
 

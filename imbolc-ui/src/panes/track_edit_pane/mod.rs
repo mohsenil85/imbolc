@@ -5,7 +5,7 @@ mod rendering;
 use std::any::Any;
 
 use crate::state::{
-    instrument::{track_row_count, track_row_info, track_section_for_row},
+    track::{track_row_count, track_row_info, track_section_for_row},
     AppState, EnvConfig, LfoConfig, Param, SourceType, TrackId, TrackSection,
 };
 use crate::ui::action_id::ActionId;
@@ -14,7 +14,7 @@ use crate::ui::widgets::TextInput;
 use crate::ui::{Action, InputEvent, Keymap, MouseEvent, Pane, Rect, RenderBuf, ToggleResult};
 use imbolc_types::{ChannelConfig, ProcessingStage};
 
-pub struct InstrumentEditPane {
+pub struct TrackEditPane {
     keymap: Keymap,
     instrument_id: Option<TrackId>,
     instrument_name: String,
@@ -35,7 +35,7 @@ pub struct InstrumentEditPane {
     perf: PerformanceController,
 }
 
-impl InstrumentEditPane {
+impl TrackEditPane {
     pub fn new(keymap: Keymap) -> Self {
         Self {
             keymap,
@@ -290,7 +290,7 @@ impl InstrumentEditPane {
     }
 }
 
-impl Pane for InstrumentEditPane {
+impl Pane for TrackEditPane {
     fn id(&self) -> &'static str {
         "instrument_edit"
     }
@@ -364,7 +364,7 @@ impl Pane for InstrumentEditPane {
     }
 }
 
-impl Default for InstrumentEditPane {
+impl Default for TrackEditPane {
     fn default() -> Self {
         Self::new(Keymap::new())
     }
@@ -374,12 +374,12 @@ impl Default for InstrumentEditPane {
 mod tests {
     use super::*;
     use crate::state::{EffectSlot, EffectType, FilterConfig, FilterType};
-    use crate::ui::action_id::{ActionId, InstrumentEditActionId};
+    use crate::ui::action_id::{ActionId, TrackEditActionId};
     use crate::ui::input::{InputEvent, KeyCode, Modifiers};
     use imbolc_types::{EffectId, TrackId};
 
-    fn make_pane_with_chain(chain: Vec<ProcessingStage>) -> InstrumentEditPane {
-        InstrumentEditPane {
+    fn make_pane_with_chain(chain: Vec<ProcessingStage>) -> TrackEditPane {
+        TrackEditPane {
             instrument_id: Some(TrackId::new(1)),
             source: SourceType::Saw,
             source_params: SourceType::Saw.default_params(),
@@ -435,7 +435,7 @@ mod tests {
 
         // Tab → Processing(0)
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::NextSection),
+            ActionId::TrackEdit(TrackEditActionId::NextSection),
             &event,
             &state,
         );
@@ -443,7 +443,7 @@ mod tests {
 
         // Tab → Processing(1)
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::NextSection),
+            ActionId::TrackEdit(TrackEditActionId::NextSection),
             &event,
             &state,
         );
@@ -451,7 +451,7 @@ mod tests {
 
         // Tab → Lfo
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::NextSection),
+            ActionId::TrackEdit(TrackEditActionId::NextSection),
             &event,
             &state,
         );
@@ -459,7 +459,7 @@ mod tests {
 
         // Tab → Envelope
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::NextSection),
+            ActionId::TrackEdit(TrackEditActionId::NextSection),
             &event,
             &state,
         );
@@ -467,7 +467,7 @@ mod tests {
 
         // Tab → Source (wrap)
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::NextSection),
+            ActionId::TrackEdit(TrackEditActionId::NextSection),
             &event,
             &state,
         );
@@ -495,7 +495,7 @@ mod tests {
 
         // Move stage down: filter goes from index 0 to index 1
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::MoveStageDown),
+            ActionId::TrackEdit(TrackEditActionId::MoveStageDown),
             &event,
             &state,
         );
@@ -516,7 +516,7 @@ mod tests {
 
         // Toggle on: should insert filter at index 0
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::ToggleFilter),
+            ActionId::TrackEdit(TrackEditActionId::ToggleFilter),
             &event,
             &state,
         );
@@ -526,7 +526,7 @@ mod tests {
 
         // Toggle off: should remove the filter
         pane.handle_action_impl(
-            ActionId::InstrumentEdit(InstrumentEditActionId::ToggleFilter),
+            ActionId::TrackEdit(TrackEditActionId::ToggleFilter),
             &event,
             &state,
         );
