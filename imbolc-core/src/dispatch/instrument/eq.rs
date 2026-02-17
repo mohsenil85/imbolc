@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult, EqParamKind};
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, InstrumentAction};
+use imbolc_types::{DomainAction, TrackAction};
 
 use super::super::automation::record_automation_point;
 
@@ -15,7 +15,7 @@ pub(super) fn handle_set_eq_param(
     value: f32,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Track(InstrumentAction::SetEqParam(
+        &DomainAction::Track(TrackAction::SetEqParam(
             instrument_id,
             band_idx,
             param,
@@ -61,7 +61,7 @@ pub(super) fn handle_toggle_eq(
     instrument_id: crate::state::TrackId,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Track(InstrumentAction::ToggleEq(instrument_id)),
+        &DomainAction::Track(TrackAction::ToggleEq(instrument_id)),
         &mut state.tracks,
         &mut state.session,
     );

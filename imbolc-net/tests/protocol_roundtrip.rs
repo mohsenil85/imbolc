@@ -1,7 +1,7 @@
 //! Serialization roundtrip tests for all protocol message types.
 
 use imbolc_net::protocol::*;
-use imbolc_types::{InstrumentAction, ServerAction, SessionState, SourceType, TrackId, TrackState};
+use imbolc_types::{ServerAction, SessionState, SourceType, TrackAction, TrackId, TrackState};
 use std::collections::HashMap;
 
 fn roundtrip_client(msg: &ClientMessage) -> ClientMessage {
@@ -93,10 +93,10 @@ fn test_roundtrip_client_hello_with_token() {
 
 #[test]
 fn test_roundtrip_client_action() {
-    let msg = ClientMessage::Action(NetworkAction::Track(InstrumentAction::Select(2)));
+    let msg = ClientMessage::Action(NetworkAction::Track(TrackAction::Select(2)));
     let rt = roundtrip_client(&msg);
     match rt {
-        ClientMessage::Action(NetworkAction::Track(InstrumentAction::Select(id))) => {
+        ClientMessage::Action(NetworkAction::Track(TrackAction::Select(id))) => {
             assert_eq!(id, 2);
         }
         _ => panic!("Roundtrip failed"),
@@ -360,7 +360,7 @@ fn test_roundtrip_network_action_variants() {
     let actions: Vec<NetworkAction> = vec![
         NetworkAction::None,
         NetworkAction::Quit,
-        NetworkAction::Track(InstrumentAction::Select(0)),
+        NetworkAction::Track(TrackAction::Select(0)),
         NetworkAction::Server(ServerAction::RecordMaster),
         NetworkAction::Undo,
         NetworkAction::Redo,

@@ -1,11 +1,11 @@
-use crate::action::{Action, AutomationAction, InstrumentAction, MidiAction};
+use crate::action::{Action, AutomationAction, MidiAction, TrackAction};
 use crate::midi::{MidiEvent, MidiEventKind};
 use crate::state::AppState;
 use imbolc_types::state::drum_sequencer::NUM_PADS;
 
 /// Process a MIDI event and return an Action if one should be dispatched.
 /// The timestamp in MidiEvent can be used for sample-accurate scheduling
-/// (passed through InstrumentAction::PlayNoteWithOffset if needed).
+/// (passed through TrackAction::PlayNoteWithOffset if needed).
 pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action> {
     let midi_rec = &state.session.midi_recording;
 
@@ -71,7 +71,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
                     if *note >= base {
                         let pad_idx = (*note - base) as usize;
                         if pad_idx < NUM_PADS {
-                            return Some(Action::Track(InstrumentAction::PlayDrumPad(
+                            return Some(Action::Track(TrackAction::PlayDrumPad(
                                 pad_idx, *velocity,
                             )));
                         }
@@ -82,7 +82,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             }
 
             // Non-Kit: PlayNote uses the selected instrument
-            Some(Action::Track(InstrumentAction::PlayNote(*note, *velocity)))
+            Some(Action::Track(TrackAction::PlayNote(*note, *velocity)))
         }
 
         MidiEventKind::NoteOff { channel, .. } => {
@@ -231,7 +231,7 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         match action {
-            Some(Action::Track(InstrumentAction::PlayDrumPad(pad_idx, vel))) => {
+            Some(Action::Track(TrackAction::PlayDrumPad(pad_idx, vel))) => {
                 assert_eq!(pad_idx, 2);
                 assert_eq!(vel, 90);
             }
@@ -287,7 +287,7 @@ mod tests {
         );
         let action = process_midi_event(&event, &state);
         match action {
-            Some(Action::Track(InstrumentAction::PlayNote(note, vel))) => {
+            Some(Action::Track(TrackAction::PlayNote(note, vel))) => {
                 assert_eq!(note, 60);
                 assert_eq!(vel, 100);
             }

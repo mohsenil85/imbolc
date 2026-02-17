@@ -3,9 +3,7 @@ use std::any::Any;
 use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{
-    Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style,
-};
+use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
 use imbolc_types::EqParamKind;
 
 use crate::state::instrument::EqBand;
@@ -82,13 +80,13 @@ impl Pane for EqPane {
                 action,
             ),
             ActionId::Eq(EqActionId::ToggleEq) => {
-                Action::Track(InstrumentAction::ToggleEq(instrument_id))
+                Action::Track(TrackAction::ToggleEq(instrument_id))
             }
             ActionId::Eq(EqActionId::ToggleBand) => {
                 if let Some(eq) = instrument.eq() {
                     let band = &eq.bands[self.selected_band];
                     let new_val = if band.enabled { 0.0 } else { 1.0 };
-                    Action::Track(InstrumentAction::SetEqParam(
+                    Action::Track(TrackAction::SetEqParam(
                         instrument_id,
                         self.selected_band,
                         EqParamKind::Enabled,
@@ -265,7 +263,7 @@ fn adjust_param(
         (current - delta).max(min)
     };
 
-    Action::Track(InstrumentAction::SetEqParam(
+    Action::Track(TrackAction::SetEqParam(
         instrument_id,
         band_idx,
         param,

@@ -732,7 +732,7 @@ impl PianoRollAction {
     /// Returns the target instrument ID for ownership validation, if applicable.
     /// Returns None for actions that don't explicitly specify an instrument ID.
     /// Note: Actions with `track` index need state to resolve to TrackId.
-    pub fn target_instrument_id(&self) -> Option<TrackId> {
+    pub fn target_track_id(&self) -> Option<TrackId> {
         match self {
             // Actions with explicit instrument_id
             Self::PlayNote { instrument_id, .. } => Some(*instrument_id),
@@ -822,9 +822,9 @@ pub enum SequencerAction {
     CycleStepResolution,
 }
 
-/// Data carried by InstrumentAction::Update to apply edits without dispatch reading pane state.
+/// Data carried by TrackAction::Update to apply edits without dispatch reading pane state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstrumentUpdate {
+pub struct TrackUpdate {
     pub id: TrackId,
     pub source: SourceType,
     pub source_params: Vec<Param>,
@@ -837,11 +837,11 @@ pub struct InstrumentUpdate {
 
 /// Track actions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum InstrumentAction {
+pub enum TrackAction {
     Add(SourceType),
     Delete(TrackId),
     Edit(TrackId),
-    Update(Box<InstrumentUpdate>),
+    Update(Box<TrackUpdate>),
     AddEffect(TrackId, EffectType),
     RemoveEffect(TrackId, EffectId),
     MoveStage(TrackId, usize, i8),
@@ -907,10 +907,10 @@ pub enum InstrumentAction {
     ToggleChannelConfig(TrackId),
 }
 
-impl InstrumentAction {
+impl TrackAction {
     /// Returns the target instrument ID for ownership validation, if applicable.
     /// Returns None for actions that don't target a specific instrument (Add, Select, PlayNote, etc).
-    pub fn target_instrument_id(&self) -> Option<TrackId> {
+    pub fn target_track_id(&self) -> Option<TrackId> {
         match self {
             // Actions that don't target a specific instrument
             Self::Add(_) => None,
@@ -1089,7 +1089,7 @@ pub enum Action {
     /// Panes emit this instead of `Quit` when the user hasn't confirmed.
     QuitIntent,
     Nav(NavAction),
-    Track(InstrumentAction),
+    Track(TrackAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),
@@ -1161,7 +1161,7 @@ pub enum RoutedAction {
 /// audio projection operate on `DomainAction` exclusively.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DomainAction {
-    Track(InstrumentAction),
+    Track(TrackAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),

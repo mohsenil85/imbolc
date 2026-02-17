@@ -41,7 +41,7 @@ pub(crate) fn select_instrument(
     if idx < dispatcher.state().tracks.tracks.len() {
         dispatch_side_effect_free(
             dispatcher,
-            &DomainAction::Track(ui::InstrumentAction::Select(idx)),
+            &DomainAction::Track(ui::TrackAction::Select(idx)),
             audio,
         );
         sync_piano_roll_to_selection(dispatcher, panes, audio);
@@ -714,7 +714,7 @@ pub(crate) fn handle_global_action(
             GlobalActionId::SelectPrevInstrument => {
                 dispatch_side_effect_free(
                     dispatcher,
-                    &DomainAction::Track(ui::InstrumentAction::SelectPrev),
+                    &DomainAction::Track(ui::TrackAction::SelectPrev),
                     audio,
                 );
                 sync_piano_roll_to_selection(dispatcher, panes, audio);
@@ -723,7 +723,7 @@ pub(crate) fn handle_global_action(
             GlobalActionId::SelectNextInstrument => {
                 dispatch_side_effect_free(
                     dispatcher,
-                    &DomainAction::Track(ui::InstrumentAction::SelectNext),
+                    &DomainAction::Track(ui::TrackAction::SelectNext),
                     audio,
                 );
                 sync_piano_roll_to_selection(dispatcher, panes, audio);
@@ -763,10 +763,8 @@ pub(crate) fn handle_global_action(
             GlobalActionId::DeleteInstrument => {
                 if let Some(instrument) = dispatcher.state().tracks.selected_track() {
                     let id = instrument.id;
-                    let mut r = dispatcher.dispatch_domain(
-                        &DomainAction::Track(ui::InstrumentAction::Delete(id)),
-                        audio,
-                    );
+                    let mut r = dispatcher
+                        .dispatch_domain(&DomainAction::Track(ui::TrackAction::Delete(id)), audio);
                     pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
                     apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
                     // Re-sync edit pane after deletion

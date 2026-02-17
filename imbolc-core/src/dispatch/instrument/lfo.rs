@@ -2,13 +2,13 @@ use crate::action::{AudioEffect, DispatchResult, LfoParamKind};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
-use imbolc_types::{DomainAction, InstrumentAction, LfoShape, ParameterTarget, TrackId};
+use imbolc_types::{DomainAction, LfoShape, ParameterTarget, TrackAction, TrackId};
 
 // LFO parameter ranges
 const LFO_RATE_MIN: f32 = 0.1;
 const LFO_RATE_MAX: f32 = 20.0;
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
         &mut state.tracks,
@@ -17,7 +17,7 @@ fn reduce(state: &mut AppState, action: &InstrumentAction) {
 }
 
 pub(super) fn handle_toggle_lfo(state: &mut AppState, id: TrackId) -> DispatchResult {
-    reduce(state, &InstrumentAction::ToggleLfo(id));
+    reduce(state, &TrackAction::ToggleLfo(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -31,7 +31,7 @@ pub(super) fn handle_adjust_lfo_rate(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustLfoRate(id, delta));
+    reduce(state, &TrackAction::AdjustLfoRate(id, delta));
 
     let mut result = DispatchResult::none();
     if let Some(instrument) = state.tracks.track(id) {
@@ -57,7 +57,7 @@ pub(super) fn handle_adjust_lfo_depth(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustLfoDepth(id, delta));
+    reduce(state, &TrackAction::AdjustLfoDepth(id, delta));
 
     let mut result = DispatchResult::none();
     if let Some(instrument) = state.tracks.track(id) {
@@ -77,7 +77,7 @@ pub(super) fn handle_set_lfo_shape(
     id: TrackId,
     shape: LfoShape,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::SetLfoShape(id, shape));
+    reduce(state, &TrackAction::SetLfoShape(id, shape));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -91,7 +91,7 @@ pub(super) fn handle_set_lfo_target(
     id: TrackId,
     target: ParameterTarget,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::SetLfoTarget(id, target));
+    reduce(state, &TrackAction::SetLfoTarget(id, target));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result

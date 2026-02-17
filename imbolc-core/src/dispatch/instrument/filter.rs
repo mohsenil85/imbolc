@@ -2,9 +2,9 @@ use crate::action::{AudioEffect, DispatchResult, FilterParamKind};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
 use crate::state::{AppState, TrackId};
-use imbolc_types::{DomainAction, InstrumentAction};
+use imbolc_types::{DomainAction, TrackAction};
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
         &mut state.tracks,
@@ -17,7 +17,7 @@ pub(super) fn handle_set_filter(
     id: TrackId,
     filter_type: Option<crate::state::FilterType>,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::SetFilter(id, filter_type));
+    reduce(state, &TrackAction::SetFilter(id, filter_type));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -27,7 +27,7 @@ pub(super) fn handle_set_filter(
 }
 
 pub(super) fn handle_toggle_filter(state: &mut AppState, id: TrackId) -> DispatchResult {
-    reduce(state, &InstrumentAction::ToggleFilter(id));
+    reduce(state, &TrackAction::ToggleFilter(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -37,7 +37,7 @@ pub(super) fn handle_toggle_filter(state: &mut AppState, id: TrackId) -> Dispatc
 }
 
 pub(super) fn handle_cycle_filter_type(state: &mut AppState, id: TrackId) -> DispatchResult {
-    reduce(state, &InstrumentAction::CycleFilterType(id));
+    reduce(state, &TrackAction::CycleFilterType(id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -48,7 +48,7 @@ pub(super) fn handle_adjust_filter_cutoff(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustFilterCutoff(id, delta));
+    reduce(state, &TrackAction::AdjustFilterCutoff(id, delta));
 
     let mut result = DispatchResult::none();
     // Read post-mutation value for automation recording and targeted param
@@ -80,7 +80,7 @@ pub(super) fn handle_adjust_filter_resonance(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustFilterResonance(id, delta));
+    reduce(state, &TrackAction::AdjustFilterResonance(id, delta));
 
     let mut result = DispatchResult::none();
     // Read post-mutation value for automation recording and targeted param

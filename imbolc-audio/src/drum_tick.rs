@@ -16,7 +16,7 @@ pub fn tick_drum_sequencer(
     elapsed: Duration,
 ) {
     // Collect instrument triggers to execute after the main loop
-    // (target_instrument_id, freq, velocity, offset_secs)
+    // (target_track_id, freq, velocity, offset_secs)
     let mut instrument_triggers: Vec<(TrackId, f32, f32, f64)> = Vec::new();
 
     for instrument in &mut instruments.tracks {
@@ -155,15 +155,10 @@ pub fn tick_drum_sequencer(
                         let total_pitch = pad.pitch as i16 + step_data.pitch_offset as i16;
 
                         // Check if this pad triggers an instrument (one-shot synth)
-                        if let Some(target_instrument_id) = pad.instrument_id {
+                        if let Some(target_track_id) = pad.instrument_id {
                             // Track trigger mode: collect for execution after loop
                             let freq = pad.trigger_freq * 2.0_f32.powf(total_pitch as f32 / 12.0);
-                            instrument_triggers.push((
-                                target_instrument_id,
-                                freq,
-                                amp,
-                                final_offset,
-                            ));
+                            instrument_triggers.push((target_track_id, freq, amp, final_offset));
                         } else if let Some(buffer_id) = pad.buffer_id {
                             // Sample mode: play one-shot sample
                             let pitch_rate = 2.0_f32.powf(total_pitch as f32 / 12.0);

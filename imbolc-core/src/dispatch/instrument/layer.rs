@@ -1,14 +1,14 @@
 use crate::action::{AudioEffect, DispatchResult};
 use crate::state::AppState;
 use crate::state::TrackId;
-use imbolc_types::{DomainAction, InstrumentAction};
+use imbolc_types::{DomainAction, TrackAction};
 
 pub(super) fn handle_link_layer(state: &mut AppState, a: TrackId, b: TrackId) -> DispatchResult {
     if a == b {
         return DispatchResult::none();
     }
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Track(InstrumentAction::LinkLayer(a, b)),
+        &DomainAction::Track(TrackAction::LinkLayer(a, b)),
         &mut state.tracks,
         &mut state.session,
     );
@@ -22,7 +22,7 @@ pub(super) fn handle_link_layer(state: &mut AppState, a: TrackId, b: TrackId) ->
 pub(super) fn handle_unlink_layer(state: &mut AppState, id: TrackId) -> DispatchResult {
     let had_group = state.tracks.track(id).and_then(|i| i.layer.group).is_some();
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Track(InstrumentAction::UnlinkLayer(id)),
+        &DomainAction::Track(TrackAction::UnlinkLayer(id)),
         &mut state.tracks,
         &mut state.session,
     );
@@ -41,7 +41,7 @@ pub(super) fn handle_adjust_layer_octave_offset(
     delta: i8,
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
-        &DomainAction::Track(InstrumentAction::AdjustLayerOctaveOffset(id, delta)),
+        &DomainAction::Track(TrackAction::AdjustLayerOctaveOffset(id, delta)),
         &mut state.tracks,
         &mut state.session,
     );

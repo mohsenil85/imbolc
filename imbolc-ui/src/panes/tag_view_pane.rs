@@ -437,50 +437,48 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
 /// Generate an Action to adjust a target by delta.
 /// Delta is in the natural unit of the parameter (not normalized).
 fn action_for_target_adjust(target: &AutomationTarget, delta: f32) -> Option<Action> {
-    use imbolc_types::InstrumentAction;
+    use imbolc_types::TrackAction;
     match target {
         AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
             let id = *id;
             let action = match param {
                 ParameterTarget::FilterCutoff => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustFilterCutoff(id, delta * (max - min))
+                    TrackAction::AdjustFilterCutoff(id, delta * (max - min))
                 }
                 ParameterTarget::FilterResonance => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustFilterResonance(id, delta * (max - min))
+                    TrackAction::AdjustFilterResonance(id, delta * (max - min))
                 }
                 ParameterTarget::Attack => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustEnvelopeAttack(id, delta * (max - min))
+                    TrackAction::AdjustEnvelopeAttack(id, delta * (max - min))
                 }
                 ParameterTarget::Decay => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustEnvelopeDecay(id, delta * (max - min))
+                    TrackAction::AdjustEnvelopeDecay(id, delta * (max - min))
                 }
-                ParameterTarget::Sustain => InstrumentAction::AdjustEnvelopeSustain(id, delta),
+                ParameterTarget::Sustain => TrackAction::AdjustEnvelopeSustain(id, delta),
                 ParameterTarget::Release => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustEnvelopeRelease(id, delta * (max - min))
+                    TrackAction::AdjustEnvelopeRelease(id, delta * (max - min))
                 }
                 ParameterTarget::LfoRate => {
                     let (min, max) = target.default_range();
-                    InstrumentAction::AdjustLfoRate(id, delta * (max - min))
+                    TrackAction::AdjustLfoRate(id, delta * (max - min))
                 }
-                ParameterTarget::LfoDepth => InstrumentAction::AdjustLfoDepth(id, delta),
+                ParameterTarget::LfoDepth => TrackAction::AdjustLfoDepth(id, delta),
                 ParameterTarget::EffectParam(eid, pidx) => {
-                    InstrumentAction::AdjustEffectParam(id, *eid, *pidx, delta)
+                    TrackAction::AdjustEffectParam(id, *eid, *pidx, delta)
                 }
-                ParameterTarget::Swing => InstrumentAction::AdjustTrackSwing(id, delta),
+                ParameterTarget::Swing => TrackAction::AdjustTrackSwing(id, delta),
                 ParameterTarget::HumanizeVelocity => {
-                    InstrumentAction::AdjustTrackHumanizeVelocity(id, delta)
+                    TrackAction::AdjustTrackHumanizeVelocity(id, delta)
                 }
                 ParameterTarget::HumanizeTiming => {
-                    InstrumentAction::AdjustTrackHumanizeTiming(id, delta)
+                    TrackAction::AdjustTrackHumanizeTiming(id, delta)
                 }
-                ParameterTarget::TimingOffset => {
-                    InstrumentAction::AdjustTrackTimingOffset(id, delta)
-                }
+                ParameterTarget::TimingOffset => TrackAction::AdjustTrackTimingOffset(id, delta),
                 // Level/Pan: no per-instrument adjust action available
                 // VstParam, SourceParam, SendLevel: no direct adjust action
                 _ => return None,

@@ -854,7 +854,7 @@ impl AudioEngine {
     /// Used by drum sequencer pads that trigger synth instruments.
     pub fn trigger_instrument_oneshot(
         &mut self,
-        target_instrument_id: TrackId,
+        target_track_id: TrackId,
         freq: f32,
         velocity: f32,
         offset_secs: f64,
@@ -862,8 +862,8 @@ impl AudioEngine {
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .track(target_instrument_id)
-            .ok_or_else(|| format!("No instrument with id {}", target_instrument_id))?;
+            .track(target_track_id)
+            .ok_or_else(|| format!("No instrument with id {}", target_track_id))?;
 
         // Skip unsupported instrument types
         if instrument.source.is_audio_input()
@@ -890,7 +890,7 @@ impl AudioEngine {
         // Get the audio bus where voices should write their output
         let source_out_bus = self
             .bus_allocator
-            .get_audio_bus(target_instrument_id, "source_out")
+            .get_audio_bus(target_track_id, "source_out")
             .unwrap_or(16);
 
         // Create a group for this one-shot voice chain
@@ -1001,7 +1001,7 @@ impl AudioEngine {
             if instrument.modulation.lfo.enabled {
                 if let Some(lfo_bus) = self
                     .bus_allocator
-                    .get_control_bus(target_instrument_id, "lfo_out")
+                    .get_control_bus(target_track_id, "lfo_out")
                 {
                     match instrument.modulation.lfo.target {
                         ParameterTarget::Level => {

@@ -5,7 +5,7 @@ use imbolc_types::*;
 use super::macro_def::repl_actions;
 
 repl_actions! {
-    group "instrument" => DomainAction::Track, InstrumentAction {
+    group "instrument" => DomainAction::Track, TrackAction {
         "add"                      => Add(source: SourceType);                                         "Add instrument with given source type"
         "delete"                   => Delete(id: TrackId);                                        "Delete instrument by ID"
         "select"                   => Select(idx: usize);                                              "Select instrument by index"
@@ -295,7 +295,7 @@ mod tests {
         let action = parse_action("instrument add saw").unwrap();
         assert!(matches!(
             action,
-            DomainAction::Track(InstrumentAction::Add(SourceType::Saw))
+            DomainAction::Track(TrackAction::Add(SourceType::Saw))
         ));
     }
 
@@ -304,7 +304,7 @@ mod tests {
         let action = parse_action("instrument select-next").unwrap();
         assert!(matches!(
             action,
-            DomainAction::Track(InstrumentAction::SelectNext)
+            DomainAction::Track(TrackAction::SelectNext)
         ));
     }
 
@@ -312,7 +312,7 @@ mod tests {
     fn parse_instrument_adjust_filter_cutoff() {
         let action = parse_action("instrument adjust-filter-cutoff 1 0.5").unwrap();
         match action {
-            DomainAction::Track(InstrumentAction::AdjustFilterCutoff(id, d)) => {
+            DomainAction::Track(TrackAction::AdjustFilterCutoff(id, d)) => {
                 assert_eq!(id, TrackId::new(1));
                 assert!((d - 0.5).abs() < f32::EPSILON);
             }

@@ -3,9 +3,9 @@ mod common;
 use imbolc_net::protocol::{NetworkAction, ServerMessage};
 use imbolc_net::server::NetServer;
 use imbolc_types::{
-    ArrangementAction, AutomationAction, AutomationTarget, BusAction, InstrumentAction,
-    InstrumentParameter, MixerAction, ParameterTarget, PianoRollAction, ServerAction, SourceType,
-    TrackId, VstParamAction, VstTarget,
+    ArrangementAction, AutomationAction, AutomationTarget, BusAction, InstrumentParameter,
+    MixerAction, ParameterTarget, PianoRollAction, ServerAction, SourceType, TrackAction, TrackId,
+    VstParamAction, VstTarget,
 };
 use std::time::{Duration, Instant};
 
@@ -152,7 +152,7 @@ fn test_patch_instruments_only() {
     let _welcome = alice.recv().unwrap();
 
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
+        &NetworkAction::Track(TrackAction::Add(SourceType::Saw)),
         &state.session,
     );
 
@@ -295,7 +295,7 @@ fn test_dirty_clears_after_patch() {
 
     // First broadcast: instruments dirty
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
+        &NetworkAction::Track(TrackAction::Add(SourceType::Saw)),
         &state.session,
     );
     let state = common::make_test_state(&server);
@@ -422,7 +422,7 @@ fn test_patch_reaches_all_clients() {
     let _welcome_b = bob.recv().unwrap();
 
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
+        &NetworkAction::Track(TrackAction::Add(SourceType::Saw)),
         &state.session,
     );
     let state = common::make_test_state(&server);
@@ -463,7 +463,7 @@ fn test_accumulated_actions_combined_patch() {
         &state.session,
     );
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
+        &NetworkAction::Track(TrackAction::Add(SourceType::Saw)),
         &state.session,
     );
     server.mark_ownership_dirty();
@@ -504,7 +504,7 @@ fn test_patch_single_instrument_change() {
 
     // Targeted action on instrument 1
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(1), 0.1)),
+        &NetworkAction::Track(TrackAction::AdjustFilterCutoff(TrackId::new(1), 0.1)),
         &state.session,
     );
     let state = common::make_test_state_with_instruments(&server, 4);
@@ -544,7 +544,7 @@ fn test_patch_structural_sends_full_instruments() {
 
     // Structural action (Add)
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
+        &NetworkAction::Track(TrackAction::Add(SourceType::Saw)),
         &state.session,
     );
     let state = common::make_test_state_with_instruments(&server, 4);
@@ -580,11 +580,11 @@ fn test_patch_targeted_then_structural() {
 
     // Targeted + structural in same tick → structural wins
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(1), 0.1)),
+        &NetworkAction::Track(TrackAction::AdjustFilterCutoff(TrackId::new(1), 0.1)),
         &state.session,
     );
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::Add(SourceType::Saw)),
+        &NetworkAction::Track(TrackAction::Add(SourceType::Saw)),
         &state.session,
     );
     let state = common::make_test_state_with_instruments(&server, 4);
@@ -630,7 +630,7 @@ fn test_instrument_patches_roundtrip() {
         &state.session,
     );
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(2), 0.3)),
+        &NetworkAction::Track(TrackAction::AdjustFilterCutoff(TrackId::new(2), 0.3)),
         &state.session,
     );
     let state = common::make_test_state_with_instruments(&server, 4);
@@ -734,15 +734,15 @@ fn test_patch_threshold_coalescing() {
 
     // Dirty 3 out of 4 instruments (> half) → should coalesce to full instruments
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(0), 0.1)),
+        &NetworkAction::Track(TrackAction::AdjustFilterCutoff(TrackId::new(0), 0.1)),
         &state.session,
     );
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(1), 0.2)),
+        &NetworkAction::Track(TrackAction::AdjustFilterCutoff(TrackId::new(1), 0.2)),
         &state.session,
     );
     server.mark_dirty(
-        &NetworkAction::Track(InstrumentAction::AdjustFilterCutoff(TrackId::new(2), 0.3)),
+        &NetworkAction::Track(TrackAction::AdjustFilterCutoff(TrackId::new(2), 0.3)),
         &state.session,
     );
     let state = common::make_test_state_with_instruments(&server, 4);

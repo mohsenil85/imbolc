@@ -2,11 +2,11 @@ use crate::action::{AudioEffect, DispatchResult, NavIntent, VstTarget};
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, InstrumentAction, ParamValue};
+use imbolc_types::{DomainAction, ParamValue, TrackAction};
 
 use super::super::automation::record_automation_point;
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
         &mut state.tracks,
@@ -19,7 +19,7 @@ pub(super) fn handle_add_effect(
     id: crate::state::TrackId,
     effect_type: crate::state::EffectType,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AddEffect(id, effect_type));
+    reduce(state, &TrackAction::AddEffect(id, effect_type));
     let mut result = DispatchResult::with_nav(NavIntent::Pop);
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -33,7 +33,7 @@ pub(super) fn handle_remove_effect(
     id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::RemoveEffect(id, effect_id));
+    reduce(state, &TrackAction::RemoveEffect(id, effect_id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -47,7 +47,7 @@ pub(super) fn handle_toggle_effect_bypass(
     id: crate::state::TrackId,
     effect_id: crate::state::EffectId,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::ToggleEffectBypass(id, effect_id));
+    reduce(state, &TrackAction::ToggleEffectBypass(id, effect_id));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -62,7 +62,7 @@ pub(super) fn handle_adjust_effect_param(
 ) -> DispatchResult {
     reduce(
         state,
-        &InstrumentAction::AdjustEffectParam(id, effect_id, param_idx, delta),
+        &TrackAction::AdjustEffectParam(id, effect_id, param_idx, delta),
     );
 
     let mut result = DispatchResult::none();
@@ -109,7 +109,7 @@ pub(super) fn handle_load_ir_result(
 
     reduce(
         state,
-        &InstrumentAction::LoadIRResult(instrument_id, effect_id, path.to_path_buf()),
+        &TrackAction::LoadIRResult(instrument_id, effect_id, path.to_path_buf()),
     );
 
     let mut result = DispatchResult::with_nav(NavIntent::Pop);

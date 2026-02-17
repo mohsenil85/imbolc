@@ -5,8 +5,8 @@ use crate::state::{AppState, EffectType, EffectTypeExt, VstPluginRegistry};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, InstrumentAction, Keymap, MouseButton, MouseEvent,
-    MouseEventKind, NavAction, Pane, Rect, RenderBuf, SessionAction, Style,
+    Action, Color, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind,
+    NavAction, Pane, Rect, RenderBuf, SessionAction, Style, TrackAction,
 };
 use imbolc_types::{BusId, VstPluginId};
 
@@ -181,7 +181,7 @@ impl AddEffectPane {
                 }
                 EffectTarget::Track => {
                     if let Some(inst) = state.tracks.selected_track() {
-                        Action::Track(InstrumentAction::AddEffect(inst.id, *effect_type))
+                        Action::Track(TrackAction::AddEffect(inst.id, *effect_type))
                     } else {
                         Action::None
                     }

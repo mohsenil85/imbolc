@@ -6,8 +6,8 @@ use crate::state::{AppState, MixerSelection, TrackId};
 use crate::ui::action_id::{ActionId, MixerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, InputEvent, InstrumentAction, LayerGroupAction, MixerAction, MouseButton,
-    MouseEvent, MouseEventKind, NavAction, PaneId, Rect,
+    Action, BusAction, InputEvent, LayerGroupAction, MixerAction, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, PaneId, Rect, TrackAction,
 };
 use imbolc_types::{BusId, EffectId};
 
@@ -318,7 +318,7 @@ impl MixerPane {
                         if self.detail_cursor > max_after {
                             self.detail_cursor = max_after;
                         }
-                        return Action::Track(InstrumentAction::RemoveEffect(inst_id, ei));
+                        return Action::Track(TrackAction::RemoveEffect(inst_id, ei));
                     }
                 }
                 Action::None
@@ -326,16 +326,16 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::ToggleEffect) => {
                 if self.detail_section == MixerSection::Effects {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
-                        return Action::Track(InstrumentAction::ToggleEffectBypass(inst_id, ei));
+                        return Action::Track(TrackAction::ToggleEffectBypass(inst_id, ei));
                     }
                 }
                 Action::None
             }
             ActionId::Mixer(MixerActionId::ToggleFilter) => {
-                Action::Track(InstrumentAction::ToggleFilter(inst_id))
+                Action::Track(TrackAction::ToggleFilter(inst_id))
             }
             ActionId::Mixer(MixerActionId::CycleFilterType) => {
-                Action::Track(InstrumentAction::CycleFilterType(inst_id))
+                Action::Track(TrackAction::CycleFilterType(inst_id))
             }
             ActionId::Mixer(MixerActionId::MoveUp) => {
                 if self.detail_section == MixerSection::Effects {
@@ -343,7 +343,7 @@ impl MixerPane {
                         let inst = state.tracks.track(inst_id);
                         if let Some(chain_idx) = inst.and_then(|i| i.effect_chain_index(ei)) {
                             if chain_idx > 0 {
-                                return Action::Track(InstrumentAction::MoveStage(
+                                return Action::Track(TrackAction::MoveStage(
                                     inst_id, chain_idx, -1,
                                 ));
                             }
@@ -358,7 +358,7 @@ impl MixerPane {
                         if let Some(inst) = state.tracks.track(inst_id) {
                             if let Some(chain_idx) = inst.effect_chain_index(ei) {
                                 if chain_idx + 1 < inst.channel_strip.processing_chain.len() {
-                                    return Action::Track(InstrumentAction::MoveStage(
+                                    return Action::Track(TrackAction::MoveStage(
                                         inst_id, chain_idx, 1,
                                     ));
                                 }
@@ -668,9 +668,7 @@ impl MixerPane {
         match self.detail_section {
             MixerSection::Effects => {
                 if let Some((ei, Some(pi))) = self.decode_effect_cursor(state) {
-                    return Action::Track(InstrumentAction::AdjustEffectParam(
-                        inst_id, ei, pi, delta,
-                    ));
+                    return Action::Track(TrackAction::AdjustEffectParam(inst_id, ei, pi, delta));
                 }
                 Action::None
             }
@@ -683,9 +681,9 @@ impl MixerPane {
                 Action::None
             }
             MixerSection::Filter => match self.detail_cursor {
-                0 => Action::Track(InstrumentAction::CycleFilterType(inst_id)),
-                1 => Action::Track(InstrumentAction::AdjustFilterCutoff(inst_id, delta)),
-                2 => Action::Track(InstrumentAction::AdjustFilterResonance(inst_id, delta)),
+                0 => Action::Track(TrackAction::CycleFilterType(inst_id)),
+                1 => Action::Track(TrackAction::AdjustFilterCutoff(inst_id, delta)),
+                2 => Action::Track(TrackAction::AdjustFilterResonance(inst_id, delta)),
                 _ => Action::None,
             },
             MixerSection::Lfo => Action::None,

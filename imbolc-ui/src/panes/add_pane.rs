@@ -6,9 +6,8 @@ use crate::state::{
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, InstrumentAction, Keymap, ListSelector,
-    MouseButton, MouseEvent, MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf,
-    SessionAction, Style,
+    Action, Color, FileSelectAction, InputEvent, Keymap, ListSelector, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf, SessionAction, Style, TrackAction,
 };
 
 /// Options available in the Add Track menu
@@ -188,7 +187,7 @@ impl AddPane {
     /// Convert the currently-selected option to an Action
     fn selected_option_action(&self) -> Action {
         match self.cached_options.get(self.selector.selected) {
-            Some(AddOption::Source(source)) => Action::Track(InstrumentAction::Add(*source)),
+            Some(AddOption::Source(source)) => Action::Track(TrackAction::Add(*source)),
             Some(AddOption::ImportCustom) => Action::Session(SessionAction::OpenFileBrowser(
                 FileSelectAction::ImportCustomSynthDef,
             )),

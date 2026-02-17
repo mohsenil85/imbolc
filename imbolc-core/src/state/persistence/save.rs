@@ -898,7 +898,7 @@ fn save_automation(conn: &Connection, session: &SessionState) -> SqlResult<()> {
         ) = encode_automation_target(&lane.target);
 
         conn.execute(
-            "INSERT INTO automation_lanes (id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value)
+            "INSERT INTO automation_lanes (id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 lane.id, target_type, target_inst_id, target_bus_id,
@@ -1013,7 +1013,7 @@ fn save_midi_recording(conn: &Connection, session: &SessionState) -> SqlResult<(
             imbolc_types::CcMappingSource::Tag => "Tag",
         };
         conn.execute(
-            "INSERT INTO midi_cc_mappings (id, cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source)
+            "INSERT INTO midi_cc_mappings (id, cc_number, channel, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 idx as i64, cc.cc_number as i32,
@@ -1036,7 +1036,7 @@ fn save_midi_recording(conn: &Connection, session: &SessionState) -> SqlResult<(
             target_extra,
         ) = encode_automation_target(&pb.target);
         conn.execute(
-            "INSERT INTO midi_pitch_bend_configs (id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, center_value, range, sensitivity)
+            "INSERT INTO midi_pitch_bend_configs (id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, center_value, range, sensitivity)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 idx as i64,
@@ -1070,7 +1070,7 @@ fn save_param_tags(conn: &Connection, session: &SessionState) -> SqlResult<()> {
                 target_extra,
             ) = encode_automation_target(target);
             conn.execute(
-                "INSERT INTO param_tag_targets (tag_id, position, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra)
+                "INSERT INTO param_tag_targets (tag_id, position, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     pos as i64, tpos as i32,
@@ -1144,7 +1144,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
                 target_extra,
             ) = encode_automation_target(&lane.target);
             conn.execute(
-                "INSERT INTO arrangement_clip_automation_lanes (id, clip_id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value)
+                "INSERT INTO arrangement_clip_automation_lanes (id, clip_id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     lane.id, clip.id, target_type, target_inst_id, target_bus_id,

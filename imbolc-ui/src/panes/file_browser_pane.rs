@@ -7,9 +7,9 @@ use crate::state::VstPluginKind;
 use crate::ui::action_id::{ActionId, FileBrowserActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, ChopperAction, Color, FileSelectAction, InputEvent, InstrumentAction, Keymap,
-    MouseButton, MouseEvent, MouseEventKind, NavAction, Pane, Rect, RenderBuf, SequencerAction,
-    SessionAction, Style,
+    Action, ChopperAction, Color, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, Pane, Rect, RenderBuf, SequencerAction, SessionAction, Style,
+    TrackAction,
 };
 
 struct DirEntry {
@@ -206,11 +206,11 @@ impl Pane for FileBrowserPane {
                             FileSelectAction::LoadChopperSample => {
                                 Action::Chopper(ChopperAction::LoadSampleResult(entry.path.clone()))
                             }
-                            FileSelectAction::LoadPitchedSample(id) => Action::Track(
-                                InstrumentAction::LoadSampleResult(id, entry.path.clone()),
-                            ),
+                            FileSelectAction::LoadPitchedSample(id) => {
+                                Action::Track(TrackAction::LoadSampleResult(id, entry.path.clone()))
+                            }
                             FileSelectAction::LoadImpulseResponse(id, fx_idx) => Action::Track(
-                                InstrumentAction::LoadIRResult(id, fx_idx, entry.path.clone()),
+                                TrackAction::LoadIRResult(id, fx_idx, entry.path.clone()),
                             ),
                             FileSelectAction::ImportProject => {
                                 Action::Session(SessionAction::LoadFrom(entry.path.clone()))
@@ -470,7 +470,7 @@ impl Pane for FileBrowserPane {
                                         ));
                                     }
                                     FileSelectAction::LoadPitchedSample(id) => {
-                                        return Action::Track(InstrumentAction::LoadSampleResult(
+                                        return Action::Track(TrackAction::LoadSampleResult(
                                             id,
                                             self.entries[clicked_idx].path.clone(),
                                         ));
@@ -488,7 +488,7 @@ impl Pane for FileBrowserPane {
                                         ));
                                     }
                                     FileSelectAction::LoadImpulseResponse(id, fx_idx) => {
-                                        return Action::Track(InstrumentAction::LoadIRResult(
+                                        return Action::Track(TrackAction::LoadIRResult(
                                             id,
                                             fx_idx,
                                             self.entries[clicked_idx].path.clone(),

@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult};
 use crate::dispatch::helpers::maybe_record_automation;
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
-use imbolc_types::{DomainAction, InstrumentAction, TrackId};
+use imbolc_types::{DomainAction, TrackAction, TrackId};
 
 // Envelope parameter ranges
 const ATTACK_MIN: f32 = 0.001;
@@ -12,7 +12,7 @@ const DECAY_MAX: f32 = 2.0;
 const RELEASE_MIN: f32 = 0.001;
 const RELEASE_MAX: f32 = 5.0;
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
         &mut state.tracks,
@@ -25,7 +25,7 @@ pub(super) fn handle_adjust_envelope_attack(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustEnvelopeAttack(id, delta));
+    reduce(state, &TrackAction::AdjustEnvelopeAttack(id, delta));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -44,7 +44,7 @@ pub(super) fn handle_adjust_envelope_decay(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustEnvelopeDecay(id, delta));
+    reduce(state, &TrackAction::AdjustEnvelopeDecay(id, delta));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -63,7 +63,7 @@ pub(super) fn handle_adjust_envelope_sustain(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustEnvelopeSustain(id, delta));
+    reduce(state, &TrackAction::AdjustEnvelopeSustain(id, delta));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result
@@ -81,7 +81,7 @@ pub(super) fn handle_adjust_envelope_release(
     id: TrackId,
     delta: f32,
 ) -> DispatchResult {
-    reduce(state, &InstrumentAction::AdjustEnvelopeRelease(id, delta));
+    reduce(state, &TrackAction::AdjustEnvelopeRelease(id, delta));
     let mut result = DispatchResult::none();
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result

@@ -3,8 +3,8 @@ use super::InstrumentEditPane;
 use crate::state::{AppState, FilterConfig, FilterType, InstrumentSection};
 use crate::ui::action_id::{ActionId, InstrumentEditActionId, ModeActionId};
 use crate::ui::{
-    translate_key, Action, FileSelectAction, InputEvent, InstrumentAction, KeyCode, PaneId,
-    SessionAction,
+    translate_key, Action, FileSelectAction, InputEvent, KeyCode, PaneId, SessionAction,
+    TrackAction,
 };
 use imbolc_types::ProcessingStage;
 
@@ -43,15 +43,12 @@ impl InstrumentEditPane {
                             ) {
                                 // NEW press - spawn voice(s)
                                 if new_pitches.len() == 1 {
-                                    return Action::Track(InstrumentAction::PlayNote(
+                                    return Action::Track(TrackAction::PlayNote(
                                         new_pitches[0],
                                         100,
                                     ));
                                 } else {
-                                    return Action::Track(InstrumentAction::PlayNotes(
-                                        new_pitches,
-                                        100,
-                                    ));
+                                    return Action::Track(TrackAction::PlayNotes(new_pitches, 100));
                                 }
                             }
                             // Key repeat - sustain, no action needed
@@ -68,7 +65,7 @@ impl InstrumentEditPane {
                     if let KeyCode::Char(c) = event.key {
                         let c = translate_key(c, state.keyboard_layout);
                         if let Some(pad_idx) = self.perf.pad.key_to_pad(c) {
-                            return Action::Track(InstrumentAction::PlayDrumPad(pad_idx, 100));
+                            return Action::Track(TrackAction::PlayDrumPad(pad_idx, 100));
                         }
                     }
                     Action::None
@@ -395,7 +392,7 @@ impl InstrumentEditPane {
             InstrumentEditActionId::ToggleChannelConfig => {
                 if let Some(id) = self.instrument_id {
                     self.channel_config = self.channel_config.toggle();
-                    return Action::Track(InstrumentAction::ToggleChannelConfig(id));
+                    return Action::Track(TrackAction::ToggleChannelConfig(id));
                 }
                 Action::None
             }
@@ -465,7 +462,7 @@ impl InstrumentEditPane {
                     if let Some(ProcessingStage::Effect(effect)) = self.processing_chain.get(i) {
                         if effect.effect_type.is_vst() {
                             if let Some(instrument_id) = self.instrument_id {
-                                Action::Track(InstrumentAction::OpenVstEffectParams(
+                                Action::Track(TrackAction::OpenVstEffectParams(
                                     instrument_id,
                                     effect.id,
                                 ))

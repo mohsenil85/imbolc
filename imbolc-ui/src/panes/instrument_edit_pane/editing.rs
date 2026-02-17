@@ -1,7 +1,7 @@
 use super::InstrumentEditPane;
 use crate::state::param::{adjust_freq_semitone, adjust_musical_step};
 use crate::state::InstrumentSection;
-use crate::ui::{Action, InstrumentAction, InstrumentUpdate};
+use crate::ui::{Action, TrackAction, TrackUpdate};
 use imbolc_types::ProcessingStage;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -189,7 +189,7 @@ impl InstrumentEditPane {
 
     pub(super) fn emit_update(&self) -> Action {
         if let Some(id) = self.instrument_id {
-            Action::Track(InstrumentAction::Update(Box::new(InstrumentUpdate {
+            Action::Track(TrackAction::Update(Box::new(TrackUpdate {
                 id,
                 source: self.source,
                 source_params: self.source_params.clone(),

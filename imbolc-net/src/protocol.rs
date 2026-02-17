@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use imbolc_types::{
     ArrangementAction, ArrangementState, AutomationAction, AutomationLane, AutomationLaneId,
-    AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, InstrumentAction,
-    LayerGroupAction, MidiAction, MixerAction, MixerBus, MixerState, NoteSequence, PianoRollAction,
-    PianoRollState, SequencerAction, ServerAction, SessionAction, SessionState, Track, TrackId,
+    AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, LayerGroupAction,
+    MidiAction, MixerAction, MixerBus, MixerState, NoteSequence, PianoRollAction, PianoRollState,
+    SequencerAction, ServerAction, SessionAction, SessionState, Track, TrackAction, TrackId,
     TrackState, VstParamAction,
 };
 
@@ -87,7 +87,7 @@ fn rand_u64() -> u64 {
 pub enum NetworkAction {
     None,
     Quit,
-    Track(InstrumentAction),
+    Track(TrackAction),
     Mixer(MixerAction),
     PianoRoll(PianoRollAction),
     Arrangement(ArrangementAction),

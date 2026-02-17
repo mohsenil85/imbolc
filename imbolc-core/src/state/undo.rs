@@ -4,7 +4,7 @@ use std::time::Instant;
 use super::instrument::Track;
 use super::{SessionState, TrackState};
 use crate::action::{
-    BusAction, DomainAction, InstrumentAction, MixerAction, SequencerAction, SessionAction,
+    BusAction, DomainAction, MixerAction, SequencerAction, SessionAction, TrackAction,
     VstParamAction,
 };
 use imbolc_types::TagAction;
@@ -273,15 +273,16 @@ pub fn undo_scope(
 
     match action {
         // Track add/delete always touch both state trees
-        DomainAction::Track(InstrumentAction::Add(_))
-        | DomainAction::Track(InstrumentAction::Delete(_)) => UndoScope::Full,
+        DomainAction::Track(TrackAction::Add(_)) | DomainAction::Track(TrackAction::Delete(_)) => {
+            UndoScope::Full
+        }
 
         // Layer link/unlink modifies instruments + session.mixer.layer_group_mixers
-        DomainAction::Track(InstrumentAction::LinkLayer(_, _))
-        | DomainAction::Track(InstrumentAction::UnlinkLayer(_)) => UndoScope::Full,
+        DomainAction::Track(TrackAction::LinkLayer(_, _))
+        | DomainAction::Track(TrackAction::UnlinkLayer(_)) => UndoScope::Full,
 
         // Track Update carries an explicit id
-        DomainAction::Track(InstrumentAction::Update(update)) => {
+        DomainAction::Track(TrackAction::Update(update)) => {
             if recording {
                 UndoScope::Full
             } else {
@@ -289,9 +290,9 @@ pub fn undo_scope(
             }
         }
 
-        // Other instrument actions — use target_instrument_id()
+        // Other instrument actions — use target_track_id()
         DomainAction::Track(a) => {
-            match a.target_instrument_id() {
+            match a.target_track_id() {
                 Some(id) => {
                     if recording {
                         UndoScope::Full
@@ -390,22 +391,22 @@ pub fn coalesce_key(
     match action {
         // Track parameter tweaks — coalesce by instrument ID
         DomainAction::Track(
-            InstrumentAction::AdjustFilterCutoff(id, _)
-            | InstrumentAction::AdjustFilterResonance(id, _)
-            | InstrumentAction::AdjustEffectParam(id, _, _, _)
-            | InstrumentAction::AdjustLfoRate(id, _)
-            | InstrumentAction::AdjustLfoDepth(id, _)
-            | InstrumentAction::AdjustEnvelopeAttack(id, _)
-            | InstrumentAction::AdjustEnvelopeDecay(id, _)
-            | InstrumentAction::AdjustEnvelopeSustain(id, _)
-            | InstrumentAction::AdjustEnvelopeRelease(id, _)
-            | InstrumentAction::AdjustArpOctaves(id, _)
-            | InstrumentAction::AdjustArpGate(id, _)
-            | InstrumentAction::AdjustLayerOctaveOffset(id, _)
-            | InstrumentAction::AdjustTrackSwing(id, _)
-            | InstrumentAction::AdjustTrackHumanizeVelocity(id, _)
-            | InstrumentAction::AdjustTrackHumanizeTiming(id, _)
-            | InstrumentAction::AdjustTrackTimingOffset(id, _),
+            TrackAction::AdjustFilterCutoff(id, _)
+            | TrackAction::AdjustFilterResonance(id, _)
+            | TrackAction::AdjustEffectParam(id, _, _, _)
+            | TrackAction::AdjustLfoRate(id, _)
+            | TrackAction::AdjustLfoDepth(id, _)
+            | TrackAction::AdjustEnvelopeAttack(id, _)
+            | TrackAction::AdjustEnvelopeDecay(id, _)
+            | TrackAction::AdjustEnvelopeSustain(id, _)
+            | TrackAction::AdjustEnvelopeRelease(id, _)
+            | TrackAction::AdjustArpOctaves(id, _)
+            | TrackAction::AdjustArpGate(id, _)
+            | TrackAction::AdjustLayerOctaveOffset(id, _)
+            | TrackAction::AdjustTrackSwing(id, _)
+            | TrackAction::AdjustTrackHumanizeVelocity(id, _)
+            | TrackAction::AdjustTrackHumanizeTiming(id, _)
+            | TrackAction::AdjustTrackTimingOffset(id, _),
         ) => CoalesceKey::InstrumentParam(*id),
         DomainAction::Track(_) => CoalesceKey::None,
 
@@ -469,16 +470,16 @@ pub fn is_undoable(action: &DomainAction) -> bool {
     match action {
         DomainAction::Track(a) => !matches!(
             a,
-            InstrumentAction::PlayNote(_, _)
-                | InstrumentAction::PlayNotes(_, _)
-                | InstrumentAction::PlayDrumPad(_, _)
-                | InstrumentAction::Select(_)
-                | InstrumentAction::SelectNext
-                | InstrumentAction::SelectPrev
-                | InstrumentAction::SelectFirst
-                | InstrumentAction::SelectLast
-                | InstrumentAction::Edit(_)
-                | InstrumentAction::OpenVstEffectParams(_, _)
+            TrackAction::PlayNote(_, _)
+                | TrackAction::PlayNotes(_, _)
+                | TrackAction::PlayDrumPad(_, _)
+                | TrackAction::Select(_)
+                | TrackAction::SelectNext
+                | TrackAction::SelectPrev
+                | TrackAction::SelectFirst
+                | TrackAction::SelectLast
+                | TrackAction::Edit(_)
+                | TrackAction::OpenVstEffectParams(_, _)
         ),
         DomainAction::Mixer(a) => !matches!(
             a,
@@ -685,13 +686,13 @@ mod tests {
 
     #[test]
     fn is_undoable_instrument_add() {
-        let action = DomainAction::Track(InstrumentAction::Add(SourceType::Saw));
+        let action = DomainAction::Track(TrackAction::Add(SourceType::Saw));
         assert!(is_undoable(&action));
     }
 
     #[test]
     fn is_undoable_select_is_not() {
-        let action = DomainAction::Track(InstrumentAction::Select(0));
+        let action = DomainAction::Track(TrackAction::Select(0));
         assert!(!is_undoable(&action));
     }
 
@@ -768,21 +769,21 @@ mod tests {
         let id1 = instruments.add_track(SourceType::Saw);
 
         // Track Add => Full
-        let action = DomainAction::Track(InstrumentAction::Add(SourceType::Saw));
+        let action = DomainAction::Track(TrackAction::Add(SourceType::Saw));
         assert_eq!(
             undo_scope(&action, &session, &instruments, false),
             UndoScope::Full
         );
 
         // Track Delete => Full
-        let action = DomainAction::Track(InstrumentAction::Delete(id1));
+        let action = DomainAction::Track(TrackAction::Delete(id1));
         assert_eq!(
             undo_scope(&action, &session, &instruments, false),
             UndoScope::Full
         );
 
         // Track param tweak => SingleInstrument (no automation recording)
-        let action = DomainAction::Track(InstrumentAction::AdjustFilterCutoff(id1, 0.1));
+        let action = DomainAction::Track(TrackAction::AdjustFilterCutoff(id1, 0.1));
         assert_eq!(
             undo_scope(&action, &session, &instruments, false),
             UndoScope::SingleInstrument(id1)

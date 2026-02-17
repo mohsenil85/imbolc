@@ -3,9 +3,7 @@ use std::any::Any;
 use crate::state::{AppState, SwingGrid, TrackId};
 use crate::ui::action_id::{ActionId, GrooveActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{
-    Action, Color, InputEvent, InstrumentAction, Keymap, Pane, Rect, RenderBuf, Style,
-};
+use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
 
 /// Parameter indices for the groove pane
 const PARAM_SWING: usize = 0;
@@ -70,16 +68,13 @@ impl Pane for GroovePane {
             ActionId::Groove(GrooveActionId::CycleSwingGrid) => {
                 let current = groove.swing_grid.unwrap_or(SwingGrid::Eighths);
                 let next = current.next();
-                Action::Track(InstrumentAction::SetTrackSwingGrid(
-                    instrument_id,
-                    Some(next),
-                ))
+                Action::Track(TrackAction::SetTrackSwingGrid(instrument_id, Some(next)))
             }
             ActionId::Groove(GrooveActionId::CycleTimeSig) => {
-                Action::Track(InstrumentAction::CycleTrackTimeSignature(instrument_id))
+                Action::Track(TrackAction::CycleTrackTimeSignature(instrument_id))
             }
             ActionId::Groove(GrooveActionId::Reset) => {
-                Action::Track(InstrumentAction::ResetTrackGroove(instrument_id))
+                Action::Track(TrackAction::ResetTrackGroove(instrument_id))
             }
             _ => Action::None,
         }
@@ -295,10 +290,7 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(InstrumentAction::AdjustTrackSwing(
-                instrument_id,
-                signed_delta,
-            ))
+            Action::Track(TrackAction::AdjustTrackSwing(instrument_id, signed_delta))
         }
         PARAM_SWING_GRID => {
             // Cycle swing grid
@@ -308,10 +300,7 @@ fn adjust_param(
             } else {
                 cycle_swing_grid_rev(current)
             };
-            Action::Track(InstrumentAction::SetTrackSwingGrid(
-                instrument_id,
-                Some(next),
-            ))
+            Action::Track(TrackAction::SetTrackSwingGrid(instrument_id, Some(next)))
         }
         PARAM_HUMANIZE_VEL => {
             let delta = match action {
@@ -322,7 +311,7 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(InstrumentAction::AdjustTrackHumanizeVelocity(
+            Action::Track(TrackAction::AdjustTrackHumanizeVelocity(
                 instrument_id,
                 signed_delta,
             ))
@@ -336,7 +325,7 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(InstrumentAction::AdjustTrackHumanizeTiming(
+            Action::Track(TrackAction::AdjustTrackHumanizeTiming(
                 instrument_id,
                 signed_delta,
             ))
@@ -350,7 +339,7 @@ fn adjust_param(
                 _ => 1.0,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(InstrumentAction::AdjustTrackTimingOffset(
+            Action::Track(TrackAction::AdjustTrackTimingOffset(
                 instrument_id,
                 signed_delta,
             ))

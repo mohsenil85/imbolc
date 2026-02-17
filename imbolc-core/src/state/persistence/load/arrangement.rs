@@ -9,7 +9,7 @@ pub(super) fn load_automation(conn: &Connection, session: &mut SessionState) -> 
     session.automation.lanes.clear();
 
     let mut stmt = conn.prepare(
-        "SELECT id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
+        "SELECT id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
          FROM automation_lanes ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -111,7 +111,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     // CC mappings
     session.midi_recording.cc_mappings.clear();
     let mut cc_stmt = conn.prepare(
-        "SELECT cc_number, channel, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source
+        "SELECT cc_number, channel, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, min_value, max_value, source
          FROM midi_cc_mappings ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -179,7 +179,7 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
     // Pitch bend configs
     session.midi_recording.pitch_bend_configs.clear();
     let mut pb_stmt = conn.prepare(
-        "SELECT target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, center_value, range, sensitivity
+        "SELECT target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, center_value, range, sensitivity
          FROM midi_pitch_bend_configs ORDER BY id"
     )?;
     #[allow(clippy::type_complexity)]
@@ -259,7 +259,7 @@ pub(super) fn load_param_tags(conn: &Connection, session: &mut SessionState) -> 
         let mut tag = ParamTag::new(name);
 
         let mut target_stmt = conn.prepare(
-            "SELECT target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra
+            "SELECT target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra
              FROM param_tag_targets WHERE tag_id = ?1 ORDER BY position"
         )?;
         #[allow(clippy::type_complexity)]
@@ -383,7 +383,7 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
 
         // Clip automation lanes
         let mut lane_stmt = conn.prepare(
-            "SELECT id, target_type, target_instrument_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
+            "SELECT id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value
              FROM arrangement_clip_automation_lanes WHERE clip_id = ?1 ORDER BY id"
         )?;
         #[allow(clippy::type_complexity)]

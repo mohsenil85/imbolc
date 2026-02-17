@@ -1,32 +1,32 @@
 use crate::{
-    BusId, EqParamKind, FilterType, InstrumentAction, Param, ParamValue, SessionState, SourceType,
+    BusId, EqParamKind, FilterType, Param, ParamValue, SessionState, SourceType, TrackAction,
     TrackId, TrackState,
 };
 
 pub(super) fn reduce(
-    action: &InstrumentAction,
+    action: &TrackAction,
     instruments: &mut TrackState,
     session: &mut SessionState,
 ) -> bool {
     match action {
-        InstrumentAction::Add(source_type) => {
+        TrackAction::Add(source_type) => {
             let id = instruments.add_track(*source_type);
             initialize_instrument_from_registries(id, *source_type, instruments, session);
             session.piano_roll.add_sequence(id);
             true
         }
-        InstrumentAction::Delete(id) => {
+        TrackAction::Delete(id) => {
             instruments.remove_track(*id);
             session.piano_roll.remove_sequence(*id);
             session.automation.remove_lanes_for_instrument(*id);
             session.arrangement.remove_instrument_data(*id);
             true
         }
-        InstrumentAction::Edit(id) => {
+        TrackAction::Edit(id) => {
             instruments.editing_track_id = Some(*id);
             true
         }
-        InstrumentAction::Update(update) => {
+        TrackAction::Update(update) => {
             if let Some(instrument) = instruments.track_mut(update.id) {
                 instrument.source = update.source;
                 instrument.source_params = update.source_params.clone();
@@ -38,31 +38,31 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::AddEffect(id, effect_type) => {
+        TrackAction::AddEffect(id, effect_type) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 instrument.add_effect(*effect_type);
             }
             true
         }
-        InstrumentAction::RemoveEffect(id, effect_id) => {
+        TrackAction::RemoveEffect(id, effect_id) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 instrument.remove_effect(*effect_id);
             }
             true
         }
-        InstrumentAction::MoveStage(id, chain_idx, direction) => {
+        TrackAction::MoveStage(id, chain_idx, direction) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 instrument.move_stage(*chain_idx, *direction);
             }
             true
         }
-        InstrumentAction::SetFilter(id, filter_type) => {
+        TrackAction::SetFilter(id, filter_type) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 instrument.set_filter(*filter_type);
             }
             true
         }
-        InstrumentAction::ToggleEffectBypass(id, effect_id) => {
+        TrackAction::ToggleEffectBypass(id, effect_id) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 if let Some(effect) = instrument.effects_mut().find(|e| e.id == *effect_id) {
                     effect.enabled = !effect.enabled;
@@ -70,13 +70,13 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::ToggleFilter(id) => {
+        TrackAction::ToggleFilter(id) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 instrument.toggle_filter();
             }
             true
         }
-        InstrumentAction::CycleFilterType(id) => {
+        TrackAction::CycleFilterType(id) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 if let Some(filter) = instrument.filter_mut() {
                     filter.filter_type = match filter.filter_type {
@@ -95,7 +95,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::AdjustFilterCutoff(id, delta) => {
+        TrackAction::AdjustFilterCutoff(id, delta) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 if let Some(filter) = instrument.filter_mut() {
                     filter.cutoff.value = (filter.cutoff.value + delta * filter.cutoff.max * 0.02)
@@ -104,7 +104,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::AdjustFilterResonance(id, delta) => {
+        TrackAction::AdjustFilterResonance(id, delta) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 if let Some(filter) = instrument.filter_mut() {
                     filter.resonance.value = (filter.resonance.value + delta * 0.05)
@@ -113,7 +113,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::AdjustEffectParam(id, effect_id, param_idx, delta) => {
+        TrackAction::AdjustEffectParam(id, effect_id, param_idx, delta) => {
             if let Some(instrument) = instruments.track_mut(*id) {
                 if let Some(effect) = instrument.effects_mut().find(|e| e.id == *effect_id) {
                     if let Some(param) = effect.params.get_mut(param_idx.get()) {
@@ -124,37 +124,37 @@ pub(super) fn reduce(
             true
         }
         // PlayNote/PlayNotes/PlayDrumPad: audio side effects only, no state mutation
-        InstrumentAction::PlayNote(_, _)
-        | InstrumentAction::PlayNotes(_, _)
-        | InstrumentAction::PlayDrumPad(_, _) => true,
+        TrackAction::PlayNote(_, _)
+        | TrackAction::PlayNotes(_, _)
+        | TrackAction::PlayDrumPad(_, _) => true,
 
-        InstrumentAction::Select(idx) => {
+        TrackAction::Select(idx) => {
             if *idx < instruments.tracks.len() {
                 instruments.selected = Some(*idx);
             }
             true
         }
-        InstrumentAction::SelectNext => {
+        TrackAction::SelectNext => {
             instruments.select_next();
             true
         }
-        InstrumentAction::SelectPrev => {
+        TrackAction::SelectPrev => {
             instruments.select_prev();
             true
         }
-        InstrumentAction::SelectFirst => {
+        TrackAction::SelectFirst => {
             if !instruments.tracks.is_empty() {
                 instruments.selected = Some(0);
             }
             true
         }
-        InstrumentAction::SelectLast => {
+        TrackAction::SelectLast => {
             if !instruments.tracks.is_empty() {
                 instruments.selected = Some(instruments.tracks.len() - 1);
             }
             true
         }
-        InstrumentAction::LoadSampleResult(instrument_id, path) => {
+        TrackAction::LoadSampleResult(instrument_id, path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
             instruments.next_sampler_buffer_id += 1;
             let sample_name = path.file_stem().map(|s| s.to_string_lossy().to_string());
@@ -166,53 +166,53 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::ToggleArp(id) => {
+        TrackAction::ToggleArp(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.enabled = !inst.note_input.arpeggiator.enabled;
             }
             true
         }
-        InstrumentAction::CycleArpDirection(id) => {
+        TrackAction::CycleArpDirection(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.direction =
                     inst.note_input.arpeggiator.direction.next();
             }
             true
         }
-        InstrumentAction::CycleArpDirectionReverse(id) => {
+        TrackAction::CycleArpDirectionReverse(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.direction =
                     inst.note_input.arpeggiator.direction.prev();
             }
             true
         }
-        InstrumentAction::CycleArpRate(id) => {
+        TrackAction::CycleArpRate(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.rate = inst.note_input.arpeggiator.rate.next();
             }
             true
         }
-        InstrumentAction::CycleArpRateReverse(id) => {
+        TrackAction::CycleArpRateReverse(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.rate = inst.note_input.arpeggiator.rate.prev();
             }
             true
         }
-        InstrumentAction::AdjustArpOctaves(id, delta) => {
+        TrackAction::AdjustArpOctaves(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.octaves =
                     (inst.note_input.arpeggiator.octaves as i8 + delta).clamp(1, 4) as u8;
             }
             true
         }
-        InstrumentAction::AdjustArpGate(id, delta) => {
+        TrackAction::AdjustArpGate(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.arpeggiator.gate =
                     (inst.note_input.arpeggiator.gate + delta).clamp(0.1, 1.0);
             }
             true
         }
-        InstrumentAction::CycleChordShape(id) => {
+        TrackAction::CycleChordShape(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.chord_shape = match inst.note_input.chord_shape {
                     None => Some(crate::ChordShape::Major),
@@ -221,7 +221,7 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::CycleChordShapeReverse(id) => {
+        TrackAction::CycleChordShapeReverse(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.chord_shape = match inst.note_input.chord_shape {
                     None => Some(crate::ChordShape::Octave),
@@ -231,13 +231,13 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::ClearChordShape(id) => {
+        TrackAction::ClearChordShape(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.note_input.chord_shape = None;
             }
             true
         }
-        InstrumentAction::LoadIRResult(instrument_id, effect_id, path) => {
+        TrackAction::LoadIRResult(instrument_id, effect_id, path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
             instruments.next_sampler_buffer_id += 1;
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
@@ -251,9 +251,9 @@ pub(super) fn reduce(
             true
         }
         // OpenVstEffectParams: navigation only, no state mutation
-        InstrumentAction::OpenVstEffectParams(_, _) => true,
+        TrackAction::OpenVstEffectParams(_, _) => true,
 
-        InstrumentAction::SetEqParam(instrument_id, band_idx, param, value) => {
+        TrackAction::SetEqParam(instrument_id, band_idx, param, value) => {
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(eq) = instrument.eq_mut() {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
@@ -268,40 +268,40 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::ToggleEq(instrument_id) => {
+        TrackAction::ToggleEq(instrument_id) => {
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 instrument.toggle_eq();
             }
             true
         }
-        InstrumentAction::LinkLayer(a, b) => {
+        TrackAction::LinkLayer(a, b) => {
             reduce_link_layer(instruments, session, *a, *b);
             true
         }
-        InstrumentAction::UnlinkLayer(id) => {
+        TrackAction::UnlinkLayer(id) => {
             reduce_unlink_layer(instruments, session, *id);
             true
         }
-        InstrumentAction::AdjustLayerOctaveOffset(id, delta) => {
+        TrackAction::AdjustLayerOctaveOffset(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.layer.octave_offset = (inst.layer.octave_offset + delta).clamp(-4, 4);
             }
             true
         }
         // Groove settings
-        InstrumentAction::SetTrackSwing(id, value) => {
+        TrackAction::SetTrackSwing(id, value) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.swing_amount = value.map(|v| v.clamp(0.0, 1.0));
             }
             true
         }
-        InstrumentAction::SetTrackSwingGrid(id, grid) => {
+        TrackAction::SetTrackSwingGrid(id, grid) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.swing_grid = *grid;
             }
             true
         }
-        InstrumentAction::AdjustTrackSwing(id, delta) => {
+        TrackAction::AdjustTrackSwing(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 let current = inst
                     .groove
@@ -311,13 +311,13 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::SetTrackHumanizeVelocity(id, value) => {
+        TrackAction::SetTrackHumanizeVelocity(id, value) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.humanize_velocity = value.map(|v| v.clamp(0.0, 1.0));
             }
             true
         }
-        InstrumentAction::AdjustTrackHumanizeVelocity(id, delta) => {
+        TrackAction::AdjustTrackHumanizeVelocity(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 let current = inst
                     .groove
@@ -327,13 +327,13 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::SetTrackHumanizeTiming(id, value) => {
+        TrackAction::SetTrackHumanizeTiming(id, value) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.humanize_timing = value.map(|v| v.clamp(0.0, 1.0));
             }
             true
         }
-        InstrumentAction::AdjustTrackHumanizeTiming(id, delta) => {
+        TrackAction::AdjustTrackHumanizeTiming(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 let current = inst
                     .groove
@@ -343,32 +343,32 @@ pub(super) fn reduce(
             }
             true
         }
-        InstrumentAction::SetTrackTimingOffset(id, value) => {
+        TrackAction::SetTrackTimingOffset(id, value) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.timing_offset_ms = value.clamp(-50.0, 50.0);
             }
             true
         }
-        InstrumentAction::AdjustTrackTimingOffset(id, delta) => {
+        TrackAction::AdjustTrackTimingOffset(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.timing_offset_ms =
                     (inst.groove.timing_offset_ms + delta).clamp(-50.0, 50.0);
             }
             true
         }
-        InstrumentAction::ResetTrackGroove(id) => {
+        TrackAction::ResetTrackGroove(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.reset();
             }
             true
         }
-        InstrumentAction::SetTrackTimeSignature(id, ts) => {
+        TrackAction::SetTrackTimeSignature(id, ts) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.time_signature = *ts;
             }
             true
         }
-        InstrumentAction::CycleTrackTimeSignature(id) => {
+        TrackAction::CycleTrackTimeSignature(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.groove.time_signature = match inst.groove.time_signature {
                     None => Some((4, 4)),
@@ -384,61 +384,61 @@ pub(super) fn reduce(
             true
         }
         // LFO actions
-        InstrumentAction::ToggleLfo(id) => {
+        TrackAction::ToggleLfo(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.lfo.enabled = !inst.modulation.lfo.enabled;
             }
             true
         }
-        InstrumentAction::AdjustLfoRate(id, delta) => {
+        TrackAction::AdjustLfoRate(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.lfo.rate =
                     (inst.modulation.lfo.rate + delta * 0.5).clamp(0.1, 20.0);
             }
             true
         }
-        InstrumentAction::AdjustLfoDepth(id, delta) => {
+        TrackAction::AdjustLfoDepth(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.lfo.depth =
                     (inst.modulation.lfo.depth + delta * 0.05).clamp(0.0, 1.0);
             }
             true
         }
-        InstrumentAction::SetLfoShape(id, shape) => {
+        TrackAction::SetLfoShape(id, shape) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.lfo.shape = *shape;
             }
             true
         }
-        InstrumentAction::SetLfoTarget(id, target) => {
+        TrackAction::SetLfoTarget(id, target) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.lfo.target = *target;
             }
             true
         }
         // Envelope actions
-        InstrumentAction::AdjustEnvelopeAttack(id, delta) => {
+        TrackAction::AdjustEnvelopeAttack(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.amp_envelope.attack =
                     (inst.modulation.amp_envelope.attack + delta * 0.1).clamp(0.001, 2.0);
             }
             true
         }
-        InstrumentAction::AdjustEnvelopeDecay(id, delta) => {
+        TrackAction::AdjustEnvelopeDecay(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.amp_envelope.decay =
                     (inst.modulation.amp_envelope.decay + delta * 0.1).clamp(0.001, 2.0);
             }
             true
         }
-        InstrumentAction::AdjustEnvelopeSustain(id, delta) => {
+        TrackAction::AdjustEnvelopeSustain(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.amp_envelope.sustain =
                     (inst.modulation.amp_envelope.sustain + delta * 0.05).clamp(0.0, 1.0);
             }
             true
         }
-        InstrumentAction::AdjustEnvelopeRelease(id, delta) => {
+        TrackAction::AdjustEnvelopeRelease(id, delta) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.modulation.amp_envelope.release =
                     (inst.modulation.amp_envelope.release + delta * 0.2).clamp(0.001, 5.0);
@@ -446,7 +446,7 @@ pub(super) fn reduce(
             true
         }
         // Channel config
-        InstrumentAction::ToggleChannelConfig(id) => {
+        TrackAction::ToggleChannelConfig(id) => {
             if let Some(inst) = instruments.track_mut(*id) {
                 inst.channel_strip.channel_config = inst.channel_strip.channel_config.toggle();
             }
@@ -618,7 +618,7 @@ mod tests {
         let custom_id = CustomSynthDefId::new(0);
 
         reduce(
-            &InstrumentAction::Add(SourceType::Custom(custom_id)),
+            &TrackAction::Add(SourceType::Custom(custom_id)),
             &mut instruments,
             &mut session,
         );
@@ -639,7 +639,7 @@ mod tests {
         let vst_id = VstPluginId::new(0);
 
         reduce(
-            &InstrumentAction::Add(SourceType::Vst(vst_id)),
+            &TrackAction::Add(SourceType::Vst(vst_id)),
             &mut instruments,
             &mut session,
         );
@@ -659,7 +659,7 @@ mod tests {
         let mut instruments = TrackState::new();
 
         reduce(
-            &InstrumentAction::Add(SourceType::Saw),
+            &TrackAction::Add(SourceType::Saw),
             &mut instruments,
             &mut session,
         );
@@ -677,7 +677,7 @@ mod tests {
         // Path A: via reducer
         let mut instruments_a = TrackState::new();
         reduce(
-            &InstrumentAction::Add(SourceType::Custom(custom_id)),
+            &TrackAction::Add(SourceType::Custom(custom_id)),
             &mut instruments_a,
             &mut session,
         );
@@ -711,7 +711,7 @@ mod tests {
         // Path A: via reducer
         let mut instruments_a = TrackState::new();
         reduce(
-            &InstrumentAction::Add(SourceType::Vst(vst_id)),
+            &TrackAction::Add(SourceType::Vst(vst_id)),
             &mut instruments_a,
             &mut session,
         );

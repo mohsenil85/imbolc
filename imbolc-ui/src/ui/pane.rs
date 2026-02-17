@@ -7,9 +7,9 @@ use crate::state::AppState;
 // Re-export all action types from the core crate
 pub use crate::action::{
     Action, ArrangementAction, AutomationAction, BusAction, ChopperAction, DispatchResult,
-    FileSelectAction, GenerativeAction, InstrumentAction, InstrumentUpdate, LayerGroupAction,
-    MixerAction, NavAction, NavIntent, PaneId, PianoRollAction, SequencerAction, ServerAction,
-    SessionAction, StatusEvent, ToggleResult, VstParamAction,
+    FileSelectAction, GenerativeAction, LayerGroupAction, MixerAction, NavAction, NavIntent,
+    PaneId, PianoRollAction, SequencerAction, ServerAction, SessionAction, StatusEvent,
+    ToggleResult, TrackAction, TrackUpdate, VstParamAction,
 };
 
 /// Trait for UI panes (screens/views).

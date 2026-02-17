@@ -4,9 +4,9 @@ use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use crate::state::BufferId;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, InstrumentAction};
+use imbolc_types::{DomainAction, TrackAction};
 
-fn reduce(state: &mut AppState, action: &InstrumentAction) {
+fn reduce(state: &mut AppState, action: &TrackAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
         &mut state.tracks,
@@ -19,7 +19,7 @@ pub(super) fn handle_add(
     source_type: crate::state::SourceType,
 ) -> DispatchResult {
     let next_id = state.tracks.next_id;
-    reduce(state, &InstrumentAction::Add(source_type));
+    reduce(state, &TrackAction::Add(source_type));
     let mut result = DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit));
     result.audio_effects.push(AudioEffect::RebuildInstruments);
     result.audio_effects.push(AudioEffect::UpdatePianoRoll);
@@ -59,7 +59,7 @@ pub(super) fn handle_delete(
         audio.free_samples(buffer_ids);
     }
 
-    reduce(state, &InstrumentAction::Delete(inst_id));
+    reduce(state, &TrackAction::Delete(inst_id));
 
     // Clear generative voice targets pointing to the deleted instrument
     for voice in &mut state.session.generative.voices {
@@ -86,13 +86,13 @@ pub(super) fn handle_delete(
 }
 
 pub(super) fn handle_edit(state: &mut AppState, id: crate::state::TrackId) -> DispatchResult {
-    reduce(state, &InstrumentAction::Edit(id));
+    reduce(state, &TrackAction::Edit(id));
     DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit))
 }
 
 pub(super) fn handle_update(
     state: &mut AppState,
-    update: &crate::action::InstrumentUpdate,
+    update: &crate::action::TrackUpdate,
 ) -> DispatchResult {
     // Capture old values for automation recording before applying
     let old_values = if state.recording.automation_recording && state.audio.playing {
@@ -110,7 +110,7 @@ pub(super) fn handle_update(
         None
     };
 
-    reduce(state, &InstrumentAction::Update(Box::new(update.clone())));
+    reduce(state, &TrackAction::Update(Box::new(update.clone())));
 
     // Record automation for changed LFO/envelope params
     if let Some((old_lfo_rate, old_lfo_depth, old_attack, old_decay, old_sustain, old_release)) =
@@ -160,7 +160,7 @@ pub(super) fn handle_update(
 #[allow(unused_must_use)]
 mod tests {
     use super::*;
-    use crate::action::InstrumentUpdate;
+    use crate::action::TrackUpdate;
     use crate::state::instrument::SourceType;
     use imbolc_types::TrackId;
 
@@ -170,9 +170,9 @@ mod tests {
         (state, id)
     }
 
-    fn default_update(state: &AppState, id: TrackId) -> InstrumentUpdate {
+    fn default_update(state: &AppState, id: TrackId) -> TrackUpdate {
         let inst = state.tracks.track(id).unwrap();
-        InstrumentUpdate {
+        TrackUpdate {
             id,
             source: inst.source,
             source_params: inst.source_params.clone(),
