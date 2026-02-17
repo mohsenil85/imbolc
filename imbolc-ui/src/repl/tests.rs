@@ -58,11 +58,8 @@ fn test_add_instrument() {
     let (mut d, mut a) = test_setup();
 
     exec("instrument add saw", &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.instruments.len(), 1);
-    assert_eq!(
-        d.state().instruments.instruments[0].source.short_name(),
-        "saw"
-    );
+    assert_eq!(d.state().tracks.tracks.len(), 1);
+    assert_eq!(d.state().tracks.tracks[0].source.short_name(), "saw");
 
     match exec("show instruments", &mut d, &mut a).unwrap() {
         ReplResult::Output(text) => assert!(text.contains("saw"), "expected saw in: {text}"),
@@ -99,14 +96,14 @@ fn test_instrument_lifecycle() {
 
     exec("instrument add saw", &mut d, &mut a).unwrap();
     exec("instrument add sin", &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.instruments.len(), 2);
+    assert_eq!(d.state().tracks.tracks.len(), 2);
 
     exec("instrument select 0", &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.selected, Some(0));
+    assert_eq!(d.state().tracks.selected, Some(0));
 
-    let id = d.state().instruments.instruments[0].id;
+    let id = d.state().tracks.tracks[0].id;
     exec(&format!("instrument delete {}", id), &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.instruments.len(), 1);
+    assert_eq!(d.state().tracks.tracks.len(), 1);
 }
 
 #[test]
@@ -117,13 +114,13 @@ fn test_mixer_operations() {
     // Mixer selection starts at channel 0 (first instrument)
     exec("mixer toggle-mute", &mut d, &mut a).unwrap();
     assert!(
-        d.state().instruments.instruments[0].channel_strip.mute,
+        d.state().tracks.tracks[0].channel_strip.mute,
         "instrument should be muted"
     );
 
     exec("mixer toggle-mute", &mut d, &mut a).unwrap();
     assert!(
-        !d.state().instruments.instruments[0].channel_strip.mute,
+        !d.state().tracks.tracks[0].channel_strip.mute,
         "instrument should be unmuted"
     );
 }
@@ -133,13 +130,13 @@ fn test_undo_redo() {
     let (mut d, mut a) = test_setup();
 
     exec("instrument add saw", &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.instruments.len(), 1);
+    assert_eq!(d.state().tracks.tracks.len(), 1);
 
     exec("undo", &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.instruments.len(), 0);
+    assert_eq!(d.state().tracks.tracks.len(), 0);
 
     exec("redo", &mut d, &mut a).unwrap();
-    assert_eq!(d.state().instruments.instruments.len(), 1);
+    assert_eq!(d.state().tracks.tracks.len(), 1);
 }
 
 #[test]

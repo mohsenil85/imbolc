@@ -1,6 +1,6 @@
 use super::backend::{build_n_set_message, AudioBackend, BackendMessage, RawArg};
 use super::AudioEngine;
-use imbolc_types::{AutomationTarget, InstrumentState, SessionState, TrackId};
+use imbolc_types::{AutomationTarget, SessionState, TrackId, TrackState};
 use imbolc_types::{BusParameter, GlobalParameter, InstrumentParameter, ParameterTarget};
 
 impl AudioEngine {
@@ -10,7 +10,7 @@ impl AudioEngine {
         &self,
         target: &AutomationTarget,
         value: f32,
-        state: &mut InstrumentState,
+        state: &mut TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
@@ -59,7 +59,7 @@ impl AudioEngine {
         instrument_id: TrackId,
         param: &InstrumentParameter,
         value: f32,
-        state: &mut InstrumentState,
+        state: &mut TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         match param {
@@ -76,7 +76,7 @@ impl AudioEngine {
         instrument_id: TrackId,
         param: &ParameterTarget,
         value: f32,
-        state: &mut InstrumentState,
+        state: &mut TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         match param {
@@ -115,7 +115,7 @@ impl AudioEngine {
             }
             ParameterTarget::FilterBypass => {
                 let bypassed = value >= 0.5;
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     if let Some(filter) = inst.filter_mut() {
                         filter.enabled = !bypassed;
                     }
@@ -124,7 +124,7 @@ impl AudioEngine {
             ParameterTarget::EffectParam(effect_id, param_idx) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
                     if let Some(&effect_node) = nodes.effects.get(effect_id) {
-                        if let Some(instrument) = state.instrument(instrument_id) {
+                        if let Some(instrument) = state.track(instrument_id) {
                             if let Some(effect) = instrument.effect_by_id(*effect_id) {
                                 if let Some(param) = effect.params.get(param_idx.get()) {
                                     backend
@@ -138,7 +138,7 @@ impl AudioEngine {
             }
             ParameterTarget::EffectBypass(effect_id) => {
                 let bypassed = value >= 0.5;
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     if let Some(effect) = inst.effect_by_id_mut(*effect_id) {
                         effect.enabled = !bypassed;
                     }
@@ -181,7 +181,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Attack => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.attack = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -193,7 +193,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Decay => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.decay = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -205,7 +205,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Sustain => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.sustain = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -217,7 +217,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Release => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.release = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -283,22 +283,22 @@ impl AudioEngine {
             }
             // Track groove settings: state-only, no OSC messages needed
             ParameterTarget::Swing => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.swing_amount = Some(value);
                 }
             }
             ParameterTarget::HumanizeVelocity => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.humanize_velocity = Some(value);
                 }
             }
             ParameterTarget::HumanizeTiming => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.humanize_timing = Some(value);
                 }
             }
             ParameterTarget::TimingOffset => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.timing_offset_ms = value;
                 }
             }
@@ -308,7 +308,7 @@ impl AudioEngine {
                 if let Some(imbolc_types::DiscreteValue::TimeSignature(num, denom)) =
                     target.normalized_to_discrete(value)
                 {
-                    if let Some(inst) = state.instrument_mut(instrument_id) {
+                    if let Some(inst) = state.track_mut(instrument_id) {
                         inst.groove.time_signature = Some((num, denom));
                     }
                 }
@@ -352,7 +352,7 @@ impl AudioEngine {
         &self,
         target: &AutomationTarget,
         value: f32,
-        state: &mut InstrumentState,
+        state: &mut TrackState,
         session: &SessionState,
     ) -> Vec<BackendMessage> {
         let mut msgs = Vec::new();
@@ -394,7 +394,7 @@ impl AudioEngine {
         instrument_id: TrackId,
         param: &InstrumentParameter,
         value: f32,
-        state: &mut InstrumentState,
+        state: &mut TrackState,
         session: &SessionState,
     ) {
         match param {
@@ -418,7 +418,7 @@ impl AudioEngine {
         instrument_id: TrackId,
         param: &ParameterTarget,
         value: f32,
-        state: &mut InstrumentState,
+        state: &mut TrackState,
         session: &SessionState,
     ) {
         match param {
@@ -449,7 +449,7 @@ impl AudioEngine {
             }
             ParameterTarget::FilterBypass => {
                 let bypassed = value >= 0.5;
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     if let Some(filter) = inst.filter_mut() {
                         filter.enabled = !bypassed;
                     }
@@ -458,7 +458,7 @@ impl AudioEngine {
             ParameterTarget::EffectParam(effect_id, param_idx) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
                     if let Some(&effect_node) = nodes.effects.get(effect_id) {
-                        if let Some(instrument) = state.instrument(instrument_id) {
+                        if let Some(instrument) = state.track(instrument_id) {
                             if let Some(effect) = instrument.effect_by_id(*effect_id) {
                                 if let Some(param) = effect.params.get(param_idx.get()) {
                                     msgs.push(build_n_set_message(effect_node, &param.name, value));
@@ -470,7 +470,7 @@ impl AudioEngine {
             }
             ParameterTarget::EffectBypass(effect_id) => {
                 let bypassed = value >= 0.5;
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     if let Some(effect) = inst.effect_by_id_mut(*effect_id) {
                         effect.enabled = !bypassed;
                     }
@@ -505,7 +505,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Attack => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.attack = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -515,7 +515,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Decay => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.decay = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -525,7 +525,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Sustain => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.sustain = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -535,7 +535,7 @@ impl AudioEngine {
                 }
             }
             ParameterTarget::Release => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.modulation.amp_envelope.release = value;
                 }
                 for voice in self.voice_allocator.chains() {
@@ -591,22 +591,22 @@ impl AudioEngine {
             }
             // Track groove settings: state-only, no OSC messages needed
             ParameterTarget::Swing => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.swing_amount = Some(value);
                 }
             }
             ParameterTarget::HumanizeVelocity => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.humanize_velocity = Some(value);
                 }
             }
             ParameterTarget::HumanizeTiming => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.humanize_timing = Some(value);
                 }
             }
             ParameterTarget::TimingOffset => {
-                if let Some(inst) = state.instrument_mut(instrument_id) {
+                if let Some(inst) = state.track_mut(instrument_id) {
                     inst.groove.timing_offset_ms = value;
                 }
             }
@@ -615,7 +615,7 @@ impl AudioEngine {
                 if let Some(imbolc_types::DiscreteValue::TimeSignature(num, denom)) =
                     target.normalized_to_discrete(value)
                 {
-                    if let Some(inst) = state.instrument_mut(instrument_id) {
+                    if let Some(inst) = state.track_mut(instrument_id) {
                         inst.groove.time_signature = Some((num, denom));
                     }
                 }

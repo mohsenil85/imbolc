@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use super::instrument::Track;
-use super::{InstrumentState, SessionState};
+use super::{SessionState, TrackState};
 use crate::action::{
     BusAction, DomainAction, InstrumentAction, MixerAction, SequencerAction, SessionAction,
     VstParamAction,
@@ -45,11 +45,11 @@ enum UndoEntry {
         id: TrackId,
         instrument: Box<Track>,
     },
-    Instruments(Box<InstrumentState>),
+    Instruments(Box<TrackState>),
     Session(Box<SessionState>),
     Full {
         session: Box<SessionState>,
-        instruments: Box<InstrumentState>,
+        instruments: Box<TrackState>,
     },
 }
 
@@ -77,11 +77,11 @@ impl UndoHistory {
         &mut self,
         scope: UndoScope,
         session: &SessionState,
-        instruments: &InstrumentState,
+        instruments: &TrackState,
     ) {
         let entry = match scope {
             UndoScope::SingleInstrument(id) => {
-                match instruments.instrument(id) {
+                match instruments.track(id) {
                     Some(inst) => UndoEntry::SingleInstrument {
                         id,
                         instrument: Box::new(inst.clone()),
@@ -106,7 +106,7 @@ impl UndoHistory {
     }
 
     /// Push a snapshot from owned values (used by automation.rs when starting recording).
-    pub fn push_from(&mut self, session: SessionState, instruments: InstrumentState) {
+    pub fn push_from(&mut self, session: SessionState, instruments: TrackState) {
         if self.undo_stack.len() >= self.max_depth {
             self.undo_stack.pop_front();
         }
@@ -124,7 +124,7 @@ impl UndoHistory {
         &mut self,
         scope: UndoScope,
         session: &SessionState,
-        instruments: &InstrumentState,
+        instruments: &TrackState,
         key: CoalesceKey,
     ) {
         let now = Instant::now();
@@ -151,7 +151,7 @@ impl UndoHistory {
     pub fn undo(
         &mut self,
         session: &mut SessionState,
-        instruments: &mut InstrumentState,
+        instruments: &mut TrackState,
     ) -> Option<UndoScope> {
         self.clear_coalesce();
         let entry = self.undo_stack.pop_back()?;
@@ -167,7 +167,7 @@ impl UndoHistory {
     pub fn redo(
         &mut self,
         session: &mut SessionState,
-        instruments: &mut InstrumentState,
+        instruments: &mut TrackState,
     ) -> Option<UndoScope> {
         self.clear_coalesce();
         let entry = self.redo_stack.pop_back()?;
@@ -209,11 +209,11 @@ fn entry_scope(entry: &UndoEntry) -> UndoScope {
 fn create_inverse(
     entry: &UndoEntry,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
 ) -> UndoEntry {
     match entry {
         UndoEntry::SingleInstrument { id, .. } => {
-            match instruments.instrument(*id) {
+            match instruments.track(*id) {
                 Some(inst) => UndoEntry::SingleInstrument {
                     id: *id,
                     instrument: Box::new(inst.clone()),
@@ -232,10 +232,10 @@ fn create_inverse(
 }
 
 /// Apply a stored entry onto the live state.
-fn apply_entry(entry: UndoEntry, session: &mut SessionState, instruments: &mut InstrumentState) {
+fn apply_entry(entry: UndoEntry, session: &mut SessionState, instruments: &mut TrackState) {
     match entry {
         UndoEntry::SingleInstrument { id, instrument } => {
-            if let Some(live) = instruments.instrument_mut(id) {
+            if let Some(live) = instruments.track_mut(id) {
                 *live = *instrument;
             }
             // If instrument not found (shouldn't happen due to Full escalation),
@@ -266,7 +266,7 @@ fn apply_entry(entry: UndoEntry, session: &mut SessionState, instruments: &mut I
 pub fn undo_scope(
     action: &DomainAction,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
     automation_recording: bool,
 ) -> UndoScope {
     let recording = automation_recording;
@@ -322,7 +322,7 @@ pub fn undo_scope(
 
         // Sequencer/Chopper operate on the selected instrument's drum sequencer
         DomainAction::Sequencer(_) | DomainAction::Chopper(_) => {
-            match instruments.selected_instrument() {
+            match instruments.selected_track() {
                 Some(inst) => UndoScope::SingleInstrument(inst.id),
                 None => UndoScope::Full,
             }
@@ -353,11 +353,11 @@ pub fn undo_scope(
 fn mixer_scope(
     _action: &MixerAction,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
     recording: bool,
 ) -> UndoScope {
     match session.mixer.selection {
-        super::session::MixerSelection::Track(idx) => match instruments.instruments.get(idx) {
+        super::session::MixerSelection::Track(idx) => match instruments.tracks.get(idx) {
             Some(inst) => {
                 if recording {
                     UndoScope::Full
@@ -385,7 +385,7 @@ fn mixer_scope(
 pub fn coalesce_key(
     action: &DomainAction,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
 ) -> CoalesceKey {
     match action {
         // Track parameter tweaks — coalesce by instrument ID
@@ -413,7 +413,7 @@ pub fn coalesce_key(
         DomainAction::Mixer(
             MixerAction::AdjustLevel(_) | MixerAction::AdjustPan(_) | MixerAction::AdjustSend(_, _),
         ) => match session.mixer.selection {
-            super::session::MixerSelection::Track(idx) => match instruments.instruments.get(idx) {
+            super::session::MixerSelection::Track(idx) => match instruments.tracks.get(idx) {
                 Some(inst) => CoalesceKey::InstrumentParam(inst.id),
                 None => CoalesceKey::None,
             },
@@ -435,7 +435,7 @@ pub fn coalesce_key(
             | SequencerAction::AdjustProbability(_, _, _)
             | SequencerAction::AdjustPadPitch(_, _)
             | SequencerAction::AdjustStepPitch(_, _, _),
-        ) => match instruments.selected_instrument() {
+        ) => match instruments.selected_track() {
             Some(inst) => CoalesceKey::InstrumentParam(inst.id),
             None => CoalesceKey::None,
         },
@@ -567,15 +567,15 @@ pub fn is_undoable(action: &DomainAction) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::InstrumentState;
     use crate::state::SessionState;
+    use crate::state::TrackState;
     use imbolc_types::{BusId, SourceType};
 
     #[test]
     fn test_undo_push_pop() {
         let mut history = UndoHistory::new(5);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
 
         assert!(!history.can_undo());
 
@@ -594,7 +594,7 @@ mod tests {
     fn test_redo() {
         let mut history = UndoHistory::new(5);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
 
         // Initial state
         session.mixer.master_level = 1.0;
@@ -616,7 +616,7 @@ mod tests {
     fn test_max_depth() {
         let mut history = UndoHistory::new(2);
         let session = SessionState::new();
-        let instruments = InstrumentState::new();
+        let instruments = TrackState::new();
 
         history.push_scoped(UndoScope::Full, &session, &instruments);
         history.push_scoped(UndoScope::Full, &session, &instruments);
@@ -629,7 +629,7 @@ mod tests {
     fn test_push_clears_redo() {
         let mut history = UndoHistory::new(5);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
 
         history.push_scoped(UndoScope::Full, &session, &instruments);
         history.undo(&mut session, &mut instruments);
@@ -643,7 +643,7 @@ mod tests {
     fn clear_empties_both_stacks() {
         let mut history = UndoHistory::new(5);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
 
         history.push_scoped(UndoScope::Full, &session, &instruments);
         history.push_scoped(UndoScope::Full, &session, &instruments);
@@ -660,7 +660,7 @@ mod tests {
     fn push_from_owned_works() {
         let mut history = UndoHistory::new(5);
         let session = SessionState::new();
-        let instruments = InstrumentState::new();
+        let instruments = TrackState::new();
 
         history.push_from(session.clone(), instruments.clone());
         assert!(history.can_undo());
@@ -671,7 +671,7 @@ mod tests {
     fn undo_empty_returns_none() {
         let mut history = UndoHistory::new(5);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
         assert!(history.undo(&mut session, &mut instruments).is_none());
     }
 
@@ -679,7 +679,7 @@ mod tests {
     fn redo_empty_returns_none() {
         let mut history = UndoHistory::new(5);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
         assert!(history.redo(&mut session, &mut instruments).is_none());
     }
 
@@ -701,32 +701,32 @@ mod tests {
     fn test_single_instrument_scope() {
         let mut history = UndoHistory::new(10);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
 
-        let id1 = instruments.add_instrument(SourceType::Saw);
-        let id2 = instruments.add_instrument(SourceType::Sin);
+        let id1 = instruments.add_track(SourceType::Saw);
+        let id2 = instruments.add_track(SourceType::Sin);
 
         // Snapshot instrument 1 before modifying
         history.push_scoped(UndoScope::SingleInstrument(id1), &session, &instruments);
 
         // Modify instrument 1's level
-        instruments.instrument_mut(id1).unwrap().channel_strip.level = 0.3;
+        instruments.track_mut(id1).unwrap().channel_strip.level = 0.3;
         // Also modify instrument 2 (should NOT be reverted)
-        instruments.instrument_mut(id2).unwrap().channel_strip.level = 0.7;
+        instruments.track_mut(id2).unwrap().channel_strip.level = 0.7;
 
         // Undo should only revert instrument 1
         assert!(history.undo(&mut session, &mut instruments).is_some());
         // Track 1 reverted to default (0.8)
         assert!(
-            (instruments.instrument(id1).unwrap().channel_strip.level - 0.8).abs() < f32::EPSILON,
+            (instruments.track(id1).unwrap().channel_strip.level - 0.8).abs() < f32::EPSILON,
             "instrument 1 level should be reverted to 0.8, got {}",
-            instruments.instrument(id1).unwrap().channel_strip.level
+            instruments.track(id1).unwrap().channel_strip.level
         );
         // Track 2 unchanged
         assert!(
-            (instruments.instrument(id2).unwrap().channel_strip.level - 0.7).abs() < f32::EPSILON,
+            (instruments.track(id2).unwrap().channel_strip.level - 0.7).abs() < f32::EPSILON,
             "instrument 2 level should remain 0.7, got {}",
-            instruments.instrument(id2).unwrap().channel_strip.level
+            instruments.track(id2).unwrap().channel_strip.level
         );
     }
 
@@ -734,9 +734,9 @@ mod tests {
     fn test_session_scope() {
         let mut history = UndoHistory::new(10);
         let mut session = SessionState::new();
-        let mut instruments = InstrumentState::new();
+        let mut instruments = TrackState::new();
 
-        let id1 = instruments.add_instrument(SourceType::Saw);
+        let id1 = instruments.add_track(SourceType::Saw);
 
         // Snapshot session before modifying
         history.push_scoped(UndoScope::Session, &session, &instruments);
@@ -744,7 +744,7 @@ mod tests {
         // Modify session
         session.mixer.master_level = 0.3;
         // Also modify an instrument (should NOT be reverted)
-        instruments.instrument_mut(id1).unwrap().channel_strip.level = 0.1;
+        instruments.track_mut(id1).unwrap().channel_strip.level = 0.1;
 
         // Undo should only revert session
         assert!(history.undo(&mut session, &mut instruments).is_some());
@@ -755,17 +755,17 @@ mod tests {
         );
         // Track unchanged
         assert!(
-            (instruments.instrument(id1).unwrap().channel_strip.level - 0.1).abs() < f32::EPSILON,
+            (instruments.track(id1).unwrap().channel_strip.level - 0.1).abs() < f32::EPSILON,
             "instrument level should remain 0.1, got {}",
-            instruments.instrument(id1).unwrap().channel_strip.level
+            instruments.track(id1).unwrap().channel_strip.level
         );
     }
 
     #[test]
     fn test_scope_classification() {
         let session = SessionState::new();
-        let mut instruments = InstrumentState::new();
-        let id1 = instruments.add_instrument(SourceType::Saw);
+        let mut instruments = TrackState::new();
+        let id1 = instruments.add_track(SourceType::Saw);
 
         // Track Add => Full
         let action = DomainAction::Track(InstrumentAction::Add(SourceType::Saw));

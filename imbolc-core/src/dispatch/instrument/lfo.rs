@@ -11,7 +11,7 @@ const LFO_RATE_MAX: f32 = 20.0;
 fn reduce(state: &mut AppState, action: &InstrumentAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -34,7 +34,7 @@ pub(super) fn handle_adjust_lfo_rate(
     reduce(state, &InstrumentAction::AdjustLfoRate(id, delta));
 
     let mut result = DispatchResult::none();
-    if let Some(instrument) = state.instruments.instrument(id) {
+    if let Some(instrument) = state.tracks.track(id) {
         let rate = instrument.modulation.lfo.rate;
         let normalized = (rate - LFO_RATE_MIN) / (LFO_RATE_MAX - LFO_RATE_MIN);
         maybe_record_automation(
@@ -60,7 +60,7 @@ pub(super) fn handle_adjust_lfo_depth(
     reduce(state, &InstrumentAction::AdjustLfoDepth(id, delta));
 
     let mut result = DispatchResult::none();
-    if let Some(instrument) = state.instruments.instrument(id) {
+    if let Some(instrument) = state.tracks.track(id) {
         let depth = instrument.modulation.lfo.depth;
         maybe_record_automation(state, &mut result, AutomationTarget::lfo_depth(id), depth);
         result
@@ -109,7 +109,7 @@ mod tests {
 
     fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         (state, id)
     }
 
@@ -118,28 +118,12 @@ mod tests {
         let (mut state, id) = setup();
 
         // LFO starts disabled
-        assert!(
-            !state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .enabled
-        );
+        assert!(!state.tracks.track(id).unwrap().modulation.lfo.enabled);
 
         let result = handle_toggle_lfo(&mut state, id);
 
         // LFO should now be enabled
-        assert!(
-            state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .enabled
-        );
+        assert!(state.tracks.track(id).unwrap().modulation.lfo.enabled);
 
         // Verify audio effects
         assert!(result
@@ -151,37 +135,17 @@ mod tests {
 
         // Toggle again to disable
         handle_toggle_lfo(&mut state, id);
-        assert!(
-            !state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .enabled
-        );
+        assert!(!state.tracks.track(id).unwrap().modulation.lfo.enabled);
     }
 
     #[test]
     fn adjust_lfo_rate() {
         let (mut state, id) = setup();
-        let original = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .modulation
-            .lfo
-            .rate;
+        let original = state.tracks.track(id).unwrap().modulation.lfo.rate;
 
         let result = handle_adjust_lfo_rate(&mut state, id, 1.0);
 
-        let new_val = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .modulation
-            .lfo
-            .rate;
+        let new_val = state.tracks.track(id).unwrap().modulation.lfo.rate;
         assert!((new_val - original).abs() > f32::EPSILON);
 
         // Verify SetLfoParam audio effect
@@ -199,23 +163,11 @@ mod tests {
     #[test]
     fn adjust_lfo_depth() {
         let (mut state, id) = setup();
-        let original = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .modulation
-            .lfo
-            .depth;
+        let original = state.tracks.track(id).unwrap().modulation.lfo.depth;
 
         let result = handle_adjust_lfo_depth(&mut state, id, 0.1);
 
-        let new_val = state
-            .instruments
-            .instrument(id)
-            .unwrap()
-            .modulation
-            .lfo
-            .depth;
+        let new_val = state.tracks.track(id).unwrap().modulation.lfo.depth;
         assert!((new_val - original).abs() > f32::EPSILON);
 
         // Verify SetLfoParam audio effect
@@ -236,26 +188,14 @@ mod tests {
 
         // Default shape is Sine
         assert_eq!(
-            state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .shape,
+            state.tracks.track(id).unwrap().modulation.lfo.shape,
             LfoShape::Sine
         );
 
         let result = handle_set_lfo_shape(&mut state, id, LfoShape::Square);
 
         assert_eq!(
-            state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .shape,
+            state.tracks.track(id).unwrap().modulation.lfo.shape,
             LfoShape::Square
         );
 
@@ -274,26 +214,14 @@ mod tests {
 
         // Default target is FilterCutoff
         assert_eq!(
-            state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .target,
+            state.tracks.track(id).unwrap().modulation.lfo.target,
             ParameterTarget::FilterCutoff
         );
 
         let result = handle_set_lfo_target(&mut state, id, ParameterTarget::Pan);
 
         assert_eq!(
-            state
-                .instruments
-                .instrument(id)
-                .unwrap()
-                .modulation
-                .lfo
-                .target,
+            state.tracks.track(id).unwrap().modulation.lfo.target,
             ParameterTarget::Pan
         );
 

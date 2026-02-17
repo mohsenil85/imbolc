@@ -88,11 +88,11 @@ pub fn tick_generative(
 
     let macros = &gen.macros;
     let tpb = 480u32; // ticks per beat (standard)
-    let any_solo = instruments.any_instrument_solo();
+    let any_solo = instruments.any_track_solo();
 
     for (voice_id, target_id, algorithm, vel_min, vel_max, oct_min, oct_max) in &voice_configs {
         // Validate target instrument exists and is playable
-        let target_inst = match instruments.instrument(*target_id) {
+        let target_inst = match instruments.track(*target_id) {
             Some(inst) => inst,
             None => continue,
         };

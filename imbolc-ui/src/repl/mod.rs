@@ -59,8 +59,8 @@ pub fn run(project_arg: Option<String>) -> ! {
         if load_path.exists() {
             if let Ok((session, instruments)) = state::persistence::load_project(&load_path) {
                 state.session = session;
-                state.instruments = instruments;
-                state.instruments.rebuild_index();
+                state.tracks = instruments;
+                state.tracks.rebuild_index();
                 state.project.path = Some(load_path);
                 state.project.dirty = false;
             } else {
@@ -87,10 +87,10 @@ pub fn run(project_arg: Option<String>) -> ! {
     println!("imbolc REPL — type 'help' for commands, 'quit' to exit");
 
     // Print initial state summary
-    if !dispatcher.state().instruments.instruments.is_empty() {
+    if !dispatcher.state().tracks.tracks.is_empty() {
         println!(
             "{} instruments loaded",
-            dispatcher.state().instruments.instruments.len()
+            dispatcher.state().tracks.tracks.len()
         );
     }
 
@@ -227,7 +227,7 @@ pub fn parse_command(input: &str, state: &AppState) -> Result<CommandResult, Str
             } else {
                 "STOPPED"
             };
-            let n_inst = state.instruments.instruments.len();
+            let n_inst = state.tracks.tracks.len();
             Ok(CommandResult::Output(format!(
                 "Server: {}  Transport: {}  Instruments: {}  BPM: {}",
                 server, playing, n_inst, state.session.bpm,
@@ -502,8 +502,8 @@ fn drain_io_feedback(dispatcher: &mut LocalDispatcher, io_rx: &Receiver<IoFeedba
                 Ok((session, instruments, name)) => {
                     let state = dispatcher.state_mut();
                     state.session = session;
-                    state.instruments = instruments;
-                    state.instruments.rebuild_index();
+                    state.tracks = instruments;
+                    state.tracks.rebuild_index();
                     state.project.path = Some(path);
                     state.project.dirty = false;
                     println!("  Project loaded: {}", name);

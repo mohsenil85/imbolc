@@ -15,7 +15,7 @@ pub(super) fn dispatch_sequencer(
 ) -> DispatchResult {
     match action {
         SequencerAction::ToggleStep(pad_idx, step_idx) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(step) = seq
                     .pattern_mut()
                     .steps
@@ -30,7 +30,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::AdjustVelocity(pad_idx, step_idx, delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(step) = seq
                     .pattern_mut()
                     .steps
@@ -45,7 +45,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::ClearPad(pad_idx) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 for step in seq
                     .pattern_mut()
                     .steps
@@ -61,7 +61,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::ClearPattern => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let len = seq.pattern().length;
                 *seq.pattern_mut() = DrumPattern::new(len);
             }
@@ -70,7 +70,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::CyclePatternLength => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let lengths = [8, 16, 32, 64];
                 let current = seq.pattern().length;
                 let idx = lengths.iter().position(|&l| l == current).unwrap_or(0);
@@ -91,7 +91,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::NextPattern => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.current_pattern = (seq.current_pattern + 1) % seq.patterns.len();
             }
             let mut result = DispatchResult::none();
@@ -99,7 +99,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::PrevPattern => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.current_pattern = if seq.current_pattern == 0 {
                     seq.patterns.len() - 1
                 } else {
@@ -111,7 +111,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::AdjustPadLevel(pad_idx, delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     pad.level = (pad.level + delta).clamp(0.0, 1.0);
                 }
@@ -121,7 +121,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::PlayStop => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.playing = !seq.playing;
                 if !seq.playing {
                     seq.current_step = 0;
@@ -136,7 +136,7 @@ pub(super) fn dispatch_sequencer(
             NavIntent::OpenFileBrowser(crate::action::FileSelectAction::LoadDrumSample(*pad_idx)),
         ),
         SequencerAction::AdjustSwing(delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.swing_amount = (seq.swing_amount + delta).clamp(0.0, 1.0);
             }
             let mut result = DispatchResult::none();
@@ -149,7 +149,7 @@ pub(super) fn dispatch_sequencer(
             steps,
             rotation,
         } => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let pattern_len = seq.pattern().length;
                 let rhythm = euclidean_rhythm(*pulses, *steps, *rotation);
                 if let Some(pad_steps) = seq.pattern_mut().steps.get_mut(*pad) {
@@ -165,7 +165,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::AdjustProbability(pad_idx, step_idx, delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(step) = seq
                     .pattern_mut()
                     .steps
@@ -187,10 +187,10 @@ pub(super) fn dispatch_sequencer(
                 .unwrap_or_default();
 
             // Allocate from global counter to avoid ID collisions after instrument deletion
-            let buffer_id = state.instruments.next_sampler_buffer_id;
-            state.instruments.next_sampler_buffer_id += 1;
+            let buffer_id = state.tracks.next_sampler_buffer_id;
+            state.tracks.next_sampler_buffer_id += 1;
 
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if audio.is_running() {
                     let _ = audio.load_sample(buffer_id, &path_str);
                 }
@@ -207,7 +207,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::ToggleChain => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.chain_enabled = !seq.chain_enabled;
                 seq.chain_position = 0;
             }
@@ -216,7 +216,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::AddChainStep(pattern_index) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if *pattern_index < seq.patterns.len() {
                     seq.chain.push(*pattern_index);
                 }
@@ -226,7 +226,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::RemoveChainStep(position) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if *position < seq.chain.len() {
                     seq.chain.remove(*position);
                 }
@@ -236,7 +236,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::MoveChainStep(from, to) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let from = *from;
                 let to = *to;
                 if from < seq.chain.len() && to < seq.chain.len() {
@@ -249,7 +249,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::ToggleReverse(pad_idx) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     pad.reverse = !pad.reverse;
                 }
@@ -259,7 +259,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::AdjustPadPitch(pad_idx, delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     pad.pitch = (pad.pitch as i16 + *delta as i16).clamp(-24, 24) as i8;
                 }
@@ -269,7 +269,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::AdjustStepPitch(pad_idx, step_idx, delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(step) = seq
                     .pattern_mut()
                     .steps
@@ -290,7 +290,7 @@ pub(super) fn dispatch_sequencer(
             start_step,
             end_step,
         } => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let pattern = &mut seq.patterns[seq.current_pattern];
                 for pad in *start_pad..=*end_pad {
                     for step in *start_step..=*end_step {
@@ -310,7 +310,7 @@ pub(super) fn dispatch_sequencer(
             start_step,
             end_step,
         } => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer() {
                 let pattern = seq.pattern();
                 let mut steps = Vec::new();
                 for pad_idx in *start_pad..=*end_pad {
@@ -339,7 +339,7 @@ pub(super) fn dispatch_sequencer(
             anchor_step,
             steps,
         } => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let pattern = &mut seq.patterns[seq.current_pattern];
                 for (pad_offset, step_offset, step_data) in steps {
                     let pad = anchor_pad + pad_offset;
@@ -355,12 +355,9 @@ pub(super) fn dispatch_sequencer(
         }
         SequencerAction::SetPadInstrument(pad_idx, instrument_id, freq) => {
             // Get target instrument name first (before mutable borrow)
-            let target_name = state
-                .instruments
-                .instrument(*instrument_id)
-                .map(|i| i.name.clone());
+            let target_name = state.tracks.track(*instrument_id).map(|i| i.name.clone());
 
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     // Clear sample source when switching to instrument
                     pad.buffer_id = None;
@@ -379,7 +376,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::ClearPadInstrument(pad_idx) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     pad.instrument_id = None;
                     pad.trigger_freq = 440.0;
@@ -391,7 +388,7 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::SetPadTriggerFreq(pad_idx, freq) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     pad.trigger_freq = *freq;
                 }
@@ -402,13 +399,13 @@ pub(super) fn dispatch_sequencer(
         }
         SequencerAction::OpenInstrumentPicker(pad_idx) => {
             // Store which pad we're editing, then open the picker
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.editing_pad = Some(*pad_idx);
             }
             DispatchResult::with_nav(NavIntent::PushTo(PaneId::InstrumentPicker))
         }
         SequencerAction::CycleStepResolution => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 seq.step_resolution = seq.step_resolution.cycle_next();
             }
             let mut result = DispatchResult::none();
@@ -438,10 +435,10 @@ pub(super) fn dispatch_chopper(
             let (peaks, duration_secs) = compute_waveform_peaks(&path_str);
 
             // Allocate from global counter to avoid ID collisions after instrument deletion
-            let buffer_id = state.instruments.next_sampler_buffer_id;
-            state.instruments.next_sampler_buffer_id += 1;
+            let buffer_id = state.tracks.next_sampler_buffer_id;
+            state.tracks.next_sampler_buffer_id += 1;
 
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if audio.is_running() {
                     let _ = audio.load_sample(buffer_id, &path_str);
                 }
@@ -466,7 +463,7 @@ pub(super) fn dispatch_chopper(
         }
         ChopperAction::AddSlice(cursor_pos) => {
             let cursor_pos = *cursor_pos;
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     // Find which slice contains cursor_pos
                     if let Some(idx) = chopper
@@ -490,7 +487,7 @@ pub(super) fn dispatch_chopper(
             result
         }
         ChopperAction::RemoveSlice => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if chopper.slices.len() > 1 {
                         let idx = chopper.selected_slice;
@@ -512,7 +509,7 @@ pub(super) fn dispatch_chopper(
             result
         }
         ChopperAction::AssignToPad(pad_idx) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 let assign_data = seq.chopper.as_ref().and_then(|c| {
                     c.slices
                         .get(c.selected_slice)
@@ -537,7 +534,7 @@ pub(super) fn dispatch_chopper(
         }
         ChopperAction::AutoSlice(n) => {
             let n = *n;
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     chopper.slices.clear();
                     for i in 0..n {
@@ -555,7 +552,7 @@ pub(super) fn dispatch_chopper(
             result
         }
         ChopperAction::PreviewSlice => {
-            if let Some(instrument) = state.instruments.selected_instrument() {
+            if let Some(instrument) = state.tracks.selected_track() {
                 if let Some(seq) = instrument.drum_sequencer() {
                     if let Some(chopper) = &seq.chopper {
                         if let Some(slice) = chopper.slices.get(chopper.selected_slice) {
@@ -584,7 +581,7 @@ pub(super) fn dispatch_chopper(
             DispatchResult::none()
         }
         ChopperAction::SelectSlice(delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if !chopper.slices.is_empty() {
                         let len = chopper.slices.len() as i8;
@@ -599,7 +596,7 @@ pub(super) fn dispatch_chopper(
             result
         }
         ChopperAction::NudgeSliceStart(delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if let Some(slice) = chopper.slices.get_mut(chopper.selected_slice) {
                         slice.start = (slice.start + delta).clamp(0.0, slice.end - 0.001);
@@ -611,7 +608,7 @@ pub(super) fn dispatch_chopper(
             result
         }
         ChopperAction::NudgeSliceEnd(delta) => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &mut seq.chopper {
                     if let Some(slice) = chopper.slices.get_mut(chopper.selected_slice) {
                         slice.end = (slice.end + delta).clamp(slice.start + 0.001, 1.0);
@@ -623,7 +620,7 @@ pub(super) fn dispatch_chopper(
             result
         }
         ChopperAction::CommitAll => {
-            if let Some(seq) = state.instruments.selected_drum_sequencer_mut() {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &seq.chopper {
                     let assignments: Vec<_> = chopper
                         .slices
@@ -671,8 +668,8 @@ mod tests {
 
     fn setup() -> (AppState, AudioHandle) {
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Kit);
-        state.instruments.selected = Some(0);
+        state.add_track(crate::state::SourceType::Kit);
+        state.tracks.selected = Some(0);
         (state, AudioHandle::new())
     }
 
@@ -680,11 +677,11 @@ mod tests {
     fn toggle_step() {
         let (mut state, mut audio) = setup();
         dispatch_sequencer(&SequencerAction::ToggleStep(0, 0), &mut state, &mut audio);
-        let seq = state.instruments.selected_drum_sequencer().unwrap();
+        let seq = state.tracks.selected_drum_sequencer().unwrap();
         assert!(seq.pattern().steps[0][0].active);
 
         dispatch_sequencer(&SequencerAction::ToggleStep(0, 0), &mut state, &mut audio);
-        let seq = state.instruments.selected_drum_sequencer().unwrap();
+        let seq = state.tracks.selected_drum_sequencer().unwrap();
         assert!(!seq.pattern().steps[0][0].active);
     }
 
@@ -698,7 +695,7 @@ mod tests {
             &mut audio,
         );
         let vel = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .unwrap()
             .pattern()
@@ -712,7 +709,7 @@ mod tests {
             &mut audio,
         );
         let vel = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .unwrap()
             .pattern()
@@ -727,7 +724,7 @@ mod tests {
         dispatch_sequencer(&SequencerAction::ToggleStep(0, 0), &mut state, &mut audio);
         dispatch_sequencer(&SequencerAction::ToggleStep(0, 1), &mut state, &mut audio);
         dispatch_sequencer(&SequencerAction::ClearPad(0), &mut state, &mut audio);
-        let seq = state.instruments.selected_drum_sequencer().unwrap();
+        let seq = state.tracks.selected_drum_sequencer().unwrap();
         assert!(seq.pattern().steps[0].iter().all(|s| !s.active));
     }
 
@@ -736,7 +733,7 @@ mod tests {
         let (mut state, mut audio) = setup();
         dispatch_sequencer(&SequencerAction::ToggleStep(0, 0), &mut state, &mut audio);
         dispatch_sequencer(&SequencerAction::ClearPattern, &mut state, &mut audio);
-        let seq = state.instruments.selected_drum_sequencer().unwrap();
+        let seq = state.tracks.selected_drum_sequencer().unwrap();
         assert!(seq
             .pattern()
             .steps
@@ -752,7 +749,7 @@ mod tests {
         for expected in expected_lengths {
             dispatch_sequencer(&SequencerAction::CyclePatternLength, &mut state, &mut audio);
             let len = state
-                .instruments
+                .tracks
                 .selected_drum_sequencer()
                 .unwrap()
                 .pattern()
@@ -765,7 +762,7 @@ mod tests {
     fn next_prev_pattern_wraps() {
         let (mut state, mut audio) = setup();
         let n_patterns = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .unwrap()
             .patterns
@@ -775,7 +772,7 @@ mod tests {
         }
         assert_eq!(
             state
-                .instruments
+                .tracks
                 .selected_drum_sequencer()
                 .unwrap()
                 .current_pattern,
@@ -785,7 +782,7 @@ mod tests {
         dispatch_sequencer(&SequencerAction::PrevPattern, &mut state, &mut audio);
         assert_eq!(
             state
-                .instruments
+                .tracks
                 .selected_drum_sequencer()
                 .unwrap()
                 .current_pattern,
@@ -801,7 +798,7 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let level = state.instruments.selected_drum_sequencer().unwrap().pads[0].level;
+        let level = state.tracks.selected_drum_sequencer().unwrap().pads[0].level;
         assert!((level - 1.0).abs() < f32::EPSILON);
 
         dispatch_sequencer(
@@ -809,7 +806,7 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let level = state.instruments.selected_drum_sequencer().unwrap().pads[0].level;
+        let level = state.tracks.selected_drum_sequencer().unwrap().pads[0].level;
         assert!((level - 0.0).abs() < f32::EPSILON);
     }
 
@@ -817,10 +814,10 @@ mod tests {
     fn play_stop_toggles_and_resets() {
         let (mut state, mut audio) = setup();
         dispatch_sequencer(&SequencerAction::PlayStop, &mut state, &mut audio);
-        assert!(state.instruments.selected_drum_sequencer().unwrap().playing);
+        assert!(state.tracks.selected_drum_sequencer().unwrap().playing);
 
         dispatch_sequencer(&SequencerAction::PlayStop, &mut state, &mut audio);
-        let seq = state.instruments.selected_drum_sequencer().unwrap();
+        let seq = state.tracks.selected_drum_sequencer().unwrap();
         assert!(!seq.playing);
         assert_eq!(seq.current_step, 0);
     }
@@ -830,24 +827,12 @@ mod tests {
         let (mut state, mut audio) = setup();
         dispatch_sequencer(&SequencerAction::AdjustSwing(2.0), &mut state, &mut audio);
         assert!(
-            (state
-                .instruments
-                .selected_drum_sequencer()
-                .unwrap()
-                .swing_amount
-                - 1.0)
-                .abs()
+            (state.tracks.selected_drum_sequencer().unwrap().swing_amount - 1.0).abs()
                 < f32::EPSILON
         );
         dispatch_sequencer(&SequencerAction::AdjustSwing(-5.0), &mut state, &mut audio);
         assert!(
-            (state
-                .instruments
-                .selected_drum_sequencer()
-                .unwrap()
-                .swing_amount
-                - 0.0)
-                .abs()
+            (state.tracks.selected_drum_sequencer().unwrap().swing_amount - 0.0).abs()
                 < f32::EPSILON
         );
     }
@@ -866,7 +851,7 @@ mod tests {
             &mut state,
             &mut audio,
         );
-        let seq = state.instruments.selected_drum_sequencer().unwrap();
+        let seq = state.tracks.selected_drum_sequencer().unwrap();
         let active_count = seq.pattern().steps[0].iter().filter(|s| s.active).count();
         assert_eq!(active_count, 4);
     }
@@ -880,7 +865,7 @@ mod tests {
             &mut audio,
         );
         let prob = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .unwrap()
             .pattern()
@@ -898,7 +883,7 @@ mod tests {
             &mut audio,
         );
         assert_eq!(
-            state.instruments.selected_drum_sequencer().unwrap().pads[0].pitch,
+            state.tracks.selected_drum_sequencer().unwrap().pads[0].pitch,
             24
         );
         dispatch_sequencer(
@@ -907,7 +892,7 @@ mod tests {
             &mut audio,
         );
         assert_eq!(
-            state.instruments.selected_drum_sequencer().unwrap().pads[0].pitch,
+            state.tracks.selected_drum_sequencer().unwrap().pads[0].pitch,
             -24
         );
     }
@@ -922,7 +907,7 @@ mod tests {
         );
         assert_eq!(
             state
-                .instruments
+                .tracks
                 .selected_drum_sequencer()
                 .unwrap()
                 .pattern()
@@ -937,7 +922,7 @@ mod tests {
         );
         assert_eq!(
             state
-                .instruments
+                .tracks
                 .selected_drum_sequencer()
                 .unwrap()
                 .pattern()
@@ -953,7 +938,7 @@ mod tests {
         dispatch_sequencer(&SequencerAction::ToggleChain, &mut state, &mut audio);
         assert!(
             state
-                .instruments
+                .tracks
                 .selected_drum_sequencer()
                 .unwrap()
                 .chain_enabled
@@ -962,12 +947,7 @@ mod tests {
         dispatch_sequencer(&SequencerAction::AddChainStep(0), &mut state, &mut audio);
         dispatch_sequencer(&SequencerAction::AddChainStep(1), &mut state, &mut audio);
         assert_eq!(
-            state
-                .instruments
-                .selected_drum_sequencer()
-                .unwrap()
-                .chain
-                .len(),
+            state.tracks.selected_drum_sequencer().unwrap().chain.len(),
             2
         );
 
@@ -977,25 +957,20 @@ mod tests {
             &mut audio,
         );
         assert_eq!(
-            state.instruments.selected_drum_sequencer().unwrap().chain,
+            state.tracks.selected_drum_sequencer().unwrap().chain,
             vec![1, 0]
         );
 
         dispatch_sequencer(&SequencerAction::RemoveChainStep(0), &mut state, &mut audio);
         assert_eq!(
-            state.instruments.selected_drum_sequencer().unwrap().chain,
+            state.tracks.selected_drum_sequencer().unwrap().chain,
             vec![0]
         );
 
         // Out of bounds add — should be no-op (pattern index 99 doesn't exist)
         dispatch_sequencer(&SequencerAction::AddChainStep(99), &mut state, &mut audio);
         assert_eq!(
-            state
-                .instruments
-                .selected_drum_sequencer()
-                .unwrap()
-                .chain
-                .len(),
+            state.tracks.selected_drum_sequencer().unwrap().chain.len(),
             1
         );
     }

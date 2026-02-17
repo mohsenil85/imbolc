@@ -3,7 +3,7 @@
 //! These functions are the single source of truth for action → state mutations.
 //! Both imbolc-core dispatch and imbolc-audio's audio thread call into this module.
 //!
-//! Reducers are pure: they mutate `InstrumentState` and `SessionState` only.
+//! Reducers are pure: they mutate `TrackState` and `SessionState` only.
 //! They do NOT:
 //! - Construct DispatchResult (no nav intents, no status events)
 //! - Record automation
@@ -24,7 +24,7 @@ mod tag;
 mod vst_param;
 
 use crate::{
-    AutomationAction, DomainAction, InstrumentState, PianoRollAction, SessionAction, SessionState,
+    AutomationAction, DomainAction, PianoRollAction, SessionAction, SessionState, TrackState,
     VstParamAction,
 };
 
@@ -85,7 +85,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
 /// Returns false if the action is not reducible (caller should use full sync).
 pub fn reduce_action(
     action: &DomainAction,
-    instruments: &mut InstrumentState,
+    instruments: &mut TrackState,
     session: &mut SessionState,
 ) -> bool {
     match action {

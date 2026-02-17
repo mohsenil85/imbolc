@@ -9,15 +9,15 @@ use super::instrument::{SourceType, Track};
 use crate::TrackId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstrumentState {
-    pub instruments: Vec<Track>,
+pub struct TrackState {
+    pub tracks: Vec<Track>,
     pub selected: Option<usize>,
     pub next_id: TrackId,
     #[serde(default = "default_sampler_buffer_id")]
     pub next_sampler_buffer_id: u32,
-    /// Set by dispatch when editing an instrument; read by InstrumentEditPane on_enter
+    /// Set by dispatch when editing a track; read by TrackEditPane on_enter
     #[serde(skip)]
-    pub editing_instrument_id: Option<TrackId>,
+    pub editing_track_id: Option<TrackId>,
     /// Counter for allocating layer group IDs
     pub next_layer_group_id: u32,
     /// Index from TrackId → Vec position for O(1) lookups.
@@ -25,14 +25,14 @@ pub struct InstrumentState {
     id_index: HashMap<TrackId, usize>,
 }
 
-impl InstrumentState {
+impl TrackState {
     pub fn new() -> Self {
         Self {
-            instruments: Vec::new(),
+            tracks: Vec::new(),
             selected: None,
             next_id: TrackId::new(0),
             next_sampler_buffer_id: 20000,
-            editing_instrument_id: None,
+            editing_track_id: None,
             next_layer_group_id: 0,
             id_index: HashMap::new(),
         }
@@ -40,39 +40,39 @@ impl InstrumentState {
 
     /// Rebuild the id → index lookup table from the Vec.
     ///
-    /// Call after any operation that replaces `instruments` wholesale
+    /// Call after any operation that replaces `tracks` wholesale
     /// (e.g. undo/redo, persistence load, network state replacement).
     pub fn rebuild_index(&mut self) {
         self.id_index.clear();
-        for (i, inst) in self.instruments.iter().enumerate() {
+        for (i, inst) in self.tracks.iter().enumerate() {
             self.id_index.insert(inst.id, i);
         }
     }
 
-    pub fn add_instrument(&mut self, source: SourceType) -> TrackId {
+    pub fn add_track(&mut self, source: SourceType) -> TrackId {
         let id = self.next_id;
         self.next_id = TrackId::new(self.next_id.get() + 1);
-        let instrument = Track::new(id, source);
-        self.instruments.push(instrument);
-        self.selected = Some(self.instruments.len() - 1);
-        self.id_index.insert(id, self.instruments.len() - 1);
+        let track = Track::new(id, source);
+        self.tracks.push(track);
+        self.selected = Some(self.tracks.len() - 1);
+        self.id_index.insert(id, self.tracks.len() - 1);
 
         id
     }
 
-    pub fn remove_instrument(&mut self, id: TrackId) {
+    pub fn remove_track(&mut self, id: TrackId) {
         // Capture layer group before removal for singleton cleanup
-        let old_group = self.instrument(id).and_then(|i| i.layer.group);
+        let old_group = self.track(id).and_then(|i| i.layer.group);
 
-        if let Some(pos) = self.instruments.iter().position(|s| s.id == id) {
-            self.instruments.remove(pos);
+        if let Some(pos) = self.tracks.iter().position(|s| s.id == id) {
+            self.tracks.remove(pos);
 
             if let Some(sel) = self.selected {
-                if sel >= self.instruments.len() {
-                    self.selected = if self.instruments.is_empty() {
+                if sel >= self.tracks.len() {
+                    self.selected = if self.tracks.is_empty() {
                         None
                     } else {
-                        Some(self.instruments.len() - 1)
+                        Some(self.tracks.len() - 1)
                     };
                 }
             }
@@ -84,66 +84,66 @@ impl InstrumentState {
         // If old group now has only 1 member, clear it (group of 1 is meaningless)
         if let Some(g) = old_group {
             let remaining: Vec<TrackId> = self
-                .instruments
+                .tracks
                 .iter()
                 .filter(|i| i.layer.group == Some(g))
                 .map(|i| i.id)
                 .collect();
             if remaining.len() == 1 {
-                if let Some(inst) = self.instrument_mut(remaining[0]) {
+                if let Some(inst) = self.track_mut(remaining[0]) {
                     inst.layer.group = None;
                 }
             }
         }
     }
 
-    pub fn instrument(&self, id: TrackId) -> Option<&Track> {
+    pub fn track(&self, id: TrackId) -> Option<&Track> {
         // Use index for O(1) lookup, fall back to linear scan if index is stale
         if let Some(&idx) = self.id_index.get(&id) {
-            if let Some(inst) = self.instruments.get(idx) {
+            if let Some(inst) = self.tracks.get(idx) {
                 if inst.id == id {
                     return Some(inst);
                 }
             }
         }
-        self.instruments.iter().find(|s| s.id == id)
+        self.tracks.iter().find(|s| s.id == id)
     }
 
-    pub fn instrument_mut(&mut self, id: TrackId) -> Option<&mut Track> {
+    pub fn track_mut(&mut self, id: TrackId) -> Option<&mut Track> {
         // Use index for O(1) lookup, fall back to linear scan if index is stale
         if let Some(&idx) = self.id_index.get(&id) {
-            if let Some(inst) = self.instruments.get(idx) {
+            if let Some(inst) = self.tracks.get(idx) {
                 if inst.id == id {
-                    return self.instruments.get_mut(idx);
+                    return self.tracks.get_mut(idx);
                 }
             }
         }
-        self.instruments.iter_mut().find(|s| s.id == id)
+        self.tracks.iter_mut().find(|s| s.id == id)
     }
 
-    pub fn selected_instrument(&self) -> Option<&Track> {
-        self.selected.and_then(|idx| self.instruments.get(idx))
+    pub fn selected_track(&self) -> Option<&Track> {
+        self.selected.and_then(|idx| self.tracks.get(idx))
     }
 
     #[allow(dead_code)]
-    pub fn selected_instrument_mut(&mut self) -> Option<&mut Track> {
-        self.selected.and_then(|idx| self.instruments.get_mut(idx))
+    pub fn selected_track_mut(&mut self) -> Option<&mut Track> {
+        self.selected.and_then(|idx| self.tracks.get_mut(idx))
     }
 
     pub fn select_next(&mut self) {
-        if self.instruments.is_empty() {
+        if self.tracks.is_empty() {
             self.selected = None;
             return;
         }
         self.selected = match self.selected {
             None => Some(0),
-            Some(idx) if idx < self.instruments.len() - 1 => Some(idx + 1),
+            Some(idx) if idx < self.tracks.len() - 1 => Some(idx + 1),
             Some(idx) => Some(idx),
         };
     }
 
     pub fn select_prev(&mut self) {
-        if self.instruments.is_empty() {
+        if self.tracks.is_empty() {
             self.selected = None;
             return;
         }
@@ -154,18 +154,18 @@ impl InstrumentState {
         };
     }
 
-    /// Check if any instrument is soloed
-    pub fn any_instrument_solo(&self) -> bool {
-        self.instruments.iter().any(|s| s.channel_strip.solo)
+    /// Check if any track is soloed
+    pub fn any_track_solo(&self) -> bool {
+        self.tracks.iter().any(|s| s.channel_strip.solo)
     }
 
     pub fn selected_drum_sequencer(&self) -> Option<&DrumSequencerState> {
-        self.selected_instrument().and_then(|s| s.drum_sequencer())
+        self.selected_track().and_then(|s| s.drum_sequencer())
     }
 
     pub fn selected_drum_sequencer_mut(&mut self) -> Option<&mut DrumSequencerState> {
         self.selected
-            .and_then(|idx| self.instruments.get_mut(idx))
+            .and_then(|idx| self.tracks.get_mut(idx))
             .and_then(|s| s.drum_sequencer_mut())
     }
 
@@ -176,25 +176,21 @@ impl InstrumentState {
         id
     }
 
-    /// Returns sorted unique group IDs from instruments that have a layer_group set.
+    /// Returns sorted unique group IDs from tracks that have a layer_group set.
     pub fn active_layer_groups(&self) -> Vec<u32> {
-        let mut groups: Vec<u32> = self
-            .instruments
-            .iter()
-            .filter_map(|i| i.layer.group)
-            .collect();
+        let mut groups: Vec<u32> = self.tracks.iter().filter_map(|i| i.layer.group).collect();
         groups.sort_unstable();
         groups.dedup();
         groups
     }
 
-    /// Returns all instrument IDs in the same layer group as `id` (including `id` itself).
-    /// If the instrument has no layer group, returns just `vec![id]`.
+    /// Returns all track IDs in the same layer group as `id` (including `id` itself).
+    /// If the track has no layer group, returns just `vec![id]`.
     pub fn layer_group_members(&self, id: TrackId) -> Vec<TrackId> {
-        let group = self.instrument(id).and_then(|inst| inst.layer.group);
+        let group = self.track(id).and_then(|inst| inst.layer.group);
         match group {
             Some(g) => self
-                .instruments
+                .tracks
                 .iter()
                 .filter(|inst| inst.layer.group == Some(g))
                 .map(|inst| inst.id)
@@ -204,7 +200,7 @@ impl InstrumentState {
     }
 }
 
-impl Default for InstrumentState {
+impl Default for TrackState {
     fn default() -> Self {
         Self::new()
     }
@@ -219,66 +215,66 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_instrument_state_creation() {
-        let state = InstrumentState::new();
-        assert_eq!(state.instruments.len(), 0);
+    fn test_track_state_creation() {
+        let state = TrackState::new();
+        assert_eq!(state.tracks.len(), 0);
         assert_eq!(state.selected, None);
     }
 
     #[test]
-    fn test_add_instrument() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
+    fn test_add_track() {
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
 
-        assert_eq!(state.instruments.len(), 2);
-        assert_eq!(state.instruments[0].id, id1);
-        assert_eq!(state.instruments[1].id, id2);
+        assert_eq!(state.tracks.len(), 2);
+        assert_eq!(state.tracks[0].id, id1);
+        assert_eq!(state.tracks[1].id, id2);
         assert_eq!(state.selected, Some(1)); // selects newly added
     }
 
     #[test]
-    fn test_remove_instrument() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
-        let _id3 = state.add_instrument(SourceType::Sqr);
+    fn test_remove_track() {
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
+        let _id3 = state.add_track(SourceType::Sqr);
 
-        state.remove_instrument(id2);
+        state.remove_track(id2);
 
-        assert_eq!(state.instruments.len(), 2);
-        assert_eq!(state.instruments[0].id, id1);
+        assert_eq!(state.tracks.len(), 2);
+        assert_eq!(state.tracks[0].id, id1);
     }
 
     #[test]
-    fn test_remove_last_instrument() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
+    fn test_remove_last_track() {
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
 
         state.selected = Some(1);
-        state.remove_instrument(id2);
+        state.remove_track(id2);
 
         assert_eq!(state.selected, Some(0));
-        assert_eq!(state.instruments[0].id, id1);
+        assert_eq!(state.tracks[0].id, id1);
     }
 
     #[test]
-    fn test_remove_all_instruments() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
+    fn test_remove_all_tracks() {
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
 
-        state.remove_instrument(id1);
+        state.remove_track(id1);
         assert_eq!(state.selected, None);
-        assert!(state.instruments.is_empty());
+        assert!(state.tracks.is_empty());
     }
 
     #[test]
     fn test_select_navigation() {
-        let mut state = InstrumentState::new();
-        state.add_instrument(SourceType::Saw);
-        state.add_instrument(SourceType::Sin);
-        state.add_instrument(SourceType::Sqr);
+        let mut state = TrackState::new();
+        state.add_track(SourceType::Saw);
+        state.add_track(SourceType::Sin);
+        state.add_track(SourceType::Sqr);
 
         assert_eq!(state.selected, Some(2)); // selects last added
         state.select_prev();
@@ -297,14 +293,14 @@ mod tests {
 
     #[test]
     fn layer_group_members_returns_all_in_group() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
-        let _id3 = state.add_instrument(SourceType::Sqr);
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
+        let _id3 = state.add_track(SourceType::Sqr);
 
         let group = state.next_layer_group();
-        state.instrument_mut(id1).unwrap().layer.group = Some(group);
-        state.instrument_mut(id2).unwrap().layer.group = Some(group);
+        state.track_mut(id1).unwrap().layer.group = Some(group);
+        state.track_mut(id2).unwrap().layer.group = Some(group);
 
         let members = state.layer_group_members(id1);
         assert_eq!(members.len(), 2);
@@ -314,33 +310,33 @@ mod tests {
 
     #[test]
     fn layer_group_members_solo_no_group() {
-        let mut state = InstrumentState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let mut state = TrackState::new();
+        let id = state.add_track(SourceType::Saw);
         let members = state.layer_group_members(id);
         assert_eq!(members, vec![id]);
     }
 
     #[test]
-    fn remove_instrument_clears_singleton_group() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
+    fn remove_track_clears_singleton_group() {
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
 
         let group = state.next_layer_group();
-        state.instrument_mut(id1).unwrap().layer.group = Some(group);
-        state.instrument_mut(id2).unwrap().layer.group = Some(group);
+        state.track_mut(id1).unwrap().layer.group = Some(group);
+        state.track_mut(id2).unwrap().layer.group = Some(group);
 
-        state.remove_instrument(id1);
+        state.remove_track(id1);
 
         // id2 should have layer_group cleared (group of 1 is meaningless)
-        assert_eq!(state.instrument(id2).unwrap().layer.group, None);
+        assert_eq!(state.track(id2).unwrap().layer.group, None);
     }
 
     #[test]
     fn select_next_wraps_at_boundary() {
-        let mut state = InstrumentState::new();
-        state.add_instrument(SourceType::Saw);
-        state.add_instrument(SourceType::Sin);
+        let mut state = TrackState::new();
+        state.add_track(SourceType::Saw);
+        state.add_track(SourceType::Sin);
         state.selected = Some(1);
         state.select_next();
         assert_eq!(state.selected, Some(1)); // stays at end, does not wrap
@@ -348,9 +344,9 @@ mod tests {
 
     #[test]
     fn select_prev_wraps_at_boundary() {
-        let mut state = InstrumentState::new();
-        state.add_instrument(SourceType::Saw);
-        state.add_instrument(SourceType::Sin);
+        let mut state = TrackState::new();
+        state.add_track(SourceType::Saw);
+        state.add_track(SourceType::Sin);
         state.selected = Some(0);
         state.select_prev();
         assert_eq!(state.selected, Some(0)); // stays at start, does not wrap
@@ -358,72 +354,72 @@ mod tests {
 
     #[test]
     fn index_correct_after_add() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
-        let id3 = state.add_instrument(SourceType::Sqr);
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
+        let id3 = state.add_track(SourceType::Sqr);
 
-        assert!(state.instrument(id1).is_some());
-        assert!(state.instrument(id2).is_some());
-        assert!(state.instrument(id3).is_some());
-        assert_eq!(state.instrument(id1).unwrap().id, id1);
-        assert_eq!(state.instrument(id2).unwrap().id, id2);
-        assert_eq!(state.instrument(id3).unwrap().id, id3);
+        assert!(state.track(id1).is_some());
+        assert!(state.track(id2).is_some());
+        assert!(state.track(id3).is_some());
+        assert_eq!(state.track(id1).unwrap().id, id1);
+        assert_eq!(state.track(id2).unwrap().id, id2);
+        assert_eq!(state.track(id3).unwrap().id, id3);
     }
 
     #[test]
     fn index_correct_after_remove() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
-        let id3 = state.add_instrument(SourceType::Sqr);
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
+        let id3 = state.add_track(SourceType::Sqr);
 
-        state.remove_instrument(id2);
+        state.remove_track(id2);
 
-        assert!(state.instrument(id1).is_some());
-        assert!(state.instrument(id2).is_none());
-        assert!(state.instrument(id3).is_some());
-        assert_eq!(state.instrument(id1).unwrap().id, id1);
-        assert_eq!(state.instrument(id3).unwrap().id, id3);
+        assert!(state.track(id1).is_some());
+        assert!(state.track(id2).is_none());
+        assert!(state.track(id3).is_some());
+        assert_eq!(state.track(id1).unwrap().id, id1);
+        assert_eq!(state.track(id3).unwrap().id, id3);
     }
 
     #[test]
     fn fallback_works_when_index_empty() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
 
         // Clear the index to simulate a deserialized state without rebuild_index
         state.id_index.clear();
 
-        // Should still find instruments via linear fallback
-        assert_eq!(state.instrument(id1).unwrap().id, id1);
-        assert_eq!(state.instrument(id2).unwrap().id, id2);
-        assert_eq!(state.instrument_mut(id1).unwrap().id, id1);
+        // Should still find tracks via linear fallback
+        assert_eq!(state.track(id1).unwrap().id, id1);
+        assert_eq!(state.track(id2).unwrap().id, id2);
+        assert_eq!(state.track_mut(id1).unwrap().id, id1);
     }
 
     #[test]
     fn rebuild_index_restores_lookups() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
 
         // Simulate whole-struct replacement by clearing and rebuilding
         state.id_index.clear();
         state.rebuild_index();
 
-        assert_eq!(state.instrument(id1).unwrap().id, id1);
-        assert_eq!(state.instrument(id2).unwrap().id, id2);
+        assert_eq!(state.track(id1).unwrap().id, id1);
+        assert_eq!(state.track(id2).unwrap().id, id2);
     }
 
     #[test]
     fn clone_preserves_index() {
-        let mut state = InstrumentState::new();
-        let id1 = state.add_instrument(SourceType::Saw);
-        let id2 = state.add_instrument(SourceType::Sin);
+        let mut state = TrackState::new();
+        let id1 = state.add_track(SourceType::Saw);
+        let id2 = state.add_track(SourceType::Sin);
 
         let cloned = state.clone();
-        assert_eq!(cloned.instrument(id1).unwrap().id, id1);
-        assert_eq!(cloned.instrument(id2).unwrap().id, id2);
+        assert_eq!(cloned.track(id1).unwrap().id, id1);
+        assert_eq!(cloned.track(id2).unwrap().id, id2);
     }
 }

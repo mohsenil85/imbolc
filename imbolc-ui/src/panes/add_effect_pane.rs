@@ -180,7 +180,7 @@ impl AddEffectPane {
                     Action::LayerGroup(LayerGroupAction::AddEffect(group_id, *effect_type))
                 }
                 EffectTarget::Track => {
-                    if let Some(inst) = state.instruments.selected_instrument() {
+                    if let Some(inst) = state.tracks.selected_track() {
                         Action::Track(InstrumentAction::AddEffect(inst.id, *effect_type))
                     } else {
                         Action::None

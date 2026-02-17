@@ -62,8 +62,8 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             // Check if the target instrument is a Kit — route to PlayDrumPad
             let instrument = midi_rec
                 .live_input_instrument
-                .and_then(|id| state.instruments.instrument(id))
-                .or_else(|| state.instruments.selected_instrument());
+                .and_then(|id| state.tracks.track(id))
+                .or_else(|| state.tracks.selected_track());
 
             if let Some(inst) = instrument {
                 if let Some(seq) = inst.drum_sequencer() {
@@ -101,7 +101,7 @@ pub fn process_midi_event(event: &MidiEvent, state: &AppState) -> Option<Action>
             // Look up pitch bend config for the target instrument
             let instrument_id = midi_rec
                 .live_input_instrument
-                .or_else(|| state.instruments.selected_instrument().map(|i| i.id))?;
+                .or_else(|| state.tracks.selected_track().map(|i| i.id))?;
 
             let config = midi_rec.find_pitch_bend_config(instrument_id)?;
             let target = config.target.clone();
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn test_kit_instrument_routes_to_play_drum_pad() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Kit);
+        state.add_track(crate::state::SourceType::Kit);
         // midi_base_note defaults to 36
         let event = MidiEvent::new(
             0,
@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn test_kit_instrument_note_outside_pad_range_returns_none() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Kit);
+        state.add_track(crate::state::SourceType::Kit);
         // base_note=36, NUM_PADS=12, so note 48 (36+12) is out of range
         let event = MidiEvent::new(
             0,
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn test_kit_instrument_note_below_base_returns_none() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Kit);
+        state.add_track(crate::state::SourceType::Kit);
         // note 35 is below base_note 36
         let event = MidiEvent::new(
             0,
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn test_non_kit_instrument_still_gets_play_note() {
         let mut state = test_state();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         let event = MidiEvent::new(
             0,
             MidiEventKind::NoteOn {

@@ -152,7 +152,7 @@ fn handle_move_stage(
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Track(InstrumentAction::MoveStage(id, stage_idx, direction)),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
     let mut result = DispatchResult::none();
@@ -166,7 +166,7 @@ fn handle_move_stage(
 fn handle_toggle_channel_config(state: &mut AppState, id: crate::state::TrackId) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Track(InstrumentAction::ToggleChannelConfig(id)),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
     let mut result = DispatchResult::default();

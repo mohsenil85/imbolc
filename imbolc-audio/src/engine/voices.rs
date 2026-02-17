@@ -3,7 +3,7 @@ use std::time::Instant;
 use super::backend::{AudioBackend, BackendMessage, RawArg};
 use super::{AudioEngine, VoiceChain, GROUP_SOURCES};
 use imbolc_types::tuning;
-use imbolc_types::{BufferId, InstrumentState, ParamValue, ParameterTarget, SessionState, TrackId};
+use imbolc_types::{BufferId, ParamValue, ParameterTarget, SessionState, TrackId, TrackState};
 
 /// Anti-click fade time for voice stealing/freeing.
 /// Must exceed the midi control node's gate release (10ms) plus margin
@@ -23,11 +23,11 @@ impl AudioEngine {
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .instrument(instrument_id)
+            .track(instrument_id)
             .ok_or_else(|| format!("No instrument with id {}", instrument_id))?;
 
         // AudioIn, BusIn, and VSTi instruments don't use voice spawning - they have persistent synths
@@ -306,11 +306,11 @@ impl AudioEngine {
         pitch: u8,
         velocity: f32,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .instrument(instrument_id)
+            .track(instrument_id)
             .ok_or_else(|| format!("No instrument with id {}", instrument_id))?;
 
         let sampler_config = instrument
@@ -595,10 +595,10 @@ impl AudioEngine {
         instrument_id: TrackId,
         pitch: u8,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
     ) -> Result<(), String> {
         // VSTi instruments: send MIDI note-off via /u_cmd
-        if let Some(instrument) = state.instrument(instrument_id) {
+        if let Some(instrument) = state.track(instrument_id) {
             if instrument.source.is_vst() {
                 return self.send_vsti_note_off(instrument_id, pitch);
             }
@@ -610,7 +610,7 @@ impl AudioEngine {
 
         // Find and mark an active voice as released via the allocator
         let release_time = state
-            .instrument(instrument_id)
+            .track(instrument_id)
             .map(|s| s.modulation.amp_envelope.release)
             .unwrap_or(1.0);
 
@@ -858,11 +858,11 @@ impl AudioEngine {
         freq: f32,
         velocity: f32,
         offset_secs: f64,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         let instrument = state
-            .instrument(target_instrument_id)
+            .track(target_instrument_id)
             .ok_or_else(|| format!("No instrument with id {}", target_instrument_id))?;
 
         // Skip unsupported instrument types

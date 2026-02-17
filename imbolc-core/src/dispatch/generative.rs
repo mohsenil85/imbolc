@@ -8,7 +8,7 @@ pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> D
     // Delegate pure state mutation to the shared reducer
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::Generative(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 
@@ -20,9 +20,9 @@ pub fn dispatch_generative(action: &GenerativeAction, state: &mut AppState) -> D
             if voice.target_instrument.is_none() {
                 // Prefer selected instrument, fall back to first
                 let target = state
-                    .instruments
-                    .selected_instrument()
-                    .or_else(|| state.instruments.instruments.first())
+                    .tracks
+                    .selected_track()
+                    .or_else(|| state.tracks.tracks.first())
                     .map(|i| i.id);
                 voice.target_instrument = target;
             }

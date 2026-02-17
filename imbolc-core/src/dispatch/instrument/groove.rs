@@ -7,7 +7,7 @@ use imbolc_types::{DomainAction, InstrumentAction};
 pub fn dispatch(state: &mut AppState, action: &InstrumentAction) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
     DispatchResult::none()

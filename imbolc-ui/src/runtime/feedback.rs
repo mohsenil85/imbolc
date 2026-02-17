@@ -74,8 +74,8 @@ impl AppRuntime {
                                 let state = self.dispatcher.state_mut();
                                 state.undo_history.clear();
                                 state.session = new_session;
-                                state.instruments = new_instruments;
-                                state.instruments.rebuild_index();
+                                state.tracks = new_instruments;
+                                state.tracks.rebuild_index();
                                 if recovering_autosave {
                                     // Keep recovered session unsaved so users pick a real project path.
                                     state.project.path = None;
@@ -97,7 +97,7 @@ impl AppRuntime {
                             self.autosave_id = self.autosave_id.wrapping_add(1);
                             self.autosave_in_progress = false;
 
-                            if self.dispatcher.state().instruments.instruments.is_empty() {
+                            if self.dispatcher.state().tracks.tracks.is_empty() {
                                 self.panes
                                     .switch_to(action::PaneId::Add, self.dispatcher.state());
                             }
@@ -109,8 +109,8 @@ impl AppRuntime {
                             let vst_restores: Vec<_> = self
                                 .dispatcher
                                 .state()
-                                .instruments
-                                .instruments
+                                .tracks
+                                .tracks
                                 .iter()
                                 .flat_map(|inst| {
                                     let mut restores = Vec::new();

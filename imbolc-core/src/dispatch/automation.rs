@@ -12,7 +12,7 @@ const RECORD_MIN_TICK_DELTA: u32 = 48;
 fn reduce(state: &mut AppState, action: &AutomationAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Automation(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -30,7 +30,7 @@ pub(super) fn dispatch_automation(
             if !state.recording.automation_recording {
                 state
                     .undo_history
-                    .push_from(state.session.clone(), state.instruments.clone());
+                    .push_from(state.session.clone(), state.tracks.clone());
             }
             state.recording.automation_recording = !state.recording.automation_recording;
             return result;

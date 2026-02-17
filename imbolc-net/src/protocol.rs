@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 use imbolc_types::{
     ArrangementAction, ArrangementState, AutomationAction, AutomationLane, AutomationLaneId,
     AutomationState, BusAction, BusId, ChopperAction, GenerativeAction, InstrumentAction,
-    InstrumentState, LayerGroupAction, MidiAction, MixerAction, MixerBus, MixerState, NoteSequence,
-    PianoRollAction, PianoRollState, SequencerAction, ServerAction, SessionAction, SessionState,
-    Track, TrackId, VstParamAction,
+    LayerGroupAction, MidiAction, MixerAction, MixerBus, MixerState, NoteSequence, PianoRollAction,
+    PianoRollState, SequencerAction, ServerAction, SessionAction, SessionState, Track, TrackId,
+    TrackState, VstParamAction,
 };
 
 /// Unique identifier for a connected client.
@@ -115,7 +115,7 @@ pub enum NetworkAction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkState {
     pub session: SessionState,
-    pub instruments: InstrumentState,
+    pub tracks: TrackState,
     /// Map of instrument IDs to their owners.
     pub ownership: HashMap<TrackId, OwnerInfo>,
     /// The privileged client (if any) who can control transport/save/load.
@@ -139,8 +139,8 @@ pub struct StatePatch {
     pub mixer: Option<MixerState>,
     /// Per-bus delta patches (mutually exclusive with `mixer`).
     pub mixer_bus_patches: Option<HashMap<BusId, MixerBus>>,
-    pub instruments: Option<InstrumentState>,
-    /// Per-instrument delta patches (mutually exclusive with `instruments`).
+    pub tracks: Option<TrackState>,
+    /// Per-instrument delta patches (mutually exclusive with `tracks`).
     pub instrument_patches: Option<HashMap<TrackId, Track>>,
     pub ownership: Option<HashMap<TrackId, OwnerInfo>>,
     pub privileged_client: Option<Option<(ClientId, String)>>,

@@ -20,7 +20,7 @@ impl AutomationPane {
         let automation = &state.session.automation;
 
         // Filter lanes for the currently selected instrument (plus global lanes)
-        let inst_id = state.instruments.selected_instrument().map(|i| i.id);
+        let inst_id = state.tracks.selected_track().map(|i| i.id);
         let visible_lanes: Vec<(usize, &crate::state::automation::AutomationLane)> = automation
             .lanes
             .iter()
@@ -320,7 +320,7 @@ impl AutomationPane {
             let title_style = Style::new().fg(Color::CYAN);
             let inner = buf.draw_block(picker_rect, " Add Lane ", border_style, title_style);
 
-            let inst = state.instruments.selected_instrument();
+            let inst = state.tracks.selected_track();
             let vst_registry = &state.session.vst_plugins;
 
             // Scroll offset: keep cursor visible within the inner area

@@ -359,8 +359,8 @@ fn format_value(v: f32) -> String {
 fn target_instrument_name(target: &AutomationTarget, state: &AppState) -> String {
     match target {
         AutomationTarget::Track(id, _) => state
-            .instruments
-            .instrument(*id)
+            .tracks
+            .track(*id)
             .map(|i| i.name.clone())
             .unwrap_or_else(|| format!("#{}", id.get())),
         AutomationTarget::Bus(id, _) => format!("Bus {}", id.get()),
@@ -387,7 +387,7 @@ fn read_target_value(target: &AutomationTarget, state: &AppState) -> Option<(f32
     let (min, max) = target.default_range();
     let value = match target {
         AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
-            let inst = state.instruments.instrument(*id)?;
+            let inst = state.tracks.track(*id)?;
             match param {
                 ParameterTarget::Level => inst.channel_strip.level,
                 ParameterTarget::Pan => inst.channel_strip.pan,

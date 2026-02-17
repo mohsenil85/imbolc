@@ -727,7 +727,7 @@ impl NetServer {
     pub fn poll_actions(
         &mut self,
         session: &imbolc_types::SessionState,
-        instruments: &imbolc_types::InstrumentState,
+        instruments: &imbolc_types::TrackState,
     ) -> Vec<(ClientId, NetworkAction)> {
         let mut actions = Vec::new();
 
@@ -783,7 +783,7 @@ impl NetServer {
                                 // Send current state so the client isn't stale
                                 let net_state = NetworkState {
                                     session: session.clone(),
-                                    instruments: instruments.clone(),
+                                    tracks: instruments.clone(),
                                     ownership: self.build_ownership_map(),
                                     privileged_client: self.privileged_client_info(),
                                 };
@@ -853,7 +853,7 @@ impl NetServer {
                         // Build NetworkState on demand (only during Hello handshake)
                         let net_state = NetworkState {
                             session: session.clone(),
-                            instruments: instruments.clone(),
+                            tracks: instruments.clone(),
                             ownership: self.build_ownership_map(),
                             privileged_client: self.privileged_client_info(),
                         };
@@ -1195,7 +1195,7 @@ impl NetServer {
     /// Broadcast only changed subsystems as a patch.
     ///
     /// Uses per-instrument delta patches when only a few instruments changed,
-    /// falling back to full `InstrumentState` for structural changes or when
+    /// falling back to full `TrackState` for structural changes or when
     /// more than half the instruments are dirty. Rate-limited to ~30 Hz.
     pub fn broadcast_state_patch(&mut self, state: &NetworkState) {
         if !self.dirty.any() {
@@ -1211,12 +1211,12 @@ impl NetServer {
         self.seq += 1;
 
         // Threshold coalescing: if structural or >half of instruments are dirty, send full state
-        let total = state.instruments.instruments.len();
+        let total = state.tracks.tracks.len();
         let use_full_instruments = self.dirty.instruments_structural
             || (total > 0 && self.dirty.dirty_instruments.len() > total / 2);
 
         let instruments = if use_full_instruments {
-            Some(state.instruments.clone())
+            Some(state.tracks.clone())
         } else {
             None
         };
@@ -1225,7 +1225,7 @@ impl NetServer {
             if !use_full_instruments && !self.dirty.dirty_instruments.is_empty() {
                 let mut patches = HashMap::new();
                 for &id in &self.dirty.dirty_instruments {
-                    if let Some(inst) = state.instruments.instrument(id) {
+                    if let Some(inst) = state.tracks.track(id) {
                         patches.insert(id, inst.clone());
                     }
                 }
@@ -1375,7 +1375,7 @@ impl NetServer {
             automation_lane_patches,
             mixer,
             mixer_bus_patches,
-            instruments,
+            tracks: instruments,
             instrument_patches,
             ownership: if self.dirty.ownership {
                 Some(state.ownership.clone())

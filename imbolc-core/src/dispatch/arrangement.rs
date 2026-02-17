@@ -198,7 +198,7 @@ pub(super) fn dispatch_arrangement(
             DispatchResult::none()
         }
         ArrangementAction::SelectLane(lane) => {
-            let max_lane = state.instruments.instruments.len().saturating_sub(1);
+            let max_lane = state.tracks.tracks.len().saturating_sub(1);
             state.session.arrangement.selected_lane = (*lane).min(max_lane);
             DispatchResult::none()
         }
@@ -396,12 +396,12 @@ mod tests {
 
     fn setup() -> (AppState, AudioHandle) {
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
         (state, AudioHandle::new())
     }
 
     fn first_instrument_id(state: &AppState) -> TrackId {
-        state.instruments.instruments[0].id
+        state.tracks.tracks[0].id
     }
 
     // ── 1. TogglePlayMode ─────────────────────────────────────────────
@@ -1149,7 +1149,7 @@ mod tests {
     fn select_lane_allows_valid_index() {
         let (mut state, mut audio) = setup();
         // Add a second instrument
-        state.add_instrument(SourceType::Sin);
+        state.add_track(SourceType::Sin);
         // 2 instruments → lanes 0 and 1 valid
         dispatch_arrangement(&ArrangementAction::SelectLane(1), &mut state, &mut audio);
         assert_eq!(state.session.arrangement.selected_lane, 1);

@@ -1,9 +1,7 @@
 //! Serialization roundtrip tests for all protocol message types.
 
 use imbolc_net::protocol::*;
-use imbolc_types::{
-    InstrumentAction, InstrumentState, ServerAction, SessionState, SourceType, TrackId,
-};
+use imbolc_types::{InstrumentAction, ServerAction, SessionState, SourceType, TrackId, TrackState};
 use std::collections::HashMap;
 
 fn roundtrip_client(msg: &ClientMessage) -> ClientMessage {
@@ -25,8 +23,8 @@ fn roundtrip_server(msg: &ServerMessage) -> ServerMessage {
 }
 
 fn make_network_state() -> NetworkState {
-    let mut instruments = InstrumentState::new();
-    instruments.add_instrument(SourceType::Saw);
+    let mut tracks = TrackState::new();
+    tracks.add_track(SourceType::Saw);
     let mut ownership = HashMap::new();
     ownership.insert(
         TrackId::new(0),
@@ -37,7 +35,7 @@ fn make_network_state() -> NetworkState {
     );
     NetworkState {
         session: SessionState::new(),
-        instruments,
+        tracks,
         ownership,
         privileged_client: Some((ClientId::new(1), "Alice".into())),
     }
@@ -322,7 +320,7 @@ fn test_roundtrip_state_patch_update() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(Some((ClientId::new(1), "Alice".into()))),
@@ -333,7 +331,7 @@ fn test_roundtrip_state_patch_update() {
     match rt {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(patch.session.is_some());
-            assert!(patch.instruments.is_none());
+            assert!(patch.tracks.is_none());
             assert!(patch.ownership.is_none());
             assert!(patch.privileged_client.is_some());
             assert_eq!(patch.seq, 42);
@@ -390,7 +388,7 @@ fn test_roundtrip_state_patch_all_none() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: None,
@@ -404,7 +402,7 @@ fn test_roundtrip_state_patch_all_none() {
     assert!(rt.arrangement.is_none());
     assert!(rt.automation.is_none());
     assert!(rt.mixer.is_none());
-    assert!(rt.instruments.is_none());
+    assert!(rt.tracks.is_none());
     assert!(rt.ownership.is_none());
     assert!(rt.privileged_client.is_none());
     assert_eq!(rt.seq, 0);
@@ -422,7 +420,7 @@ fn test_roundtrip_state_patch_privileged_client_cleared() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(None), // "changed to: nobody"
@@ -454,7 +452,7 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: None,
@@ -474,7 +472,7 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(None),
@@ -494,7 +492,7 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: None,
         ownership: None,
         privileged_client: Some(Some((ClientId::new(1), "Alice".into()))),
@@ -509,10 +507,10 @@ fn test_roundtrip_state_patch_privileged_client_all_variants() {
 
 #[test]
 fn test_roundtrip_state_patch_with_instrument_patches() {
-    let mut instruments = InstrumentState::new();
-    instruments.add_instrument(SourceType::Saw);
-    instruments.add_instrument(SourceType::Saw);
-    let inst = instruments.instrument(TrackId::new(0)).unwrap().clone();
+    let mut instruments = TrackState::new();
+    instruments.add_track(SourceType::Saw);
+    instruments.add_track(SourceType::Saw);
+    let inst = instruments.track(TrackId::new(0)).unwrap().clone();
 
     let mut patches = HashMap::new();
     patches.insert(TrackId::new(0), inst);
@@ -526,7 +524,7 @@ fn test_roundtrip_state_patch_with_instrument_patches() {
         automation_lane_patches: None,
         mixer: None,
         mixer_bus_patches: None,
-        instruments: None,
+        tracks: None,
         instrument_patches: Some(patches),
         ownership: None,
         privileged_client: None,
@@ -536,7 +534,7 @@ fn test_roundtrip_state_patch_with_instrument_patches() {
     let bytes = bincode::serde::encode_to_vec(&patch, bincode::config::standard()).unwrap();
     let (rt, _): (StatePatch, _) =
         bincode::serde::decode_from_slice(&bytes, bincode::config::standard()).unwrap();
-    assert!(rt.instruments.is_none());
+    assert!(rt.tracks.is_none());
     let rt_patches = rt.instrument_patches.unwrap();
     assert_eq!(rt_patches.len(), 1);
     assert!(rt_patches.contains_key(&TrackId::new(0)));

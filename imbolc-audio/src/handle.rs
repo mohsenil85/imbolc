@@ -380,7 +380,7 @@ impl AudioHandle {
         };
 
         self.event_log.append(LogEntryKind::Checkpoint {
-            instruments: state.instruments().clone(),
+            instruments: state.tracks().clone(),
             session: state.session().clone(),
             piano_roll,
             automation_lanes,
@@ -465,7 +465,7 @@ impl AudioHandle {
                     }
                 }
                 AudioEffect::SetEffectParam(instrument_id, effect_id, param_idx, value) => {
-                    if let Some(inst) = state.instruments().instrument(*instrument_id) {
+                    if let Some(inst) = state.tracks().track(*instrument_id) {
                         if let Some(effect) = inst.effect_by_id(*effect_id) {
                             if let Some(param) = effect.params.get(param_idx.get()) {
                                 if let Err(e) = self.set_effect_param(

@@ -19,7 +19,7 @@ pub fn tick_drum_sequencer(
     // (target_instrument_id, freq, velocity, offset_secs)
     let mut instrument_triggers: Vec<(TrackId, f32, f32, f64)> = Vec::new();
 
-    for instrument in &mut instruments.instruments {
+    for instrument in &mut instruments.tracks {
         let seq = match &mut instrument.source_extra {
             SourceExtra::Kit(s) => s,
             _ => continue,

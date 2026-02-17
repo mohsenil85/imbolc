@@ -25,7 +25,7 @@ pub fn dispatch_audio_feedback(
             instrument_id,
             step,
         } => {
-            if let Some(inst) = state.instruments.instrument_mut(*instrument_id) {
+            if let Some(inst) = state.tracks.track_mut(*instrument_id) {
                 if let Some(seq) = inst.drum_sequencer_mut() {
                     seq.current_step = *step;
                     seq.last_played_step = Some(*step);
@@ -64,12 +64,12 @@ pub fn dispatch_audio_feedback(
             result.reset_playhead = true;
 
             // Convert instrument to PitchedSampler
-            let buffer_id = state.instruments.next_sampler_buffer_id;
-            state.instruments.next_sampler_buffer_id += 1;
+            let buffer_id = state.tracks.next_sampler_buffer_id;
+            state.tracks.next_sampler_buffer_id += 1;
             let path_str = path.to_string_lossy().to_string();
             let _ = audio.load_sample(buffer_id, &path_str);
 
-            if let Some(inst) = state.instruments.instrument_mut(*instrument_id) {
+            if let Some(inst) = state.tracks.track_mut(*instrument_id) {
                 use crate::state::{ParamValue, SourceType};
                 inst.source = SourceType::PitchedSampler;
                 inst.source_params = SourceType::PitchedSampler.default_params();
@@ -117,7 +117,7 @@ pub fn dispatch_audio_feedback(
                 }
             }
             // Initialize per-instance param values from defaults
-            if let Some(instrument) = state.instruments.instrument_mut(*instrument_id) {
+            if let Some(instrument) = state.tracks.track_mut(*instrument_id) {
                 match target {
                     VstTarget::Source => {
                         if let SourceExtra::Vst {
@@ -177,7 +177,7 @@ pub fn dispatch_audio_feedback(
             target,
             path,
         } => {
-            if let Some(instrument) = state.instruments.instrument_mut(*instrument_id) {
+            if let Some(instrument) = state.tracks.track_mut(*instrument_id) {
                 match target {
                     VstTarget::Source => {
                         if let SourceExtra::Vst {

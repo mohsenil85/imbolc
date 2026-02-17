@@ -9,7 +9,7 @@ use imbolc_types::{DomainAction, InstrumentAction};
 fn reduce(state: &mut AppState, action: &InstrumentAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -18,7 +18,7 @@ pub(super) fn handle_add(
     state: &mut AppState,
     source_type: crate::state::SourceType,
 ) -> DispatchResult {
-    let next_id = state.instruments.next_id;
+    let next_id = state.tracks.next_id;
     reduce(state, &InstrumentAction::Add(source_type));
     let mut result = DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit));
     result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -36,7 +36,7 @@ pub(super) fn handle_delete(
 ) -> DispatchResult {
     // Collect buffer IDs from the instrument before removing it
     let mut buffer_ids: Vec<BufferId> = Vec::new();
-    if let Some(inst) = state.instruments.instrument(inst_id) {
+    if let Some(inst) = state.tracks.track(inst_id) {
         if let Some(seq) = inst.drum_sequencer() {
             for pad in &seq.pads {
                 if let Some(id) = pad.buffer_id {
@@ -69,9 +69,9 @@ pub(super) fn handle_delete(
     }
 
     // Remove deleted instrument from all param tags
-    state.session.param_tags.remove_instrument(inst_id);
+    state.session.param_tags.remove_track(inst_id);
 
-    let mut result = if state.instruments.instruments.is_empty() {
+    let mut result = if state.tracks.tracks.is_empty() {
         DispatchResult::with_nav(NavIntent::SwitchTo(PaneId::Add))
     } else {
         DispatchResult::none()
@@ -96,7 +96,7 @@ pub(super) fn handle_update(
 ) -> DispatchResult {
     // Capture old values for automation recording before applying
     let old_values = if state.recording.automation_recording && state.audio.playing {
-        state.instruments.instrument(update.id).map(|inst| {
+        state.tracks.track(update.id).map(|inst| {
             (
                 inst.modulation.lfo.rate,
                 inst.modulation.lfo.depth,
@@ -166,12 +166,12 @@ mod tests {
 
     fn setup_with_instrument() -> (AppState, TrackId) {
         let mut state = AppState::new();
-        let id = state.instruments.add_instrument(SourceType::Saw);
+        let id = state.tracks.add_track(SourceType::Saw);
         (state, id)
     }
 
     fn default_update(state: &AppState, id: TrackId) -> InstrumentUpdate {
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         InstrumentUpdate {
             id,
             source: inst.source,
@@ -191,7 +191,7 @@ mod tests {
         update.lfo.rate = 8.0;
         update.lfo.depth = 0.9;
         handle_update(&mut state, &update);
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert!((inst.modulation.lfo.rate - 8.0).abs() < f32::EPSILON);
         assert!((inst.modulation.lfo.depth - 0.9).abs() < f32::EPSILON);
     }
@@ -261,7 +261,7 @@ mod tests {
         handle_update(&mut state, &update);
 
         // Values should still be applied
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert!((inst.modulation.lfo.rate - 10.0).abs() < f32::EPSILON);
         assert!((inst.modulation.amp_envelope.attack - 0.5).abs() < f32::EPSILON);
 

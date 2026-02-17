@@ -25,12 +25,12 @@ pub use handle::{AudioHandle, AudioReadState};
 pub use input::AudioInputManager;
 pub use osc_client::AudioMonitor;
 
-use imbolc_types::{InstrumentState, SessionState};
+use imbolc_types::{SessionState, TrackState};
 
-/// Trait for types that provide the session and instrument state needed by the
+/// Trait for types that provide the session and track state needed by the
 /// audio subsystem. Implemented by `AppState` in imbolc-core to break the
 /// circular dependency.
 pub trait AudioStateProvider {
     fn session(&self) -> &SessionState;
-    fn instruments(&self) -> &InstrumentState;
+    fn tracks(&self) -> &TrackState;
 }

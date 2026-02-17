@@ -62,7 +62,7 @@ impl PianoRollPane {
             }
             ViewMode::NoteEditor => {
                 // Only switch to step sequencer if current instrument is a Kit
-                if let Some(inst) = state.instruments.selected_instrument() {
+                if let Some(inst) = state.tracks.selected_track() {
                     if inst.source.is_kit() {
                         self.view_mode = ViewMode::StepSequencer;
                         self.seq_selection_anchor = None;
@@ -137,7 +137,7 @@ impl PianoRollPane {
 
     /// Handle actions in step sequencer view mode by reinterpreting piano roll action IDs.
     fn handle_sequencer_action(&mut self, action: ActionId, state: &AppState) -> Action {
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
         };
@@ -475,7 +475,7 @@ impl PianoRollPane {
         let grid_y = header_y + 1;
         let visible = self.seq_visible_steps(box_width);
 
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
         };

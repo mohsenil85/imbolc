@@ -31,8 +31,8 @@ impl ParamTag {
         self.targets.retain(|t| t != target);
     }
 
-    /// Remove all targets referencing a given instrument.
-    pub fn remove_instrument(&mut self, id: TrackId) {
+    /// Remove all targets referencing a given track.
+    pub fn remove_track(&mut self, id: TrackId) {
         self.targets.retain(|t| t.instrument_id() != Some(id));
     }
 }
@@ -60,10 +60,10 @@ impl ParamTagState {
         self.selected_tag.and_then(|i| self.tags.get_mut(i))
     }
 
-    /// Remove all targets referencing a given instrument across all tags.
-    pub fn remove_instrument(&mut self, id: TrackId) {
+    /// Remove all targets referencing a given track across all tags.
+    pub fn remove_track(&mut self, id: TrackId) {
         for tag in &mut self.tags {
-            tag.remove_instrument(id);
+            tag.remove_track(id);
         }
     }
 }
@@ -101,7 +101,7 @@ mod tests {
         let id2 = TrackId::new(2);
         tag.add_target(AutomationTarget::filter_cutoff(id1));
         tag.add_target(AutomationTarget::level(id2));
-        tag.remove_instrument(id1);
+        tag.remove_track(id1);
         assert_eq!(tag.targets.len(), 1);
         assert_eq!(tag.targets[0].instrument_id(), Some(id2));
     }
@@ -116,7 +116,7 @@ mod tests {
         state.tags[0].add_target(AutomationTarget::filter_cutoff(id1));
         state.tags[0].add_target(AutomationTarget::level(id2));
         state.tags[1].add_target(AutomationTarget::instrument(id1, ParameterTarget::Pan));
-        state.remove_instrument(id1);
+        state.remove_track(id1);
         assert_eq!(state.tags[0].targets.len(), 1);
         assert_eq!(state.tags[1].targets.len(), 0);
     }

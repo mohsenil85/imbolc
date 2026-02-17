@@ -105,7 +105,7 @@ fn test_state_patch_broadcast() {
             assert!(patch.session.is_some(), "Session should be in the patch");
             // Instruments should NOT be present
             assert!(
-                patch.instruments.is_none(),
+                patch.tracks.is_none(),
                 "Instruments should not be in the patch"
             );
             assert!(patch.seq > 0);
@@ -163,7 +163,7 @@ fn test_patch_instruments_only() {
     let msg = alice.recv().unwrap();
     match msg {
         ServerMessage::StatePatchUpdate { patch } => {
-            assert!(patch.instruments.is_some(), "instruments should be present");
+            assert!(patch.tracks.is_some(), "instruments should be present");
             assert!(patch.session.is_none(), "session should be absent");
             assert!(patch.ownership.is_none(), "ownership should be absent");
             assert!(
@@ -203,7 +203,7 @@ fn test_patch_mixer_and_instruments() {
                 "session should be absent (Mixer is granular)"
             );
             assert!(patch.mixer.is_some(), "mixer should be present");
-            assert!(patch.instruments.is_some(), "instruments should be present");
+            assert!(patch.tracks.is_some(), "instruments should be present");
         }
         other => panic!("Expected StatePatchUpdate, got {:?}", other),
     }
@@ -318,7 +318,7 @@ fn test_dirty_clears_after_patch() {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(patch.session.is_some(), "session should be present");
             assert!(
-                patch.instruments.is_none(),
+                patch.tracks.is_none(),
                 "instruments should be cleared from previous broadcast"
             );
         }
@@ -357,7 +357,7 @@ fn test_ownership_patch() {
                 "Some(None) should survive JSON roundtrip"
             );
             assert!(patch.session.is_none(), "session should be absent");
-            assert!(patch.instruments.is_none(), "instruments should be absent");
+            assert!(patch.tracks.is_none(), "instruments should be absent");
         }
         other => panic!("Expected StatePatchUpdate, got {:?}", other),
     }
@@ -434,7 +434,7 @@ fn test_patch_reaches_all_clients() {
         match msg {
             ServerMessage::StatePatchUpdate { patch } => {
                 assert!(
-                    patch.instruments.is_some(),
+                    patch.tracks.is_some(),
                     "{} should receive instruments",
                     name
                 );
@@ -476,7 +476,7 @@ fn test_accumulated_actions_combined_patch() {
     match msg {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(patch.session.is_some(), "session should be present");
-            assert!(patch.instruments.is_some(), "instruments should be present");
+            assert!(patch.tracks.is_some(), "instruments should be present");
             assert!(patch.ownership.is_some(), "ownership should be present");
             assert!(
                 patch.privileged_client.is_some(),
@@ -515,7 +515,7 @@ fn test_patch_single_instrument_change() {
     match msg {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(
-                patch.instruments.is_none(),
+                patch.tracks.is_none(),
                 "full instruments should NOT be sent for targeted change"
             );
             let patches = patch
@@ -555,7 +555,7 @@ fn test_patch_structural_sends_full_instruments() {
     match msg {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(
-                patch.instruments.is_some(),
+                patch.tracks.is_some(),
                 "full instruments should be sent for structural"
             );
             assert!(
@@ -595,7 +595,7 @@ fn test_patch_targeted_then_structural() {
     match msg {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(
-                patch.instruments.is_some(),
+                patch.tracks.is_some(),
                 "structural should override to full instruments"
             );
             assert!(
@@ -753,7 +753,7 @@ fn test_patch_threshold_coalescing() {
     match msg {
         ServerMessage::StatePatchUpdate { patch } => {
             assert!(
-                patch.instruments.is_some(),
+                patch.tracks.is_some(),
                 "should coalesce to full instruments when >half are dirty"
             );
             assert!(
@@ -927,7 +927,7 @@ fn test_piano_roll_only_sends_piano_roll() {
             assert!(patch.arrangement.is_none(), "arrangement should be absent");
             assert!(patch.automation.is_none(), "automation should be absent");
             assert!(patch.mixer.is_none(), "mixer should be absent");
-            assert!(patch.instruments.is_none(), "instruments should be absent");
+            assert!(patch.tracks.is_none(), "instruments should be absent");
         }
         other => panic!("Expected StatePatchUpdate, got {:?}", other),
     }
@@ -1035,7 +1035,7 @@ fn test_undo_sends_full_session() {
             );
             assert!(patch.mixer.is_none(), "mixer absent when full session");
             assert!(
-                patch.instruments.is_some(),
+                patch.tracks.is_some(),
                 "instruments should be present (undo is structural)"
             );
         }

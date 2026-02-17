@@ -69,7 +69,7 @@ pub(super) fn dispatch_server(
                 let _ = audio.stop_recording();
 
                 // Auto-deactivate AudioIn instrument on stop
-                if let Some(inst) = state.instruments.selected_instrument_mut() {
+                if let Some(inst) = state.tracks.selected_track_mut() {
                     if inst.source.is_audio_input() && inst.channel_strip.active {
                         inst.channel_strip.active = false;
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -80,7 +80,7 @@ pub(super) fn dispatch_server(
                 result.push_status(audio.status(), "Stopping recording...");
             } else if audio.is_running() {
                 // Auto-activate AudioIn instrument on start
-                if let Some(inst) = state.instruments.selected_instrument_mut() {
+                if let Some(inst) = state.tracks.selected_track_mut() {
                     if inst.source.is_audio_input() && !inst.channel_strip.active {
                         inst.channel_strip.active = true;
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -103,7 +103,7 @@ pub(super) fn dispatch_server(
                 let _ = audio.stop_recording();
 
                 // Auto-deactivate AudioIn instrument on stop
-                if let Some(inst) = state.instruments.selected_instrument_mut() {
+                if let Some(inst) = state.tracks.selected_track_mut() {
                     if inst.source.is_audio_input() && inst.channel_strip.active {
                         inst.channel_strip.active = false;
                         result.audio_effects.push(AudioEffect::RebuildInstruments);
@@ -114,11 +114,11 @@ pub(super) fn dispatch_server(
                 result.push_status(audio.status(), "Stopping recording...");
             } else if audio.is_running() {
                 // Record from the selected instrument's source_out bus
-                if let Some(inst) = state.instruments.selected_instrument() {
+                if let Some(inst) = state.tracks.selected_track() {
                     let inst_id = inst.id;
                     // Auto-activate AudioIn instrument on start
                     if inst.source.is_audio_input() && !inst.channel_strip.active {
-                        if let Some(inst_mut) = state.instruments.instrument_mut(inst_id) {
+                        if let Some(inst_mut) = state.tracks.track_mut(inst_id) {
                             inst_mut.channel_strip.active = true;
                         }
                         result.audio_effects.push(AudioEffect::RebuildInstruments);

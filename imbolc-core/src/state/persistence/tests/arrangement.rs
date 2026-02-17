@@ -1,6 +1,6 @@
 use super::{load_project, save_project, temp_db_path};
 use crate::state::instrument::SourceType;
-use crate::state::instrument_state::InstrumentState;
+use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
 use crate::state::AutomationTarget;
 
@@ -10,8 +10,8 @@ fn save_and_load_round_trip_arrangement() {
     use crate::state::piano_roll::Note;
 
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut instruments = TrackState::new();
+    let inst_id = instruments.add_track(SourceType::Saw);
 
     // Create clips with notes
     let clip_id = session
@@ -131,8 +131,8 @@ fn round_trip_arrangement_clips() {
     use crate::state::piano_roll::Note;
 
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Saw);
+    let mut instruments = TrackState::new();
+    let inst_id = instruments.add_track(SourceType::Saw);
     session.piano_roll.add_sequence(inst_id);
 
     let clip_id = session
@@ -179,7 +179,7 @@ fn round_trip_arrangement_clips() {
 #[test]
 fn round_trip_automation_with_curves() {
     let mut session = SessionState::new();
-    let instruments = InstrumentState::new();
+    let instruments = TrackState::new();
 
     let lane_id = session.automation.add_lane(AutomationTarget::bpm());
     let lane = session.automation.lane_mut(lane_id).unwrap();

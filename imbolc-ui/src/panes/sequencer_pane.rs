@@ -73,7 +73,7 @@ impl Pane for SequencerPane {
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
         };
@@ -196,7 +196,7 @@ impl Pane for SequencerPane {
             }
             ActionId::Sequencer(SequencerActionId::FreqUp) => {
                 // Increase trigger freq by a semitone
-                if let Some(seq) = state.instruments.selected_drum_sequencer() {
+                if let Some(seq) = state.tracks.selected_drum_sequencer() {
                     if let Some(pad) = seq.pads.get(self.cursor_pad) {
                         let new_freq = pad.trigger_freq * 2.0_f32.powf(1.0 / 12.0);
                         return Action::Sequencer(SequencerAction::SetPadTriggerFreq(
@@ -209,7 +209,7 @@ impl Pane for SequencerPane {
             }
             ActionId::Sequencer(SequencerActionId::FreqDown) => {
                 // Decrease trigger freq by a semitone
-                if let Some(seq) = state.instruments.selected_drum_sequencer() {
+                if let Some(seq) = state.tracks.selected_drum_sequencer() {
                     if let Some(pad) = seq.pads.get(self.cursor_pad) {
                         let new_freq = pad.trigger_freq * 2.0_f32.powf(-1.0 / 12.0);
                         return Action::Sequencer(SequencerAction::SetPadTriggerFreq(
@@ -233,7 +233,7 @@ impl Pane for SequencerPane {
 
         let border_style = Style::new().fg(Color::ORANGE);
 
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => {
                 let inner = buf.draw_block(rect, " Drum Sequencer ", border_style, border_style);
@@ -533,7 +533,7 @@ impl Pane for SequencerPane {
         let grid_y = header_y + 1;
         let visible = self.visible_steps(box_width);
 
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
         };
@@ -625,7 +625,7 @@ mod tests {
     #[test]
     fn cursor_moves_with_actions_and_toggle_uses_cursor() {
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         let mut pane = SequencerPane::new(Keymap::new());
 
         pane.cursor_pad = 0;
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn chopper_pushes_sample_chopper() {
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Kit);
+        state.add_track(SourceType::Kit);
         let mut pane = SequencerPane::new(Keymap::new());
 
         let action = pane.handle_action(

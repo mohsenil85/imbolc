@@ -212,7 +212,7 @@ pub fn replay_domain_log(path: &Path) -> Result<crate::state::AppState, ReplayEr
                 continue;
             }
             if reduce::is_reducible(&action) {
-                reduce::reduce_action(&action, &mut state.instruments, &mut state.session);
+                reduce::reduce_action(&action, &mut state.tracks, &mut state.session);
             }
         }
     }
@@ -231,7 +231,7 @@ mod tests {
         File::create(&path).unwrap();
 
         let state = replay_domain_log(&path).unwrap();
-        assert!(state.instruments.instruments.is_empty());
+        assert!(state.tracks.tracks.is_empty());
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
         .unwrap();
 
         let state = replay_domain_log(&path).unwrap();
-        assert!(state.instruments.instruments.is_empty());
+        assert!(state.tracks.tracks.is_empty());
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod tests {
         .unwrap();
 
         let state = replay_domain_log(&path).unwrap();
-        assert_eq!(state.instruments.instruments.len(), 1);
+        assert_eq!(state.tracks.tracks.len(), 1);
     }
 
     #[test]
@@ -284,7 +284,7 @@ mod tests {
         .unwrap();
 
         let state = replay_domain_log(&path).unwrap();
-        assert!(state.instruments.instruments.is_empty());
+        assert!(state.tracks.tracks.is_empty());
     }
 
     #[test]
@@ -301,6 +301,6 @@ mod tests {
         .unwrap();
 
         let state = replay_domain_log(&path).unwrap();
-        assert_eq!(state.instruments.instruments.len(), 1);
+        assert_eq!(state.tracks.tracks.len(), 1);
     }
 }

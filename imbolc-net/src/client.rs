@@ -358,7 +358,7 @@ impl RemoteDispatcher {
                                 self.owned_instruments.insert(inst_id);
                             }
                         }
-                        new_state.instruments.rebuild_index();
+                        new_state.tracks.rebuild_index();
                         self.state = new_state;
                         state_updated = true;
                     }
@@ -439,14 +439,12 @@ impl RemoteDispatcher {
                                     }
                                 }
                             }
-                            if let Some(instruments) = patch.instruments {
-                                self.state.instruments = instruments;
-                                self.state.instruments.rebuild_index();
+                            if let Some(instruments) = patch.tracks {
+                                self.state.tracks = instruments;
+                                self.state.tracks.rebuild_index();
                             } else if let Some(patches) = patch.instrument_patches {
                                 for (id, new_instrument) in patches {
-                                    if let Some(existing) =
-                                        self.state.instruments.instrument_mut(id)
-                                    {
+                                    if let Some(existing) = self.state.tracks.track_mut(id) {
                                         *existing = new_instrument;
                                     }
                                 }
@@ -475,7 +473,7 @@ impl RemoteDispatcher {
                                 self.owned_instruments.insert(inst_id);
                             }
                         }
-                        new_state.instruments.rebuild_index();
+                        new_state.tracks.rebuild_index();
                         self.state = new_state;
                         state_updated = true;
                     }

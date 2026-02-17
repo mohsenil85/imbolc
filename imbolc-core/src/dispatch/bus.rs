@@ -8,7 +8,7 @@ use imbolc_types::DomainAction;
 fn reduce(state: &mut AppState, action: &BusAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Bus(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -86,7 +86,7 @@ pub fn dispatch_bus(action: &BusAction, state: &mut AppState) -> DispatchResult 
 fn reduce_lg(state: &mut AppState, action: &LayerGroupAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::LayerGroup(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -194,30 +194,26 @@ mod tests {
     #[test]
     fn add_bus_creates_bus() {
         let mut state = setup();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
         let initial_bus_count = state.session.mixer.buses.len();
 
         dispatch_bus(&BusAction::Add, &mut state);
 
         assert_eq!(state.session.mixer.buses.len(), initial_bus_count + 1);
         // Sends are lazily created now, so instrument sends remain empty
-        assert!(state.instruments.instruments[0]
-            .channel_strip
-            .sends
-            .is_empty());
+        assert!(state.tracks.tracks[0].channel_strip.sends.is_empty());
     }
 
     #[test]
     fn remove_bus_resets_instrument_output() {
         let mut state = setup();
-        state.add_instrument(SourceType::Saw);
-        state.instruments.instruments[0].channel_strip.output_target =
-            OutputTarget::Bus(BusId::new(3));
+        state.add_track(SourceType::Saw);
+        state.tracks.tracks[0].channel_strip.output_target = OutputTarget::Bus(BusId::new(3));
 
         dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state);
 
         assert_eq!(
-            state.instruments.instruments[0].channel_strip.output_target,
+            state.tracks.tracks[0].channel_strip.output_target,
             OutputTarget::Master
         );
     }
@@ -226,9 +222,9 @@ mod tests {
     fn remove_bus_disables_sends() {
         use imbolc_types::MixerSend;
         let mut state = setup();
-        state.add_instrument(SourceType::Saw);
+        state.add_track(SourceType::Saw);
         // Insert and enable a send to bus 3
-        state.instruments.instruments[0].channel_strip.sends.insert(
+        state.tracks.tracks[0].channel_strip.sends.insert(
             BusId::new(3),
             MixerSend {
                 bus_id: BusId::new(3),
@@ -241,7 +237,7 @@ mod tests {
         dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state);
 
         // Send should be disabled but still exist
-        let send = state.instruments.instruments[0]
+        let send = state.tracks.tracks[0]
             .channel_strip
             .sends
             .get(&BusId::new(3));

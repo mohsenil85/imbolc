@@ -40,12 +40,12 @@ impl InstrumentPickerPane {
 
     fn update_instruments(&mut self, state: &AppState) {
         // Get the current instrument (the Kit) to exclude from the list
-        let current_kit_id = state.instruments.selected_instrument().map(|i| i.id);
+        let current_kit_id = state.tracks.selected_track().map(|i| i.id);
 
         // Build list of instruments that can be triggered (exclude the current Kit)
         self.cached_instruments = state
-            .instruments
-            .instruments
+            .tracks
+            .tracks
             .iter()
             .filter(|i| {
                 // Exclude the current Kit instrument
@@ -95,7 +95,7 @@ impl InstrumentPickerPane {
     fn confirm_selection(&self, state: &AppState) -> Action {
         // Get the target pad from state
         let target_pad = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .and_then(|seq| seq.editing_pad);
 
@@ -182,7 +182,7 @@ impl Pane for InstrumentPickerPane {
 
         // Get the pad number from state
         let pad_num = state
-            .instruments
+            .tracks
             .selected_drum_sequencer()
             .and_then(|seq| seq.editing_pad)
             .map(|p| p + 1)
@@ -225,8 +225,8 @@ impl Pane for InstrumentPickerPane {
 
                 // Find instrument to get source type
                 let source_label = state
-                    .instruments
-                    .instrument(*id)
+                    .tracks
+                    .track(*id)
                     .map(|inst| format!("{:?}", inst.source))
                     .unwrap_or_default();
 

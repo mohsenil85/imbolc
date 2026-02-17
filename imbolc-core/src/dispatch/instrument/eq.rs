@@ -21,7 +21,7 @@ pub(super) fn handle_set_eq_param(
             param,
             value,
         )),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 
@@ -62,7 +62,7 @@ pub(super) fn handle_toggle_eq(
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(InstrumentAction::ToggleEq(instrument_id)),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
     let mut result = DispatchResult::none();

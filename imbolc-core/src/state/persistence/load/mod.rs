@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use rusqlite::{params, Connection, Result as SqlResult};
 
-use crate::state::instrument_state::InstrumentState;
+use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
 
 mod arrangement;
@@ -12,9 +12,9 @@ mod mixer;
 mod session;
 
 /// Load project state from relational tables.
-pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, InstrumentState)> {
+pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState)> {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
+    let mut instruments = TrackState::new();
 
     session::load_session(conn, &mut session, &mut instruments)?;
     session::load_theme(conn, &mut session)?;

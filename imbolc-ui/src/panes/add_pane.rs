@@ -403,7 +403,7 @@ impl Pane for AddPane {
         match action {
             ActionId::Add(AddActionId::Confirm) => self.selected_option_action(),
             ActionId::Add(AddActionId::Cancel) => {
-                if state.instruments.instruments.is_empty() {
+                if state.tracks.tracks.is_empty() {
                     Action::Nav(NavAction::SwitchPane(PaneId::Server))
                 } else {
                     Action::Nav(NavAction::SwitchPane(PaneId::TrackList))

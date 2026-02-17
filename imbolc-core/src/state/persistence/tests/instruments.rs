@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use super::{load_project, save_project, temp_db_path};
 use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
 use crate::state::instrument::{SourceExtra, SourceType};
-use crate::state::instrument_state::InstrumentState;
+use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
 use imbolc_types::CustomSynthDefId;
 use imbolc_types::VstPluginId;
@@ -11,10 +11,10 @@ use imbolc_types::VstPluginId;
 #[test]
 fn round_trip_drum_sequencer() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let kit_id = instruments.add_instrument(SourceType::Kit);
+    let mut instruments = TrackState::new();
+    let kit_id = instruments.add_track(SourceType::Kit);
 
-    if let Some(inst) = instruments.instrument_mut(kit_id) {
+    if let Some(inst) = instruments.track_mut(kit_id) {
         if let Some(seq) = inst.drum_sequencer_mut() {
             seq.pads[0].name = "Kick".to_string();
             seq.pads[0].level = 0.9;
@@ -35,11 +35,7 @@ fn round_trip_drum_sequencer() {
     save_project(&path, &session, &instruments).expect("save");
     let (_, loaded_inst) = load_project(&path).expect("load");
 
-    let loaded_kit = loaded_inst
-        .instruments
-        .iter()
-        .find(|i| i.id == kit_id)
-        .unwrap();
+    let loaded_kit = loaded_inst.tracks.iter().find(|i| i.id == kit_id).unwrap();
     let seq = loaded_kit.drum_sequencer().unwrap();
     assert_eq!(seq.pads[0].name, "Kick");
     assert!((seq.pads[0].level - 0.9).abs() < 0.001);
@@ -58,10 +54,10 @@ fn round_trip_drum_sequencer() {
 #[test]
 fn round_trip_sampler_config() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let sampler_id = instruments.add_instrument(SourceType::PitchedSampler);
+    let mut instruments = TrackState::new();
+    let sampler_id = instruments.add_track(SourceType::PitchedSampler);
 
-    if let Some(inst) = instruments.instrument_mut(sampler_id) {
+    if let Some(inst) = instruments.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
             config.buffer_id = Some(42);
             config.sample_name = Some("test.wav".to_string());
@@ -82,7 +78,7 @@ fn round_trip_sampler_config() {
     let (_, loaded_inst) = load_project(&path).expect("load");
 
     let loaded = loaded_inst
-        .instruments
+        .tracks
         .iter()
         .find(|i| i.id == sampler_id)
         .unwrap();
@@ -100,10 +96,10 @@ fn round_trip_sampler_config() {
 #[test]
 fn round_trip_vst_plugins() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let inst_id = instruments.add_instrument(SourceType::Vst(VstPluginId::new(0)));
+    let mut instruments = TrackState::new();
+    let inst_id = instruments.add_track(SourceType::Vst(VstPluginId::new(0)));
 
-    if let Some(inst) = instruments.instrument_mut(inst_id) {
+    if let Some(inst) = instruments.track_mut(inst_id) {
         inst.source_extra = SourceExtra::Vst {
             param_values: vec![(0, 0.75), (1, 0.5)],
             state_path: Some(PathBuf::from("/tmp/test.vststate")),
@@ -116,11 +112,7 @@ fn round_trip_vst_plugins() {
     save_project(&path, &session, &instruments).expect("save");
     let (_, loaded_inst) = load_project(&path).expect("load");
 
-    let loaded = loaded_inst
-        .instruments
-        .iter()
-        .find(|i| i.id == inst_id)
-        .unwrap();
+    let loaded = loaded_inst.tracks.iter().find(|i| i.id == inst_id).unwrap();
     assert!(loaded
         .vst_source_params()
         .iter()
@@ -140,7 +132,7 @@ fn round_trip_vst_plugins() {
 #[test]
 fn round_trip_custom_synthdefs() {
     let mut session = SessionState::new();
-    let instruments = InstrumentState::new();
+    let instruments = TrackState::new();
 
     let mut registry = CustomSynthDefRegistry::new();
     registry.add(CustomSynthDef {
@@ -182,15 +174,15 @@ fn round_trip_custom_synthdefs() {
 #[test]
 fn round_trip_layer_octave_offset() {
     let mut session = SessionState::new();
-    let mut instruments = InstrumentState::new();
-    let id1 = instruments.add_instrument(SourceType::Saw);
-    let id2 = instruments.add_instrument(SourceType::Sin);
+    let mut instruments = TrackState::new();
+    let id1 = instruments.add_track(SourceType::Saw);
+    let id2 = instruments.add_track(SourceType::Sin);
 
     // Set non-default offsets
-    if let Some(inst) = instruments.instrument_mut(id1) {
+    if let Some(inst) = instruments.track_mut(id1) {
         inst.layer.octave_offset = 3;
     }
-    if let Some(inst) = instruments.instrument_mut(id2) {
+    if let Some(inst) = instruments.track_mut(id2) {
         inst.layer.octave_offset = -2;
     }
 
@@ -202,19 +194,11 @@ fn round_trip_layer_octave_offset() {
     let (_, loaded_instruments) = load_project(&path).expect("load");
 
     assert_eq!(
-        loaded_instruments
-            .instrument(id1)
-            .unwrap()
-            .layer
-            .octave_offset,
+        loaded_instruments.track(id1).unwrap().layer.octave_offset,
         3
     );
     assert_eq!(
-        loaded_instruments
-            .instrument(id2)
-            .unwrap()
-            .layer
-            .octave_offset,
+        loaded_instruments.track(id2).unwrap().layer.octave_offset,
         -2
     );
 

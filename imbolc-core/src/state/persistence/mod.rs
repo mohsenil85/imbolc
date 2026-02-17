@@ -12,7 +12,7 @@ use std::path::Path;
 
 use rusqlite::{Connection as SqlConnection, Result as SqlResult};
 
-use super::instrument_state::InstrumentState;
+use super::instrument_state::TrackState;
 use super::session::SessionState;
 
 /// Save project using relational schema.
@@ -24,7 +24,7 @@ use super::session::SessionState;
 pub fn save_project(
     path: &Path,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
 ) -> SqlResult<()> {
     let conn = SqlConnection::open(path)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
@@ -39,7 +39,7 @@ pub fn save_project(
 }
 
 /// Load project from relational format.
-pub fn load_project(path: &Path) -> SqlResult<(SessionState, InstrumentState)> {
+pub fn load_project(path: &Path) -> SqlResult<(SessionState, TrackState)> {
     let conn = SqlConnection::open(path)?;
 
     let (mut session, instruments) = load::load_relational(&conn)?;

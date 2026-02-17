@@ -171,8 +171,8 @@ impl Frame {
         );
 
         // Right-aligned items: [instrument indicator] [A-REC indicator] [REC indicator]
-        let inst_indicator = if let Some(idx) = state.instruments.selected {
-            if let Some(inst) = state.instruments.instruments.get(idx) {
+        let inst_indicator = if let Some(idx) = state.tracks.selected {
+            if let Some(inst) = state.tracks.tracks.get(idx) {
                 format!(" {}: {} ", idx + 1, inst.name)
             } else {
                 String::new()

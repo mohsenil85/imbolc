@@ -7,7 +7,7 @@ use imbolc_types::{DomainAction, InstrumentAction};
 fn reduce(state: &mut AppState, action: &InstrumentAction) {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -52,7 +52,7 @@ pub(super) fn handle_adjust_filter_cutoff(
 
     let mut result = DispatchResult::none();
     // Read post-mutation value for automation recording and targeted param
-    if let Some(instrument) = state.instruments.instrument(id) {
+    if let Some(instrument) = state.tracks.track(id) {
         if let Some(filter) = instrument.filter() {
             let cutoff = filter.cutoff.value;
             let target = AutomationTarget::filter_cutoff(id);
@@ -84,7 +84,7 @@ pub(super) fn handle_adjust_filter_resonance(
 
     let mut result = DispatchResult::none();
     // Read post-mutation value for automation recording and targeted param
-    if let Some(instrument) = state.instruments.instrument(id) {
+    if let Some(instrument) = state.tracks.track(id) {
         if let Some(filter) = instrument.filter() {
             let resonance = filter.resonance.value;
             let target = AutomationTarget::filter_resonance(id);
@@ -116,7 +116,7 @@ mod tests {
 
     fn setup() -> (AppState, imbolc_types::TrackId) {
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         (state, id)
     }
 
@@ -125,12 +125,12 @@ mod tests {
         let (mut state, id) = setup();
 
         // No filter initially
-        assert!(state.instruments.instrument(id).unwrap().filter().is_none());
+        assert!(state.tracks.track(id).unwrap().filter().is_none());
 
         let result = handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Lpf));
 
         // Filter should now be set
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         let filter = inst.filter().expect("filter should be present");
         assert_eq!(filter.filter_type, imbolc_types::FilterType::Lpf);
 
@@ -149,12 +149,12 @@ mod tests {
 
         // Set a filter first
         handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Hpf));
-        assert!(state.instruments.instrument(id).unwrap().filter().is_some());
+        assert!(state.tracks.track(id).unwrap().filter().is_some());
 
         // Toggle removes the filter from the processing chain
         let result = handle_toggle_filter(&mut state, id);
 
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         assert!(inst.filter().is_none());
 
         // Verify audio effects
@@ -167,7 +167,7 @@ mod tests {
 
         // Toggle again re-adds a default filter
         handle_toggle_filter(&mut state, id);
-        assert!(state.instruments.instrument(id).unwrap().filter().is_some());
+        assert!(state.tracks.track(id).unwrap().filter().is_some());
     }
 
     #[test]
@@ -180,7 +180,7 @@ mod tests {
         let result = handle_cycle_filter_type(&mut state, id);
 
         // Filter type should have changed from Lpf
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         let filter = inst.filter().unwrap();
         assert_ne!(filter.filter_type, imbolc_types::FilterType::Lpf);
 
@@ -198,8 +198,8 @@ mod tests {
         handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Lpf));
 
         let original_cutoff = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()
@@ -209,8 +209,8 @@ mod tests {
         let result = handle_adjust_filter_cutoff(&mut state, id, 100.0);
 
         let new_cutoff = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()
@@ -236,8 +236,8 @@ mod tests {
         handle_set_filter(&mut state, id, Some(imbolc_types::FilterType::Lpf));
 
         let original_resonance = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()
@@ -247,8 +247,8 @@ mod tests {
         let result = handle_adjust_filter_resonance(&mut state, id, 0.1);
 
         let new_resonance = state
-            .instruments
-            .instrument(id)
+            .tracks
+            .track(id)
             .unwrap()
             .filter()
             .unwrap()

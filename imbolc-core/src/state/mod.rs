@@ -30,7 +30,7 @@ pub use instrument::{
     instrument_row_count, instrument_row_info, instrument_section_for_row, InstrumentSection,
 };
 pub use instrument::{EffectTypeExt, SourceTypeExt};
-pub use instrument_state::InstrumentState;
+pub use instrument_state::TrackState;
 pub use midi_connection::MidiConnectionState;
 pub use param::{adjust_freq_semitone, adjust_musical_step, is_freq_param, Param, ParamValue};
 pub use sampler::{BufferId, SampleBuffer, SampleRegistry, SamplerConfig, Slice, SliceId};
@@ -50,7 +50,7 @@ pub use imbolc_types::{
 /// Top-level application state, owned by main.rs and passed to panes by reference.
 pub struct AppState {
     pub session: SessionState,
-    pub instruments: InstrumentState,
+    pub tracks: TrackState,
     pub clipboard: Clipboard,
     /// I/O state for render and export operations
     pub io: IoState,
@@ -81,7 +81,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             session: SessionState::new(),
-            instruments: InstrumentState::new(),
+            tracks: TrackState::new(),
             clipboard: Clipboard::default(),
             io: IoState::default(),
             keyboard_layout: KeyboardLayout::default(),
@@ -98,7 +98,7 @@ impl AppState {
     pub fn new_with_defaults(defaults: MusicalSettings) -> Self {
         Self {
             session: SessionState::new_with_defaults(defaults.clone(), session::DEFAULT_BUS_COUNT),
-            instruments: InstrumentState::new(),
+            tracks: TrackState::new(),
             clipboard: Clipboard::default(),
             io: IoState::default(),
             keyboard_layout: KeyboardLayout::default(),
@@ -112,42 +112,42 @@ impl AppState {
         }
     }
 
-    /// Get the ownership status for an instrument (for UI display).
-    pub fn ownership_status(&self, instrument_id: TrackId) -> OwnershipDisplayStatus {
+    /// Get the ownership status for a track (for UI display).
+    pub fn ownership_status(&self, track_id: TrackId) -> OwnershipDisplayStatus {
         match &self.network {
             Some(ctx) => ctx
                 .ownership
-                .get(&instrument_id)
+                .get(&track_id)
                 .cloned()
                 .unwrap_or(OwnershipDisplayStatus::Unowned),
             None => OwnershipDisplayStatus::Local,
         }
     }
 
-    /// Add an instrument, with custom synthdef param setup and piano roll sequence auto-creation.
-    pub fn add_instrument(&mut self, source: SourceType) -> TrackId {
-        let id = self.instruments.add_instrument(source);
+    /// Add a track, with custom synthdef param setup and piano roll sequence auto-creation.
+    pub fn add_track(&mut self, source: SourceType) -> TrackId {
+        let id = self.tracks.add_track(source);
         imbolc_types::reduce::initialize_instrument_from_registries(
             id,
             source,
-            &mut self.instruments,
+            &mut self.tracks,
             &self.session,
         );
         self.session.piano_roll.add_sequence(id);
         id
     }
 
-    /// Remove an instrument and its piano roll sequence.
-    pub fn remove_instrument(&mut self, id: TrackId) {
-        self.instruments.remove_instrument(id);
+    /// Remove a track and its piano roll sequence.
+    pub fn remove_track(&mut self, id: TrackId) {
+        self.tracks.remove_track(id);
         self.session.piano_roll.remove_sequence(id);
         self.session.automation.remove_lanes_for_instrument(id);
         self.session.arrangement.remove_instrument_data(id);
     }
 
-    /// Compute effective mute for an instrument, considering solo state and master mute.
-    pub fn effective_instrument_mute(&self, inst: &Track) -> bool {
-        if self.instruments.any_instrument_solo() {
+    /// Compute effective mute for a track, considering solo state and master mute.
+    pub fn effective_track_mute(&self, inst: &Track) -> bool {
+        if self.tracks.any_track_solo() {
             !inst.channel_strip.solo
         } else {
             inst.channel_strip.mute || self.session.mixer.master_mute
@@ -159,8 +159,8 @@ impl imbolc_audio::AudioStateProvider for AppState {
     fn session(&self) -> &SessionState {
         &self.session
     }
-    fn instruments(&self) -> &InstrumentState {
-        &self.instruments
+    fn tracks(&self) -> &TrackState {
+        &self.tracks
     }
 }
 
@@ -169,94 +169,94 @@ mod tests {
     use super::*;
 
     #[test]
-    fn remove_instrument_clears_automation_lanes() {
+    fn remove_track_clears_automation_lanes() {
         let mut state = AppState::new();
-        let instrument_id = state.add_instrument(SourceType::Saw);
+        let track_id = state.add_track(SourceType::Saw);
 
         assert_eq!(state.session.piano_roll.sequence_order.len(), 1);
-        assert_eq!(state.session.piano_roll.sequence_order[0], instrument_id);
+        assert_eq!(state.session.piano_roll.sequence_order[0], track_id);
 
         state
             .session
             .automation
-            .add_lane(AutomationTarget::level(instrument_id));
+            .add_lane(AutomationTarget::level(track_id));
         state
             .session
             .automation
-            .add_lane(AutomationTarget::pan(instrument_id));
+            .add_lane(AutomationTarget::pan(track_id));
 
         assert_eq!(
             state
                 .session
                 .automation
-                .lanes_for_instrument(instrument_id)
+                .lanes_for_instrument(track_id)
                 .len(),
             2
         );
 
-        state.remove_instrument(instrument_id);
+        state.remove_track(track_id);
 
         assert!(state
             .session
             .automation
-            .lanes_for_instrument(instrument_id)
+            .lanes_for_instrument(track_id)
             .is_empty());
         assert!(state.session.piano_roll.sequence_order.is_empty());
     }
 
     #[test]
-    fn effective_instrument_mute_no_solo() {
+    fn effective_track_mute_no_solo() {
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
-        let inst = &state.instruments.instruments[0];
+        state.add_track(SourceType::Saw);
+        let inst = &state.tracks.tracks[0];
         // Not muted, no solo, no master mute
-        assert!(!state.effective_instrument_mute(inst));
+        assert!(!state.effective_track_mute(inst));
 
-        // Mute the instrument
-        state.instruments.instruments[0].channel_strip.mute = true;
-        let inst = &state.instruments.instruments[0];
-        assert!(state.effective_instrument_mute(inst));
+        // Mute the track
+        state.tracks.tracks[0].channel_strip.mute = true;
+        let inst = &state.tracks.tracks[0];
+        assert!(state.effective_track_mute(inst));
 
-        // Unmute instrument but mute master
-        state.instruments.instruments[0].channel_strip.mute = false;
+        // Unmute track but mute master
+        state.tracks.tracks[0].channel_strip.mute = false;
         state.session.mixer.master_mute = true;
-        let inst = &state.instruments.instruments[0];
-        assert!(state.effective_instrument_mute(inst));
+        let inst = &state.tracks.tracks[0];
+        assert!(state.effective_track_mute(inst));
     }
 
     #[test]
-    fn effective_instrument_mute_with_solo() {
+    fn effective_track_mute_with_solo() {
         let mut state = AppState::new();
-        state.add_instrument(SourceType::Saw);
-        state.add_instrument(SourceType::Sin);
-        state.instruments.instruments[0].channel_strip.solo = true;
+        state.add_track(SourceType::Saw);
+        state.add_track(SourceType::Sin);
+        state.tracks.tracks[0].channel_strip.solo = true;
 
-        let inst0 = &state.instruments.instruments[0];
-        assert!(!state.effective_instrument_mute(inst0)); // soloed — not muted
+        let inst0 = &state.tracks.tracks[0];
+        assert!(!state.effective_track_mute(inst0)); // soloed — not muted
 
-        let inst1 = &state.instruments.instruments[1];
-        assert!(state.effective_instrument_mute(inst1)); // not soloed — muted
+        let inst1 = &state.tracks.tracks[1];
+        assert!(state.effective_track_mute(inst1)); // not soloed — muted
     }
 
     #[test]
-    fn add_instrument_creates_piano_roll_track() {
+    fn add_track_creates_piano_roll_sequence() {
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         assert_eq!(state.session.piano_roll.sequence_order.len(), 1);
         assert!(state.session.piano_roll.sequences.contains_key(&id));
     }
 
     #[test]
-    fn remove_instrument_cleans_up_all() {
+    fn remove_track_cleans_up_all() {
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         state
             .session
             .automation
             .add_lane(AutomationTarget::level(id));
         assert_eq!(state.session.automation.lanes.len(), 1);
 
-        state.remove_instrument(id);
+        state.remove_track(id);
         assert!(state.session.piano_roll.sequence_order.is_empty());
         assert!(state.session.automation.lanes.is_empty());
     }

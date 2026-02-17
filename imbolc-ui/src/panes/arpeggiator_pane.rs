@@ -42,7 +42,7 @@ impl Pane for ArpeggiatorPane {
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let instrument = match state.instruments.selected_instrument() {
+        let instrument = match state.tracks.selected_track() {
             Some(i) => i,
             None => return Action::None,
         };
@@ -76,7 +76,7 @@ impl Pane for ArpeggiatorPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let rect = center_rect(area, 44, 12);
 
-        let instrument = state.instruments.selected_instrument();
+        let instrument = state.tracks.selected_track();
         let title = match instrument {
             Some(i) => format!(" Arpeggiator: {} ", i.name),
             None => " Arpeggiator: (none) ".to_string(),

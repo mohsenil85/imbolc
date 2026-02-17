@@ -22,7 +22,7 @@ fn dispatch_save(
 
     // piano_roll.time_signature/bpm are now kept in sync by SessionState setters
     let session = state.session.clone();
-    let instruments = state.instruments.clone();
+    let instruments = state.tracks.clone();
     let tx = io_tx.clone();
     let save_id = state.io.generation.next_save();
 
@@ -126,7 +126,7 @@ pub(super) fn dispatch_session(
                 defaults,
                 crate::state::session::DEFAULT_BUS_COUNT,
             );
-            state.instruments = crate::state::InstrumentState::new();
+            state.tracks = crate::state::TrackState::new();
             state.project.path = None;
             state.project.dirty = false;
             state.undo_history.clear();
@@ -139,7 +139,7 @@ pub(super) fn dispatch_session(
         SessionAction::UpdateSession(_) => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.push_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
@@ -149,7 +149,7 @@ pub(super) fn dispatch_session(
         SessionAction::UpdateSessionLive(_) => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.audio_effects.push(AudioEffect::RebuildSession);
@@ -159,7 +159,7 @@ pub(super) fn dispatch_session(
             // Reducer is a no-op for navigation; delegate for consistency
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.push_nav(NavIntent::OpenFileBrowser(file_action.clone()));
@@ -235,7 +235,7 @@ pub(super) fn dispatch_session(
         SessionAction::AdjustHumanizeVelocity(_) => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.audio_effects.push(AudioEffect::RebuildSession);
@@ -243,7 +243,7 @@ pub(super) fn dispatch_session(
         SessionAction::AdjustHumanizeTiming(_) => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.audio_effects.push(AudioEffect::RebuildSession);
@@ -305,7 +305,7 @@ pub(super) fn dispatch_session(
         SessionAction::ToggleMasterMute => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.audio_effects.push(AudioEffect::RebuildSession);
@@ -314,7 +314,7 @@ pub(super) fn dispatch_session(
         SessionAction::CycleTheme => {
             imbolc_types::reduce::reduce_action(
                 &DomainAction::Session(action.clone()),
-                &mut state.instruments,
+                &mut state.tracks,
                 &mut state.session,
             );
             result.push_status(
@@ -328,7 +328,7 @@ pub(super) fn dispatch_session(
                 &path,
                 label,
                 &state.session,
-                &state.instruments,
+                &state.tracks,
             ) {
                 Ok(id) => {
                     result.push_status(
@@ -346,8 +346,8 @@ pub(super) fn dispatch_session(
             match crate::state::persistence::checkpoint::restore_checkpoint(&path, *checkpoint_id) {
                 Ok((session, instruments)) => {
                     state.session = session;
-                    state.instruments = instruments;
-                    state.instruments.rebuild_index();
+                    state.tracks = instruments;
+                    state.tracks.rebuild_index();
                     state.undo_history.clear();
                     result.audio_effects = AudioEffect::all();
                     result.push_status(audio.status(), "Checkpoint restored");
@@ -394,12 +394,12 @@ mod tests {
     #[test]
     fn new_project_resets_instruments() {
         let (mut state, mut audio, io_tx) = setup();
-        state.add_instrument(crate::state::SourceType::Saw);
-        assert!(!state.instruments.instruments.is_empty());
+        state.add_track(crate::state::SourceType::Saw);
+        assert!(!state.tracks.tracks.is_empty());
 
         dispatch_session(&SessionAction::NewProject, &mut state, &mut audio, &io_tx);
 
-        assert!(state.instruments.instruments.is_empty());
+        assert!(state.tracks.tracks.is_empty());
     }
 
     #[test]
@@ -410,7 +410,7 @@ mod tests {
         state.undo_history.push_scoped(
             UndoScope::Instruments,
             &state.session.clone(),
-            &state.instruments.clone(),
+            &state.tracks.clone(),
         );
         assert!(state.undo_history.can_undo());
 

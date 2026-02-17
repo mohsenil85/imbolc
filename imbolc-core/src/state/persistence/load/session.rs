@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
-use crate::state::instrument_state::InstrumentState;
+use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
 
 pub(super) fn load_session(
     conn: &Connection,
     session: &mut SessionState,
-    instruments: &mut InstrumentState,
+    instruments: &mut TrackState,
 ) -> SqlResult<()> {
     let row = conn.query_row(
         "SELECT bpm, time_sig_num, time_sig_denom, key, scale, tuning_a4, snap,

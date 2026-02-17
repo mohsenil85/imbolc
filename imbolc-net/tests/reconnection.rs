@@ -31,7 +31,7 @@ fn test_graceful_disconnect_suspends_session() {
     std::thread::sleep(Duration::from_millis(100));
     let state = common::make_test_state_with_instruments(&server, 3);
     server.accept_connections();
-    server.poll_actions(&state.session, &state.instruments);
+    server.poll_actions(&state.session, &state.tracks);
 
     // Client should be suspended (count drops)
     assert_eq!(server.client_count(), 0);
@@ -70,7 +70,7 @@ fn test_reconnect_with_valid_token() {
     std::thread::sleep(Duration::from_millis(100));
     let state = common::make_test_state_with_instruments(&server, 3);
     server.accept_connections();
-    server.poll_actions(&state.session, &state.instruments);
+    server.poll_actions(&state.session, &state.tracks);
     assert_eq!(server.client_count(), 0);
 
     // Alice reconnects with token
@@ -99,7 +99,7 @@ fn test_reconnect_with_valid_token() {
     match state_msg {
         ServerMessage::StateUpdate { state } => {
             // Verify the state has the expected instruments
-            assert_eq!(state.instruments.instruments.len(), 3);
+            assert_eq!(state.tracks.tracks.len(), 3);
         }
         other => panic!("Expected StateUpdate after reconnect, got {:?}", other),
     }
@@ -124,7 +124,7 @@ fn test_reconnect_with_invalid_token_fails() {
     std::thread::sleep(Duration::from_millis(100));
     let state = common::make_test_state(&server);
     server.accept_connections();
-    server.poll_actions(&state.session, &state.instruments);
+    server.poll_actions(&state.session, &state.tracks);
 
     // Try to reconnect with a fake token
     let state = common::make_test_state(&server);
@@ -138,7 +138,7 @@ fn test_reconnect_with_invalid_token_fails() {
     let start = std::time::Instant::now();
     while start.elapsed() < Duration::from_secs(2) {
         server.accept_connections();
-        server.poll_actions(&state.session, &state.instruments);
+        server.poll_actions(&state.session, &state.tracks);
         if server.pending_count() == 0 && server.client_count() == 0 {
             // Give a tiny extra moment for the message to be flushed
             std::thread::sleep(Duration::from_millis(10));

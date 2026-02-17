@@ -17,7 +17,7 @@ pub fn tick_arpeggiator(
 ) {
     // Collect instrument ids and arp configs to avoid borrow conflicts
     let arp_instruments: Vec<(TrackId, imbolc_types::ArpeggiatorConfig)> = instruments
-        .instruments
+        .tracks
         .iter()
         .filter(|inst| inst.note_input.arpeggiator.enabled)
         .map(|inst| (inst.id, inst.note_input.arpeggiator.clone()))
@@ -33,7 +33,7 @@ pub fn tick_arpeggiator(
                     let targets = instruments.layer_group_members(instrument_id);
                     for &target_id in &targets {
                         let release_pitch = instruments
-                            .instrument(target_id)
+                            .track(target_id)
                             .map_or(pitch, |i| i.offset_pitch(pitch));
                         let _ = engine.release_voice(target_id, release_pitch, 0.0, instruments);
                     }
@@ -76,7 +76,7 @@ pub fn tick_arpeggiator(
                     let targets = instruments.layer_group_members(instrument_id);
                     for &target_id in &targets {
                         let release_pitch = instruments
-                            .instrument(target_id)
+                            .track(target_id)
                             .map_or(pitch, |i| i.offset_pitch(pitch));
                         let _ = engine.release_voice(
                             target_id,
@@ -135,10 +135,10 @@ pub fn tick_arpeggiator(
             // Spawn the new note (fan-out to layer group siblings)
             if engine.is_running() {
                 let vel_f = 0.8; // Default velocity for arp notes
-                let any_solo = instruments.any_instrument_solo();
+                let any_solo = instruments.any_track_solo();
                 let targets = instruments.layer_group_members(instrument_id);
                 for &target_id in &targets {
-                    let inst = instruments.instrument(target_id);
+                    let inst = instruments.track(target_id);
                     let skip = inst.is_none_or(|inst| {
                         !inst.channel_strip.active
                             || if any_solo {
@@ -168,7 +168,7 @@ pub fn tick_arpeggiator(
 
     // Clean up arp states for instruments that no longer have arp enabled
     let active_ids: Vec<TrackId> = instruments
-        .instruments
+        .tracks
         .iter()
         .filter(|inst| inst.note_input.arpeggiator.enabled)
         .map(|inst| inst.id)
@@ -181,7 +181,7 @@ pub fn tick_arpeggiator(
                     let targets = instruments.layer_group_members(*id);
                     for &target_id in &targets {
                         let release_pitch = instruments
-                            .instrument(target_id)
+                            .track(target_id)
                             .map_or(pitch, |i| i.offset_pitch(pitch));
                         let _ = engine.release_voice(target_id, release_pitch, 0.0, instruments);
                     }

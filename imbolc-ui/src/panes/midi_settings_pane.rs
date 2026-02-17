@@ -104,7 +104,7 @@ impl MidiSettingsPane {
                 title_style,
             );
 
-            let inst = state.instruments.selected_instrument();
+            let inst = state.tracks.selected_track();
             let vst_registry = &state.session.vst_plugins;
 
             let visible_rows = inner.height as usize;
@@ -235,7 +235,7 @@ impl Pane for MidiSettingsPane {
                 Action::Midi(MidiAction::SetChannelFilter(None))
             }
             ActionId::MidiSettings(MidiSettingsActionId::SetLiveInstrument) => {
-                if let Some(inst) = state.instruments.selected_instrument() {
+                if let Some(inst) = state.tracks.selected_track() {
                     Action::Midi(MidiAction::SetLiveInputInstrument(Some(inst.id)))
                 } else {
                     Action::None
@@ -250,7 +250,7 @@ impl Pane for MidiSettingsPane {
                 }
                 // Build target list from selected instrument
                 let mut options = Vec::new();
-                if let Some(inst) = state.instruments.selected_instrument() {
+                if let Some(inst) = state.tracks.selected_track() {
                     options = AutomationTarget::targets_for_instrument_context(
                         inst,
                         &state.session.vst_plugins,
@@ -431,8 +431,8 @@ impl Pane for MidiSettingsPane {
                     match state.session.midi_recording.live_input_instrument {
                         Some(id) => {
                             state
-                                .instruments
-                                .instruments
+                                .tracks
+                                .tracks
                                 .iter()
                                 .find(|i| i.id == id)
                                 .map(|i| i.name.clone())
@@ -485,7 +485,7 @@ mod tests {
     fn learn_opens_target_picker_in_cc_section() {
         let mut pane = MidiSettingsPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         pane.section = Section::CcMappings;
 
         pane.handle_action(
@@ -503,7 +503,7 @@ mod tests {
     fn learn_does_nothing_outside_cc_section() {
         let mut pane = MidiSettingsPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         pane.section = Section::Ports;
 
         pane.handle_action(
@@ -518,7 +518,7 @@ mod tests {
     fn target_picker_confirm_returns_start_learn() {
         let mut pane = MidiSettingsPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         pane.section = Section::CcMappings;
 
         pane.handle_action(
@@ -540,7 +540,7 @@ mod tests {
     fn target_picker_cancel_closes_picker() {
         let mut pane = MidiSettingsPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         pane.section = Section::CcMappings;
 
         pane.handle_action(
@@ -562,7 +562,7 @@ mod tests {
     fn cancel_during_learn_mode_returns_cancel_learn() {
         let mut pane = MidiSettingsPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         let target = crate::state::automation::AutomationTarget::filter_cutoff(
             imbolc_types::TrackId::new(0),
         );
@@ -580,7 +580,7 @@ mod tests {
     fn actions_blocked_during_learn_mode() {
         let mut pane = MidiSettingsPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.add_instrument(crate::state::SourceType::Saw);
+        state.add_track(crate::state::SourceType::Saw);
         let target = crate::state::automation::AutomationTarget::filter_cutoff(
             imbolc_types::TrackId::new(0),
         );

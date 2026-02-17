@@ -70,16 +70,11 @@ pub fn dispatch_action(
     // Auto-push undo snapshot for undoable actions (with coalescing for param sweeps)
     if is_undoable(action) {
         let automation_recording = state.recording.automation_recording && state.audio.playing;
-        let scope = undo_scope(
-            action,
-            &state.session,
-            &state.instruments,
-            automation_recording,
-        );
-        let key = coalesce_key(action, &state.session, &state.instruments);
+        let scope = undo_scope(action, &state.session, &state.tracks, automation_recording);
+        let key = coalesce_key(action, &state.session, &state.tracks);
         state
             .undo_history
-            .push_coalesced(scope, &state.session, &state.instruments, key);
+            .push_coalesced(scope, &state.session, &state.tracks, key);
         state.project.dirty = true;
     }
 
@@ -105,7 +100,7 @@ pub fn dispatch_action(
         DomainAction::Undo => {
             if let Some(scope) = state
                 .undo_history
-                .undo(&mut state.session, &mut state.instruments)
+                .undo(&mut state.session, &mut state.tracks)
             {
                 state.project.dirty = true;
                 let mut r = DispatchResult::none();
@@ -118,7 +113,7 @@ pub fn dispatch_action(
         DomainAction::Redo => {
             if let Some(scope) = state
                 .undo_history
-                .redo(&mut state.session, &mut state.instruments)
+                .redo(&mut state.session, &mut state.tracks)
             {
                 state.project.dirty = true;
                 let mut r = DispatchResult::none();
@@ -161,7 +156,7 @@ fn dispatch_click(
     // Delegate pure state mutation to the shared reducer
     imbolc_types::reduce::reduce_action(
         &DomainAction::Click(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 

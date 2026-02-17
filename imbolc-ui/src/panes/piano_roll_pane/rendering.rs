@@ -36,7 +36,7 @@ impl PianoRollPane {
         state: &AppState,
     ) {
         let automation = &state.session.automation;
-        let inst_id = state.instruments.selected_instrument().map(|i| i.id);
+        let inst_id = state.tracks.selected_track().map(|i| i.id);
 
         // Find the lane to display
         let lane = if let Some(idx) = self.automation_overlay_lane_idx {
@@ -464,7 +464,7 @@ impl PianoRollPane {
         let rect = center_rect(area, box_width, 29);
         let border_style = Style::new().fg(Color::ORANGE);
 
-        let seq = match state.instruments.selected_drum_sequencer() {
+        let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => {
                 let inner =

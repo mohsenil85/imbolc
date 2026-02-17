@@ -185,7 +185,7 @@ impl Pane for GenerativePane {
             }
             ActionId::Generative(GenerativeActionId::CycleTarget) => {
                 if let Some(voice) = gen.voices.get(self.selected_voice) {
-                    let instruments = &state.instruments.instruments;
+                    let instruments = &state.tracks.tracks;
                     if instruments.is_empty() {
                         return Action::None;
                     }
@@ -372,7 +372,7 @@ impl GenerativePane {
                         VOICE_MUTED => Action::Generative(GenerativeAction::MuteVoice(id)),
                         VOICE_TARGET => {
                             // cycle target same as CycleTarget action
-                            let instruments = &state.instruments.instruments;
+                            let instruments = &state.tracks.tracks;
                             if instruments.is_empty() {
                                 return Action::None;
                             }
@@ -641,7 +641,7 @@ impl GenerativePane {
             let muted = if voice.muted { "M" } else { " " };
             let target_name = voice
                 .target_instrument
-                .and_then(|id| state.instruments.instrument(id))
+                .and_then(|id| state.tracks.track(id))
                 .map(|i| i.name.as_str())
                 .unwrap_or("--");
             let summary = format!(
@@ -702,7 +702,7 @@ fn build_voice_detail_params(
 ) -> Vec<(String, String)> {
     let target_name = voice
         .target_instrument
-        .and_then(|id| state.instruments.instrument(id))
+        .and_then(|id| state.tracks.track(id))
         .map(|i| i.name.clone())
         .unwrap_or_else(|| "--".to_string());
 

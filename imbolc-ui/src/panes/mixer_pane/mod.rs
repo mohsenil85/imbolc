@@ -163,11 +163,7 @@ impl MixerPane {
         state: &'a AppState,
     ) -> Option<(usize, &'a crate::state::Track)> {
         match self.detail_mode? {
-            DetailTarget::Track(idx) => state
-                .instruments
-                .instruments
-                .get(idx)
-                .map(|inst| (idx, inst)),
+            DetailTarget::Track(idx) => state.tracks.tracks.get(idx).map(|inst| (idx, inst)),
             DetailTarget::LayerGroup(_) | DetailTarget::Bus(_) => None,
         }
     }

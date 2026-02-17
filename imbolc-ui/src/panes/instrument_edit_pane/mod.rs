@@ -321,15 +321,15 @@ impl Pane for InstrumentEditPane {
 
     fn tick(&mut self, state: &AppState) -> Vec<Action> {
         let instrument_id = state
-            .instruments
-            .selected_instrument()
+            .tracks
+            .selected_track()
             .map(|inst| inst.id)
             .unwrap_or(TrackId::new(0));
         self.perf.tick_releases(instrument_id)
     }
 
     fn on_enter(&mut self, state: &AppState) {
-        if let Some(inst) = state.instruments.selected_instrument() {
+        if let Some(inst) = state.tracks.selected_track() {
             if self.instrument_id == Some(inst.id) {
                 self.refresh_instrument(inst);
             } else {
@@ -340,8 +340,8 @@ impl Pane for InstrumentEditPane {
 
     fn toggle_performance_mode(&mut self, state: &AppState) -> ToggleResult {
         let is_kit = state
-            .instruments
-            .selected_instrument()
+            .tracks
+            .selected_track()
             .is_some_and(|s| s.source.is_kit());
         self.perf.toggle(is_kit)
     }

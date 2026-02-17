@@ -1,6 +1,6 @@
 use rusqlite::{params, Connection, Result as SqlResult};
 
-use crate::state::instrument_state::InstrumentState;
+use crate::state::instrument_state::TrackState;
 use crate::state::session::SessionState;
 
 use super::schema;
@@ -9,7 +9,7 @@ use super::schema;
 pub fn save_relational(
     conn: &Connection,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
 ) -> SqlResult<()> {
     schema::delete_all_data(conn)?;
 
@@ -37,7 +37,7 @@ pub fn save_relational(
 fn save_session(
     conn: &Connection,
     session: &SessionState,
-    instruments: &InstrumentState,
+    instruments: &TrackState,
 ) -> SqlResult<()> {
     conn.execute(
         "INSERT INTO session (id, bpm, time_sig_num, time_sig_denom, key, scale, tuning_a4, snap,
@@ -201,7 +201,7 @@ fn save_theme(conn: &Connection, session: &SessionState) -> SqlResult<()> {
 // Instruments
 // ============================================================
 
-fn save_instruments(conn: &Connection, instruments: &InstrumentState) -> SqlResult<()> {
+fn save_instruments(conn: &Connection, instruments: &TrackState) -> SqlResult<()> {
     let mut inst_stmt = conn.prepare(
         "INSERT INTO instruments (
             id, name, position, source_type,
@@ -222,7 +222,7 @@ fn save_instruments(conn: &Connection, instruments: &InstrumentState) -> SqlResu
          VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31,?32,?33,?34,?35,?36,?37,?38,?39,?40,?41,?42,?43,?44,?45,?46,?47,?48)",
     )?;
 
-    for (pos, inst) in instruments.instruments.iter().enumerate() {
+    for (pos, inst) in instruments.tracks.iter().enumerate() {
         let source_type = encode_source_type(&inst.source);
         let output_target = encode_output_target(&inst.channel_strip.output_target);
         let channel_config = format!("{:?}", inst.channel_strip.channel_config);

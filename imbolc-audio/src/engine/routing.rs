@@ -5,9 +5,9 @@ use super::{
     VST_UGEN_INDEX,
 };
 use imbolc_types::{
-    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, InstrumentState,
-    LayerGroupMixer, MixerBus, ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType,
-    SourceTypeExt, Track, TrackId,
+    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, LayerGroupMixer, MixerBus,
+    ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType, SourceTypeExt, Track,
+    TrackId, TrackState,
 };
 use std::collections::HashMap;
 
@@ -808,7 +808,7 @@ impl AudioEngine {
     /// 4. Output synth with level/pan/mute
     pub fn rebuild_instrument_routing(
         &mut self,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
@@ -884,8 +884,8 @@ impl AudioEngine {
         }
 
         // Build signal chain for each instrument
-        let any_solo = state.any_instrument_solo();
-        for instrument in &state.instruments {
+        let any_solo = state.any_track_solo();
+        for instrument in &state.tracks {
             self.build_instrument_chain(instrument, any_solo, session)?;
         }
 
@@ -896,7 +896,7 @@ impl AudioEngine {
         );
 
         // Create send synths
-        for instrument in &state.instruments {
+        for instrument in &state.tracks {
             self.build_instrument_sends(instrument)?;
         }
 
@@ -993,7 +993,7 @@ impl AudioEngine {
         }
 
         // Restore saved VST param values
-        for instrument in &state.instruments {
+        for instrument in &state.tracks {
             self.restore_instrument_vst_params(instrument);
         }
 
@@ -1008,19 +1008,19 @@ impl AudioEngine {
     pub fn add_instrument_routing(
         &mut self,
         instrument_id: TrackId,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
 
-        let instrument = match state.instruments.iter().find(|i| i.id == instrument_id) {
+        let instrument = match state.tracks.iter().find(|i| i.id == instrument_id) {
             Some(i) => i,
             None => return Err(format!("Track {} not found", instrument_id)),
         };
 
-        let any_solo = state.any_instrument_solo();
+        let any_solo = state.any_track_solo();
         self.build_instrument_chain(instrument, any_solo, session)?;
 
         // Sync voice allocator bus watermarks (bus allocator extends naturally for new instruments)
@@ -1089,7 +1089,7 @@ impl AudioEngine {
     /// outputs/effects/sends/EQ, then recreates them.
     pub fn rebuild_bus_processing(
         &mut self,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
@@ -1233,14 +1233,14 @@ impl AudioEngine {
     pub fn rebuild_single_instrument_routing(
         &mut self,
         instrument_id: TrackId,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
 
-        let instrument = match state.instruments.iter().find(|i| i.id == instrument_id) {
+        let instrument = match state.tracks.iter().find(|i| i.id == instrument_id) {
             Some(i) => i,
             None => return Err(format!("Track {} not found", instrument_id)),
         };
@@ -1284,7 +1284,7 @@ impl AudioEngine {
         self.instrument_final_buses.remove(&instrument_id);
 
         // 2. Recreate the signal chain
-        let any_solo = state.any_instrument_solo();
+        let any_solo = state.any_track_solo();
         self.build_instrument_chain(instrument, any_solo, session)?;
 
         // Sync voice allocator bus watermarks
@@ -1307,7 +1307,7 @@ impl AudioEngine {
     pub(crate) fn routing_rebuild_step(
         &mut self,
         phase: RoutingRebuildPhase,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<RebuildStepResult, String> {
         match phase {
@@ -1388,7 +1388,7 @@ impl AudioEngine {
                     self.layer_group_audio_buses.insert(group_id, group_bus);
                 }
 
-                if state.instruments.is_empty() {
+                if state.tracks.is_empty() {
                     Ok(RebuildStepResult::Continue(
                         RoutingRebuildPhase::BuildOutputs,
                     ))
@@ -1400,13 +1400,13 @@ impl AudioEngine {
             }
 
             RoutingRebuildPhase::BuildInstrument(i) => {
-                let any_solo = state.any_instrument_solo();
-                if let Some(instrument) = state.instruments.get(i) {
+                let any_solo = state.any_track_solo();
+                if let Some(instrument) = state.tracks.get(i) {
                     self.build_instrument_chain(instrument, any_solo, session)?;
                     self.build_instrument_sends(instrument)?;
 
                     let next = i + 1;
-                    if next < state.instruments.len() {
+                    if next < state.tracks.len() {
                         Ok(RebuildStepResult::Continue(
                             RoutingRebuildPhase::BuildInstrument(next),
                         ))
@@ -1525,7 +1525,7 @@ impl AudioEngine {
                 }
 
                 // Restore saved VST param values
-                for instrument in &state.instruments {
+                for instrument in &state.tracks {
                     self.restore_instrument_vst_params(instrument);
                 }
 
@@ -1600,15 +1600,15 @@ impl AudioEngine {
     /// Update all instrument output mixer params (level, mute, pan) in real-time without rebuilding the graph
     pub fn update_all_instrument_mixer_params(
         &self,
-        state: &InstrumentState,
+        state: &TrackState,
         session: &SessionState,
     ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
-        let any_solo = state.any_instrument_solo();
-        for instrument in &state.instruments {
+        let any_solo = state.any_track_solo();
+        for instrument in &state.tracks {
             if let Some(nodes) = self.node_map.get(&instrument.id) {
                 let mute = instrument.channel_strip.mute
                     || session.mixer.master_mute

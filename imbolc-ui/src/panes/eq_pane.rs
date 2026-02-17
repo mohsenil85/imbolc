@@ -38,7 +38,7 @@ impl Pane for EqPane {
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let instrument = match state.instruments.selected_instrument() {
+        let instrument = match state.tracks.selected_track() {
             Some(i) => i,
             None => return Action::None,
         };
@@ -105,7 +105,7 @@ impl Pane for EqPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let rect = center_rect(area, 78, 24);
 
-        let instrument = state.instruments.selected_instrument();
+        let instrument = state.tracks.selected_track();
         let title = match instrument {
             Some(i) => format!(" EQ: {} ", i.name),
             None => " EQ: (none) ".to_string(),

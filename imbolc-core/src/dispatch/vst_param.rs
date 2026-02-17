@@ -89,7 +89,7 @@ fn get_param_values(instrument: &Track, target: VstTarget) -> &[(u32, f32)] {
 fn reduce(state: &mut AppState, action: &VstParamAction) {
     imbolc_types::reduce::reduce_action(
         &imbolc_types::DomainAction::VstParam(action.clone()),
-        &mut state.instruments,
+        &mut state.tracks,
         &mut state.session,
     );
 }
@@ -132,8 +132,8 @@ pub(super) fn dispatch_vst_param(
 
             // Read back the new value after mutation for side effects
             let new_value = state
-                .instruments
-                .instrument(*instrument_id)
+                .tracks
+                .track(*instrument_id)
                 .map(|inst| {
                     let values = get_param_values(inst, *target);
                     values
@@ -169,8 +169,8 @@ pub(super) fn dispatch_vst_param(
 
             // Read back the new value after mutation for side effects
             let new_value = state
-                .instruments
-                .instrument(*instrument_id)
+                .tracks
+                .track(*instrument_id)
                 .map(|inst| {
                     let values = get_param_values(inst, *target);
                     values
@@ -195,22 +195,19 @@ pub(super) fn dispatch_vst_param(
         }
         VstParamAction::DiscoverParams(instrument_id, target) => {
             // Try VST3 probe first — direct binary probing gives real param names
-            let probed = state
-                .instruments
-                .instrument(*instrument_id)
-                .and_then(|inst| {
-                    let plugin_id = get_vst_plugin_id(inst, *target)?;
-                    let plugin = state.session.vst_plugins.get(plugin_id)?;
-                    let path = &plugin.plugin_path;
-                    if path.extension().and_then(|e| e.to_str()) == Some("vst3") {
-                        match crate::vst3_probe::probe_vst3_params(path) {
-                            Ok(params) if !params.is_empty() => Some((plugin_id, params)),
-                            _ => None,
-                        }
-                    } else {
-                        None
+            let probed = state.tracks.track(*instrument_id).and_then(|inst| {
+                let plugin_id = get_vst_plugin_id(inst, *target)?;
+                let plugin = state.session.vst_plugins.get(plugin_id)?;
+                let path = &plugin.plugin_path;
+                if path.extension().and_then(|e| e.to_str()) == Some("vst3") {
+                    match crate::vst3_probe::probe_vst3_params(path) {
+                        Ok(params) if !params.is_empty() => Some((plugin_id, params)),
+                        _ => None,
                     }
-                });
+                } else {
+                    None
+                }
+            });
 
             if let Some((plugin_id, probed_params)) = probed {
                 // Update the plugin registry with probed params
@@ -244,7 +241,7 @@ pub(super) fn dispatch_vst_param(
             DispatchResult::none()
         }
         VstParamAction::SaveState(instrument_id, target) => {
-            if let Some(instrument) = state.instruments.instrument(*instrument_id) {
+            if let Some(instrument) = state.tracks.track(*instrument_id) {
                 let plugin_id = get_vst_plugin_id(instrument, *target);
                 let plugin_name = plugin_id
                     .and_then(|id| state.session.vst_plugins.get(id))
@@ -263,7 +260,7 @@ pub(super) fn dispatch_vst_param(
                     let _ = std::fs::create_dir_all(parent);
                 }
                 // Store the path in state
-                if let Some(instrument) = state.instruments.instrument_mut(*instrument_id) {
+                if let Some(instrument) = state.tracks.track_mut(*instrument_id) {
                     match *target {
                         VstTarget::Source => {
                             if let SourceExtra::Vst {
@@ -311,9 +308,7 @@ mod tests {
     #[test]
     fn set_param_records_when_recording() {
         let (mut state, mut audio) = setup();
-        let id = state
-            .instruments
-            .add_instrument(SourceType::Vst(VstPluginId::new(0)));
+        let id = state.tracks.add_track(SourceType::Vst(VstPluginId::new(0)));
         state.recording.automation_recording = true;
         state.session.piano_roll.playing = true;
         state.audio.playing = true;
@@ -334,9 +329,7 @@ mod tests {
     #[test]
     fn set_param_no_record_when_not_recording() {
         let (mut state, mut audio) = setup();
-        let id = state
-            .instruments
-            .add_instrument(SourceType::Vst(VstPluginId::new(0)));
+        let id = state.tracks.add_track(SourceType::Vst(VstPluginId::new(0)));
         state.recording.automation_recording = false;
         state.session.piano_roll.playing = true;
         state.audio.playing = true;
@@ -354,9 +347,7 @@ mod tests {
     #[test]
     fn set_param_updates_state_regardless() {
         let (mut state, mut audio) = setup();
-        let id = state
-            .instruments
-            .add_instrument(SourceType::Vst(VstPluginId::new(0)));
+        let id = state.tracks.add_track(SourceType::Vst(VstPluginId::new(0)));
         state.recording.automation_recording = false;
 
         dispatch_vst_param(
@@ -366,7 +357,7 @@ mod tests {
         );
 
         // State should be updated even without recording
-        let inst = state.instruments.instrument(id).unwrap();
+        let inst = state.tracks.track(id).unwrap();
         let val = inst.vst_source_params().iter().find(|(idx, _)| *idx == 0);
         assert!(val.is_some());
         assert!((val.unwrap().1 - 0.7).abs() < f32::EPSILON);

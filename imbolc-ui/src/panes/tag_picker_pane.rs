@@ -193,8 +193,8 @@ fn describe_target(target: &AutomationTarget, state: &AppState) -> String {
     match target {
         AutomationTarget::Track(id, InstrumentParameter::Standard(param)) => {
             let inst_name = state
-                .instruments
-                .instrument(*id)
+                .tracks
+                .track(*id)
                 .map(|i| i.name.as_str())
                 .unwrap_or("?");
             format!("{} > {}", inst_name, param.name())

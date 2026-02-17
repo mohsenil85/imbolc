@@ -98,7 +98,7 @@ pub struct SessionState {
     #[serde(default)]
     pub ji_flavor: JIFlavor,
 
-    // Project state (hoisted from InstrumentState)
+    // Project state (hoisted from TrackState)
     pub piano_roll: PianoRollState,
     pub arrangement: ArrangementState,
     pub automation: AutomationState,

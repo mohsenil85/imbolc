@@ -71,7 +71,7 @@ impl AutomationPane {
             ActionId::Automation(AutomationActionId::AddLane) => {
                 let editing_clip = state.session.arrangement.editing_clip.is_some();
                 let mut options: Vec<AutomationTarget> = Vec::new();
-                if let Some(inst) = state.instruments.selected_instrument() {
+                if let Some(inst) = state.tracks.selected_track() {
                     options = AutomationTarget::targets_for_instrument_context(
                         inst,
                         &state.session.vst_plugins,

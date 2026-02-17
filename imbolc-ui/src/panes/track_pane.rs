@@ -73,13 +73,13 @@ impl Pane for TrackPane {
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
         let arr = &state.session.arrangement;
-        let num_instruments = state.instruments.instruments.len();
+        let num_instruments = state.tracks.tracks.len();
         if num_instruments == 0 {
             return Action::None;
         }
 
         let lane = arr.selected_lane.min(num_instruments.saturating_sub(1));
-        let instrument_id = state.instruments.instruments[lane].id;
+        let instrument_id = state.tracks.tracks[lane].id;
 
         match action {
             ActionId::Track(TrackActionId::LaneUp) => {
@@ -274,7 +274,7 @@ impl Pane for TrackPane {
         let border_style = Style::new().fg(Color::CYAN);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
-        if state.instruments.instruments.is_empty() {
+        if state.tracks.tracks.is_empty() {
             let text = "(no instruments)";
             let x = inner.x + (inner.width.saturating_sub(text.len() as u16)) / 2;
             let y = inner.y + inner.height / 2;
@@ -294,7 +294,7 @@ impl Pane for TrackPane {
         let lanes_area_y = inner.y + header_height;
         let lanes_area_height = inner.height.saturating_sub(header_height + footer_height);
 
-        let num_instruments = state.instruments.instruments.len();
+        let num_instruments = state.tracks.tracks.len();
         let lane_height: u16 = 2;
         let max_visible = (lanes_area_height / lane_height) as usize;
 
@@ -338,7 +338,7 @@ impl Pane for TrackPane {
             if vi >= max_visible {
                 break;
             }
-            let instrument = &state.instruments.instruments[i];
+            let instrument = &state.tracks.tracks[i];
             let is_selected = i == selected_lane;
             let lane_y = lanes_area_y + (vi as u16) * lane_height;
 
@@ -598,7 +598,7 @@ impl Pane for TrackPane {
         // Cursor position + selected clip info
         let bar = arr.cursor_tick / ticks_per_bar + 1;
         let beat = (arr.cursor_tick % ticks_per_bar) / 480 + 1;
-        let inst_id = state.instruments.instruments[selected_lane].id;
+        let inst_id = state.tracks.tracks[selected_lane].id;
         let clips = arr.clips_for_instrument(inst_id);
         let clip_info = if clips.is_empty() {
             "No clips".to_string()

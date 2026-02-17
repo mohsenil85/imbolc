@@ -15,7 +15,7 @@ use super::telemetry::AudioTelemetry;
 use super::ServerStatus;
 use crate::arp_state::ArpPlayState;
 use imbolc_types::VstTarget;
-use imbolc_types::{InstrumentState, SessionState, TrackId};
+use imbolc_types::{SessionState, TrackId, TrackState};
 
 /// Deferred server connection: after spawning scsynth, wait before connecting
 /// so the server has time to initialize. Avoids blocking the audio thread.
@@ -86,7 +86,7 @@ pub(crate) struct AudioThread {
     event_log: EventLogReader,
     feedback_tx: Sender<AudioFeedback>,
     monitor: AudioMonitor,
-    instruments: InstrumentSnapshot,
+    tracks: InstrumentSnapshot,
     session: SessionSnapshot,
     piano_roll: PianoRollSnapshot,
     automation_lanes: AutomationSnapshot,
@@ -159,7 +159,7 @@ impl AudioThread {
             event_log,
             feedback_tx,
             monitor,
-            instruments: InstrumentState::new(),
+            tracks: TrackState::new(),
             session: SessionState::new(),
             piano_roll: PianoRollSnapshot::new(),
             automation_lanes: Vec::new(),
@@ -526,7 +526,7 @@ impl AudioThread {
             } => {
                 let reduced = imbolc_types::reduce::reduce_action(
                     action,
-                    &mut self.instruments,
+                    &mut self.tracks,
                     &mut self.session,
                 );
                 if !reduced {
@@ -542,29 +542,27 @@ impl AudioThread {
                         let _ = self.engine.delete_instrument_routing(*id);
                     }
                     if let Some(id) = add_instrument_routing {
-                        let _ = self.engine.add_instrument_routing(
-                            *id,
-                            &self.instruments,
-                            &self.session,
-                        );
+                        let _ =
+                            self.engine
+                                .add_instrument_routing(*id, &self.tracks, &self.session);
                     }
                     for id in rebuild_instrument_routing.iter().flatten() {
                         let _ = self.engine.rebuild_single_instrument_routing(
                             *id,
-                            &self.instruments,
+                            &self.tracks,
                             &self.session,
                         );
                     }
                     if *rebuild_bus_processing {
                         let _ = self
                             .engine
-                            .rebuild_bus_processing(&self.instruments, &self.session);
+                            .rebuild_bus_processing(&self.tracks, &self.session);
                     }
                 }
                 if *mixer_dirty {
                     let _ = self
                         .engine
-                        .update_all_instrument_mixer_params(&self.instruments, &self.session);
+                        .update_all_instrument_mixer_params(&self.tracks, &self.session);
                 }
             }
             LogEntryKind::Checkpoint {
@@ -576,13 +574,9 @@ impl AudioThread {
             } => {
                 // Preserve drum sequencer playback state from old instruments
                 let mut instruments = instruments.clone();
-                let old_instruments: HashMap<TrackId, &_> = self
-                    .instruments
-                    .instruments
-                    .iter()
-                    .map(|i| (i.id, i))
-                    .collect();
-                for new_inst in instruments.instruments.iter_mut() {
+                let old_instruments: HashMap<TrackId, &_> =
+                    self.tracks.tracks.iter().map(|i| (i.id, i)).collect();
+                for new_inst in instruments.tracks.iter_mut() {
                     if let Some(old_inst) = old_instruments.get(&new_inst.id) {
                         if let (Some(old_seq), Some(new_seq)) =
                             (old_inst.drum_sequencer(), new_inst.drum_sequencer_mut())
@@ -595,7 +589,7 @@ impl AudioThread {
                         }
                     }
                 }
-                self.instruments = instruments;
+                self.tracks = instruments;
                 self.session = session.clone();
                 // Preserve runtime state (playhead, playing)
                 let playhead = self.piano_roll.playhead;
@@ -693,14 +687,14 @@ impl AudioThread {
             AudioCmd::RebuildInstrumentRouting { instrument_id } => {
                 let _ = self.engine.rebuild_single_instrument_routing(
                     instrument_id,
-                    &self.instruments,
+                    &self.tracks,
                     &self.session,
                 );
             }
             AudioCmd::UpdateMixerParams => {
                 let _ = self
                     .engine
-                    .update_all_instrument_mixer_params(&self.instruments, &self.session);
+                    .update_all_instrument_mixer_params(&self.tracks, &self.session);
             }
             AudioCmd::SetMasterParams { level, mute } => {
                 self.session.mixer.master_level = level;
@@ -714,8 +708,8 @@ impl AudioThread {
                 solo,
             } => {
                 if let Some(inst) = self
-                    .instruments
-                    .instruments
+                    .tracks
+                    .tracks
                     .iter_mut()
                     .find(|i| i.id == instrument_id)
                 {
@@ -811,12 +805,9 @@ impl AudioThread {
                     .set_layer_group_eq_param(group_id, &param, value);
             }
             AudioCmd::ApplyAutomation { target, value } => {
-                let _ = self.engine.apply_automation(
-                    &target,
-                    value,
-                    &mut self.instruments,
-                    &self.session,
-                );
+                let _ =
+                    self.engine
+                        .apply_automation(&target, value, &mut self.tracks, &self.session);
             }
             _ => {}
         }
@@ -839,7 +830,7 @@ impl AudioThread {
                     pitch,
                     velocity,
                     offset_secs,
-                    &self.instruments,
+                    &self.tracks,
                     &self.session,
                 );
             }
@@ -848,9 +839,9 @@ impl AudioThread {
                 pitch,
                 offset_secs,
             } => {
-                let _ =
-                    self.engine
-                        .release_voice(instrument_id, pitch, offset_secs, &self.instruments);
+                let _ = self
+                    .engine
+                    .release_voice(instrument_id, pitch, offset_secs, &self.tracks);
             }
             AudioCmd::RegisterActiveNote {
                 instrument_id,
@@ -1150,11 +1141,7 @@ impl AudioThread {
         instrument_id: TrackId,
         target: VstTarget,
     ) -> Option<imbolc_types::VstPluginId> {
-        let inst = self
-            .instruments
-            .instruments
-            .iter()
-            .find(|i| i.id == instrument_id)?;
+        let inst = self.tracks.tracks.iter().find(|i| i.id == instrument_id)?;
         match target {
             VstTarget::Source => {
                 if let imbolc_types::SourceType::Vst(id) = inst.source {
@@ -1218,7 +1205,7 @@ impl AudioThread {
     }
 
     fn load_drum_samples(&mut self) {
-        for instrument in &self.instruments.instruments {
+        for instrument in &self.tracks.tracks {
             if let Some(seq) = instrument.drum_sequencer() {
                 for pad in &seq.pads {
                     if let (Some(buffer_id), Some(path)) = (pad.buffer_id, pad.path.as_ref()) {
@@ -1232,7 +1219,7 @@ impl AudioThread {
     fn tick(&mut self, elapsed: Duration) {
         super::playback::tick_playback(
             &mut self.piano_roll,
-            &mut self.instruments,
+            &mut self.tracks,
             &mut self.session,
             &self.automation_lanes,
             &mut self.engine,
@@ -1300,7 +1287,7 @@ impl AudioThread {
         }
 
         super::drum_tick::tick_drum_sequencer(
-            &mut self.instruments,
+            &mut self.tracks,
             &self.session,
             self.piano_roll.bpm,
             &mut self.engine,
@@ -1309,7 +1296,7 @@ impl AudioThread {
             elapsed,
         );
         super::arpeggiator_tick::tick_arpeggiator(
-            &self.instruments,
+            &self.tracks,
             &self.session,
             self.piano_roll.bpm,
             &mut self.arp_states,
@@ -1318,7 +1305,7 @@ impl AudioThread {
             elapsed,
         );
         super::generative_tick::tick_generative(
-            &self.instruments,
+            &self.tracks,
             &self.session,
             self.piano_roll.bpm,
             &mut self.generative_states,
@@ -1517,7 +1504,7 @@ impl AudioThread {
             use super::engine::routing::RebuildStepResult;
             match self
                 .engine
-                .routing_rebuild_step(phase, &self.instruments, &self.session)
+                .routing_rebuild_step(phase, &self.tracks, &self.session)
             {
                 Ok(RebuildStepResult::Continue(next)) => {
                     self.routing_rebuild = Some(next);

@@ -80,7 +80,7 @@ impl AppRuntime {
 
         let mut layer_stack = LayerStack::new(layers);
         layer_stack.push("global");
-        if state.instruments.instruments.is_empty() {
+        if state.tracks.tracks.is_empty() {
             panes.switch_to(PaneId::Add, &state);
         }
         layer_stack.set_pane_layer(panes.active().id());
@@ -124,15 +124,15 @@ impl AppRuntime {
                         .to_string();
                     let st = dispatcher.state_mut();
                     st.session = session;
-                    st.instruments = instruments;
-                    st.instruments.rebuild_index();
+                    st.tracks = instruments;
+                    st.tracks.rebuild_index();
                     st.project.path = Some(load_path);
                     st.project.dirty = false;
                     app_frame.set_project_name(name);
                     pending_audio_effects.extend(AudioEffect::all());
                     needs_full_sync = true;
 
-                    if dispatcher.state().instruments.instruments.is_empty() {
+                    if dispatcher.state().tracks.tracks.is_empty() {
                         panes.switch_to(PaneId::Add, dispatcher.state());
                     } else {
                         panes.switch_to(PaneId::InstrumentEdit, dispatcher.state());
@@ -240,7 +240,7 @@ impl AppRuntime {
         let id = self.autosave_id;
         let path = self.autosave_path.clone();
         let session = self.dispatcher.state().session.clone();
-        let instruments = self.dispatcher.state().instruments.clone();
+        let instruments = self.dispatcher.state().tracks.clone();
         let tx = self.dispatcher.io_tx().clone();
 
         std::thread::spawn(move || {

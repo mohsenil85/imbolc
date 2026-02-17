@@ -2,13 +2,13 @@ use crate::state::AppState;
 use imbolc_types::*;
 
 pub fn format_instrument_list(state: &AppState) -> String {
-    if state.instruments.instruments.is_empty() {
+    if state.tracks.tracks.is_empty() {
         return "No instruments. Use 'instrument add <source>' to create one.".to_string();
     }
 
-    let selected = state.instruments.selected;
+    let selected = state.tracks.selected;
     let mut lines = Vec::new();
-    for (i, inst) in state.instruments.instruments.iter().enumerate() {
+    for (i, inst) in state.tracks.tracks.iter().enumerate() {
         let marker = if Some(i) == selected { '*' } else { ' ' };
         let mute_str = if inst.channel_strip.mute {
             " muted"
@@ -33,7 +33,7 @@ pub fn format_instrument_list(state: &AppState) -> String {
 }
 
 pub fn format_instrument_detail(state: &AppState, id: TrackId) -> String {
-    let inst = match state.instruments.instrument(id) {
+    let inst = match state.tracks.track(id) {
         Some(inst) => inst,
         None => return format!("Track {} not found", id),
     };
@@ -153,7 +153,7 @@ pub fn format_mixer(state: &AppState) -> String {
     let mut lines = vec!["Mixer:".to_string()];
 
     // Instruments
-    for (i, inst) in state.instruments.instruments.iter().enumerate() {
+    for (i, inst) in state.tracks.tracks.iter().enumerate() {
         let mute = if inst.channel_strip.mute { " M" } else { "" };
         let solo = if inst.channel_strip.solo { " S" } else { "" };
         lines.push(format!(
@@ -226,7 +226,7 @@ pub fn format_notes(state: &AppState, track_idx: usize) -> String {
 }
 
 pub fn format_effects(state: &AppState, id: TrackId) -> String {
-    let inst = match state.instruments.instrument(id) {
+    let inst = match state.tracks.track(id) {
         Some(inst) => inst,
         None => return format!("Track {} not found", id),
     };
@@ -410,8 +410,8 @@ pub fn format_session(state: &AppState) -> String {
 }
 
 pub fn format_sequencer(state: &AppState) -> String {
-    let selected = state.instruments.selected;
-    let inst = selected.and_then(|i| state.instruments.instruments.get(i));
+    let selected = state.tracks.selected;
+    let inst = selected.and_then(|i| state.tracks.tracks.get(i));
     let inst = match inst {
         Some(i) => i,
         None => return "No instrument selected".to_string(),

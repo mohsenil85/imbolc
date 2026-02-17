@@ -132,7 +132,7 @@ impl Pane for InstrumentPane {
                 // Press 'l' again to confirm the link
                 ActionId::InstrumentList(InstrumentListActionId::LinkLayer) => {
                     self.linking_from = None;
-                    if let Some(target) = state.instruments.selected_instrument() {
+                    if let Some(target) = state.tracks.selected_track() {
                         let target_id = target.id;
                         if target_id != from_id {
                             return Action::Track(InstrumentAction::LinkLayer(from_id, target_id));
@@ -172,14 +172,14 @@ impl Pane for InstrumentPane {
                 Action::Nav(NavAction::SwitchPane(PaneId::Add))
             }
             ActionId::InstrumentList(InstrumentListActionId::Delete) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(InstrumentAction::Delete(instrument.id))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::Edit) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(InstrumentAction::Edit(instrument.id))
                 } else {
                     Action::None
@@ -192,34 +192,34 @@ impl Pane for InstrumentPane {
                 Action::Session(SessionAction::Load)
             }
             ActionId::InstrumentList(InstrumentListActionId::LinkLayer) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     self.linking_from = Some(instrument.id);
                 }
                 Action::None
             }
             ActionId::InstrumentList(InstrumentListActionId::UnlinkLayer) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(InstrumentAction::UnlinkLayer(instrument.id))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::LayerOctaveUp) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(InstrumentAction::AdjustLayerOctaveOffset(instrument.id, 1))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::LayerOctaveDown) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     Action::Track(InstrumentAction::AdjustLayerOctaveOffset(instrument.id, -1))
                 } else {
                     Action::None
                 }
             }
             ActionId::InstrumentList(InstrumentListActionId::RenameLayerGroup) => {
-                if let Some(instrument) = state.instruments.selected_instrument() {
+                if let Some(instrument) = state.tracks.selected_track() {
                     if let Some(group_id) = instrument.layer.group {
                         let current_name = state
                             .session
@@ -343,7 +343,7 @@ impl Pane for InstrumentPane {
         let list_y = content_y + 2;
         let max_visible = ((inner.height.saturating_sub(7)) as usize).max(3);
 
-        if state.instruments.instruments.is_empty() {
+        if state.tracks.tracks.is_empty() {
             buf.draw_line(
                 Rect::new(content_x + 2, list_y, inner.width.saturating_sub(4), 1),
                 &[(
@@ -354,7 +354,7 @@ impl Pane for InstrumentPane {
         }
 
         let scroll_offset = state
-            .instruments
+            .tracks
             .selected
             .map(|s| {
                 if s >= max_visible {
@@ -366,13 +366,7 @@ impl Pane for InstrumentPane {
             .unwrap_or(0);
         let sel_bg = Style::new().bg(Color::SELECTION_BG);
 
-        for (i, instrument) in state
-            .instruments
-            .instruments
-            .iter()
-            .enumerate()
-            .skip(scroll_offset)
-        {
+        for (i, instrument) in state.tracks.tracks.iter().enumerate().skip(scroll_offset) {
             let row = i - scroll_offset;
             if row >= max_visible {
                 break;
@@ -381,7 +375,7 @@ impl Pane for InstrumentPane {
             if y >= inner.y + inner.height {
                 break;
             }
-            let is_selected = state.instruments.selected == Some(i);
+            let is_selected = state.tracks.selected == Some(i);
 
             // Selection indicator
             if is_selected {
@@ -485,7 +479,7 @@ impl Pane for InstrumentPane {
                 &[("...", scroll_style)],
             );
         }
-        if scroll_offset + max_visible < state.instruments.instruments.len() {
+        if scroll_offset + max_visible < state.tracks.tracks.len() {
             buf.draw_line(
                 Rect::new(
                     rect.x + rect.width - 5,
@@ -555,7 +549,7 @@ impl Pane for InstrumentPane {
         let max_visible = ((inner_height.saturating_sub(7)) as usize).max(3);
 
         let scroll_offset = state
-            .instruments
+            .tracks
             .selected
             .map(|s| {
                 if s >= max_visible {
@@ -573,7 +567,7 @@ impl Pane for InstrumentPane {
                 // Click on instrument list
                 if col >= inner_x && row >= list_y && row < list_y + max_visible as u16 {
                     let clicked_idx = scroll_offset + (row - list_y) as usize;
-                    if clicked_idx < state.instruments.instruments.len() {
+                    if clicked_idx < state.tracks.tracks.len() {
                         return Action::Track(InstrumentAction::Select(clicked_idx));
                     }
                 }
@@ -591,8 +585,8 @@ impl Pane for InstrumentPane {
 
     fn tick(&mut self, state: &AppState) -> Vec<Action> {
         let instrument_id = state
-            .instruments
-            .selected_instrument()
+            .tracks
+            .selected_track()
             .map(|inst| inst.id)
             .unwrap_or(TrackId::new(0));
         self.perf.tick_releases(instrument_id)
@@ -600,8 +594,8 @@ impl Pane for InstrumentPane {
 
     fn toggle_performance_mode(&mut self, state: &AppState) -> ToggleResult {
         let is_kit = state
-            .instruments
-            .selected_instrument()
+            .tracks
+            .selected_track()
             .is_some_and(|s| s.source.is_kit());
         self.perf.toggle(is_kit)
     }
@@ -641,7 +635,7 @@ mod tests {
     fn delete_returns_selected_instrument_id() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         let mut pane = InstrumentPane::new(Keymap::new());
 
         let action = pane.handle_action(
@@ -659,7 +653,7 @@ mod tests {
     fn edit_returns_selected_instrument_id() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Sin);
+        let id = state.add_track(SourceType::Sin);
         let mut pane = InstrumentPane::new(Keymap::new());
 
         let action = pane.handle_action(
@@ -721,11 +715,11 @@ mod tests {
     fn link_mode_navigation_passes_through() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let id0 = state.add_instrument(SourceType::Saw);
-        let _id1 = state.add_instrument(SourceType::Sin);
+        let id0 = state.add_track(SourceType::Saw);
+        let _id1 = state.add_track(SourceType::Sin);
 
         // Select first instrument before entering link mode
-        state.instruments.selected = Some(0);
+        state.tracks.selected = Some(0);
 
         let mut pane = InstrumentPane::new(Keymap::new());
         // Enter linking mode
@@ -754,11 +748,11 @@ mod tests {
     fn link_mode_confirm_with_different_target() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let id0 = state.add_instrument(SourceType::Saw);
-        let id1 = state.add_instrument(SourceType::Sin);
+        let id0 = state.add_track(SourceType::Saw);
+        let id1 = state.add_track(SourceType::Sin);
 
         // Select first instrument, enter linking mode
-        state.instruments.selected = Some(0);
+        state.tracks.selected = Some(0);
         let mut pane = InstrumentPane::new(Keymap::new());
         pane.handle_action(
             ActionId::InstrumentList(InstrumentListActionId::LinkLayer),
@@ -768,7 +762,7 @@ mod tests {
         assert_eq!(pane.linking_from, Some(id0));
 
         // Move selection to second instrument
-        state.instruments.selected = Some(1);
+        state.tracks.selected = Some(1);
 
         // Press 'l' again to confirm
         let action = pane.handle_action(
@@ -790,7 +784,7 @@ mod tests {
     fn link_mode_confirm_same_instrument_no_action() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let _id0 = state.add_instrument(SourceType::Saw);
+        let _id0 = state.add_track(SourceType::Saw);
 
         let mut pane = InstrumentPane::new(Keymap::new());
         // Enter linking mode
@@ -814,7 +808,7 @@ mod tests {
     fn link_mode_cancelled_by_other_action() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let _id0 = state.add_instrument(SourceType::Saw);
+        let _id0 = state.add_track(SourceType::Saw);
 
         let mut pane = InstrumentPane::new(Keymap::new());
         // Enter linking mode
@@ -838,7 +832,7 @@ mod tests {
     fn layer_octave_up_returns_adjust_action() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         let mut pane = InstrumentPane::new(Keymap::new());
 
         let action = pane.handle_action(
@@ -859,7 +853,7 @@ mod tests {
     fn layer_octave_down_returns_adjust_action() {
         use crate::ui::action_id::{ActionId, InstrumentListActionId};
         let mut state = AppState::new();
-        let id = state.add_instrument(SourceType::Saw);
+        let id = state.add_track(SourceType::Saw);
         let mut pane = InstrumentPane::new(Keymap::new());
 
         let action = pane.handle_action(

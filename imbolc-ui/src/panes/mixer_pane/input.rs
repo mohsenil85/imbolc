@@ -109,7 +109,7 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::EnterDetail) => {
                 match state.session.mixer.selection {
                     MixerSelection::Track(idx) => {
-                        if idx < state.instruments.instruments.len() {
+                        if idx < state.tracks.tracks.len() {
                             self.detail_mode = Some(DetailTarget::Track(idx));
                             self.detail_section = MixerSection::Effects;
                             self.detail_cursor = 0;
@@ -142,7 +142,7 @@ impl MixerPane {
         area: Rect,
         state: &AppState,
     ) -> Action {
-        let active_groups = state.instruments.active_layer_groups();
+        let active_groups = state.tracks.active_layer_groups();
         let num_group_slots = active_groups.len().min(NUM_VISIBLE_GROUPS);
         let group_section_width = if num_group_slots > 0 {
             num_group_slots as u16 * CHANNEL_WIDTH + 2
@@ -171,11 +171,9 @@ impl MixerPane {
 
         // Calculate scroll offsets (same as render)
         let instrument_scroll = match state.session.mixer.selection {
-            MixerSelection::Track(idx) => Self::calc_scroll_offset(
-                idx,
-                state.instruments.instruments.len(),
-                NUM_VISIBLE_CHANNELS,
-            ),
+            MixerSelection::Track(idx) => {
+                Self::calc_scroll_offset(idx, state.tracks.tracks.len(), NUM_VISIBLE_CHANNELS)
+            }
             _ => 0,
         };
         let bus_scroll = match state.session.mixer.selection {
@@ -194,7 +192,7 @@ impl MixerPane {
                 if col >= base_x && col < inst_end_x {
                     let channel = ((col - base_x) / CHANNEL_WIDTH) as usize;
                     let idx = instrument_scroll + channel;
-                    if idx < state.instruments.instruments.len() {
+                    if idx < state.tracks.tracks.len() {
                         self.send_target = None;
                         return Action::Mixer(MixerAction::SelectAt(MixerSelection::Track(idx)));
                     }
@@ -342,7 +340,7 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::MoveUp) => {
                 if self.detail_section == MixerSection::Effects {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
-                        let inst = state.instruments.instrument(inst_id);
+                        let inst = state.tracks.track(inst_id);
                         if let Some(chain_idx) = inst.and_then(|i| i.effect_chain_index(ei)) {
                             if chain_idx > 0 {
                                 return Action::Track(InstrumentAction::MoveStage(
@@ -357,7 +355,7 @@ impl MixerPane {
             ActionId::Mixer(MixerActionId::MoveDown) => {
                 if self.detail_section == MixerSection::Effects {
                     if let Some((ei, _)) = self.decode_effect_cursor(state) {
-                        if let Some(inst) = state.instruments.instrument(inst_id) {
+                        if let Some(inst) = state.tracks.track(inst_id) {
                             if let Some(chain_idx) = inst.effect_chain_index(ei) {
                                 if chain_idx + 1 < inst.channel_strip.processing_chain.len() {
                                     return Action::Track(InstrumentAction::MoveStage(

@@ -45,9 +45,7 @@ impl VstParamPane {
 
     /// Get the VstPluginId for the current target
     fn get_plugin_id(&self, state: &AppState) -> Option<crate::state::vst_plugin::VstPluginId> {
-        let inst = self
-            .instrument_id
-            .and_then(|id| state.instruments.instrument(id))?;
+        let inst = self.instrument_id.and_then(|id| state.tracks.track(id))?;
         match self.target {
             VstTarget::Source => {
                 if let crate::state::SourceType::Vst(id) = inst.source {
@@ -97,7 +95,7 @@ impl VstParamPane {
 
     /// Sync state from current selection (only when navigated to via instrument selection, not set_target)
     fn sync_from_state(&mut self, state: &AppState) {
-        let new_id = state.instruments.selected_instrument().map(|i| i.id);
+        let new_id = state.tracks.selected_track().map(|i| i.id);
         if new_id != self.instrument_id {
             self.instrument_id = new_id;
             self.target = VstTarget::Source;

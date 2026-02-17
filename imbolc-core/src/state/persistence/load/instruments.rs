@@ -4,19 +4,16 @@ use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
 use super::{load_effects_from, load_params, table_exists};
-use crate::state::instrument_state::InstrumentState;
+use crate::state::instrument_state::TrackState;
 use imbolc_types::BusId;
 
-pub(super) fn load_instruments(
-    conn: &Connection,
-    instruments: &mut InstrumentState,
-) -> SqlResult<()> {
+pub(super) fn load_instruments(conn: &Connection, instruments: &mut TrackState) -> SqlResult<()> {
     use crate::state::arpeggiator::ArpeggiatorConfig;
     use crate::state::instrument::*;
     use imbolc_types::state::groove::GrooveConfig;
     use imbolc_types::ProcessingStage;
 
-    instruments.instruments.clear();
+    instruments.tracks.clear();
 
     let has_layer_octave_offset = conn
         .prepare("SELECT layer_octave_offset FROM instruments LIMIT 0")
@@ -359,7 +356,7 @@ pub(super) fn load_instruments(
             inst.source_extra = SourceExtra::Kit(seq);
         }
 
-        instruments.instruments.push(inst);
+        instruments.tracks.push(inst);
     }
 
     Ok(())
