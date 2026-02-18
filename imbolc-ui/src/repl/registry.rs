@@ -35,6 +35,8 @@ repl_actions! {
         "clear-chord-shape"        => ClearChordShape(id: TrackId);                               "Clear chord shape"
         "set-eq-param"             => SetEqualizerParam(id: TrackId, eid: EffectId, band: usize, kind: EqualizerParamKind, v: f32); "Set EQ band parameter"
         "toggle-eq"                => ToggleEqualizer(id: TrackId);                                      "Toggle EQ on/off"
+        "add-eq"                   => AddEqualizer(id: TrackId);                                         "Add EQ to track"
+        "remove-eq"                => RemoveEqualizer(id: TrackId, eid: EffectId);                       "Remove EQ from track"
         "link-layer"               => LinkLayer(id: TrackId, target: TrackId);               "Link track to layer group"
         "unlink-layer"             => UnlinkLayer(id: TrackId);                                   "Unlink track from layer group"
         "adjust-layer-octave"      => AdjustLayerOctaveOffset(id: TrackId, d: i8);                "Adjust layer octave offset"
@@ -135,6 +137,7 @@ repl_actions! {
         "toggle-lane-arm"       => ToggleLaneArm(id: AutomationLaneId);                    "Toggle lane arm for recording"
         "arm-all"               => ArmAllLanes;                                             "Arm all lanes for recording"
         "disarm-all"            => DisarmAllLanes;                                           "Disarm all lanes"
+        "add-lane"              => AddLane(target: AutomationTarget);                         "Add automation lane for target"
     }
 
     group "session" => DomainAction::Session, SessionAction {
@@ -172,6 +175,10 @@ repl_actions! {
         "move-effect"           => MoveEffect(id: BusId, fx_id: EffectId, d: i8);  "Move bus effect up/down"
         "toggle-effect-bypass"  => ToggleEffectBypass(id: BusId, fx_id: EffectId); "Toggle bus effect bypass"
         "adjust-effect-param"   => AdjustEffectParam(id: BusId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust bus effect parameter"
+        "toggle-eq"             => ToggleEqualizer(id: BusId);                                           "Toggle bus EQ"
+        "set-eq-param"          => SetEqualizerParam(id: BusId, eid: EffectId, band: usize, kind: EqualizerParamKind, v: f32); "Set bus EQ band param"
+        "add-eq"                => AddEqualizer(id: BusId);                                              "Add EQ to bus"
+        "remove-eq"             => RemoveEqualizer(id: BusId, eid: EffectId);                            "Remove EQ from bus"
     }
 
     group "layer-group" => DomainAction::Group, GroupAction {
@@ -183,6 +190,20 @@ repl_actions! {
         "toggle-eq"             => ToggleEqualizer(gid: GroupId);                                             "Toggle layer group EQ"
         "set-eq-param"          => SetEqualizerParam(gid: GroupId, eid: EffectId, band: usize, kind: EqualizerParamKind, v: f32);   "Set layer group EQ band param"
         "rename"                => Rename(gid: GroupId, name: String);                                  "Rename layer group"
+        "add-eq"                => AddEqualizer(gid: GroupId);                                           "Add EQ to layer group"
+        "remove-eq"             => RemoveEqualizer(gid: GroupId, eid: EffectId);                         "Remove EQ from layer group"
+    }
+
+    group "master" => DomainAction::Master, MasterAction {
+        "add-effect"            => AddEffect(fx: EffectType);                                            "Add effect to master bus"
+        "remove-effect"         => RemoveEffect(eid: EffectId);                                          "Remove effect from master bus"
+        "move-effect"           => MoveEffect(eid: EffectId, d: i8);                                     "Move master effect up/down"
+        "toggle-effect-bypass"  => ToggleEffectBypass(eid: EffectId);                                    "Toggle master effect bypass"
+        "adjust-effect-param"   => AdjustEffectParam(eid: EffectId, pi: ParamIndex, d: f32);             "Adjust master effect param"
+        "toggle-eq"             => ToggleEqualizer;                                                      "Toggle master EQ"
+        "set-eq-param"          => SetEqualizerParam(eid: EffectId, band: usize, kind: EqualizerParamKind, v: f32); "Set master EQ band param"
+        "add-eq"                => AddEqualizer;                                                         "Add EQ to master bus"
+        "remove-eq"             => RemoveEqualizer(eid: EffectId);                                       "Remove EQ from master bus"
     }
 
     group "generative" => DomainAction::Generative, GenerativeAction {
@@ -215,6 +236,12 @@ repl_actions! {
         "set-lsystem-iterations"    => SetLSystemIterations(id: GenVoiceId, n: u8);           "Set L-System iterations"
         "adjust-lsystem-step"       => AdjustLSystemStepInterval(id: GenVoiceId, d: i8);      "Adjust L-System step interval"
         "remove-lsystem-rule"       => RemoveLSystemRule(id: GenVoiceId, idx: usize);         "Remove L-System rule by index"
+        "add-voice"                 => AddVoice(algo: GenerativeAlgorithm);                  "Add a generative voice"
+        "set-voice-target"          => SetVoiceTarget(id: GenVoiceId, target: Option<TrackId>); "Set voice target instrument"
+        "set-voice-algo"            => SetVoiceAlgorithm(id: GenVoiceId, algo: GenerativeAlgorithm); "Set voice algorithm"
+        "set-markov-transition"     => SetMarkovTransition(id: GenVoiceId, from: u8, to: u8, w: f32); "Set Markov transition weight"
+        "set-lsystem-axiom"         => SetLSystemAxiom(id: GenVoiceId, axiom: String);       "Set L-System axiom string"
+        "add-lsystem-rule"          => AddLSystemRule(id: GenVoiceId, c: char, replacement: String); "Add L-System production rule"
     }
 
     group "slicer" => DomainAction::SampleSlicer, SampleSlicerAction {

@@ -420,6 +420,95 @@ impl ReplParseable for VstPluginKind {
     }
 }
 
+impl ReplParseable for GenerativeAlgorithm {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        match s.to_lowercase().as_str() {
+            "euclidean" => Ok(GenerativeAlgorithm::Euclidean(Default::default())),
+            "markov" => Ok(GenerativeAlgorithm::Markov(Default::default())),
+            "lsystem" | "l-system" => Ok(GenerativeAlgorithm::LSystem(Default::default())),
+            _ => Err(format!(
+                "unknown algorithm: {s} (try: euclidean, markov, lsystem)"
+            )),
+        }
+    }
+    fn type_hint() -> &'static str {
+        "<algo>"
+    }
+}
+
+impl ReplParseable for AutomationTarget {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        // Formats: "track:<id>:<param>", "bus:<id>:level", "global:bpm", "global:tsig",
+        //          "gen:density", "gen:chaos", "gen:energy", "gen:motion"
+        let parts: Vec<&str> = s.splitn(3, ':').collect();
+        match parts.first().copied() {
+            Some("track") => {
+                if parts.len() != 3 {
+                    return Err("expected track:<id>:<param>".to_string());
+                }
+                let id = TrackId::parse_repl(parts[1])?;
+                let param = ParameterTarget::from_short_name(parts[2]).ok_or_else(|| {
+                    format!("unknown track param: {} (try: Level, Pan, FltCt, ...)", parts[2])
+                })?;
+                Ok(AutomationTarget::instrument(id, param))
+            }
+            Some("bus") => {
+                if parts.len() != 3 {
+                    return Err("expected bus:<id>:<param>".to_string());
+                }
+                let id = BusId::parse_repl(parts[1])?;
+                match parts[2] {
+                    "level" => Ok(AutomationTarget::bus_level(id)),
+                    other => Err(format!("unknown bus param: {other} (try: level)")),
+                }
+            }
+            Some("global") => {
+                if parts.len() != 2 {
+                    return Err("expected global:<param>".to_string());
+                }
+                match parts[1] {
+                    "bpm" => Ok(AutomationTarget::bpm()),
+                    "tsig" => Ok(AutomationTarget::time_signature()),
+                    other => Err(format!("unknown global param: {other} (try: bpm, tsig)")),
+                }
+            }
+            Some("gen") => {
+                if parts.len() != 2 {
+                    return Err("expected gen:<param>".to_string());
+                }
+                match parts[1] {
+                    "density" => Ok(AutomationTarget::Generative(GenerativeParameter::Density)),
+                    "chaos" => Ok(AutomationTarget::Generative(GenerativeParameter::Chaos)),
+                    "energy" => Ok(AutomationTarget::Generative(GenerativeParameter::Energy)),
+                    "motion" => Ok(AutomationTarget::Generative(GenerativeParameter::Motion)),
+                    other => Err(format!(
+                        "unknown gen param: {other} (try: density, chaos, energy, motion)"
+                    )),
+                }
+            }
+            _ => Err(format!(
+                "invalid automation target: {s} (try: track:0:Level, bus:1:level, global:bpm, gen:density)"
+            )),
+        }
+    }
+    fn type_hint() -> &'static str {
+        "<target>"
+    }
+}
+
+impl ReplParseable for Option<TrackId> {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        if s == "none" || s == "None" {
+            Ok(None)
+        } else {
+            TrackId::parse_repl(s).map(Some)
+        }
+    }
+    fn type_hint() -> &'static str {
+        "<track_id|none>"
+    }
+}
+
 impl ReplParseable for Key {
     fn parse_repl(s: &str) -> Result<Self, String> {
         Key::from_name(s).ok_or_else(|| {

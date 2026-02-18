@@ -32,7 +32,7 @@ pub fn format_track_list(state: &AppState) -> String {
     lines.join("\n")
 }
 
-pub fn format_track_detail(state: &AppState, id: TrackId) -> String {
+pub fn format_instrument_detail(state: &AppState, id: TrackId) -> String {
     let inst = match state.tracks.track(id) {
         Some(inst) => inst,
         None => return format!("Track {} not found", id),
