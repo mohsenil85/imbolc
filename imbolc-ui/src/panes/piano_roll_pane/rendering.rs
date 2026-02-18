@@ -1,9 +1,10 @@
+use crate::state::automation::{AutomationTargetExt, CurveType};
 use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{Color, Palette, Rect, RenderBuf, Style};
 use imbolc_types::state::piano_roll::Note;
 
-use super::PianoRollPane;
+use super::{PianoRollPane, TargetPickerState};
 
 /// MIDI note name for a given pitch (0-127)
 pub(super) fn note_name(pitch: u8) -> String {
@@ -20,136 +21,18 @@ pub(super) fn is_black_key(pitch: u8) -> bool {
     matches!(pitch % 12, 1 | 3 | 6 | 8 | 10)
 }
 
-/// Block characters for value graph (8 levels, bottom to top)
-pub(super) const AUTOMATION_BLOCKS: [char; 8] = [
-    '\u{2581}', '\u{2582}', '\u{2583}', '\u{2584}', '\u{2585}', '\u{2586}', '\u{2587}', '\u{2588}',
-];
-
 impl PianoRollPane {
-    /// Render the automation overlay strip at the bottom of the note grid
-    pub(super) fn render_automation_overlay(
-        &self,
-        buf: &mut RenderBuf,
-        overlay_area: Rect,
-        grid_x: u16,
-        grid_width: u16,
-        state: &AppState,
-    ) {
-        let p = Palette::from(&state.session.theme);
-        let automation = &state.session.automation;
-        let inst_id = state.tracks.selected_track().map(|i| i.id);
-
-        // Find the lane to display
-        let lane = if let Some(idx) = self.automation_overlay_lane_idx {
-            automation.lanes.get(idx)
-        } else {
-            // Default: show first lane for current instrument
-            inst_id.and_then(|id| {
-                automation
-                    .lanes
-                    .iter()
-                    .find(|l| l.target.instrument_id() == Some(id))
-            })
-        };
-
-        let overlay_height = overlay_area.height;
-        if overlay_height == 0 {
-            return;
-        }
-
-        // Separator line
-        let sep_style = Style::new().fg(Color::new(50, 40, 60));
-        for x in overlay_area.x..overlay_area.x + overlay_area.width {
-            buf.set_cell(x, overlay_area.y, '─', sep_style);
-        }
-
-        // Lane name on left edge
-        let lane_name = lane.map(|l| l.target.short_name()).unwrap_or("—");
-        let label_style = Style::new().fg(p.accent);
-        for (i, ch) in lane_name.chars().enumerate() {
-            let x = overlay_area.x + i as u16;
-            if x >= grid_x {
-                break;
-            }
-            let y = overlay_area.y + 1;
-            if y < overlay_area.y + overlay_height {
-                buf.set_cell(x, y, ch, label_style);
-            }
-        }
-
-        // REC indicator
-        if state.recording.automation_recording {
-            let rec_str = "REC";
-            let rec_style = Style::new().fg(p.fg).bg(p.recording);
-            for (i, ch) in rec_str.chars().enumerate() {
-                let x = overlay_area.x + i as u16;
-                let y = overlay_area.y + 2.min(overlay_height - 1);
-                if x < grid_x && y < overlay_area.y + overlay_height {
-                    buf.set_cell(x, y, ch, rec_style);
-                }
-            }
-        }
-
-        let Some(lane) = lane else {
-            return;
-        };
-        if lane.points.is_empty() {
-            return;
-        }
-
-        let tpc = self.ticks_per_cell();
-        let graph_rows = overlay_height.saturating_sub(1); // Minus separator row
-        if graph_rows == 0 {
-            return;
-        }
-
-        let curve_color = if lane.enabled { p.accent } else { p.dim };
-        let curve_style = Style::new().fg(curve_color);
-
-        for col in 0..grid_width {
-            let tick = self.view_start_tick + col as u32 * tpc;
-            if let Some(raw_value) = lane.value_at(tick) {
-                // Normalize to 0-1
-                let normalized = if lane.max_value > lane.min_value {
-                    ((raw_value - lane.min_value) / (lane.max_value - lane.min_value))
-                        .clamp(0.0, 1.0)
-                } else {
-                    0.5
-                };
-                // Map to block character index (0-7)
-                let block_idx = (normalized * 7.0) as usize;
-                let block_char = AUTOMATION_BLOCKS[block_idx.min(7)];
-
-                // Render at the bottom row(s) of the overlay
-                let x = grid_x + col;
-                let y = overlay_area.y + 1; // First row below separator
-                if y < overlay_area.y + overlay_height && x < overlay_area.x + overlay_area.width {
-                    buf.set_cell(x, y, block_char, curve_style);
-                }
-
-                // For taller overlays, fill upward with full blocks
-                if graph_rows > 1 {
-                    let filled_rows =
-                        ((normalized * (graph_rows - 1) as f32) as u16).min(graph_rows - 1);
-                    for r in 1..filled_rows {
-                        let y = overlay_area.y + graph_rows - r;
-                        if y > overlay_area.y
-                            && y < overlay_area.y + overlay_height
-                            && x < overlay_area.x + overlay_area.width
-                        {
-                            buf.set_cell(x, y, '▁', curve_style);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     /// Render notes grid (buffer version)
     pub(super) fn render_notes_buf(&self, buf: &mut RenderBuf, area: Rect, state: &AppState) {
         let p = Palette::from(&state.session.theme);
         let piano_roll = &state.session.piano_roll;
-        let rect = center_rect(area, 97, 29);
+
+        // When rendering in split mode, use the area directly; otherwise center
+        let rect = if self.automation_visible {
+            area
+        } else {
+            center_rect(area, 97, 29)
+        };
 
         // Layout constants
         let key_col_width: u16 = 5;
@@ -195,11 +78,16 @@ impl PianoRollPane {
         } else {
             " Piano Roll: (no tracks) ".to_string()
         };
-        let border_style = if is_kit {
-            Style::new().fg(p.accent_secondary)
+        let border_color = if is_kit {
+            p.accent_secondary
+        } else if self.automation_visible && !self.automation_focus {
+            Color::PINK
+        } else if self.automation_visible {
+            p.border
         } else {
-            Style::new().fg(Color::PINK)
+            Color::PINK
         };
+        let border_style = Style::new().fg(border_color);
         buf.draw_block(rect, &track_label, border_style, border_style);
 
         // Header: transport info
@@ -413,30 +301,30 @@ impl PianoRollPane {
 
                 let (ch, style) = if is_cursor {
                     if has_note {
-                        ('█', Style::new().fg(p.bg).bg(p.fg))
+                        ('\u{2588}', Style::new().fg(p.bg).bg(p.fg))
                     } else {
-                        ('▒', Style::new().fg(p.fg).bg(p.selection_bg))
+                        ('\u{2592}', Style::new().fg(p.fg).bg(p.selection_bg))
                     }
                 } else if in_selection && has_note {
                     // Selected note
-                    ('█', Style::new().fg(p.fg).bg(Color::new(60, 30, 80)))
+                    ('\u{2588}', Style::new().fg(p.fg).bg(Color::new(60, 30, 80)))
                 } else if in_selection {
                     // Selection region background
-                    ('░', Style::new().fg(Color::new(60, 30, 80)))
+                    ('\u{2591}', Style::new().fg(Color::new(60, 30, 80)))
                 } else if has_note {
                     if is_note_start {
-                        ('█', Style::new().fg(note_start_color))
+                        ('\u{2588}', Style::new().fg(note_start_color))
                     } else {
-                        ('█', Style::new().fg(note_body_color))
+                        ('\u{2588}', Style::new().fg(note_body_color))
                     }
                 } else if is_playhead {
-                    ('│', Style::new().fg(p.playing))
+                    ('\u{2502}', Style::new().fg(p.playing))
                 } else if is_bar_line {
-                    ('┊', Style::new().fg(p.border))
+                    ('\u{250a}', Style::new().fg(p.border))
                 } else if is_beat_line {
-                    ('·', Style::new().fg(Color::new(40, 40, 40)))
+                    ('\u{00b7}', Style::new().fg(Color::new(40, 40, 40)))
                 } else if is_black {
-                    ('·', Style::new().fg(Color::new(25, 25, 25)))
+                    ('\u{00b7}', Style::new().fg(Color::new(25, 25, 25)))
                 } else {
                     (' ', Style::new())
                 };
@@ -461,7 +349,7 @@ impl PianoRollPane {
                     buf.set_cell(x + j as u16, footer_y, ch, bar_style);
                 }
             } else if tick.is_multiple_of(tpb) {
-                buf.set_cell(x, footer_y, '·', Style::new().fg(p.border));
+                buf.set_cell(x, footer_y, '\u{00b7}', Style::new().fg(p.border));
             }
         }
 
@@ -514,6 +402,324 @@ impl PianoRollPane {
             let piano_style = Style::new().fg(p.bg).bg(Color::PINK);
             for (j, ch) in piano_str.chars().enumerate() {
                 buf.set_cell(indicator_x + j as u16, status_y, ch, piano_style);
+            }
+        }
+    }
+
+    /// Render the horizontal separator between notes and automation
+    pub(super) fn render_separator(
+        &self,
+        buf: &mut RenderBuf,
+        rect: Rect,
+        note_height: u16,
+        state: &AppState,
+    ) {
+        let p = Palette::from(&state.session.theme);
+        let sep_y = rect.y + note_height;
+
+        let sep_color = if self.automation_focus {
+            Color::CYAN
+        } else {
+            p.border
+        };
+        let sep_style = Style::new().fg(sep_color);
+
+        for x in rect.x..rect.x + rect.width {
+            buf.set_cell(x, sep_y, '\u{2500}', sep_style);
+        }
+
+        // Lane name on separator
+        let lane_info = state
+            .session
+            .automation
+            .selected()
+            .map(|l| {
+                let enabled = if l.enabled { "\u{25cf}" } else { "\u{25cb}" };
+                format!(" {} {} ", l.target.short_name(), enabled)
+            })
+            .unwrap_or_else(|| " (no lane) ".to_string());
+
+        let title_style = Style::new().fg(if self.automation_focus {
+            Color::CYAN
+        } else {
+            p.dim
+        });
+        for (i, ch) in lane_info.chars().enumerate() {
+            let x = rect.x + 1 + i as u16;
+            if x >= rect.x + rect.width {
+                break;
+            }
+            buf.set_cell(x, sep_y, ch, title_style);
+        }
+
+        // REC indicator on right side
+        if state.recording.automation_recording {
+            let rec_str = " REC ";
+            let rec_style = Style::new().fg(p.fg).bg(p.recording);
+            let rx = rect.x + rect.width - rec_str.len() as u16 - 1;
+            for (i, ch) in rec_str.chars().enumerate() {
+                buf.set_cell(rx + i as u16, sep_y, ch, rec_style);
+            }
+        }
+    }
+
+    /// Render the automation timeline in the bottom half of the split view
+    pub(super) fn render_automation_timeline(
+        &self,
+        buf: &mut RenderBuf,
+        area: Rect,
+        state: &AppState,
+    ) {
+        let p = Palette::from(&state.session.theme);
+
+        if area.height < 3 || area.width < 10 {
+            return;
+        }
+
+        let automation = &state.session.automation;
+        let lane = match automation.selected() {
+            Some(l) => l,
+            None => {
+                let text = "(press 'a' to add a lane)";
+                let style = Style::new().fg(Color::DARK_GRAY);
+                let x = area.x + (area.width.saturating_sub(text.len() as u16)) / 2;
+                let y = area.y + area.height / 2;
+                buf.draw_line(Rect::new(x, y, text.len() as u16, 1), &[(text, style)]);
+                return;
+            }
+        };
+
+        let tpc = self.ticks_per_cell();
+        let graph_height = area.height.saturating_sub(2); // Reserve 1 for beat markers, 1 for status
+        let graph_width = area.width;
+        let graph_y = area.y;
+
+        // Grid dots
+        let bar_style = Style::new().fg(Color::new(55, 55, 55));
+        let bg_style = Style::new().fg(Color::new(30, 30, 30));
+        for col in 0..graph_width {
+            let tick = self.view_start_tick + col as u32 * tpc;
+            let is_bar = tick.is_multiple_of(1920);
+            let is_beat = tick.is_multiple_of(480);
+
+            for row in 0..graph_height {
+                let y = graph_y + row;
+                let x = area.x + col;
+                if is_bar {
+                    buf.set_cell(x, y, '\u{250a}', bar_style);
+                } else if is_beat && row == 0 {
+                    buf.set_cell(x, y, '\u{00b7}', bg_style);
+                }
+            }
+        }
+
+        // Draw automation curve
+        let curve_color = if lane.enabled {
+            Color::CYAN
+        } else {
+            Color::DARK_GRAY
+        };
+        let curve_style = Style::new().fg(curve_color);
+        let point_style = Style::new().fg(Color::WHITE).bg(curve_color);
+
+        if !lane.points.is_empty() && graph_height > 0 {
+            for col in 0..graph_width {
+                let tick = self.view_start_tick + col as u32 * tpc;
+                if let Some(raw_value) = lane.value_at(tick) {
+                    let normalized = if lane.max_value > lane.min_value {
+                        (raw_value - lane.min_value) / (lane.max_value - lane.min_value)
+                    } else {
+                        0.5
+                    };
+                    let row = ((1.0 - normalized) * (graph_height.saturating_sub(1)) as f32) as u16;
+                    let y = graph_y + row;
+                    let x = area.x + col;
+                    if y < graph_y + graph_height {
+                        if lane.point_at(tick).is_some() {
+                            buf.set_cell(x, y, '\u{25cf}', point_style);
+                        } else {
+                            buf.set_cell(x, y, '\u{2500}', curve_style);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Draw cursor (only when automation has focus)
+        if self.automation_focus {
+            let cursor_col = if self.automation_cursor_tick >= self.view_start_tick {
+                ((self.automation_cursor_tick - self.view_start_tick) / tpc) as u16
+            } else {
+                0
+            };
+            let cursor_row = ((1.0 - self.automation_cursor_value)
+                * (graph_height.saturating_sub(1)) as f32) as u16;
+
+            if cursor_col < graph_width {
+                let x = area.x + cursor_col;
+
+                for row in 0..graph_height {
+                    let y = graph_y + row;
+                    if let Some(cell) = buf.raw_buf().cell_mut((x, y)) {
+                        if row == cursor_row {
+                            cell.set_char('\u{25c6}')
+                                .set_style(Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG));
+                        } else if cell.symbol() == " " {
+                            cell.set_char('\u{2502}')
+                                .set_style(Style::new().fg(Color::new(50, 50, 60)));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Playhead
+        if state.audio.playing {
+            let playhead_col = if state.audio.playhead >= self.view_start_tick {
+                ((state.audio.playhead - self.view_start_tick) / tpc) as u16
+            } else {
+                graph_width // off-screen
+            };
+            if playhead_col < graph_width {
+                let x = area.x + playhead_col;
+                for row in 0..graph_height {
+                    let y = graph_y + row;
+                    if let Some(cell) = buf.raw_buf().cell_mut((x, y)) {
+                        if cell.symbol() == " " || cell.symbol() == "\u{250a}" {
+                            cell.set_char('\u{2502}')
+                                .set_style(Style::new().fg(p.playing));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Beat markers row
+        let marker_y = graph_y + graph_height;
+        if marker_y < area.y + area.height {
+            let marker_style = Style::new().fg(Color::DARK_GRAY);
+            for col in 0..graph_width {
+                let tick = self.view_start_tick + col as u32 * tpc;
+                if tick.is_multiple_of(1920) {
+                    let bar = tick / 1920 + 1;
+                    let label = format!("B{}", bar);
+                    for (j, ch) in label.chars().enumerate() {
+                        let x = area.x + col + j as u16;
+                        if x < area.x + graph_width {
+                            buf.set_cell(x, marker_y, ch, marker_style);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Status line
+        let status_y = graph_y + graph_height + 1;
+        if status_y < area.y + area.height {
+            let curve_at_cursor = lane
+                .point_at(self.automation_cursor_tick)
+                .map(|pt| match pt.curve {
+                    CurveType::Linear => "Linear",
+                    CurveType::Exponential => "Exp",
+                    CurveType::Step => "Step",
+                    CurveType::SCurve => "SCurve",
+                })
+                .unwrap_or("\u{2014}");
+
+            let rec_indicator = if state.recording.automation_recording {
+                " [REC]"
+            } else {
+                ""
+            };
+            let status = format!(
+                " Tick:{:<6} Val:{:.2}  Curve:{}{}",
+                self.automation_cursor_tick,
+                self.automation_cursor_value,
+                curve_at_cursor,
+                rec_indicator,
+            );
+
+            let normal_style = Style::new().fg(Color::GRAY);
+            let rec_style = Style::new().fg(Color::WHITE).bg(Color::RED);
+
+            for (i, ch) in status.chars().enumerate() {
+                let x = area.x + i as u16;
+                if x >= area.x + graph_width {
+                    break;
+                }
+                let is_rec_section = state.recording.automation_recording && i >= status.len() - 6;
+                let style = if is_rec_section {
+                    rec_style
+                } else {
+                    normal_style
+                };
+                buf.set_cell(x, status_y, ch, style);
+            }
+        }
+    }
+
+    /// Render the target picker overlay
+    pub(super) fn render_target_picker(&self, buf: &mut RenderBuf, area: Rect, state: &AppState) {
+        if let TargetPickerState::Active {
+            ref options,
+            cursor,
+        } = self.target_picker
+        {
+            let picker_width = 40u16.min(area.width.saturating_sub(4));
+            let picker_height = (options.len() as u16 + 2).min(area.height.saturating_sub(2));
+            let picker_rect = center_rect(area, picker_width, picker_height);
+
+            // Clear background
+            let clear_style = Style::new().bg(Color::new(20, 20, 30));
+            for y in picker_rect.y..picker_rect.y + picker_rect.height {
+                for x in picker_rect.x..picker_rect.x + picker_rect.width {
+                    buf.set_cell(x, y, ' ', clear_style);
+                }
+            }
+
+            let border_style = Style::new().fg(Color::CYAN);
+            let title_style = Style::new().fg(Color::CYAN);
+            let inner = buf.draw_block(picker_rect, " Add Lane ", border_style, title_style);
+
+            let inst = state.tracks.selected_track();
+            let vst_registry = &state.session.vst_plugins;
+
+            // Scroll offset: keep cursor visible
+            let visible_rows = inner.height as usize;
+            let scroll_offset = if cursor >= visible_rows {
+                cursor - visible_rows + 1
+            } else {
+                0
+            };
+
+            for (vi, target) in options.iter().enumerate().skip(scroll_offset) {
+                let row = vi - scroll_offset;
+                let y = inner.y + row as u16;
+                if y >= inner.y + inner.height {
+                    break;
+                }
+
+                let is_selected = vi == cursor;
+                let display_name = target.name_with_context(inst, vst_registry);
+                let text = format!("{} {}", if is_selected { ">" } else { " " }, display_name);
+                let style = if is_selected {
+                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                } else {
+                    Style::new().fg(Color::GRAY)
+                };
+
+                for (j, ch) in text.chars().enumerate() {
+                    let x = inner.x + j as u16;
+                    if x >= inner.x + inner.width {
+                        break;
+                    }
+                    buf.set_cell(x, y, ch, style);
+                }
+                if is_selected {
+                    for x in (inner.x + text.len() as u16)..(inner.x + inner.width) {
+                        buf.set_cell(x, y, ' ', style);
+                    }
+                }
             }
         }
     }

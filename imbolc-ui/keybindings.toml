@@ -143,7 +143,7 @@ bindings = [
   { key = "A", action = "toggle_automation", description = "Toggle automation overlay" },
   { key = "Ctrl+Up", action = "automation_lane_prev", description = "Previous automation lane" },
   { key = "Ctrl+Down", action = "automation_lane_next", description = "Next automation lane" },
-  { key = "R", action = "render_to_wav", description = "Render track to WAV" },
+  { key = "Tab", action = "automation_switch_focus", description = "Switch focus (notes / automation)" },
   { key = "B", action = "bounce_to_wav", description = "Bounce master to WAV" },
   { key = "Ctrl+b", action = "export_stems", description = "Export stems to WAV" },
 ]
@@ -347,30 +347,6 @@ bindings = [
   { key = "=", action = "assign_12", description = "Assign to Pad 12" },
   { key = "Shift+Left", action = "nudge_start", description = "Nudge slice start" },
   { key = "Shift+Right", action = "nudge_end", description = "Nudge slice end" },
-]
-
-[layers.automation]
-bindings = [
-  { key = "Tab", action = "switch_focus", description = "Switch focus (lane list / timeline)", hint = "focus" },
-  { key = "Up", action = "up", description = "Up (select lane / increase value)" },
-  { key = "Down", action = "down", description = "Down (select lane / decrease value)" },
-  { key = "Left", action = "left", description = "Move cursor left" },
-  { key = "Right", action = "right", description = "Move cursor right" },
-  { key = "a", action = "add_lane", description = "Add automation lane", hint = "add lane" },
-  { key = "x", action = "remove_lane", description = "Remove selected lane", hint = "remove" },
-  { key = "e", action = "toggle_enabled", description = "Toggle lane enabled", hint = "enable" },
-  { key = "Enter", action = "place_point", description = "Place/remove point", hint = "point" },
-  { key = "d", action = "delete_point", description = "Delete point at cursor" },
-  { key = "c", action = "cycle_curve", description = "Cycle curve type", hint = "curve" },
-  { key = "C", action = "clear_lane", description = "Clear all points in lane" },
-  { key = "r", action = "toggle_recording", description = "Toggle automation recording", hint = "record" },
-  { key = "R", action = "toggle_arm", description = "Arm/disarm lane for recording", hint = "arm" },
-  { key = "Ctrl+r", action = "arm_all", description = "Arm all lanes" },
-  { key = "Alt+r", action = "disarm_all", description = "Disarm all lanes" },
-  { key = "z", action = "zoom_in", description = "Zoom in", hint = "zoom" },
-  { key = "Z", action = "zoom_out", description = "Zoom out", hint = "zoom" },
-  { key = "Home", action = "home", description = "Jump to start" },
-  { key = "End", action = "end", description = "Jump to end" },
 ]
 
 [layers.eq]

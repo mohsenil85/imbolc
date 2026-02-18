@@ -1,7 +1,6 @@
 mod add_effect_pane;
 mod add_pane;
 mod arpeggiator_pane;
-mod automation_pane;
 mod checkpoint_list_pane;
 mod command_line_pane;
 mod command_palette_pane;
@@ -37,7 +36,6 @@ mod waveform_pane;
 pub use add_effect_pane::AddEffectPane;
 pub use add_pane::AddPane;
 pub use arpeggiator_pane::ArpeggiatorPane;
-pub use automation_pane::AutomationPane;
 pub use checkpoint_list_pane::CheckpointListPane;
 pub use command_line_pane::CommandLinePane;
 pub use command_palette_pane::CommandPalettePane;

@@ -351,6 +351,15 @@ define_action_enum! {
         RenderToWav => "render_to_wav",
         BounceToWav => "bounce_to_wav",
         ExportStems => "export_stems",
+        AutomationSwitchFocus => "automation_switch_focus",
+        AutomationDeletePoint => "automation_delete_point",
+        AutomationCycleCurve => "automation_cycle_curve",
+        AutomationClearLane => "automation_clear_lane",
+        AutomationAddLane => "automation_add_lane",
+        AutomationRemoveLane => "automation_remove_lane",
+        AutomationToggleEnabled => "automation_toggle_enabled",
+        AutomationToggleRecording => "automation_toggle_recording",
+        AutomationToggleArm => "automation_toggle_arm",
     }
 }
 
@@ -565,38 +574,6 @@ impl SampleSlicerActionId {
             "assign_12" => Some(SampleSlicerActionId::AssignToPad(12)),
             _ => None,
         }
-    }
-}
-
-define_action_enum! {
-    /// Automation layer actions
-    pub enum AutomationActionId {
-        SwitchFocus => "switch_focus",
-        Up => "up",
-        Down => "down",
-        Left => "left",
-        Right => "right",
-        Prev => "prev",
-        Next => "next",
-        AddLane => "add_lane",
-        RemoveLane => "remove_lane",
-        ToggleEnabled => "toggle_enabled",
-        PlacePoint => "place_point",
-        DeletePoint => "delete_point",
-        CycleCurve => "cycle_curve",
-        ClearLane => "clear_lane",
-        ToggleRecording => "toggle_recording",
-        ToggleArm => "toggle_arm",
-        ArmAll => "arm_all",
-        DisarmAll => "disarm_all",
-        ZoomIn => "zoom_in",
-        ZoomOut => "zoom_out",
-        Home => "home",
-        End => "end",
-        TogglePlayback => "play_stop",
-        Confirm => "confirm",
-        Cancel => "cancel",
-        Escape => "escape",
     }
 }
 
@@ -868,7 +845,6 @@ pub enum ActionId {
     FrameEdit(FrameEditActionId),
     FileBrowser(FileBrowserActionId),
     SampleSlicer(SampleSlicerActionId),
-    Automation(AutomationActionId),
     Eq(EqActionId),
     Arpeggiator(ArpeggiatorActionId),
     Generative(GenerativeActionId),
@@ -902,7 +878,6 @@ impl ActionId {
             ActionId::FrameEdit(a) => a.as_str(),
             ActionId::FileBrowser(a) => a.as_str(),
             ActionId::SampleSlicer(a) => a.as_str(),
-            ActionId::Automation(a) => a.as_str(),
             ActionId::Eq(a) => a.as_str(),
             ActionId::Arpeggiator(a) => a.as_str(),
             ActionId::Generative(a) => a.as_str(),
@@ -937,7 +912,6 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "frame_edit" => FrameEditActionId::from_str(action).map(ActionId::FrameEdit),
         "file_browser" => FileBrowserActionId::from_str(action).map(ActionId::FileBrowser),
         "sample_slicer" => SampleSlicerActionId::from_str(action).map(ActionId::SampleSlicer),
-        "automation" => AutomationActionId::from_str(action).map(ActionId::Automation),
         "eq" => EqActionId::from_str(action).map(ActionId::Eq),
         "arpeggiator" => ArpeggiatorActionId::from_str(action).map(ActionId::Arpeggiator),
         "generative" => GenerativeActionId::from_str(action).map(ActionId::Generative),
@@ -1177,44 +1151,6 @@ mod tests {
         for action in actions {
             let s = action.as_str();
             let parsed = SampleSlicerActionId::from_str(s);
-            assert_eq!(Some(action), parsed, "Failed round-trip for {}", s);
-        }
-    }
-
-    #[test]
-    fn test_automation_round_trip() {
-        let actions = vec![
-            AutomationActionId::SwitchFocus,
-            AutomationActionId::Up,
-            AutomationActionId::Down,
-            AutomationActionId::Left,
-            AutomationActionId::Right,
-            AutomationActionId::Prev,
-            AutomationActionId::Next,
-            AutomationActionId::AddLane,
-            AutomationActionId::RemoveLane,
-            AutomationActionId::ToggleEnabled,
-            AutomationActionId::PlacePoint,
-            AutomationActionId::DeletePoint,
-            AutomationActionId::CycleCurve,
-            AutomationActionId::ClearLane,
-            AutomationActionId::ToggleRecording,
-            AutomationActionId::ToggleArm,
-            AutomationActionId::ArmAll,
-            AutomationActionId::DisarmAll,
-            AutomationActionId::ZoomIn,
-            AutomationActionId::ZoomOut,
-            AutomationActionId::Home,
-            AutomationActionId::End,
-            AutomationActionId::TogglePlayback,
-            AutomationActionId::Confirm,
-            AutomationActionId::Cancel,
-            AutomationActionId::Escape,
-        ];
-
-        for action in actions {
-            let s = action.as_str();
-            let parsed = AutomationActionId::from_str(s);
             assert_eq!(Some(action), parsed, "Failed round-trip for {}", s);
         }
     }

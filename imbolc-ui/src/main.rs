@@ -20,7 +20,7 @@ mod ui;
 use std::fs::File;
 
 use panes::{
-    AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane, CommandLinePane,
+    AddEffectPane, AddPane, ArpeggiatorPane, CheckpointListPane, CommandLinePane,
     CommandPalettePane, ConfirmPane, DocsPane, EqMode, EqPane, FileBrowserPane, FrameEditPane,
     GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PaneSwitcherPane,
     PianoRollPane, ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane,
@@ -193,10 +193,6 @@ pub(crate) fn register_all_panes(
     panes.add_pane(Box::new(TrackPane::new(pane_keymap(keymaps, "track"))));
     panes.add_pane(Box::new(WaveformPane::new(pane_keymap(
         keymaps, "waveform",
-    ))));
-    panes.add_pane(Box::new(AutomationPane::new(pane_keymap(
-        keymaps,
-        "automation",
     ))));
     let eq_keymap = pane_keymap(keymaps, "eq");
     panes.add_pane(Box::new(EqPane::new(EqMode::Channel, eq_keymap.clone())));

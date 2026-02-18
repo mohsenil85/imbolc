@@ -36,7 +36,7 @@ const PANE_ENTRIES: &[(PaneId, &str, &str)] = &[
     (PaneId::Track, "Track View", "F3"),
     (PaneId::Mixer, "Mixer", "F4"),
     (PaneId::Server, "Audio Server", "F5"),
-    (PaneId::Automation, "Automation", "F7"),
+    (PaneId::PianoRoll, "Piano Roll + Automation", "F7"),
     (PaneId::Eq, "Channel EQ", ""),
     (PaneId::MasterEq, "Master EQ", ""),
     (PaneId::TrackList, "Track List", "Ctrl+g"),

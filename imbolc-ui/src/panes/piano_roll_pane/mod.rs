@@ -4,6 +4,7 @@ mod rendering;
 use std::any::Any;
 use std::time::Instant;
 
+use crate::state::automation::{AutomationLaneId, AutomationTarget};
 use crate::state::AppState;
 use crate::ui::action_id::ActionId;
 use crate::ui::layout_helpers::center_rect;
@@ -13,6 +14,16 @@ use crate::ui::{
 };
 use imbolc_types::state::drum_sequencer::{DrumSequencerState, NUM_PADS};
 use imbolc_types::TrackId;
+
+/// Sub-mode for adding a new automation lane target
+#[derive(Debug, Clone)]
+pub(super) enum TargetPickerState {
+    Inactive,
+    Active {
+        options: Vec<AutomationTarget>,
+        cursor: usize,
+    },
+}
 
 pub struct PianoRollPane {
     keymap: Keymap,
@@ -30,9 +41,13 @@ pub struct PianoRollPane {
     // Piano keyboard mode
     pub(super) piano: PianoKeyboard,
     pub(super) recording: bool, // True when recording notes from piano keyboard
-    // Automation overlay
-    pub(super) automation_overlay_visible: bool,
-    pub(super) automation_overlay_lane_idx: Option<usize>, // index into automation.lanes for overlay display
+    // Automation split view
+    pub(crate) automation_visible: bool,
+    pub(crate) automation_focus: bool,
+    pub(crate) automation_cursor_tick: u32,
+    pub(super) automation_cursor_value: f32, // 0.0-1.0
+    pub(super) target_picker: TargetPickerState,
+    pub(crate) automation_selection_anchor_tick: Option<u32>,
     /// Selection anchor — set when Shift+Arrow begins. None = no active selection.
     pub(crate) selection_anchor: Option<(u32, u8)>, // (tick, pitch)
 }
@@ -51,9 +66,56 @@ impl PianoRollPane {
             default_velocity: 100,
             piano: PianoKeyboard::new(),
             recording: false,
-            automation_overlay_visible: false,
-            automation_overlay_lane_idx: None,
+            automation_visible: false,
+            automation_focus: false,
+            automation_cursor_tick: 0,
+            automation_cursor_value: 0.5,
+            target_picker: TargetPickerState::Inactive,
+            automation_selection_anchor_tick: None,
             selection_anchor: None,
+        }
+    }
+
+    /// Show automation split view (called when navigating via F7)
+    pub fn show_automation(&mut self) {
+        self.automation_visible = true;
+        self.automation_focus = true;
+    }
+
+    /// Get the currently selected automation lane id
+    pub(crate) fn selected_lane_id(&self, state: &AppState) -> Option<AutomationLaneId> {
+        state.session.automation.selected().map(|l| l.id)
+    }
+
+    /// Returns the automation selection region as (lane_id, start_tick, end_tick), or None.
+    pub(crate) fn automation_selection_region(
+        &self,
+        state: &AppState,
+    ) -> Option<(AutomationLaneId, u32, u32)> {
+        let lane_id = self.selected_lane_id(state)?;
+        let anchor_tick = self.automation_selection_anchor_tick?;
+        let (t0, t1) =
+            crate::state::grid::normalize_tick_range(anchor_tick, self.automation_cursor_tick);
+        if t0 < t1 {
+            Some((lane_id, t0, t1))
+        } else {
+            None
+        }
+    }
+
+    /// Adjust view_start_tick to keep the automation cursor visible
+    fn scroll_automation_cursor_into_view(&mut self) {
+        let visible_cols = 60u32;
+        let visible_ticks = visible_cols * self.ticks_per_cell();
+        if self.automation_cursor_tick < self.view_start_tick {
+            self.view_start_tick =
+                crate::state::grid::snap_to_grid(self.automation_cursor_tick, self.zoom_level);
+        } else if self.automation_cursor_tick >= self.view_start_tick + visible_ticks {
+            self.view_start_tick = crate::state::grid::snap_to_grid(
+                self.automation_cursor_tick
+                    .saturating_sub(visible_ticks - self.ticks_per_cell()),
+                self.zoom_level,
+            );
         }
     }
 
@@ -198,6 +260,7 @@ impl Pane for PianoRollPane {
 
     fn on_enter(&mut self, state: &AppState) {
         self.selection_anchor = None;
+        self.automation_selection_anchor_tick = None;
         // Sync current_track to the globally selected instrument
         if let Some(selected_idx) = state.tracks.selected {
             if let Some(inst) = state.tracks.tracks.get(selected_idx) {
@@ -275,25 +338,32 @@ impl Pane for PianoRollPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
-        self.render_notes_buf(buf, area, state);
+        if self.automation_visible {
+            let total_height = 42u16.min(area.height.saturating_sub(2));
+            let rect = center_rect(area, 97, total_height);
+            let note_height = (total_height * 3 / 5)
+                .max(15)
+                .min(total_height.saturating_sub(6));
+            let auto_height = total_height.saturating_sub(note_height + 1);
+            let note_area = Rect {
+                height: note_height,
+                ..rect
+            };
+            let auto_area = Rect {
+                y: rect.y + note_height + 1,
+                height: auto_height,
+                ..rect
+            };
 
-        // Automation overlay
-        if self.automation_overlay_visible {
-            let rect = center_rect(area, 97, 29);
-            let key_col_width: u16 = 5;
-            let header_height: u16 = 2;
-            let footer_height: u16 = 2;
-            let grid_x = rect.x + key_col_width;
-            let grid_width = rect.width.saturating_sub(key_col_width + 1);
-            let grid_height = rect
-                .height
-                .saturating_sub(header_height + footer_height + 1);
+            self.render_notes_buf(buf, note_area, state);
+            self.render_separator(buf, rect, note_height, state);
+            self.render_automation_timeline(buf, auto_area, state);
 
-            let overlay_rows = 4u16.min(grid_height / 2);
-            let overlay_y = rect.y + header_height + grid_height - overlay_rows;
-            let overlay_area = Rect::new(rect.x, overlay_y, rect.width, overlay_rows);
-
-            self.render_automation_overlay(buf, overlay_area, grid_x, grid_width, state);
+            if matches!(self.target_picker, TargetPickerState::Active { .. }) {
+                self.render_target_picker(buf, rect, state);
+            }
+        } else {
+            self.render_notes_buf(buf, area, state);
         }
     }
 
@@ -433,5 +503,261 @@ mod tests {
             action,
             Action::PianoRoll(PianoRollAction::ToggleNote { .. })
         ));
+    }
+
+    // --- Automation split view tests ---
+
+    #[test]
+    fn toggle_automation_opens_and_closes_split() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        assert!(!pane.automation_visible);
+        assert!(!pane.automation_focus);
+
+        // Toggle automation on
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::ToggleAutomation),
+            &dummy_event(),
+            &state,
+        );
+        assert!(pane.automation_visible);
+        assert!(!pane.automation_focus); // Notes keep focus initially
+
+        // Toggle automation off
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::ToggleAutomation),
+            &dummy_event(),
+            &state,
+        );
+        assert!(!pane.automation_visible);
+    }
+
+    #[test]
+    fn tab_switches_focus_between_notes_and_automation() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = false;
+
+        // Tab from notes -> automation
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::AutomationSwitchFocus),
+            &dummy_event(),
+            &state,
+        );
+        assert!(pane.automation_focus);
+
+        // Tab from automation -> notes
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::AutomationSwitchFocus),
+            &dummy_event(),
+            &state,
+        );
+        assert!(!pane.automation_focus);
+    }
+
+    #[test]
+    fn automation_cursor_moves_value_up_down() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+        pane.automation_cursor_value = 0.5;
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Up),
+            &dummy_event(),
+            &state,
+        );
+        assert!((pane.automation_cursor_value - 0.55).abs() < 0.01);
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Down),
+            &dummy_event(),
+            &state,
+        );
+        assert!((pane.automation_cursor_value - 0.50).abs() < 0.01);
+    }
+
+    #[test]
+    fn automation_cursor_value_clamps() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+
+        pane.automation_cursor_value = 1.0;
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Up),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.automation_cursor_value, 1.0);
+
+        pane.automation_cursor_value = 0.0;
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Down),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.automation_cursor_value, 0.0);
+    }
+
+    #[test]
+    fn automation_cursor_moves_tick_left_right() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+        pane.automation_cursor_tick = 0;
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Right),
+            &dummy_event(),
+            &state,
+        );
+        let tpc = pane.ticks_per_cell();
+        assert_eq!(pane.automation_cursor_tick, tpc);
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Left),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.automation_cursor_tick, 0);
+    }
+
+    #[test]
+    fn automation_left_clears_selection_anchor() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+        pane.automation_selection_anchor_tick = Some(100);
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Right),
+            &dummy_event(),
+            &state,
+        );
+        assert!(pane.automation_selection_anchor_tick.is_none());
+    }
+
+    #[test]
+    fn automation_select_right_sets_anchor() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+        pane.automation_cursor_tick = 480;
+        assert!(pane.automation_selection_anchor_tick.is_none());
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::SelectRight),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.automation_selection_anchor_tick, Some(480));
+        assert!(pane.automation_cursor_tick > 480);
+    }
+
+    #[test]
+    fn automation_home_resets_cursor() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+        pane.automation_cursor_tick = 960;
+        pane.view_start_tick = 480;
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::Home),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.automation_cursor_tick, 0);
+        assert_eq!(pane.view_start_tick, 0);
+    }
+
+    #[test]
+    fn automation_zoom_shared_with_notes() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+        pane.zoom_level = 3;
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::ZoomOut),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.zoom_level, 4);
+
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::ZoomIn),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.zoom_level, 3);
+    }
+
+    #[test]
+    fn show_automation_sets_visible_and_focused() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        assert!(!pane.automation_visible);
+        pane.show_automation();
+        assert!(pane.automation_visible);
+        assert!(pane.automation_focus);
+    }
+
+    #[test]
+    fn automation_action_ids_noop_when_notes_focused() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = false;
+
+        let action = pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::AutomationDeletePoint),
+            &dummy_event(),
+            &state,
+        );
+        assert!(matches!(action, Action::None));
+
+        let action = pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::AutomationToggleEnabled),
+            &dummy_event(),
+            &state,
+        );
+        assert!(matches!(action, Action::None));
+    }
+
+    #[test]
+    fn automation_toggle_off_from_automation_focus() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+
+        // ToggleAutomation while automation has focus → close split
+        pane.handle_action(
+            ActionId::PianoRoll(PianoRollActionId::ToggleAutomation),
+            &dummy_event(),
+            &state,
+        );
+        assert!(!pane.automation_visible);
+        assert!(!pane.automation_focus);
     }
 }

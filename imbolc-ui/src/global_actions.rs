@@ -5,9 +5,9 @@ use crate::action::{
 use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
 use crate::panes::{
-    AutomationPane, CommandPalettePane, ConfirmPane, DocsPane, FileBrowserPane, FrameEditPane,
-    HelpPane, PaneSwitcherPane, PendingAction, PianoRollPane, SaveAsPane, SequencerPane,
-    ServerPane, TrackEditPane, TrackListPane, VstParamPane, WaveformPane,
+    CommandPalettePane, ConfirmPane, DocsPane, FileBrowserPane, FrameEditPane, HelpPane,
+    PaneSwitcherPane, PendingAction, PianoRollPane, SaveAsPane, SequencerPane, ServerPane,
+    TrackEditPane, TrackListPane, VstParamPane, WaveformPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -560,14 +560,18 @@ pub(crate) fn handle_global_action(
                 );
             }
             GlobalActionId::SwitchPane(NavPaneId::Automation) => {
+                // F7: Navigate to piano roll with automation split visible
                 switch_to_pane(
-                    NavPaneId::Automation,
+                    NavPaneId::PianoRoll,
                     panes,
                     dispatcher,
                     audio,
                     app_frame,
                     layer_stack,
                 );
+                if let Some(pr) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
+                    pr.show_automation();
+                }
             }
             GlobalActionId::SwitchPane(NavPaneId::Eq) => {
                 switch_to_pane(
@@ -1148,21 +1152,38 @@ fn copy_from_active_pane(
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
-                if pane.is_kit_track(dispatcher.state()) {
-                    return;
+                if pane.automation_visible && pane.automation_focus {
+                    // Copy automation points
+                    if let Some((lane_id, start_tick, end_tick)) =
+                        pane.automation_selection_region(dispatcher.state())
+                    {
+                        dispatch_side_effect_free(
+                            dispatcher,
+                            &DomainAction::Automation(AutomationAction::CopyPoints(
+                                lane_id, start_tick, end_tick,
+                            )),
+                            audio,
+                        );
+                    }
+                } else {
+                    // Copy notes
+                    if pane.is_kit_track(dispatcher.state()) {
+                        return;
+                    }
+                    let (track, start_tick, end_tick, start_pitch, end_pitch) =
+                        pane.selection_region();
+                    dispatch_side_effect_free(
+                        dispatcher,
+                        &DomainAction::PianoRoll(PianoRollAction::CopyNotes {
+                            track,
+                            start_tick,
+                            end_tick,
+                            start_pitch,
+                            end_pitch,
+                        }),
+                        audio,
+                    );
                 }
-                let (track, start_tick, end_tick, start_pitch, end_pitch) = pane.selection_region();
-                dispatch_side_effect_free(
-                    dispatcher,
-                    &DomainAction::PianoRoll(PianoRollAction::CopyNotes {
-                        track,
-                        start_tick,
-                        end_tick,
-                        start_pitch,
-                        end_pitch,
-                    }),
-                    audio,
-                );
             }
         }
         "sequencer" => {
@@ -1178,21 +1199,6 @@ fn copy_from_active_pane(
                     }),
                     audio,
                 );
-            }
-        }
-        "automation" => {
-            if let Some(pane) = panes.get_pane_mut::<AutomationPane>("automation") {
-                if let Some((lane_id, start_tick, end_tick)) =
-                    pane.selection_region(dispatcher.state())
-                {
-                    dispatch_side_effect_free(
-                        dispatcher,
-                        &DomainAction::Automation(AutomationAction::CopyPoints(
-                            lane_id, start_tick, end_tick,
-                        )),
-                        audio,
-                    );
-                }
             }
         }
         _ => {}
@@ -1212,33 +1218,52 @@ fn cut_from_active_pane(
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
-                if pane.is_kit_track(dispatcher.state()) {
-                    return None;
-                }
-                if let Some((anchor_tick, anchor_pitch)) = pane.selection_anchor {
-                    let (tick_start, tick_end) = if anchor_tick <= pane.cursor_tick {
-                        (anchor_tick, pane.cursor_tick + pane.ticks_per_cell())
-                    } else {
-                        (pane.cursor_tick, anchor_tick + pane.ticks_per_cell())
-                    };
-                    let (pitch_start, pitch_end) = if anchor_pitch <= pane.cursor_pitch {
-                        (anchor_pitch, pane.cursor_pitch)
-                    } else {
-                        (pane.cursor_pitch, anchor_pitch)
-                    };
+                if pane.automation_visible && pane.automation_focus {
+                    // Cut automation points
+                    if let Some(anchor_tick) = pane.automation_selection_anchor_tick {
+                        let (tick_start, tick_end) = if anchor_tick <= pane.automation_cursor_tick {
+                            (anchor_tick, pane.automation_cursor_tick)
+                        } else {
+                            (pane.automation_cursor_tick, anchor_tick)
+                        };
+                        if let Some(lane_id) = pane.selected_lane_id(dispatcher.state()) {
+                            pane.automation_selection_anchor_tick = None;
+                            return Some(DomainAction::Automation(
+                                AutomationAction::DeletePointsInRange(
+                                    lane_id, tick_start, tick_end,
+                                ),
+                            ));
+                        }
+                    }
+                } else {
+                    // Cut notes
+                    if pane.is_kit_track(dispatcher.state()) {
+                        return None;
+                    }
+                    if let Some((anchor_tick, anchor_pitch)) = pane.selection_anchor {
+                        let (tick_start, tick_end) = if anchor_tick <= pane.cursor_tick {
+                            (anchor_tick, pane.cursor_tick + pane.ticks_per_cell())
+                        } else {
+                            (pane.cursor_tick, anchor_tick + pane.ticks_per_cell())
+                        };
+                        let (pitch_start, pitch_end) = if anchor_pitch <= pane.cursor_pitch {
+                            (anchor_pitch, pane.cursor_pitch)
+                        } else {
+                            (pane.cursor_pitch, anchor_pitch)
+                        };
 
-                    // Clear selection after cut
-                    pane.selection_anchor = None;
+                        pane.selection_anchor = None;
 
-                    return Some(DomainAction::PianoRoll(
-                        PianoRollAction::DeleteNotesInRegion {
-                            track: pane.current_track,
-                            start_tick: tick_start,
-                            end_tick: tick_end,
-                            start_pitch: pitch_start,
-                            end_pitch: pitch_end,
-                        },
-                    ));
+                        return Some(DomainAction::PianoRoll(
+                            PianoRollAction::DeleteNotesInRegion {
+                                track: pane.current_track,
+                                start_tick: tick_start,
+                                end_tick: tick_end,
+                                start_pitch: pitch_start,
+                                end_pitch: pitch_end,
+                            },
+                        ));
+                    }
                 }
             }
         }
@@ -1265,23 +1290,6 @@ fn cut_from_active_pane(
                             end_step: step_end,
                         },
                     ));
-                }
-            }
-        }
-        "automation" => {
-            if let Some(pane) = panes.get_pane_mut::<AutomationPane>("automation") {
-                if let Some(anchor_tick) = pane.selection_anchor_tick {
-                    let (tick_start, tick_end) = if anchor_tick <= pane.cursor_tick {
-                        (anchor_tick, pane.cursor_tick)
-                    } else {
-                        (pane.cursor_tick, anchor_tick)
-                    };
-                    if let Some(lane_id) = pane.selected_lane_id(dispatcher.state()) {
-                        pane.selection_anchor_tick = None;
-                        return Some(DomainAction::Automation(
-                            AutomationAction::DeletePointsInRange(lane_id, tick_start, tick_end),
-                        ));
-                    }
                 }
             }
         }
@@ -1326,16 +1334,19 @@ fn paste_to_active_pane(state: &mut AppState, panes: &mut PaneManager) -> Option
                 }
             }
             ClipboardContents::AutomationPoints { points } => {
-                if panes.active().id().0 == "automation" {
-                    if let Some(pane) = panes.get_pane_mut::<AutomationPane>("automation") {
-                        if let Some(lane_id) = pane.selected_lane_id(state) {
-                            let action = DomainAction::Automation(AutomationAction::PastePoints(
-                                lane_id,
-                                pane.cursor_tick,
-                                points.clone(),
-                            ));
-                            pane.selection_anchor_tick = None;
-                            return Some(action);
+                if panes.active().id().0 == "piano_roll" {
+                    if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
+                        if pane.automation_visible && pane.automation_focus {
+                            if let Some(lane_id) = pane.selected_lane_id(state) {
+                                let action =
+                                    DomainAction::Automation(AutomationAction::PastePoints(
+                                        lane_id,
+                                        pane.automation_cursor_tick,
+                                        points.clone(),
+                                    ));
+                                pane.automation_selection_anchor_tick = None;
+                                return Some(action);
+                            }
                         }
                     }
                 }
