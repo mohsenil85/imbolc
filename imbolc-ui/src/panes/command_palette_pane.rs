@@ -5,7 +5,8 @@ use crate::ui::action_id::{ActionId, ModeActionId};
 use crate::ui::filterable_list::{FilterableItem, FilterableList};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
+    RenderBuf, Style,
 };
 
 struct CommandEntry {
@@ -94,7 +95,8 @@ impl Pane for CommandPalettePane {
         Action::None
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let max_visible = self.list.max_visible();
         let list_height = self.list.filtered().len().min(max_visible);
         let total_height = (3 + list_height).max(5) as u16;
@@ -127,6 +129,7 @@ impl Pane for CommandPalettePane {
             inner.x + 2,
             prompt_y,
             inner.width.saturating_sub(2),
+            &p,
         );
 
         // Divider

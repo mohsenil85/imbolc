@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf,
-    SessionAction, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
+    RenderBuf, SessionAction, Style,
 };
 
 pub struct SaveAsPane {
@@ -83,7 +83,8 @@ impl Pane for SaveAsPane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let width = 46_u16.min(area.width.saturating_sub(4));
         let height = if self.error.is_some() { 8 } else { 7 };
         let rect = center_rect(area, width, height);
@@ -102,7 +103,7 @@ impl Pane for SaveAsPane {
         let field_y = inner.y + 2;
         let field_width = inner.width.saturating_sub(2);
         self.text_input
-            .render_buf(buf.raw_buf(), inner.x + 1, field_y, field_width);
+            .render_buf(buf.raw_buf(), inner.x + 1, field_y, field_width, &p);
 
         // Error message
         if let Some(ref error) = self.error {

@@ -5,7 +5,7 @@ use crate::ui::action_id::{ActionId, ModeActionId, WaveformActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf,
+    Action, Color, FileSelectAction, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf,
     SessionAction, Style,
 };
 
@@ -906,9 +906,15 @@ impl WaveformPane {
             )
         };
         if self.editing_name {
+            let p = Palette::from(&state.session.theme);
             let input_rect = layout.status_rect();
-            self.edit_input
-                .render_buf(buf.raw_buf(), input_rect.x, input_rect.y, input_rect.width);
+            self.edit_input.render_buf(
+                buf.raw_buf(),
+                input_rect.x,
+                input_rect.y,
+                input_rect.width,
+                &p,
+            );
             if let Some((cx, cy)) = self.edit_input.screen_cursor() {
                 buf.set_cursor_position(cx, cy);
             }

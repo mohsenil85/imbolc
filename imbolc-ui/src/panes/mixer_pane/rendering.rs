@@ -5,7 +5,7 @@ use super::{
 };
 use crate::state::{AppState, MixerSelection, OutputTarget, ParamValue};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Color, Rect, RenderBuf, Style};
+use crate::ui::{Color, Palette, Rect, RenderBuf, Style};
 use imbolc_types::{BusId, GroupId};
 
 impl MixerPane {
@@ -18,14 +18,14 @@ impl MixerPane {
         }
     }
 
-    fn meter_color(row: u16, height: u16) -> Color {
+    fn meter_color(row: u16, height: u16, p: &Palette) -> Color {
         let frac = row as f32 / height as f32;
         if frac > 0.85 {
-            Color::METER_HIGH
+            p.meter_high
         } else if frac > 0.6 {
-            Color::METER_MID
+            p.meter_mid
         } else {
-            Color::METER_LOW
+            p.meter_low
         }
     }
 
@@ -53,6 +53,7 @@ impl MixerPane {
     }
 
     pub(super) fn render_mixer_buf(&self, buf: &mut RenderBuf, area: Rect, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let active_groups = state.tracks.active_layer_groups();
         let num_group_slots = active_groups.len().min(NUM_VISIBLE_GROUPS);
         let group_section_width = if num_group_slots > 0 {
@@ -73,8 +74,8 @@ impl MixerPane {
         buf.draw_block(
             rect,
             " MIXER ",
-            Style::new().fg(Color::CYAN),
-            Style::new().fg(Color::CYAN),
+            Style::new().fg(p.accent),
+            Style::new().fg(p.accent),
         );
 
         let base_x = rect.x + 2;
@@ -129,6 +130,7 @@ impl MixerPane {
                 };
                 Self::render_channel_buf(
                     buf,
+                    &p,
                     x,
                     &label,
                     &instrument.name,
@@ -147,6 +149,7 @@ impl MixerPane {
             } else {
                 Self::render_empty_channel_buf(
                     buf,
+                    &p,
                     x,
                     &format!("I{}", idx + 1),
                     label_y,
@@ -161,10 +164,10 @@ impl MixerPane {
         }
 
         // Separator before groups (if any) or buses
-        let teal_style = Style::new().fg(Color::TEAL);
+        let teal_style = Style::new().fg(p.group_color);
         if !active_groups.is_empty() {
             for y in label_y..=output_y {
-                buf.set_cell(x, y, '│', teal_style);
+                buf.set_cell(x, y, '\u{2502}', teal_style);
             }
             x += 2;
 
@@ -181,6 +184,7 @@ impl MixerPane {
                     let label = format!("G{}", group_id);
                     Self::render_channel_buf(
                         buf,
+                        &p,
                         x,
                         &label,
                         &gm.name,
@@ -203,9 +207,9 @@ impl MixerPane {
         }
 
         // Separator before buses
-        let purple_style = Style::new().fg(Color::PURPLE);
+        let purple_style = Style::new().fg(p.bus_color);
         for y in label_y..=output_y {
-            buf.set_cell(x, y, '│', purple_style);
+            buf.set_cell(x, y, '\u{2502}', purple_style);
         }
         x += 2;
 
@@ -221,6 +225,7 @@ impl MixerPane {
 
             Self::render_channel_buf(
                 buf,
+                &p,
                 x,
                 &format!("BUS{}", bus.id),
                 &bus.name,
@@ -241,9 +246,9 @@ impl MixerPane {
         }
 
         // Separator before master
-        let gold_style = Style::new().fg(Color::GOLD);
+        let gold_style = Style::new().fg(p.master_color);
         for y in label_y..=output_y {
-            buf.set_cell(x, y, '│', gold_style);
+            buf.set_cell(x, y, '\u{2502}', gold_style);
         }
         x += 2;
 
@@ -251,6 +256,7 @@ impl MixerPane {
         let is_master_selected = matches!(state.session.mixer.selection, MixerSelection::Master);
         Self::render_channel_buf(
             buf,
+            &p,
             x,
             "MASTER",
             "",
@@ -274,7 +280,12 @@ impl MixerPane {
                 MixerSelection::Track(id) => state.tracks.track(id).and_then(|instrument| {
                     instrument.channel_strip.sends.get(&bus_id).map(|send| {
                         let status = if send.enabled { "ON" } else { "OFF" };
-                        format!("Send→B{}: {:.0}% [{}]", bus_id, send.level * 100.0, status)
+                        format!(
+                            "Send\u{2192}B{}: {:.0}% [{}]",
+                            bus_id,
+                            send.level * 100.0,
+                            status
+                        )
                     })
                 }),
                 MixerSelection::Group(gid) => {
@@ -282,7 +293,7 @@ impl MixerPane {
                         gm.channel_strip.sends.get(&bus_id).map(|send| {
                             let status = if send.enabled { "ON" } else { "OFF" };
                             format!(
-                                "G{} Send→B{}: {:.0}% [{}]",
+                                "G{} Send\u{2192}B{}: {:.0}% [{}]",
                                 gid,
                                 bus_id,
                                 send.level * 100.0,
@@ -296,13 +307,14 @@ impl MixerPane {
             if let Some(info) = send_info {
                 buf.draw_line(
                     Rect::new(base_x, send_y, rect.width.saturating_sub(4), 1),
-                    &[(&info, Style::new().fg(Color::TEAL).bold())],
+                    &[(&info, Style::new().fg(p.group_color).bold())],
                 );
             }
         }
     }
 
     pub(super) fn render_detail_buf(&self, buf: &mut RenderBuf, area: Rect, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let Some((_, inst)) = self.detail_instrument(state) else {
             return;
         };
@@ -320,8 +332,8 @@ impl MixerPane {
         buf.draw_block(
             rect,
             &title,
-            Style::new().fg(Color::CYAN),
-            Style::new().fg(Color::CYAN),
+            Style::new().fg(p.accent),
+            Style::new().fg(p.accent),
         );
 
         let inner_x = rect.x + 2;
@@ -338,19 +350,19 @@ impl MixerPane {
         let col2_x = col1_x + col1_w + 1;
         let col3_x = col2_x + col2_w + 1;
 
-        let dim = Style::new().fg(Color::DARK_GRAY);
-        let normal = Style::new().fg(Color::WHITE);
-        let header_style = Style::new().fg(Color::CYAN).bold();
-        let active_section = Style::new().fg(Color::WHITE).bold();
-        let selected_style = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG);
+        let dim = Style::new().fg(p.dim);
+        let normal = Style::new().fg(p.fg);
+        let header_style = Style::new().fg(p.accent).bold();
+        let active_section = Style::new().fg(p.fg).bold();
+        let selected_style = Style::new().fg(p.fg).bg(p.selection_bg);
 
         // Column separators
         for y in inner_y..(inner_y + inner_h) {
-            buf.set_cell(col2_x - 1, y, '│', dim);
-            buf.set_cell(col3_x - 1, y, '│', dim);
+            buf.set_cell(col2_x - 1, y, '\u{2502}', dim);
+            buf.set_cell(col3_x - 1, y, '\u{2502}', dim);
         }
 
-        // ── Column 1: Effects Chain ──
+        // -- Column 1: Effects Chain --
         let effects_header = if self.detail_section == MixerSection::Effects {
             active_section
         } else {
@@ -416,7 +428,7 @@ impl MixerPane {
             Self::write_str(buf, col1_x, ey, "(no effects)", dim);
         }
 
-        // ── Column 2 top: Sends ──
+        // -- Column 2 top: Sends --
         let sends_header = if self.detail_section == MixerSection::Sends {
             active_section
         } else {
@@ -448,7 +460,7 @@ impl MixerPane {
             sy += 1;
         }
 
-        // ── Column 2 bottom: Filter ──
+        // -- Column 2 bottom: Filter --
         let filter_y = inner_y + inner_h / 2;
         let filter_header = if self.detail_section == MixerSection::Filter {
             active_section
@@ -491,7 +503,7 @@ impl MixerPane {
             Self::write_str(buf, col2_x, fy, "(off)", dim);
         }
 
-        // ── Column 3 top: Output ──
+        // -- Column 3 top: Output --
         let output_header = if self.detail_section == MixerSection::Output {
             active_section
         } else {
@@ -550,19 +562,19 @@ impl MixerPane {
             " S "
         };
         let mute_style = if inst.channel_strip.mute {
-            Style::new().fg(Color::MUTE_COLOR).bold()
+            Style::new().fg(p.mute_color).bold()
         } else {
             dim
         };
         let solo_style = if inst.channel_strip.solo {
-            Style::new().fg(Color::SOLO_COLOR).bold()
+            Style::new().fg(p.solo_color).bold()
         } else {
             dim
         };
         Self::write_str(buf, col3_x, oy, mute_str, mute_style);
         Self::write_str(buf, col3_x + 4, oy, solo_str, solo_style);
 
-        // ── Column 3 bottom: LFO ──
+        // -- Column 3 bottom: LFO --
         let lfo_y = inner_y + inner_h / 2;
         let lfo_header = if self.detail_section == MixerSection::Lfo {
             active_section
@@ -621,9 +633,9 @@ impl MixerPane {
                 break;
             }
             let sstyle = if section == self.detail_section {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let label = format!(" {} ", section.label());
             Self::write_str(buf, sx, section_bar_y, &label, sstyle);
@@ -638,6 +650,7 @@ impl MixerPane {
         state: &AppState,
         group_id: GroupId,
     ) {
+        let p = Palette::from(&state.session.theme);
         let gm = match state.session.mixer.layer_group_mixer(group_id) {
             Some(gm) => gm,
             None => return,
@@ -652,18 +665,18 @@ impl MixerPane {
         buf.draw_block(
             rect,
             &title,
-            Style::new().fg(Color::TEAL),
-            Style::new().fg(Color::TEAL),
+            Style::new().fg(p.group_color),
+            Style::new().fg(p.group_color),
         );
 
         let inner_x = rect.x + 2;
         let inner_y = rect.y + 1;
         let inner_h = rect.height.saturating_sub(3);
 
-        let dim = Style::new().fg(Color::DARK_GRAY);
-        let normal = Style::new().fg(Color::WHITE);
-        let active_section = Style::new().fg(Color::WHITE).bold();
-        let selected_style = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG);
+        let dim = Style::new().fg(p.dim);
+        let normal = Style::new().fg(p.fg);
+        let active_section = Style::new().fg(p.fg).bold();
+        let selected_style = Style::new().fg(p.fg).bg(p.selection_bg);
 
         // Section indicator bar
         let section_bar_y = rect.y;
@@ -678,9 +691,9 @@ impl MixerPane {
                 break;
             }
             let sstyle = if section == self.group_detail_section {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let label = format!(" {} ", section.label());
             Self::write_str(buf, sx, section_bar_y, &label, sstyle);
@@ -811,12 +824,12 @@ impl MixerPane {
                 let mute_str = if gm.channel_strip.mute { "[M]" } else { " M " };
                 let solo_str = if gm.channel_strip.solo { "[S]" } else { " S " };
                 let mute_style = if gm.channel_strip.mute {
-                    Style::new().fg(Color::MUTE_COLOR).bold()
+                    Style::new().fg(p.mute_color).bold()
                 } else {
                     dim
                 };
                 let solo_style = if gm.channel_strip.solo {
-                    Style::new().fg(Color::SOLO_COLOR).bold()
+                    Style::new().fg(p.solo_color).bold()
                 } else {
                     dim
                 };
@@ -833,6 +846,7 @@ impl MixerPane {
         state: &AppState,
         bus_id: BusId,
     ) {
+        let p = Palette::from(&state.session.theme);
         let Some(bus) = state.session.bus(bus_id) else {
             return;
         };
@@ -846,18 +860,18 @@ impl MixerPane {
         buf.draw_block(
             rect,
             &title,
-            Style::new().fg(Color::PURPLE),
-            Style::new().fg(Color::PURPLE),
+            Style::new().fg(p.bus_color),
+            Style::new().fg(p.bus_color),
         );
 
         let inner_x = rect.x + 2;
         let inner_y = rect.y + 1;
         let inner_h = rect.height.saturating_sub(3);
 
-        let dim = Style::new().fg(Color::DARK_GRAY);
-        let normal = Style::new().fg(Color::WHITE);
-        let active_section = Style::new().fg(Color::WHITE).bold();
-        let selected_style = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG);
+        let dim = Style::new().fg(p.dim);
+        let normal = Style::new().fg(p.fg);
+        let active_section = Style::new().fg(p.fg).bold();
+        let selected_style = Style::new().fg(p.fg).bg(p.selection_bg);
 
         // Section indicator bar
         let section_bar_y = rect.y;
@@ -868,9 +882,9 @@ impl MixerPane {
                 break;
             }
             let sstyle = if section == self.bus_detail_section {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let label = format!(" {} ", section.label());
             Self::write_str(buf, sx, section_bar_y, &label, sstyle);
@@ -966,12 +980,12 @@ impl MixerPane {
                 let mute_str = if bus.channel_strip.mute { "[M]" } else { " M " };
                 let solo_str = if bus.channel_strip.solo { "[S]" } else { " S " };
                 let mute_style = if bus.channel_strip.mute {
-                    Style::new().fg(Color::MUTE_COLOR).bold()
+                    Style::new().fg(p.mute_color).bold()
                 } else {
                     dim
                 };
                 let solo_style = if bus.channel_strip.solo {
-                    Style::new().fg(Color::SOLO_COLOR).bold()
+                    Style::new().fg(p.solo_color).bold()
                 } else {
                     dim
                 };
@@ -987,6 +1001,7 @@ impl MixerPane {
         area: Rect,
         state: &AppState,
     ) {
+        let p = Palette::from(&state.session.theme);
         let cs = &state.session.mixer.master_channel_strip;
         let title = " MIXER --- MASTER ";
 
@@ -997,18 +1012,18 @@ impl MixerPane {
         buf.draw_block(
             rect,
             title,
-            Style::new().fg(Color::PURPLE),
-            Style::new().fg(Color::PURPLE),
+            Style::new().fg(p.master_color),
+            Style::new().fg(p.master_color),
         );
 
         let inner_x = rect.x + 2;
         let inner_y = rect.y + 1;
         let inner_h = rect.height.saturating_sub(3);
 
-        let dim = Style::new().fg(Color::DARK_GRAY);
-        let normal = Style::new().fg(Color::WHITE);
-        let active_section = Style::new().fg(Color::WHITE).bold();
-        let selected_style = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG);
+        let dim = Style::new().fg(p.dim);
+        let normal = Style::new().fg(p.fg);
+        let active_section = Style::new().fg(p.fg).bold();
+        let selected_style = Style::new().fg(p.fg).bg(p.selection_bg);
 
         // Section indicator bar
         let section_bar_y = rect.y;
@@ -1019,9 +1034,9 @@ impl MixerPane {
                 break;
             }
             let sstyle = if section == self.bus_detail_section {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let label = format!(" {} ", section.label());
             Self::write_str(buf, sx, section_bar_y, &label, sstyle);
@@ -1106,7 +1121,7 @@ impl MixerPane {
                     " M "
                 };
                 let mute_style = if state.session.mixer.master_mute {
-                    Style::new().fg(Color::MUTE_COLOR).bold()
+                    Style::new().fg(p.mute_color).bold()
                 } else {
                     dim
                 };
@@ -1118,6 +1133,7 @@ impl MixerPane {
     #[allow(clippy::too_many_arguments)]
     fn render_channel_buf(
         buf: &mut RenderBuf,
+        p: &Palette,
         x: u16,
         label: &str,
         name: &str,
@@ -1136,27 +1152,27 @@ impl MixerPane {
         let channel_w = (CHANNEL_WIDTH - 1) as usize;
 
         let label_style = if selected {
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+            Style::new().fg(p.fg).bg(p.selection_bg).bold()
         } else if label.starts_with("G")
             && label.len() <= 3
             && label[1..].chars().all(|c| c.is_ascii_digit())
         {
-            Style::new().fg(Color::TEAL).bold()
+            Style::new().fg(p.group_color).bold()
         } else if label.starts_with("BUS") {
-            Style::new().fg(Color::PURPLE).bold()
+            Style::new().fg(p.bus_color).bold()
         } else if label == "MASTER" {
-            Style::new().fg(Color::GOLD).bold()
+            Style::new().fg(p.master_color).bold()
         } else {
-            Style::new().fg(Color::CYAN)
+            Style::new().fg(p.accent)
         };
         for (j, ch) in label.chars().take(channel_w).enumerate() {
             buf.set_cell(x + j as u16, label_y, ch, label_style);
         }
 
         let text_style = if selected {
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+            Style::new().fg(p.fg).bg(p.selection_bg)
         } else {
-            Style::new().fg(Color::DARK_GRAY)
+            Style::new().fg(p.dim)
         };
         let name_display = if name.is_empty() && label.starts_with('I') {
             "---"
@@ -1169,22 +1185,17 @@ impl MixerPane {
 
         // Vertical meter
         let meter_x = x + (CHANNEL_WIDTH / 2).saturating_sub(1);
-        Self::render_meter_buf(buf, meter_x, meter_top_y, METER_HEIGHT, level);
+        Self::render_meter_buf(buf, p, meter_x, meter_top_y, METER_HEIGHT, level);
 
         // Selection indicator
         if selected {
             let sel_x = meter_x + 1;
-            buf.set_cell(
-                sel_x,
-                meter_top_y,
-                '▼',
-                Style::new().fg(Color::WHITE).bold(),
-            );
+            buf.set_cell(sel_x, meter_top_y, '\u{25BC}', Style::new().fg(p.fg).bold());
         }
 
         // dB display
         let db_style = if selected {
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+            Style::new().fg(p.fg).bg(p.selection_bg)
         } else {
             Style::new().fg(Color::SKY_BLUE)
         };
@@ -1195,11 +1206,11 @@ impl MixerPane {
 
         // Mute/Solo indicator
         let (indicator, indicator_style) = if mute {
-            ("M", Style::new().fg(Color::MUTE_COLOR).bold())
+            ("M", Style::new().fg(p.mute_color).bold())
         } else if solo {
-            ("S", Style::new().fg(Color::SOLO_COLOR).bold())
+            ("S", Style::new().fg(p.solo_color).bold())
         } else {
-            ("●", Style::new().fg(Color::DARK_GRAY))
+            ("\u{25CF}", Style::new().fg(p.dim))
         };
         for (j, ch) in indicator.chars().enumerate() {
             buf.set_cell(x + j as u16, indicator_y, ch, indicator_style);
@@ -1208,9 +1219,9 @@ impl MixerPane {
         // Output routing
         if let Some(target) = output {
             let routing_style = if selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                Style::new().fg(p.fg).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::TEAL)
+                Style::new().fg(p.group_color)
             };
             for (j, ch) in Self::format_output(target).chars().enumerate() {
                 buf.set_cell(x + j as u16, output_y, ch, routing_style);
@@ -1221,6 +1232,7 @@ impl MixerPane {
     #[allow(clippy::too_many_arguments)]
     fn render_empty_channel_buf(
         buf: &mut RenderBuf,
+        p: &Palette,
         x: u16,
         label: &str,
         label_y: u16,
@@ -1230,7 +1242,7 @@ impl MixerPane {
         indicator_y: u16,
     ) {
         let channel_w = (CHANNEL_WIDTH - 1) as usize;
-        let dark_gray = Style::new().fg(Color::DARK_GRAY);
+        let dark_gray = Style::new().fg(p.dim);
 
         for (j, ch) in label.chars().take(channel_w).enumerate() {
             buf.set_cell(x + j as u16, label_y, ch, dark_gray);
@@ -1241,18 +1253,25 @@ impl MixerPane {
 
         let meter_x = x + (CHANNEL_WIDTH / 2).saturating_sub(1);
         for row in 0..METER_HEIGHT {
-            buf.set_cell(meter_x, meter_top_y + row, '·', dark_gray);
+            buf.set_cell(meter_x, meter_top_y + row, '\u{00B7}', dark_gray);
         }
 
         for (j, ch) in "--".chars().enumerate() {
             buf.set_cell(x + j as u16, db_y, ch, dark_gray);
         }
-        for (j, ch) in "●".chars().enumerate() {
+        for (j, ch) in "\u{25CF}".chars().enumerate() {
             buf.set_cell(x + j as u16, indicator_y, ch, dark_gray);
         }
     }
 
-    fn render_meter_buf(buf: &mut RenderBuf, x: u16, top_y: u16, height: u16, level: f32) {
+    fn render_meter_buf(
+        buf: &mut RenderBuf,
+        p: &Palette,
+        x: u16,
+        top_y: u16,
+        height: u16,
+        level: f32,
+    ) {
         let total_sub = height as f32 * 8.0;
         let filled_sub = (level * total_sub) as u16;
 
@@ -1261,7 +1280,7 @@ impl MixerPane {
             let y = top_y + row;
             let row_start = inverted_row * 8;
             let row_end = row_start + 8;
-            let color = Self::meter_color(inverted_row, height);
+            let color = Self::meter_color(inverted_row, height, p);
 
             let (ch, c) = if filled_sub >= row_end {
                 ('\u{2588}', color)
@@ -1269,7 +1288,7 @@ impl MixerPane {
                 let sub_level = (filled_sub - row_start) as usize;
                 (BLOCK_CHARS[sub_level.saturating_sub(1).min(7)], color)
             } else {
-                ('·', Color::DARK_GRAY)
+                ('\u{00B7}', p.dim)
             };
 
             buf.set_cell(x, y, ch, Style::new().fg(c));

@@ -73,8 +73,10 @@ impl AppRuntime {
                             let recovering_autosave = path == self.autosave_path;
                             {
                                 let state = self.dispatcher.state_mut();
+                                let global_theme = state.session.theme.clone();
                                 state.undo_history.clear();
                                 state.session = new_session;
+                                state.session.theme = global_theme; // Theme is global, not per-project
                                 state.tracks = new_instruments;
                                 state.tracks.rebuild_index();
                                 if recovering_autosave {

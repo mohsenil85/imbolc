@@ -74,6 +74,7 @@ impl AppRuntime {
         let autosave_path = autosave_path();
         let mut state = AppState::new_with_defaults(config.defaults());
         state.keyboard_layout = config.keyboard_layout();
+        state.session.theme = config.theme();
 
         let (layers, mut keymaps) = keybindings::load_keybindings();
         let mut panes = crate::register_all_panes(&mut keymaps);
@@ -124,6 +125,7 @@ impl AppRuntime {
                         .to_string();
                     let st = dispatcher.state_mut();
                     st.session = session;
+                    st.session.theme = config.theme(); // Theme is global, not per-project
                     st.tracks = instruments;
                     st.tracks.rebuild_index();
                     st.project.path = Some(load_path);

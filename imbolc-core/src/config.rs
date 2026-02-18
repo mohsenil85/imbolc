@@ -34,6 +34,7 @@ struct DefaultsConfig {
 struct RuntimeConfig {
     autosave: Option<bool>,
     autosave_interval_minutes: Option<u64>,
+    theme: Option<String>,
 }
 
 pub struct Config {
@@ -135,6 +136,33 @@ impl Config {
             .unwrap_or(2)
             .clamp(1, 10_080)
     }
+
+    /// Get the configured theme, falling back to Dark.
+    pub fn theme(&self) -> imbolc_types::state::theme::Theme {
+        self.runtime
+            .theme
+            .as_deref()
+            .and_then(imbolc_types::state::theme::Theme::from_name)
+            .unwrap_or_default()
+    }
+
+    /// Persist the theme name to the user config file.
+    /// Creates `~/.config/imbolc/config.toml` if it doesn't exist.
+    pub fn save_theme(name: &str) {
+        let Some(path) = user_config_path() else {
+            return;
+        };
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        // Read existing file or start fresh
+        let contents = std::fs::read_to_string(&path).unwrap_or_default();
+
+        // Update or insert the theme line under [runtime]
+        let new_contents = update_runtime_theme(&contents, name);
+        let _ = std::fs::write(&path, new_contents);
+    }
 }
 
 fn user_config_path() -> Option<PathBuf> {
@@ -181,6 +209,59 @@ fn merge_runtime(base: &mut RuntimeConfig, user: RuntimeConfig) {
     if user.autosave_interval_minutes.is_some() {
         base.autosave_interval_minutes = user.autosave_interval_minutes;
     }
+    if user.theme.is_some() {
+        base.theme = user.theme;
+    }
+}
+
+/// Update or insert `theme = "..."` under `[runtime]` in a TOML string.
+fn update_runtime_theme(contents: &str, theme_name: &str) -> String {
+    let mut lines: Vec<String> = contents.lines().map(|l| l.to_string()).collect();
+    let theme_line = format!("theme = \"{}\"", theme_name);
+
+    // Find existing theme line under [runtime]
+    let mut in_runtime = false;
+    let mut found = false;
+    for line in &mut lines {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            in_runtime = trimmed == "[runtime]";
+        }
+        if in_runtime && trimmed.starts_with("theme") && trimmed.contains('=') {
+            *line = theme_line.clone();
+            found = true;
+            break;
+        }
+    }
+
+    if !found {
+        // Find [runtime] section or create it
+        let mut runtime_idx = None;
+        for (i, line) in lines.iter().enumerate() {
+            if line.trim() == "[runtime]" {
+                runtime_idx = Some(i);
+                break;
+            }
+        }
+        match runtime_idx {
+            Some(idx) => {
+                lines.insert(idx + 1, theme_line);
+            }
+            None => {
+                if !lines.is_empty() && !lines.last().unwrap().is_empty() {
+                    lines.push(String::new());
+                }
+                lines.push("[runtime]".to_string());
+                lines.push(theme_line);
+            }
+        }
+    }
+
+    let mut result = lines.join("\n");
+    if !result.ends_with('\n') {
+        result.push('\n');
+    }
+    result
 }
 
 fn parse_key(s: &str) -> Option<Key> {

@@ -1,4 +1,5 @@
 use super::status_bar::{StatusBar, StatusLevel};
+use super::style::Palette;
 use super::{Color, Rect, RenderBuf, Style};
 use crate::audio::ServerStatus;
 use crate::state::AppState;
@@ -89,14 +90,14 @@ impl Frame {
     }
 
     /// Get meter color for a given row position (0=bottom, height-1=top)
-    fn meter_color(row: u16, height: u16) -> Color {
+    fn meter_color(row: u16, height: u16, p: &Palette) -> Color {
         let frac = row as f32 / height as f32;
         if frac > 0.85 {
-            Color::METER_HIGH
+            p.meter_high
         } else if frac > 0.6 {
-            Color::METER_MID
+            p.meter_mid
         } else {
-            Color::METER_LOW
+            p.meter_low
         }
     }
 
@@ -110,6 +111,8 @@ impl Frame {
 
     /// Render the frame border, header, indicators, meter, and status bar.
     pub fn render_buf(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
+
         if !Self::is_size_ok(area) {
             let msg = format!(
                 "{}x{} required, got {}x{}",
@@ -120,12 +123,12 @@ impl Frame {
             );
             let x = area.x + area.width.saturating_sub(msg.len() as u16) / 2;
             let y = area.y + area.height / 2;
-            buf.draw_str(x, y, &msg, Style::new().fg(Color::MUTE_COLOR));
+            buf.draw_str(x, y, &msg, Style::new().fg(p.error));
             return;
         }
 
         let session = &state.session;
-        let border_style = Style::new().fg(Color::GRAY);
+        let border_style = Style::new().fg(p.border);
 
         // Outer border
         buf.draw_block(area, "", border_style, border_style);
@@ -164,7 +167,7 @@ impl Frame {
             tuning_str,
             snap_text,
         );
-        let header_style = Style::new().fg(Color::CYAN).bold();
+        let header_style = Style::new().fg(p.accent).bold();
         buf.draw_line(
             Rect::new(area.x + 1, area.y, area.width.saturating_sub(2), 1),
             &[(&header, header_style)],
@@ -196,7 +199,7 @@ impl Frame {
         // REC indicator (rightmost)
         if self.recording {
             let rec_start = cursor.saturating_sub(rec_text.len() as u16);
-            let rec_style = Style::new().fg(Color::MUTE_COLOR).bold();
+            let rec_style = Style::new().fg(p.recording).bold();
             buf.draw_str(rec_start, area.y, &rec_text, rec_style);
             cursor = rec_start;
         }
@@ -205,7 +208,7 @@ impl Frame {
         if state.recording.automation_recording {
             let arec_text = " A-REC ";
             let arec_start = cursor.saturating_sub(arec_text.len() as u16);
-            let arec_style = Style::new().fg(Color::WHITE).bg(Color::MUTE_COLOR).bold();
+            let arec_style = Style::new().fg(p.fg).bg(p.mute_color).bold();
             buf.draw_str(arec_start, area.y, arec_text, arec_style);
             cursor = arec_start;
         }
@@ -213,7 +216,7 @@ impl Frame {
         // Track indicator (to the left of REC)
         if !inst_indicator.is_empty() {
             let inst_start = cursor.saturating_sub(inst_indicator.len() as u16);
-            let inst_style = Style::new().fg(Color::WHITE).bold();
+            let inst_style = Style::new().fg(p.fg).bold();
             buf.draw_str(inst_start, area.y, &inst_indicator, inst_style);
             cursor = inst_start;
         }
@@ -227,7 +230,7 @@ impl Frame {
                     priv_start,
                     area.y,
                     priv_text,
-                    Style::new().fg(Color::METER_LOW).bold(),
+                    Style::new().fg(p.success).bold(),
                 );
                 cursor = priv_start;
             }
@@ -241,9 +244,9 @@ impl Frame {
         };
         let autosave_start = cursor.saturating_sub(autosave_text.len() as u16);
         let autosave_style = if self.autosave_enabled {
-            Style::new().fg(Color::METER_LOW).bold()
+            Style::new().fg(p.success).bold()
         } else {
-            Style::new().fg(Color::DARK_GRAY)
+            Style::new().fg(p.dim)
         };
         buf.draw_str(autosave_start, area.y, &autosave_text, autosave_style);
         cursor = autosave_start;
@@ -251,12 +254,7 @@ impl Frame {
         // Help hint (leftmost right-aligned item)
         let help_hint = " ? ";
         let help_start = cursor.saturating_sub(help_hint.len() as u16);
-        buf.draw_str(
-            help_start,
-            area.y,
-            help_hint,
-            Style::new().fg(Color::DARK_GRAY),
-        );
+        buf.draw_str(help_start, area.y, help_hint, Style::new().fg(p.dim));
         cursor = help_start;
 
         // Fill gap between header and right-aligned items with border
@@ -267,7 +265,7 @@ impl Frame {
 
         // Master meter (direct buffer writes)
         let meter_bottom_y = area.y + area.height.saturating_sub(2);
-        self.render_master_meter_buf(buf, area.width, area.height, meter_bottom_y);
+        self.render_master_meter_buf(buf, area.width, area.height, meter_bottom_y, &p);
 
         // SC CPU and latency indicators on the bottom border
         if self.sc_cpu > 0.0 || self.osc_latency_ms > 0.0 || self.audio_latency_ms > 0.0 {
@@ -277,27 +275,25 @@ impl Frame {
             let osc_lat_text = format!("  OSC: {:.1}ms ", self.osc_latency_ms);
 
             let cpu_color = if self.sc_cpu > 80.0 {
-                Color::RED
+                p.error
             } else if self.sc_cpu > 50.0 {
-                Color::YELLOW
+                p.warning
             } else {
-                Color::GREEN
+                p.success
             };
-            // Audio latency thresholds: Green <12ms, Yellow <23ms, Red >=23ms
             let audio_lat_color = if self.audio_latency_ms >= 23.0 {
-                Color::RED
+                p.error
             } else if self.audio_latency_ms >= 12.0 {
-                Color::YELLOW
+                p.warning
             } else {
-                Color::GREEN
+                p.success
             };
-            // OSC latency thresholds: Green <5ms, Yellow <20ms, Red >=20ms
             let osc_lat_color = if self.osc_latency_ms > 20.0 {
-                Color::RED
+                p.error
             } else if self.osc_latency_ms > 5.0 {
-                Color::YELLOW
+                p.warning
             } else {
-                Color::GREEN
+                p.success
             };
 
             let x = area.x + 1;
@@ -317,12 +313,12 @@ impl Frame {
         if let Some(msg) = self.status_bar.current() {
             let bottom_y = area.y + area.height.saturating_sub(1);
             let color = match msg.level {
-                StatusLevel::Info => Color::METER_LOW,
-                StatusLevel::Warning => Color::SOLO_COLOR,
-                StatusLevel::Error => Color::MUTE_COLOR,
+                StatusLevel::Info => p.success,
+                StatusLevel::Warning => p.warning,
+                StatusLevel::Error => p.error,
             };
             let text = format!(" {} ", msg.text);
-            let max_width = area.width.saturating_sub(40) as usize; // leave room for left/right indicators
+            let max_width = area.width.saturating_sub(40) as usize;
             let display: String = text.chars().take(max_width).collect();
             let x = area.x + (area.width.saturating_sub(display.len() as u16)) / 2;
             buf.draw_str(x, bottom_y, &display, Style::new().fg(color));
@@ -331,25 +327,20 @@ impl Frame {
         // Right-aligned SC and MIDI status indicators on bottom border
         if area.width > 50 {
             let bottom_y = area.y + area.height.saturating_sub(1);
-            let right_edge = area.x + area.width.saturating_sub(4); // avoid meter column
+            let right_edge = area.x + area.width.saturating_sub(4);
 
             let sc_dot_color = match state.audio.server_status {
-                ServerStatus::Connected => Color::METER_LOW,
-                ServerStatus::Starting | ServerStatus::Running => Color::SOLO_COLOR,
-                ServerStatus::Stopped => Color::DARK_GRAY,
-                ServerStatus::Error => Color::MUTE_COLOR,
+                ServerStatus::Connected => p.success,
+                ServerStatus::Starting | ServerStatus::Running => p.warning,
+                ServerStatus::Stopped => p.dim,
+                ServerStatus::Error => p.error,
             };
 
             let midi_connected = state.midi.connected_port.is_some();
-            let midi_dot_color = if midi_connected {
-                Color::METER_LOW
-            } else {
-                Color::DARK_GRAY
-            };
+            let midi_dot_color = if midi_connected { p.success } else { p.dim };
 
-            let label_style = Style::new().fg(Color::GRAY);
+            let label_style = Style::new().fg(p.border);
 
-            // Draw from right to left: "● NET  ● SC  ● MIDI "
             // MIDI indicator
             let midi_label = " MIDI ";
             let midi_label_x = right_edge.saturating_sub(midi_label.len() as u16);
@@ -368,9 +359,9 @@ impl Frame {
             if let Some(ref net) = state.network {
                 use crate::state::NetworkConnectionStatus;
                 let net_dot_color = match net.connection_status {
-                    NetworkConnectionStatus::Connected => Color::METER_LOW,
-                    NetworkConnectionStatus::Reconnecting => Color::SOLO_COLOR,
-                    NetworkConnectionStatus::Disconnected => Color::MUTE_COLOR,
+                    NetworkConnectionStatus::Connected => p.success,
+                    NetworkConnectionStatus::Reconnecting => p.warning,
+                    NetworkConnectionStatus::Disconnected => p.error,
                 };
                 let net_label = " NET  ";
                 let net_label_x = sc_dot_x.saturating_sub(net_label.len() as u16);
@@ -382,7 +373,14 @@ impl Frame {
     }
 
     /// Render vertical master meter on the right side
-    fn render_master_meter_buf(&self, buf: &mut RenderBuf, width: u16, _height: u16, sep_y: u16) {
+    fn render_master_meter_buf(
+        &self,
+        buf: &mut RenderBuf,
+        width: u16,
+        _height: u16,
+        sep_y: u16,
+        p: &Palette,
+    ) {
         let meter_x = width.saturating_sub(3);
         let meter_top = 2_u16;
         let meter_height = sep_y.saturating_sub(meter_top + 1);
@@ -404,7 +402,7 @@ impl Frame {
             let y = meter_top + row;
             let row_start = inverted_row * 8;
             let row_end = row_start + 8;
-            let color = Self::meter_color(inverted_row, meter_height);
+            let color = Self::meter_color(inverted_row, meter_height, p);
 
             let (ch, c) = if filled_sub >= row_end {
                 ('█', color)
@@ -412,7 +410,7 @@ impl Frame {
                 let sub_level = (filled_sub - row_start) as usize;
                 (BLOCK_CHARS[sub_level.saturating_sub(1).min(7)], color)
             } else {
-                ('·', Color::DARK_GRAY)
+                ('·', p.dim)
             };
 
             buf.set_cell(meter_x, y, ch, Style::new().fg(c));
@@ -421,12 +419,7 @@ impl Frame {
         // Label below meter
         let label_y = meter_top + meter_height;
         if self.master_mute {
-            buf.set_cell(
-                meter_x,
-                label_y,
-                'M',
-                Style::new().fg(Color::MUTE_COLOR).bold(),
-            );
+            buf.set_cell(meter_x, label_y, 'M', Style::new().fg(p.mute_color).bold());
         } else {
             let db = if level <= 0.0 {
                 "-∞".to_string()
@@ -435,7 +428,7 @@ impl Frame {
                 format!("{:+.0}", db_val.max(-99.0))
             };
             let db_x = meter_x.saturating_sub(db.len() as u16 - 1);
-            buf.draw_str(db_x, label_y, &db, Style::new().fg(Color::DARK_GRAY));
+            buf.draw_str(db_x, label_y, &db, Style::new().fg(p.dim));
         }
     }
 }

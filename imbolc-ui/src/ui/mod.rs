@@ -38,4 +38,4 @@ pub use pane::{
 pub use piano_keyboard::{translate_key, PianoKeyboard};
 pub use ratatui_impl::RatatuiBackend;
 pub use render::{Rect, RenderBuf};
-pub use style::{Color, Style};
+pub use style::{Color, Palette, Style};

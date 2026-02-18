@@ -4,7 +4,7 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, HelpActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
+    Action, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Palette, Pane,
     PaneIdStr, Rect, RenderBuf, Style,
 };
 
@@ -87,19 +87,20 @@ impl Pane for HelpPane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 60, 20);
         let title = format!(" Help: {} ", self.title);
 
-        let border_style = Style::new().fg(Color::SKY_BLUE);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         let visible_lines = inner.height.saturating_sub(4) as usize;
         let max_scroll = self.display_keymap.len().saturating_sub(visible_lines);
         let scroll = self.scroll.min(max_scroll);
 
-        let key_style = Style::new().fg(Color::CYAN).bold();
-        let desc_style = Style::new().fg(Color::WHITE);
+        let key_style = Style::new().fg(p.accent).bold();
+        let desc_style = Style::new().fg(p.fg);
 
         for (i, (key, desc)) in self
             .display_keymap
@@ -136,7 +137,7 @@ impl Pane for HelpPane {
                 );
                 let ind_area =
                     Rect::new(inner.x + 1, indicator_y, inner.width.saturating_sub(1), 1);
-                buf.draw_line(ind_area, &[(&indicator, Style::new().fg(Color::DARK_GRAY))]);
+                buf.draw_line(ind_area, &[(&indicator, Style::new().fg(p.dim))]);
             }
         }
     }

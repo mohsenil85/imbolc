@@ -52,13 +52,16 @@ pub fn run(project_arg: Option<String>) -> ! {
     let (io_tx, io_rx) = mpsc::channel::<IoFeedback>();
     let config = config::Config::load();
     let mut state = AppState::new_with_defaults(config.defaults());
+    state.session.theme = config.theme();
 
     // Load project if specified
     if let Some(ref path_str) = project_arg {
         let load_path = PathBuf::from(path_str);
         if load_path.exists() {
             if let Ok((session, instruments)) = state::persistence::load_project(&load_path) {
+                let global_theme = state.session.theme.clone();
                 state.session = session;
+                state.session.theme = global_theme;
                 state.tracks = instruments;
                 state.tracks.rebuild_index();
                 state.project.path = Some(load_path);

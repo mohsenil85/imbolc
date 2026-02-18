@@ -678,6 +678,8 @@ pub(super) fn dispatch_session(
                 &mut state.tracks,
                 &mut state.session,
             );
+            // Persist globally
+            crate::config::Config::save_theme(&state.session.theme.name);
             result.push_status(
                 audio.status(),
                 format!("Theme: {}", state.session.theme.name),
@@ -1044,11 +1046,23 @@ mod tests {
     }
 
     #[test]
-    fn cycle_theme_light_to_high_contrast() {
+    fn cycle_theme_light_to_minimal() {
         let (mut state, mut audio, io_tx) = setup();
         // Set to Light first
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Light");
+
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "Minimal");
+    }
+
+    #[test]
+    fn cycle_theme_minimal_to_high_contrast() {
+        let (mut state, mut audio, io_tx) = setup();
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        assert_eq!(state.session.theme.name, "Minimal");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
@@ -1058,7 +1072,8 @@ mod tests {
     #[test]
     fn cycle_theme_wraps_to_dark() {
         let (mut state, mut audio, io_tx) = setup();
-        // Cycle through all three
+        // Cycle through all four
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "High Contrast");

@@ -9,7 +9,7 @@ use rat_widget::text_input::{TextInput as RatTextInput, TextInputState};
 
 use crate::ui::input::InputEvent;
 use crate::ui::rat_compat::{outcome_consumed, to_crossterm_key_event};
-use crate::ui::style::Color;
+use crate::ui::style::Palette;
 use crate::ui::theme::DawTheme;
 
 /// A single-line text input widget backed by rat-widget.
@@ -85,10 +85,9 @@ impl TextInput {
     ///
     /// Renders the label prefix manually, then delegates to the rat-widget
     /// TextInput StatefulWidget for the actual input field.
-    pub fn render_buf(&mut self, buf: &mut Buffer, x: u16, y: u16, width: u16) -> u16 {
+    pub fn render_buf(&mut self, buf: &mut Buffer, x: u16, y: u16, width: u16, p: &Palette) -> u16 {
         // Draw label manually
-        let label_style =
-            ratatui::style::Style::default().fg(ratatui::style::Color::from(Color::WHITE));
+        let label_style = ratatui::style::Style::default().fg(ratatui::style::Color::from(p.fg));
         for (j, ch) in self.label.chars().enumerate() {
             if let Some(cell) = buf.cell_mut((x + j as u16, y)) {
                 cell.set_char(ch).set_style(label_style);
@@ -109,10 +108,10 @@ impl TextInput {
 
         // Build the rat-widget TextInput with theme styles
         let widget = RatTextInput::new()
-            .style(DawTheme::text_input_style())
-            .focus_style(DawTheme::text_input_focus_style())
-            .select_style(DawTheme::text_input_select_style())
-            .cursor_style(DawTheme::text_input_cursor_style());
+            .style(DawTheme::text_input_style(p))
+            .focus_style(DawTheme::text_input_focus_style(p))
+            .select_style(DawTheme::text_input_select_style(p))
+            .cursor_style(DawTheme::text_input_cursor_style(p));
 
         let area = Rect::new(input_x, y, input_width, 1);
         widget.render(area, buf, &mut self.state);

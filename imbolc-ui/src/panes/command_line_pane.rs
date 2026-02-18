@@ -7,7 +7,8 @@ use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
+    RenderBuf, Style,
 };
 
 pub struct CommandLinePane {
@@ -137,7 +138,8 @@ impl Pane for CommandLinePane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 97, 29);
 
         // Clear background
@@ -215,6 +217,7 @@ impl Pane for CommandLinePane {
             inner.x + 2,
             input_y,
             inner.width.saturating_sub(2),
+            &p,
         );
         if let Some((cx, cy)) = self.text_input.screen_cursor() {
             buf.set_cursor_position(cx, cy);

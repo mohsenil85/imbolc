@@ -258,6 +258,9 @@ pub(crate) fn render_frame(
     let cursor_pos;
     {
         let mut rbuf = RenderBuf::new(frame.buffer_mut());
+        // Fill with theme background before rendering any content
+        let bg: ui::Color = state.session.theme.background.into();
+        rbuf.fill_bg(area, bg);
         app_frame.render_buf(area, &mut rbuf, state);
         if ui::Frame::is_size_ok(area) {
             panes.render(area, &mut rbuf, state);

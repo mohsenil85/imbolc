@@ -5,10 +5,11 @@ use crate::state::{AppState, SourceType};
 use crate::ui::action_id::{ActionId, TrackActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, ArrangementAction, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    Action, ArrangementAction, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect,
+    RenderBuf, Style,
 };
 
-fn source_color(source: SourceType) -> Color {
+fn source_color(source: SourceType, p: &Palette) -> Color {
     match source {
         // Oscillators and synths
         SourceType::Saw | SourceType::Sin | SourceType::Sqr | SourceType::Tri
@@ -30,14 +31,12 @@ fn source_color(source: SourceType) -> Color {
         // Classic synths
         | SourceType::Choir | SourceType::EPiano | SourceType::Organ | SourceType::BrassStab
         | SourceType::Strings | SourceType::Acid
-        | SourceType::Universe | SourceType::Dreamscape | SourceType::Soundtrack => Color::OSC_COLOR,
-        SourceType::AudioIn => Color::AUDIO_IN_COLOR,
-        SourceType::PitchedSampler | SourceType::TimeStretch | SourceType::Kit => {
-            Color::SAMPLE_COLOR
-        }
-        SourceType::BusIn => Color::BUS_IN_COLOR,
-        SourceType::Custom(_) => Color::CUSTOM_COLOR,
-        SourceType::Vst(_) => Color::VST_COLOR,
+        | SourceType::Universe | SourceType::Dreamscape | SourceType::Soundtrack => p.osc_color,
+        SourceType::AudioIn => p.audio_in_color,
+        SourceType::PitchedSampler | SourceType::TimeStretch | SourceType::Kit => p.sample_color,
+        SourceType::BusIn => p.bus_in_color,
+        SourceType::Custom(_) => p.custom_color,
+        SourceType::Vst(_) => p.vst_color,
     }
 }
 
@@ -261,6 +260,7 @@ impl Pane for TrackPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 97, 29);
         let arr = &state.session.arrangement;
         let ticks_per_col = arr.ticks_per_col.max(1);
@@ -272,7 +272,7 @@ impl Pane for TrackPane {
         };
         let title = format!(" Track [{}] ", mode_str);
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         if state.tracks.tracks.is_empty() {
@@ -281,7 +281,7 @@ impl Pane for TrackPane {
             let y = inner.y + inner.height / 2;
             buf.draw_line(
                 Rect::new(x, y, text.len() as u16, 1),
-                &[(text, Style::new().fg(Color::DARK_GRAY))],
+                &[(text, Style::new().fg(p.dim))],
             );
             return;
         }
@@ -307,7 +307,7 @@ impl Pane for TrackPane {
             0
         };
 
-        let sel_bg = Style::new().bg(Color::SELECTION_BG);
+        let sel_bg = Style::new().bg(p.selection_bg);
         let bar_line_style = Style::new().fg(Color::new(50, 50, 50));
         let separator_style = Style::new().fg(Color::new(40, 40, 40));
 
@@ -319,7 +319,7 @@ impl Pane for TrackPane {
 
         // --- Header: bar numbers ---
         let header_y = inner.y;
-        let header_label_style = Style::new().fg(Color::DARK_GRAY);
+        let header_label_style = Style::new().fg(p.dim);
         for col in 0..timeline_width as u32 {
             let tick = arr.view_start_tick + col * ticks_per_col;
             if cols_per_bar > 0 && (tick % ticks_per_bar) < ticks_per_col {
@@ -347,7 +347,7 @@ impl Pane for TrackPane {
                 break;
             }
 
-            let source_c = source_color(instrument.source);
+            let source_c = source_color(instrument.source, &p);
 
             // Fill label area bg for selected (before drawing text)
             if is_selected {
@@ -368,7 +368,7 @@ impl Pane for TrackPane {
                     inner.x,
                     lane_y,
                     '>',
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                    Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                 );
             }
 
@@ -378,17 +378,17 @@ impl Pane for TrackPane {
             let src_short = format!(" {}", instrument.source.name());
 
             let num_style = if is_selected {
-                Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                Style::new().fg(p.dim).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let name_style = if is_selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
-                Style::new().fg(Color::WHITE)
+                Style::new().fg(p.fg)
             };
             let src_style = if is_selected {
-                Style::new().fg(source_c).bg(Color::SELECTION_BG)
+                Style::new().fg(source_c).bg(p.selection_bg)
             } else {
                 Style::new().fg(source_c)
             };
@@ -414,7 +414,7 @@ impl Pane for TrackPane {
                 if y >= lanes_area_y + lanes_area_height {
                     break;
                 }
-                buf.set_cell(inner.x + label_width, y, '|', Style::new().fg(Color::GRAY));
+                buf.set_cell(inner.x + label_width, y, '|', Style::new().fg(p.border));
             }
 
             // Timeline area: bar/beat lines + clip blocks
@@ -472,9 +472,8 @@ impl Pane for TrackPane {
                     }
 
                     let clip_bg = source_c;
-                    let clip_style = Style::new().fg(Color::BLACK).bg(clip_bg);
-                    let sel_clip_style =
-                        Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold();
+                    let clip_style = Style::new().fg(p.bg).bg(clip_bg);
+                    let sel_clip_style = Style::new().fg(p.fg).bg(p.selection_bg).bold();
 
                     let is_placement_selected = arr
                         .selected_placement
@@ -565,7 +564,7 @@ impl Pane for TrackPane {
             let playhead_col = (playhead_tick - arr.view_start_tick) / ticks_per_col;
             if (playhead_col as u16) < timeline_width {
                 let x = timeline_x + playhead_col as u16;
-                let ph_style = Style::new().fg(Color::WHITE).bold();
+                let ph_style = Style::new().fg(p.fg).bold();
                 for y in lanes_area_y..(lanes_area_y + lanes_area_height) {
                     buf.set_cell(x, y, '|', ph_style);
                 }
@@ -579,7 +578,7 @@ impl Pane for TrackPane {
                 let x = timeline_x + cursor_col as u16;
                 let lane_y = lanes_area_y
                     + ((selected_lane - scroll.min(selected_lane)) as u16) * lane_height;
-                let cursor_style = Style::new().fg(Color::CYAN);
+                let cursor_style = Style::new().fg(p.accent);
                 for row in 0..lane_height {
                     let y = lane_y + row;
                     if y < lanes_area_y + lanes_area_height {
@@ -611,7 +610,7 @@ impl Pane for TrackPane {
         let pos_str = format!("Bar {} Beat {}  |  {}", bar, beat, clip_info);
         buf.draw_line(
             Rect::new(inner.x + 1, footer_y + 1, inner.width.saturating_sub(2), 1),
-            &[(&pos_str, Style::new().fg(Color::GRAY))],
+            &[(&pos_str, Style::new().fg(p.border))],
         );
     }
 

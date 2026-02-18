@@ -81,6 +81,17 @@ impl<'a> RenderBuf<'a> {
         }
     }
 
+    /// Fill an entire rectangular area with a background color.
+    /// Used to set the theme background before any content is drawn.
+    pub fn fill_bg(&mut self, area: Rect, bg: super::style::Color) {
+        let style = Style::new().bg(bg);
+        for y in area.y..area.y.saturating_add(area.height) {
+            for x in area.x..area.x.saturating_add(area.width) {
+                self.set_cell(x, y, ' ', style);
+            }
+        }
+    }
+
     /// Set the terminal cursor position (for blinking cursor in text inputs).
     pub fn set_cursor_position(&mut self, x: u16, y: u16) {
         self.cursor_position = Some((x, y));

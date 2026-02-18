@@ -4,8 +4,8 @@ use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, Color, GroupAction, InputEvent, Keymap, LayerName, MasterAction, Pane,
-    PaneIdStr, Rect, RenderBuf, Style, TrackAction,
+    Action, BusAction, Color, GroupAction, InputEvent, Keymap, LayerName, MasterAction, Palette,
+    Pane, PaneIdStr, Rect, RenderBuf, Style, TrackAction,
 };
 use imbolc_types::FilterSlope;
 use imbolc_types::{BusId, EffectId, EqualizerParamKind, GroupId, MixerSelection};
@@ -342,15 +342,15 @@ impl Pane for EqPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 78, 24);
 
         let (target_name, eq) = match resolve_target(self.mode, state) {
             Some(r) => (r.title, r.eq),
             None => {
-                let border_color = Color::new(100, 180, 255);
-                let border_style = Style::new().fg(border_color);
+                let border_style = Style::new().fg(p.eq_color);
                 let inner = buf.draw_block(rect, " EQ: (none) ", border_style, border_style);
-                render_centered_text(inner, buf, "(no target selected)", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "(no target selected)", p.dim);
                 return;
             }
         };
@@ -360,14 +360,13 @@ impl Pane for EqPane {
             EqMode::Master => format!(" Master EQ: {} ", target_name),
         };
 
-        let border_color = Color::new(100, 180, 255);
-        let border_style = Style::new().fg(border_color);
+        let border_style = Style::new().fg(p.eq_color);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         let eq = match eq {
             Some(eq) => eq,
             None => {
-                render_centered_text(inner, buf, "EQ off — press 'e' to enable", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "EQ off — press 'e' to enable", p.dim);
                 return;
             }
         };
@@ -386,11 +385,12 @@ impl Pane for EqPane {
             eq,
             self.selected_band,
             buf,
+            &p,
         );
 
         // dB axis labels
         let db_labels = ["+24", "+12", "  0", "-12", "-24"];
-        let db_style = Style::new().fg(Color::DARK_GRAY);
+        let db_style = Style::new().fg(p.dim);
         for (i, label) in db_labels.iter().enumerate() {
             let y = curve_y + (i as u16) * (curve_height.saturating_sub(1)) / 4;
             if y < inner.y + inner.height {
@@ -406,7 +406,7 @@ impl Pane for EqPane {
         // Frequency axis labels
         let freq_labels = ["20", "100", "500", "1k", "5k", "10k", "20k"];
         let freq_axis_y = curve_y + curve_height;
-        let freq_style = Style::new().fg(Color::DARK_GRAY);
+        let freq_style = Style::new().fg(p.dim);
         if freq_axis_y < inner.y + inner.height {
             for (i, label) in freq_labels.iter().enumerate() {
                 let frac = i as f32 / (freq_labels.len() - 1) as f32;
@@ -430,6 +430,7 @@ impl Pane for EqPane {
             self.selected_band,
             self.selected_param,
             buf,
+            &p,
         );
     }
 
@@ -660,6 +661,7 @@ fn composite_response_db(eq: &EqConfig, freq: f32) -> f32 {
 }
 
 /// Render the frequency response curve.
+#[allow(clippy::too_many_arguments)]
 fn render_frequency_curve(
     x: u16,
     y: u16,
@@ -668,6 +670,7 @@ fn render_frequency_curve(
     eq: &EqConfig,
     selected_band: usize,
     buf: &mut RenderBuf,
+    p: &Palette,
 ) {
     if width < 2 || height < 2 {
         return;
@@ -721,9 +724,9 @@ fn render_frequency_curve(
             let marker_color = if i == selected_band {
                 Color::new(255, 200, 50)
             } else if !band.enabled {
-                Color::DARK_GRAY
+                p.dim
             } else {
-                Color::WHITE
+                p.fg
             };
             buf.set_cell(px, py, '\u{25cf}', Style::new().fg(marker_color));
         }
@@ -731,6 +734,7 @@ fn render_frequency_curve(
 }
 
 /// Render band info in a single row of 6 bands.
+#[allow(clippy::too_many_arguments)]
 fn render_band_info(
     x: u16,
     y: u16,
@@ -739,6 +743,7 @@ fn render_band_info(
     selected_band: usize,
     selected_param: usize,
     buf: &mut RenderBuf,
+    p: &Palette,
 ) {
     let band_width = (width / 6).max(10);
 
@@ -749,7 +754,7 @@ fn render_band_info(
         let type_color = if is_selected {
             Color::new(255, 200, 50)
         } else {
-            Color::WHITE
+            p.fg
         };
 
         // Row 0: type + freq (param 0 = freq)
@@ -767,13 +772,13 @@ fn render_band_info(
             let slope_style = Style::new().fg(if is_selected && selected_param == 1 {
                 Color::new(255, 200, 50)
             } else {
-                Color::WHITE
+                p.fg
             });
             render_text_at(bx, y + 1, &slope_str, slope_style, width, buf);
 
             let on_str = if band.enabled { "[ON]" } else { "[OFF]" };
             let on_color = if !band.enabled {
-                Color::DARK_GRAY
+                p.dim
             } else if is_selected && selected_param == 2 {
                 Color::new(255, 200, 50)
             } else {
@@ -786,7 +791,7 @@ fn render_band_info(
             let gain_style = Style::new().fg(if is_selected && selected_param == 1 {
                 Color::new(255, 200, 50)
             } else {
-                Color::WHITE
+                p.fg
             });
             render_text_at(bx, y + 1, &gain_str, gain_style, width, buf);
 
@@ -794,7 +799,7 @@ fn render_band_info(
             let q_style = Style::new().fg(if is_selected && selected_param == 2 {
                 Color::new(255, 200, 50)
             } else {
-                Color::WHITE
+                p.fg
             });
             render_text_at(bx, y + 2, &q_str, q_style, width, buf);
 
@@ -812,7 +817,7 @@ fn render_band_info(
 
             let on_str = if band.enabled { "[ON]" } else { "[OFF]" };
             let on_color = if !band.enabled {
-                Color::DARK_GRAY
+                p.dim
             } else if is_selected && selected_param == 4 {
                 Color::new(255, 200, 50)
             } else {

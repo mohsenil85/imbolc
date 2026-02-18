@@ -32,7 +32,8 @@ pub(super) fn reduce(
             let current_name = &session.theme.name;
             session.theme = match current_name.as_str() {
                 "Dark" => Theme::light(),
-                "Light" => Theme::high_contrast(),
+                "Light" => Theme::minimal(),
+                "Minimal" => Theme::high_contrast(),
                 _ => Theme::dark(),
             };
             true

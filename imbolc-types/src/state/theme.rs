@@ -39,6 +39,11 @@ pub struct Theme {
     pub foreground: ThemeColor,
     pub border: ThemeColor,
 
+    // Accent colors
+    pub accent: ThemeColor,
+    pub accent_secondary: ThemeColor,
+    pub dim: ThemeColor,
+
     // Semantic UI colors
     pub selection_bg: ThemeColor,
     pub selection_fg: ThemeColor,
@@ -46,6 +51,13 @@ pub struct Theme {
     pub error: ThemeColor,
     pub warning: ThemeColor,
     pub success: ThemeColor,
+
+    // Track type indicator colors
+    pub mute_color: ThemeColor,
+    pub solo_color: ThemeColor,
+    pub bus_color: ThemeColor,
+    pub group_color: ThemeColor,
+    pub master_color: ThemeColor,
 
     // Module type colors (for instrument editor sections)
     pub osc_color: ThemeColor,
@@ -56,6 +68,11 @@ pub struct Theme {
     pub sample_color: ThemeColor,
     pub midi_color: ThemeColor,
     pub audio_in_color: ThemeColor,
+    pub eq_color: ThemeColor,
+    pub custom_color: ThemeColor,
+    pub kit_color: ThemeColor,
+    pub bus_in_color: ThemeColor,
+    pub vst_color: ThemeColor,
 
     // Meter colors
     pub meter_low: ThemeColor,
@@ -88,28 +105,45 @@ impl Theme {
             foreground: ThemeColor::new(255, 255, 255),
             border: ThemeColor::new(100, 100, 100),
 
+            // Accent
+            accent: ThemeColor::new(0, 255, 255),
+            accent_secondary: ThemeColor::new(255, 165, 0),
+            dim: ThemeColor::new(100, 100, 100),
+
             // Semantic
-            selection_bg: ThemeColor::new(60, 60, 80),
+            selection_bg: ThemeColor::new(60, 100, 180),
             selection_fg: ThemeColor::new(255, 255, 255),
             muted: ThemeColor::new(100, 100, 100),
             error: ThemeColor::new(255, 80, 80),
             warning: ThemeColor::new(255, 180, 0),
             success: ThemeColor::new(80, 255, 80),
 
+            // Track type indicators
+            mute_color: ThemeColor::new(255, 100, 100),
+            solo_color: ThemeColor::new(255, 220, 80),
+            bus_color: ThemeColor::new(147, 112, 219),
+            group_color: ThemeColor::new(0, 128, 128),
+            master_color: ThemeColor::new(255, 215, 0),
+
             // Module types
-            osc_color: ThemeColor::new(100, 200, 255), // Cyan-ish
-            filter_color: ThemeColor::new(255, 150, 100), // Orange
-            env_color: ThemeColor::new(150, 255, 150), // Green
-            lfo_color: ThemeColor::new(255, 100, 255), // Magenta
-            fx_color: ThemeColor::new(255, 255, 100),  // Yellow
-            sample_color: ThemeColor::new(100, 255, 200), // Teal
-            midi_color: ThemeColor::new(255, 100, 100), // Red
-            audio_in_color: ThemeColor::new(200, 100, 255), // Purple
+            osc_color: ThemeColor::new(100, 180, 255),
+            filter_color: ThemeColor::new(255, 140, 90),
+            env_color: ThemeColor::new(180, 130, 255),
+            lfo_color: ThemeColor::new(130, 255, 180),
+            fx_color: ThemeColor::new(255, 180, 220),
+            sample_color: ThemeColor::new(255, 200, 100),
+            midi_color: ThemeColor::new(255, 100, 160),
+            audio_in_color: ThemeColor::new(100, 255, 200),
+            eq_color: ThemeColor::new(100, 200, 255),
+            custom_color: ThemeColor::new(200, 150, 255),
+            kit_color: ThemeColor::new(255, 165, 0),
+            bus_in_color: ThemeColor::new(180, 220, 100),
+            vst_color: ThemeColor::new(255, 120, 200),
 
             // Meters
-            meter_low: ThemeColor::new(0, 180, 0),
-            meter_mid: ThemeColor::new(180, 180, 0),
-            meter_high: ThemeColor::new(180, 0, 0),
+            meter_low: ThemeColor::new(80, 220, 100),
+            meter_mid: ThemeColor::new(255, 220, 50),
+            meter_high: ThemeColor::new(255, 80, 80),
 
             // Waveform gradient
             waveform_gradient: [
@@ -136,6 +170,11 @@ impl Theme {
             foreground: ThemeColor::new(30, 30, 30),
             border: ThemeColor::new(180, 180, 180),
 
+            // Accent
+            accent: ThemeColor::new(0, 100, 180),
+            accent_secondary: ThemeColor::new(200, 120, 0),
+            dim: ThemeColor::new(150, 150, 150),
+
             // Semantic
             selection_bg: ThemeColor::new(100, 140, 200),
             selection_fg: ThemeColor::new(255, 255, 255),
@@ -144,15 +183,27 @@ impl Theme {
             warning: ThemeColor::new(200, 140, 0),
             success: ThemeColor::new(50, 180, 50),
 
-            // Module types (darker for visibility)
+            // Track type indicators
+            mute_color: ThemeColor::new(200, 60, 60),
+            solo_color: ThemeColor::new(200, 160, 0),
+            bus_color: ThemeColor::new(120, 80, 180),
+            group_color: ThemeColor::new(0, 110, 110),
+            master_color: ThemeColor::new(180, 140, 0),
+
+            // Module types (darker for visibility on light bg)
             osc_color: ThemeColor::new(0, 120, 200),
             filter_color: ThemeColor::new(200, 100, 50),
-            env_color: ThemeColor::new(50, 150, 50),
-            lfo_color: ThemeColor::new(180, 50, 180),
-            fx_color: ThemeColor::new(180, 140, 0),
-            sample_color: ThemeColor::new(0, 150, 120),
-            midi_color: ThemeColor::new(200, 60, 60),
-            audio_in_color: ThemeColor::new(140, 60, 200),
+            env_color: ThemeColor::new(100, 60, 180),
+            lfo_color: ThemeColor::new(0, 160, 100),
+            fx_color: ThemeColor::new(200, 100, 140),
+            sample_color: ThemeColor::new(180, 130, 50),
+            midi_color: ThemeColor::new(200, 60, 100),
+            audio_in_color: ThemeColor::new(0, 150, 120),
+            eq_color: ThemeColor::new(0, 140, 200),
+            custom_color: ThemeColor::new(140, 80, 200),
+            kit_color: ThemeColor::new(200, 120, 0),
+            bus_in_color: ThemeColor::new(100, 150, 50),
+            vst_color: ThemeColor::new(200, 60, 140),
 
             // Meters
             meter_low: ThemeColor::new(50, 180, 50),
@@ -184,6 +235,11 @@ impl Theme {
             foreground: ThemeColor::new(255, 255, 255),
             border: ThemeColor::new(255, 255, 255),
 
+            // Accent
+            accent: ThemeColor::new(0, 255, 255),
+            accent_secondary: ThemeColor::new(255, 200, 0),
+            dim: ThemeColor::new(180, 180, 180),
+
             // Semantic
             selection_bg: ThemeColor::new(255, 255, 0),
             selection_fg: ThemeColor::new(0, 0, 0),
@@ -191,6 +247,13 @@ impl Theme {
             error: ThemeColor::new(255, 0, 0),
             warning: ThemeColor::new(255, 255, 0),
             success: ThemeColor::new(0, 255, 0),
+
+            // Track type indicators
+            mute_color: ThemeColor::new(255, 0, 0),
+            solo_color: ThemeColor::new(255, 255, 0),
+            bus_color: ThemeColor::new(200, 100, 255),
+            group_color: ThemeColor::new(0, 255, 200),
+            master_color: ThemeColor::new(255, 255, 0),
 
             // Module types (bright, saturated)
             osc_color: ThemeColor::new(0, 255, 255),
@@ -201,6 +264,11 @@ impl Theme {
             sample_color: ThemeColor::new(0, 255, 128),
             midi_color: ThemeColor::new(255, 0, 0),
             audio_in_color: ThemeColor::new(128, 0, 255),
+            eq_color: ThemeColor::new(0, 255, 255),
+            custom_color: ThemeColor::new(200, 100, 255),
+            kit_color: ThemeColor::new(255, 200, 0),
+            bus_in_color: ThemeColor::new(200, 255, 0),
+            vst_color: ThemeColor::new(255, 0, 200),
 
             // Meters
             meter_low: ThemeColor::new(0, 255, 0),
@@ -222,9 +290,87 @@ impl Theme {
         }
     }
 
+    /// Minimal monochrome theme — color only for meters, recording, and playing
+    pub fn minimal() -> Self {
+        let mono = ThemeColor::new(200, 200, 200);
+        Self {
+            name: "Minimal".to_string(),
+
+            // Base
+            background: ThemeColor::new(0, 0, 0),
+            foreground: ThemeColor::new(200, 200, 200),
+            border: ThemeColor::new(80, 80, 80),
+
+            // Accent (monochrome)
+            accent: ThemeColor::new(220, 220, 220),
+            accent_secondary: ThemeColor::new(160, 160, 160),
+            dim: ThemeColor::new(80, 80, 80),
+
+            // Semantic (mostly mono)
+            selection_bg: ThemeColor::new(60, 60, 60),
+            selection_fg: ThemeColor::new(220, 220, 220),
+            muted: ThemeColor::new(80, 80, 80),
+            error: ThemeColor::new(200, 200, 200),
+            warning: ThemeColor::new(200, 200, 200),
+            success: ThemeColor::new(200, 200, 200),
+
+            // Track type indicators (mono)
+            mute_color: mono,
+            solo_color: mono,
+            bus_color: mono,
+            group_color: mono,
+            master_color: mono,
+
+            // Module types (all mono)
+            osc_color: mono,
+            filter_color: mono,
+            env_color: mono,
+            lfo_color: mono,
+            fx_color: mono,
+            sample_color: mono,
+            midi_color: mono,
+            audio_in_color: mono,
+            eq_color: mono,
+            custom_color: mono,
+            kit_color: mono,
+            bus_in_color: mono,
+            vst_color: mono,
+
+            // Meters — keep color for functional clarity
+            meter_low: ThemeColor::new(80, 220, 100),
+            meter_mid: ThemeColor::new(255, 220, 50),
+            meter_high: ThemeColor::new(255, 80, 80),
+
+            // Waveform gradient (greyscale)
+            waveform_gradient: [
+                ThemeColor::new(40, 40, 40),
+                ThemeColor::new(80, 80, 80),
+                ThemeColor::new(140, 140, 140),
+                ThemeColor::new(200, 200, 200),
+            ],
+
+            // Status — keep color for recording/playing
+            playing: ThemeColor::new(0, 255, 0),
+            recording: ThemeColor::new(255, 0, 0),
+            armed: ThemeColor::new(200, 200, 200),
+        }
+    }
+
     /// Get all built-in themes
     pub fn built_in_themes() -> Vec<Theme> {
-        vec![Self::dark(), Self::light(), Self::high_contrast()]
+        vec![
+            Self::dark(),
+            Self::light(),
+            Self::minimal(),
+            Self::high_contrast(),
+        ]
+    }
+
+    /// Look up a built-in theme by name (case-insensitive match on name field)
+    pub fn from_name(name: &str) -> Option<Theme> {
+        Self::built_in_themes()
+            .into_iter()
+            .find(|t| t.name.eq_ignore_ascii_case(name))
     }
 }
 
@@ -241,10 +387,11 @@ mod tests {
     #[test]
     fn test_built_in_themes() {
         let themes = Theme::built_in_themes();
-        assert_eq!(themes.len(), 3);
+        assert_eq!(themes.len(), 4);
         assert_eq!(themes[0].name, "Dark");
         assert_eq!(themes[1].name, "Light");
-        assert_eq!(themes[2].name, "High Contrast");
+        assert_eq!(themes[2].name, "Minimal");
+        assert_eq!(themes[3].name, "High Contrast");
     }
 
     #[test]

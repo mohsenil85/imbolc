@@ -2,11 +2,12 @@ use super::TrackEditPane;
 use crate::state::{AppState, Param, ParamValue};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
-use crate::ui::{Color, Rect, RenderBuf, Style};
+use crate::ui::{Color, Palette, Rect, RenderBuf, Style};
 use imbolc_types::ProcessingStage;
 
 impl TrackEditPane {
-    pub(super) fn render_impl(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    pub(super) fn render_impl(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 97, 29);
 
         let title = format!(" Edit: {} ({}) ", self.instrument_name, self.source.name());
@@ -169,6 +170,7 @@ impl TrackEditPane {
                         is_sel,
                         self.editing && is_sel,
                         &mut self.edit_input,
+                        &p,
                     );
                     visual_y += 1;
                 }
@@ -249,6 +251,7 @@ impl TrackEditPane {
                                 is_sel,
                                 self.editing && is_sel,
                                 &mut self.edit_input,
+                                &p,
                             );
                             visual_y += 1;
                         }
@@ -268,6 +271,7 @@ impl TrackEditPane {
                                 is_sel,
                                 self.editing && is_sel,
                                 &mut self.edit_input,
+                                &p,
                             );
                             visual_y += 1;
                         }
@@ -285,6 +289,7 @@ impl TrackEditPane {
                                     is_sel,
                                     self.editing && is_sel,
                                     &mut self.edit_input,
+                                    &p,
                                 );
                                 visual_y += 1;
                             }
@@ -351,6 +356,7 @@ impl TrackEditPane {
                                     is_sel,
                                     self.editing && is_sel,
                                     &mut self.edit_input,
+                                    &p,
                                 );
                                 visual_y += 1;
                             }
@@ -412,6 +418,7 @@ impl TrackEditPane {
                 is_sel,
                 self.editing && is_sel,
                 &mut self.edit_input,
+                &p,
             );
             // Hz label
             let hz_style = if is_sel {
@@ -440,6 +447,7 @@ impl TrackEditPane {
                 is_sel,
                 self.editing && is_sel,
                 &mut self.edit_input,
+                &p,
             );
             visual_y += 1;
         }
@@ -521,6 +529,7 @@ impl TrackEditPane {
                         is_sel,
                         self.editing && is_sel,
                         &mut self.edit_input,
+                        &p,
                     );
                     visual_y += 1;
                 }
@@ -575,6 +584,7 @@ fn render_slider(value: f32, min: f32, max: f32, width: usize) -> String {
     render_slider_with_default(value, min, max, width, None)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_param_row_buf(
     buf: &mut RenderBuf,
     x: u16,
@@ -583,6 +593,7 @@ fn render_param_row_buf(
     is_selected: bool,
     is_editing: bool,
     edit_input: &mut TextInput,
+    p: &Palette,
 ) {
     // Selection indicator
     if is_selected {
@@ -623,7 +634,7 @@ fn render_param_row_buf(
 
     // Value or text input
     if is_editing {
-        edit_input.render_buf(buf.raw_buf(), x + 34, y, 10);
+        edit_input.render_buf(buf.raw_buf(), x + 34, y, 10, p);
     } else {
         let value_str = match &param.value {
             ParamValue::Float(v) => format!("{:.2}", v),
@@ -654,6 +665,7 @@ fn render_value_row_buf(
     is_selected: bool,
     is_editing: bool,
     edit_input: &mut TextInput,
+    p: &Palette,
 ) {
     render_value_row_with_default_buf(
         buf,
@@ -667,6 +679,7 @@ fn render_value_row_buf(
         is_selected,
         is_editing,
         edit_input,
+        p,
     );
 }
 
@@ -684,6 +697,7 @@ fn render_value_row_with_default_buf(
     is_selected: bool,
     is_editing: bool,
     edit_input: &mut TextInput,
+    p: &Palette,
 ) {
     // Selection indicator
     if is_selected {
@@ -719,7 +733,7 @@ fn render_value_row_with_default_buf(
 
     // Value or text input
     if is_editing {
-        edit_input.render_buf(buf.raw_buf(), x + 34, y, 10);
+        edit_input.render_buf(buf.raw_buf(), x + 34, y, 10, p);
     } else {
         let val_style = if is_selected {
             Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)

@@ -6,7 +6,8 @@ use crate::ui::action_id::{ActionId, FrameEditActionId, ModeActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
+    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
+    Style,
 };
 
 /// Fields editable in the frame editor
@@ -305,7 +306,8 @@ impl Pane for FrameEditPane {
         Action::None
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 50, 13);
 
         let border_style = Style::new().fg(Color::CYAN);
@@ -349,6 +351,7 @@ impl Pane for FrameEditPane {
                     value_col,
                     y,
                     inner.width.saturating_sub(18),
+                    &p,
                 );
             } else {
                 let val_style = if is_selected {

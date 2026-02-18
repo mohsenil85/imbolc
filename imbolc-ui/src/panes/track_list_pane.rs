@@ -7,12 +7,12 @@ use crate::ui::performance::PerformanceController;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
     translate_key, Action, Color, InputEvent, KeyCode, Keymap, MouseButton, MouseEvent,
-    MouseEventKind, NavAction, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
-    ToggleResult, TrackAction,
+    MouseEventKind, NavAction, Palette, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction,
+    Style, ToggleResult, TrackAction,
 };
 use imbolc_types::{GroupAction, GroupId, TrackId};
 
-fn source_color(source: SourceType) -> Color {
+fn source_color(source: SourceType, p: &Palette) -> Color {
     match source {
         // Oscillators and synths
         SourceType::Saw | SourceType::Sin | SourceType::Sqr | SourceType::Tri
@@ -34,14 +34,12 @@ fn source_color(source: SourceType) -> Color {
         // Classic synths
         | SourceType::Choir | SourceType::EPiano | SourceType::Organ | SourceType::BrassStab
         | SourceType::Strings | SourceType::Acid
-        | SourceType::Universe | SourceType::Dreamscape | SourceType::Soundtrack => Color::OSC_COLOR,
-        SourceType::AudioIn => Color::AUDIO_IN_COLOR,
-        SourceType::PitchedSampler | SourceType::TimeStretch | SourceType::Kit => {
-            Color::SAMPLE_COLOR
-        }
-        SourceType::BusIn => Color::BUS_IN_COLOR,
-        SourceType::Custom(_) => Color::CUSTOM_COLOR,
-        SourceType::Vst(_) => Color::VST_COLOR,
+        | SourceType::Universe | SourceType::Dreamscape | SourceType::Soundtrack => p.osc_color,
+        SourceType::AudioIn => p.audio_in_color,
+        SourceType::PitchedSampler | SourceType::TimeStretch | SourceType::Kit => p.sample_color,
+        SourceType::BusIn => p.bus_in_color,
+        SourceType::Custom(_) => p.custom_color,
+        SourceType::Vst(_) => p.vst_color,
     }
 }
 
@@ -314,9 +312,10 @@ impl Pane for TrackListPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 97, 29);
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Tracks ", border_style, border_style);
 
         let content_x = inner.x + 1;
@@ -324,7 +323,7 @@ impl Pane for TrackListPane {
 
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
-            &[("Tracks:", Style::new().fg(Color::CYAN).bold())],
+            &[("Tracks:", Style::new().fg(p.accent).bold())],
         );
 
         let list_y = content_y + 2;
@@ -333,10 +332,7 @@ impl Pane for TrackListPane {
         if state.tracks.tracks.is_empty() {
             buf.draw_line(
                 Rect::new(content_x + 2, list_y, inner.width.saturating_sub(4), 1),
-                &[(
-                    "(no tracks — press 'a' to add)",
-                    Style::new().fg(Color::DARK_GRAY),
-                )],
+                &[("(no tracks — press 'a' to add)", Style::new().fg(p.dim))],
             );
         }
 
@@ -351,7 +347,7 @@ impl Pane for TrackListPane {
                 }
             })
             .unwrap_or(0);
-        let sel_bg = Style::new().bg(Color::SELECTION_BG);
+        let sel_bg = Style::new().bg(p.selection_bg);
 
         for (i, instrument) in state.tracks.tracks.iter().enumerate().skip(scroll_offset) {
             let row = i - scroll_offset;
@@ -370,13 +366,13 @@ impl Pane for TrackListPane {
                     content_x,
                     y,
                     '>',
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                    Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                 );
             }
 
             let mk_style = |fg: Color| -> Style {
                 if is_selected {
-                    Style::new().fg(fg).bg(Color::SELECTION_BG)
+                    Style::new().fg(fg).bg(p.selection_bg)
                 } else {
                     Style::new().fg(fg)
                 }
@@ -391,7 +387,7 @@ impl Pane for TrackListPane {
             let fx_str = format!(" {:18}", &fx_raw[..fx_raw.len().min(18)]);
             let level_str = format!(" {}", Self::format_level(instrument.channel_strip.level));
 
-            let source_c = source_color(instrument.source);
+            let source_c = source_color(instrument.source, &p);
 
             let layer_str = match instrument.layer.group {
                 Some(g) => {
@@ -426,21 +422,21 @@ impl Pane for TrackListPane {
                 OwnershipDisplayStatus::Local => String::new(),
             };
             let ownership_color = match state.ownership_status(instrument.id) {
-                OwnershipDisplayStatus::OwnedByMe => Color::LIME,
-                OwnershipDisplayStatus::OwnedByOther(_) => Color::ORANGE,
-                _ => Color::DARK_GRAY,
+                OwnershipDisplayStatus::OwnedByMe => p.success,
+                OwnershipDisplayStatus::OwnedByOther(_) => p.accent_secondary,
+                _ => p.dim,
             };
 
             let mut spans: Vec<(&str, Style)> = vec![
-                (&name_str, mk_style(Color::WHITE)),
+                (&name_str, mk_style(p.fg)),
                 (&source_str, mk_style(source_c)),
-                (&filter_str, mk_style(Color::FILTER_COLOR)),
-                (&eq_str, mk_style(Color::EQ_COLOR)),
-                (&fx_str, mk_style(Color::FX_COLOR)),
-                (&level_str, mk_style(Color::LIME)),
+                (&filter_str, mk_style(p.filter_color)),
+                (&eq_str, mk_style(p.eq_color)),
+                (&fx_str, mk_style(p.fx_color)),
+                (&level_str, mk_style(p.success)),
             ];
             if !layer_str.is_empty() {
-                spans.push((&layer_str, mk_style(Color::ORANGE)));
+                spans.push((&layer_str, mk_style(p.accent_secondary)));
             }
             if !ownership_str.is_empty() {
                 spans.push((&ownership_str, mk_style(ownership_color)));
@@ -459,7 +455,7 @@ impl Pane for TrackListPane {
         }
 
         // Scroll indicators
-        let scroll_style = Style::new().fg(Color::ORANGE);
+        let scroll_style = Style::new().fg(p.accent_secondary);
         if scroll_offset > 0 {
             buf.draw_line(
                 Rect::new(rect.x + rect.width - 5, list_y, 3, 1),
@@ -484,14 +480,14 @@ impl Pane for TrackListPane {
             let pad_x = rect.x + rect.width - pad_str.len() as u16 - 1;
             buf.draw_line(
                 Rect::new(pad_x, rect.y, pad_str.len() as u16, 1),
-                &[(&pad_str, Style::new().fg(Color::BLACK).bg(Color::KIT_COLOR))],
+                &[(&pad_str, Style::new().fg(p.bg).bg(p.kit_color))],
             );
         } else if self.perf.piano.is_active() {
             let piano_str = self.perf.piano.status_label();
             let piano_x = rect.x + rect.width - piano_str.len() as u16 - 1;
             buf.draw_line(
                 Rect::new(piano_x, rect.y, piano_str.len() as u16, 1),
-                &[(&piano_str, Style::new().fg(Color::BLACK).bg(Color::PINK))],
+                &[(&piano_str, Style::new().fg(p.bg).bg(Color::PINK))],
             );
         }
 
@@ -501,7 +497,7 @@ impl Pane for TrackListPane {
             let link_x = rect.x + rect.width - link_str.len() as u16 - 1;
             buf.draw_line(
                 Rect::new(link_x, rect.y, link_str.len() as u16, 1),
-                &[(link_str, Style::new().fg(Color::BLACK).bg(Color::ORANGE))],
+                &[(link_str, Style::new().fg(p.bg).bg(p.accent_secondary))],
             );
         }
 
@@ -511,7 +507,7 @@ impl Pane for TrackListPane {
             let rename_x = rect.x + rect.width - rename_str.len() as u16 - 1;
             buf.draw_line(
                 Rect::new(rename_x, rect.y, rename_str.len() as u16, 1),
-                &[(rename_str, Style::new().fg(Color::BLACK).bg(Color::LIME))],
+                &[(rename_str, Style::new().fg(p.bg).bg(p.success))],
             );
 
             // Draw text input at the bottom of the inner area
@@ -519,7 +515,7 @@ impl Pane for TrackListPane {
             let input_x = inner.x + 1;
             let input_width = inner.width.saturating_sub(2);
             self.edit_input
-                .render_buf(buf.raw_buf(), input_x, input_y, input_width);
+                .render_buf(buf.raw_buf(), input_x, input_y, input_width, &p);
             if let Some((cx, cy)) = self.edit_input.screen_cursor() {
                 buf.set_cursor_position(cx, cy);
             }
