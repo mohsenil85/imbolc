@@ -45,6 +45,7 @@ impl Pane for QuitPromptPane {
 
     fn handle_raw_input(&mut self, event: &InputEvent, _state: &AppState) -> Action {
         match event.key {
+            KeyCode::Char('q') if event.modifiers.ctrl => Action::Quit,
             KeyCode::Char('s') | KeyCode::Char('S') => Action::SaveAndQuit,
             KeyCode::Char('d') | KeyCode::Char('D') => Action::Quit,
             KeyCode::Char('c') | KeyCode::Char('C') | KeyCode::Escape => {
@@ -149,6 +150,17 @@ mod tests {
 
     fn state() -> AppState {
         AppState::new()
+    }
+
+    fn ctrl_key(code: KeyCode) -> InputEvent {
+        InputEvent::new(code, Modifiers::ctrl())
+    }
+
+    #[test]
+    fn ctrl_q_returns_quit() {
+        let mut pane = make_pane();
+        let action = pane.handle_raw_input(&ctrl_key(KeyCode::Char('q')), &state());
+        assert!(matches!(action, Action::Quit));
     }
 
     #[test]
