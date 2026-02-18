@@ -1,153 +1,184 @@
 # Oscillators
 
-Basic waveform generators for sound synthesis.
+Oscillator sources generate sound directly (without sample playback or external
+audio input).
+
+Most pitched entries on this page share these baseline controls:
+- `freq`: base frequency in hertz.
+- `amp`: source output level.
+- `lag`: smoothing applied to control changes.
+- `attack`, `decay`, `sustain`, `release`: source envelope.
+
+The sections below focus on source-specific controls.
 
 ## Saw
 
-A sawtooth wave with all harmonics. Bright, buzzy tone that's great for
-leads, basses, and pads. The classic subtractive synth starting point.
+Sawtooth oscillator with a full harmonic series.
 
-**Parameters:**
-- Detune: Slight pitch variation for thickness
-- Phase: Starting phase of the waveform
+Source-specific controls:
+- None.
 
 ## Sine
 
-A pure sine wave with no harmonics. The simplest waveform, useful for
-sub-bass, FM carriers, and pure tones.
+Sine oscillator containing only the fundamental.
 
-**Parameters:**
-- Phase: Starting phase
+Source-specific controls:
+- None.
 
 ## Square
 
-Equal on/off duty cycle producing odd harmonics only. Hollow, clarinet-like
-tone. Good for leads and arpeggios.
+Square-like pulse oscillator centered at a fixed 50% duty cycle.
 
-**Parameters:**
-- Phase: Starting phase
+Source-specific controls:
+- None (pulse width is fixed unless modulated externally).
 
 ## Triangle
 
-Softer than square, still odd harmonics but with faster rolloff. Flute-like
-quality, good for soft leads and sub-bass.
+Triangle oscillator with reduced high-frequency harmonic energy.
 
-**Parameters:**
-- Phase: Starting phase
+Source-specific controls:
+- None.
 
 ## Noise
 
-White noise generator. Useful for hi-hats, snares, risers, and adding
-texture to sounds.
+Noise source with selectable coloration and event density.
 
-**Parameters:**
-- Color: Filter applied to noise
+Source-specific controls:
+- `color`: selects the noise coloration mode.
+- `density`: controls event density in sparse/noise modes.
 
 ## Pulse
 
-Variable pulse width for timbral control. At 50% it's a square wave.
-Narrower pulses create thinner, more nasal tones.
+Variable-duty pulse oscillator.
 
-**Parameters:**
-- Width: Pulse width (0-100%)
-- PWM: Pulse width modulation depth
+Source-specific controls:
+- `width`: duty cycle.
 
 ## SuperSaw
 
-Multiple detuned sawtooth oscillators for a huge, rich sound. Classic
-trance and EDM lead sound.
+Detuned multi-voice saw oscillator.
 
-**Parameters:**
-- Voices: Number of oscillators (1-7)
-- Detune: Spread between voices
-- Mix: Blend of voices
+Source-specific controls:
+- `detune`: spread between voices.
+- `mix`: blend of center and detuned components.
 
 ## Sync
 
-Hard-synced oscillator pair. The slave oscillator resets at the master's
-frequency, creating harmonically rich, aggressive tones.
+Hard-sync oscillator where a slave oscillator is reset by a master period.
 
-**Parameters:**
-- Ratio: Frequency ratio of slave to master
-- Mix: Blend of master and slave
+Source-specific controls:
+- `sync_ratio`: slave-to-master frequency ratio.
 
 ## Choir
 
-Vocal-like pad sound using formant synthesis.
+Vocal-formant style synth voice.
 
-**Parameters:**
-- Vowel: Formant shape (a, e, i, o, u)
-- Vibrato: Pitch modulation depth
+Source-specific controls:
+- `vowel`: formant position.
+- `spread`: stereo/unison spread.
+- `vibrato`: pitch modulation depth.
 
 ## EPiano
 
-Electric piano emulation with bell-like attack.
+Electric-piano style voice.
 
-**Parameters:**
-- Tone: Brightness
-- Velocity: Dynamic response
+Source-specific controls:
+- `tine`: high partial emphasis.
+- `bark`: attack nonlinearity.
+- `tremolo`: amplitude modulation depth.
 
 ## Organ
 
-Drawbar organ simulation.
+Drawbar organ model.
 
-**Parameters:**
-- Drawbars: Harmonic mix
-- Percussion: Attack transient
+Source-specific controls:
+- `perc`: key-click/percussion amount.
+- `leslie`: rotary speaker modulation amount.
+- `d1` through `d9`: drawbar harmonic levels.
 
 ## Brass Stab
 
-Punchy brass section sound.
+Brass-inspired synth stab.
 
-**Parameters:**
-- Attack: Initial transient brightness
-- Fatness: Low-frequency emphasis
+Source-specific controls:
+- `bite`: transient brightness and edge.
+- `cutoff_decay`: filter-envelope decay amount.
 
 ## Strings
 
-Ensemble string pad.
+Ensemble string-style synth voice.
 
-**Parameters:**
-- Ensemble: Chorus/detuning amount
-- Attack: String attack time
+Source-specific controls:
+- `spread`: detune/unison spread.
+- `vibrato`: pitch modulation depth.
 
 ## Acid
 
-Classic TB-303 style acid bass.
+Resonant monosynth bass voice.
 
-**Parameters:**
-- Cutoff: Filter frequency
-- Resonance: Filter emphasis
-- Accent: Dynamic filter sweep
+Source-specific controls:
+- `cutoff`: filter cutoff frequency.
+- `res`: filter resonance.
+- `accent`: accent amount.
+- `envmod`: envelope-to-filter depth.
+
+## Universe
+
+Layered pad voice designed for long, evolving tones.
+
+Source-specific controls:
+- `shimmer`: high-frequency sheen.
+- `warmth`: low-mid body.
+- `air`: high-band openness.
+
+## Dreamscape
+
+Atmospheric pad voice with slow spectral movement.
+
+Source-specific controls:
+- `density`: layer thickness.
+- `evolve`: modulation/evolution amount.
+- `brightness`: high-frequency emphasis.
+
+## Soundtrack
+
+Cinematic synth texture voice.
+
+Source-specific controls:
+- `brass`: brass-like component level.
+- `sweep`: spectral movement amount.
+- `width`: stereo spread.
 
 ## Additive
 
-Harmonic additive synthesis with individual partial control.
+Additive oscillator built from harmonic partials.
 
-**Parameters:**
-- Harmonics: Level of each partial
-- Spread: Harmonic spacing
+Source-specific controls:
+- `harmonics`: number of active partials.
+- `rolloff`: amplitude decay across partial index.
 
 ## Wavetable
 
-Morphable wavetable synthesis.
+Wavetable oscillator with continuous table scan.
 
-**Parameters:**
-- Position: Wavetable position
-- Morph: Interpolation between frames
+Source-specific controls:
+- `position`: scan position in the wavetable.
 
 ## Gendy
 
-Stochastic waveform synthesis (Iannis Xenakis).
+Stochastic waveform generator (dynamic stochastic synthesis).
 
-**Parameters:**
-- Amp: Amplitude deviation
-- Dur: Duration deviation
+Source-specific controls:
+- `ampdist`: amplitude-distribution mode.
+- `durdist`: duration-distribution mode.
+- `minfreq`: lower frequency bound.
+- `maxfreq`: upper frequency bound.
 
 ## Chaos
 
-Chaotic oscillator based on nonlinear dynamics.
+Chaotic-system oscillator.
 
-**Parameters:**
-- Parameter: Chaos control
-- Rate: Update frequency
+Source-specific controls:
+- `model`: chaotic model selector.
+- `chaos_freq`: update/audio rate of the chaotic system.
+- `chaos_param`: model control parameter.

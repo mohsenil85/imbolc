@@ -1,69 +1,54 @@
 # Samplers
 
-Sample playback and manipulation.
+Sample playback and grain-based source types.
 
 ## Pitched Sampler
 
-Plays a sample pitched across the keyboard.
+Plays an audio buffer as a pitched instrument voice.
 
-**Parameters:**
-- Sample: Source audio file
-- Root Key: Original pitch of sample
-- Loop: Enable/disable looping
-- Loop Start/End: Loop points
+Core controls:
+- `rate`: playback speed and transposition.
+- `amp`: source output level.
+- `loop`: loop enable/disable.
 
-**Tips:**
-- Set root key to match the sample's original pitch
-- Use loop for sustaining sounds (pads, strings)
-- One-shot mode for drums and hits
+Related data controls:
+- sample/buffer selection.
+- `sliceStart`, `sliceEnd`: normalized playback range within the buffer.
 
 ## Time Stretch
 
-Granular time-stretching sampler. Change tempo without affecting pitch.
+Granular sample player that separates timing (`stretch`) from pitch (`pitch`).
 
-**Parameters:**
-- Sample: Source audio file
-- Stretch: Time stretch factor
-- Grain Size: Granular window size
-- Pitch: Independent pitch control
+Core controls:
+- `stretch`: playback time scale.
+- `pitch`: transposition in semitones.
+- `grain_size`: grain duration.
+- `overlap`: grain overlap count.
+- `amp`: source output level.
 
-**Tips:**
-- Larger grains = smoother but less responsive
-- Smaller grains = more accurate but potential artifacts
-- Extreme stretch values create textural effects
+Related data controls:
+- sample/buffer selection.
+- `sliceStart`, `sliceEnd`: normalized playback range within the buffer.
 
 ## Kit
 
-Drum kit sampler with multiple pads.
+Twelve-pad one-shot sampler used by the drum sequencer.
 
-**Parameters:**
-- Pads: 12 sample slots
-- Per-pad: Level, Pan, Pitch, Reverse
-
-**Workflow:**
-1. Load samples to pads using the Sample Chopper
-2. Sequence with the Drum Sequencer (F2)
-3. Adjust per-pad settings as needed
-
-**Tips:**
-- Assign related sounds to adjacent pads
-- Use pitch for variation without loading multiple samples
-- Reverse for interesting textures
+Per-pad controls:
+- `level`: pad output level.
+- `pitch`: semitone offset.
+- `reverse`: reverse playback toggle.
+- `slice_start`, `slice_end`: sample region per pad.
+- optional instrument trigger assignment (pad can trigger another track).
 
 ## Granular
 
-Granular synthesis sampler.
+Real-time granular oscillator using sine grains (not sample-buffer granulation).
 
-**Parameters:**
-- Sample: Source audio file
-- Position: Playback position in sample
-- Grain Size: Duration of each grain
-- Density: Grains per second
-- Spray: Random position variation
-- Pitch Spray: Random pitch variation
-
-**Tips:**
-- Small grains + high density = smooth texture
-- Large grains = audible chunks
-- Position modulation creates evolving textures
-- High spray values = glitchy, scattered sound
+Core controls:
+- `freq`: center pitch.
+- `grain_size`: grain duration.
+- `density`: grain trigger rate.
+- `spread`: stereo/random pan spread.
+- `pitch_rnd`: per-grain random pitch deviation.
+- `amp`: source output level.

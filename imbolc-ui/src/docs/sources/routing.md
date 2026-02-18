@@ -1,48 +1,25 @@
 # Routing
 
-Audio routing and external input sources.
+Sources that route external or internal audio into a track.
 
 ## Audio In
 
-Routes external audio input through the instrument's processing chain.
+Captures hardware audio input and feeds it through the standard track signal
+chain.
 
-**Parameters:**
-- Input: Select audio input channel(s)
-- Gain: Input level adjustment
-- Monitor: Enable/disable direct monitoring
-
-**Use Cases:**
-- Process external synths through Imbolc effects
-- Guitar/bass processing
-- Vocal processing
-- Live sampling source
-
-**Tips:**
-- Set appropriate input gain to avoid clipping
-- Use the instrument's filter and effects for processing
-- Combine with automation for dynamic processing
+Controls:
+- `channel`: hardware input channel index.
+- `gain`: input gain multiplier.
+- `test_tone`: enables an internal sine test tone.
+- `test_freq`: test tone frequency.
+- `fb_suppress`: feedback suppression amount/enable.
+- `fb_threshold`: suppression detection threshold.
+- `fb_q`: suppression notch width (Q-related control).
 
 ## Bus In
 
-Receives audio from an internal bus for reprocessing.
+Reads audio from an internal bus and processes it as a normal track source.
 
-**Parameters:**
-- Bus: Source bus selection
-- Gain: Input level
-
-**Use Cases:**
-- Parallel processing (send to bus, process differently)
-- Sidechain source for effects
-- Complex routing for layered sounds
-- Re-amping internal audio
-
-**Workflow:**
-1. Set up a send from source instrument to a bus
-2. Create BusIn instrument receiving from that bus
-3. Add different effects/processing
-4. Mix with original or use alone
-
-**Tips:**
-- Great for parallel compression
-- Use for creative effects routing
-- Enables complex sound design with multiple processing paths
+Controls:
+- `bus`: logical bus selector.
+- `gain`: input gain multiplier.

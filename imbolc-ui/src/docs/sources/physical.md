@@ -1,138 +1,132 @@
 # Physical Models
 
-Physically modeled instrument simulations.
+Physically inspired and resonator-based synthesis sources.
+
+Most entries share these baseline controls:
+- `freq`: base frequency in hertz.
+- `amp`: source output level.
+- `lag`: smoothing applied to control changes.
+- `attack`, `decay`, `sustain`, `release`: source envelope.
+
+The sections below list model-specific controls.
 
 ## Pluck
 
-Karplus-Strong string synthesis. A burst of noise filtered through
-a tuned delay creates realistic plucked string sounds.
+Karplus-Strong style plucked-string model.
 
-**Parameters:**
-- Decay: String damping (how quickly it fades)
-- Brightness: Initial excitation brightness
-- Position: Pick position along string
-
-**Tips:**
-- Short decay = muted guitar, long decay = sustaining strings
-- Lower brightness = softer pluck, higher = sharper attack
+Source-specific controls:
+- `decay`: resonance length.
+- `coef`: damping/brightness coefficient.
 
 ## Formant
 
-Vocal formant synthesis for voice-like tones.
+Formant-filtered synthesis source for vowel-like spectra.
 
-**Parameters:**
-- Vowel: Formant shape (A, E, I, O, U)
-- Formant Shift: Pitch of formants independent of note
-- Breathiness: Noise content
+Source-specific controls:
+- `formant`: formant center frequency.
+- `bw`: formant bandwidth.
 
 ## Bowed
 
-Bowed string physical model (violin, cello, etc).
+Bowed-string physical model.
 
-**Parameters:**
-- Bow Pressure: Force against string
-- Bow Position: Distance from bridge
-- Vibrato: Pitch modulation
-
-**Tips:**
-- Higher pressure = louder, more aggressive
-- Position near bridge = brighter, "sul ponticello"
+Source-specific controls:
+- `pressure`: bow pressure.
+- `bow_pos`: bow position on the string.
 
 ## Blown
 
-Wind instrument model (flute, clarinet, etc).
+Blown pipe/wind physical model.
 
-**Parameters:**
-- Breath: Air pressure
-- Embouchure: Mouth position/tension
-- Noise: Breath noise
+Source-specific controls:
+- `pressure`: blowing pressure.
+- `embouchure`: embouchure/tube excitation shape.
 
 ## Membrane
 
-Drum head / membrane physical model.
+Struck membrane model.
 
-**Parameters:**
-- Tension: Membrane tightness (pitch)
-- Damping: How quickly vibration decays
-- Strike Position: Where the membrane is hit
+Source-specific controls:
+- `tension`: membrane tension.
+- `loss`: energy loss per cycle.
 
 ## Marimba
 
-Wooden bar percussion with resonator.
+Malleted bar resonator model.
 
-**Parameters:**
-- Hardness: Mallet hardness (soft felt to hard plastic)
-- Resonance: Resonator tube length
+Source-specific controls:
+- `hardness`: mallet hardness.
+- `bar_pos`: strike position along the bar.
 
 ## Vibes
 
-Vibraphone with motor-driven tremolo.
+Vibraphone-style resonator with motor modulation.
 
-**Parameters:**
-- Motor Speed: Tremolo rate
-- Damper: Sustain pedal amount
+Source-specific controls:
+- `motor_speed`: motor/tremolo speed.
+- `damper`: damping amount.
 
 ## Kalimba
 
-Thumb piano / mbira model.
+Thumb-piano style resonator.
 
-**Parameters:**
-- Tine Length: Affects timbre
-- Body Resonance: Wooden body contribution
+Source-specific controls:
+- `damping`: decay damping.
+- `brightness`: high-frequency emphasis.
 
 ## Steel Drum
 
-Caribbean steel pan model.
+Steel pan resonator model.
 
-**Parameters:**
-- Damping: Note decay
-- Brightness: Harmonic content
+Source-specific controls:
+- `tone`: spectral brightness/voicing.
+- `decay`: note decay time.
 
 ## Tubular Bell
 
-Orchestral chime/tubular bell.
+Tubular bell/chime model.
 
-**Parameters:**
-- Size: Bell diameter
-- Strike: Hit position
+Source-specific controls:
+- `strike_pos`: strike position.
+- `damping`: bell damping.
 
 ## Glockenspiel
 
-Metal bar percussion with bright, bell-like tone.
+Metal bar percussion model.
 
-**Parameters:**
-- Hardness: Mallet hardness
-- Damping: Ring time
+Source-specific controls:
+- `hardness`: mallet hardness.
+- `decay`: ring time.
 
 ## Guitar
 
-Nylon or steel string acoustic guitar model.
+Plucked-string model with body resonance.
 
-**Parameters:**
-- Body: Resonance of guitar body
-- Pick Position: Neck to bridge
-- String Type: Nylon/steel character
+Source-specific controls:
+- `pick_pos`: pluck/pick position.
+- `damping`: string damping.
+- `body`: body resonance contribution.
 
 ## Bass Guitar
 
-Electric bass guitar model.
+Electric bass model.
 
-**Parameters:**
-- Pickup: Position simulation
-- Tone: Brightness control
+Source-specific controls:
+- `finger`: finger/pluck character.
+- `fret_noise`: fret/transient noise level.
 
 ## Harp
 
-Concert harp model with multiple strings.
+Harp-style plucked-string model.
 
-**Parameters:**
-- Damping: String ring time
-- Resonance: Soundboard character
+Source-specific controls:
+- `pedal`: pedal/tuning coloration control.
+- `damping`: string damping.
 
 ## Koto
 
-Japanese plucked string instrument.
+Koto-inspired plucked-string model.
 
-**Parameters:**
-- Bridge Position: Moveable bridge placement
-- Pluck Style: Nail vs flesh
+Source-specific controls:
+- `bend`: pitch bend amount.
+- `damping`: string damping.

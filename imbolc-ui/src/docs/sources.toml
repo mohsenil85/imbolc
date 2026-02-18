@@ -1,5 +1,6 @@
 # Source type to documentation path mapping
-# Maps SourceType::short_name() to documentation path with optional anchor
+# Canonical keys below use SourceType::short_name() values.
+# Legacy aliases are kept at the bottom for compatibility.
 
 [sources]
 # Basic Oscillators
@@ -32,20 +33,20 @@ marimba = "sources/physical.md#marimba"
 vibes = "sources/physical.md#vibes"
 kalimba = "sources/physical.md#kalimba"
 steeldrum = "sources/physical.md#steel-drum"
-tubularbell = "sources/physical.md#tubular-bell"
-glockenspiel = "sources/physical.md#glockenspiel"
+tubular = "sources/physical.md#tubular-bell"
+glock = "sources/physical.md#glockenspiel"
 
 # Plucked Strings
 guitar = "sources/physical.md#guitar"
-bassguitar = "sources/physical.md#bass-guitar"
+bass = "sources/physical.md#bass-guitar"
 harp = "sources/physical.md#harp"
 koto = "sources/physical.md#koto"
 
 # Drums
 kick = "sources/drums.md#kick"
 snare = "sources/drums.md#snare"
-hihatclosed = "sources/drums.md#hihat"
-hihatopen = "sources/drums.md#hihat"
+hh_cl = "sources/drums.md#hihat"
+hh_op = "sources/drums.md#hihat"
 clap = "sources/drums.md#clap"
 cowbell = "sources/drums.md#cowbell"
 rim = "sources/drums.md#rim"
@@ -57,9 +58,12 @@ conga = "sources/drums.md#conga"
 choir = "sources/oscillators.md#choir"
 epiano = "sources/oscillators.md#epiano"
 organ = "sources/oscillators.md#organ"
-brassstab = "sources/oscillators.md#brass-stab"
+brass = "sources/oscillators.md#brass-stab"
 strings = "sources/oscillators.md#strings"
 acid = "sources/oscillators.md#acid"
+universe = "sources/oscillators.md#universe"
+dreamscape = "sources/oscillators.md#dreamscape"
+soundtrack = "sources/oscillators.md#soundtrack"
 
 # Experimental
 gendy = "sources/oscillators.md#gendy"
@@ -71,10 +75,22 @@ wavetable = "sources/oscillators.md#wavetable"
 granular = "sources/samplers.md#granular"
 
 # Routing
-audioin = "sources/routing.md#audio-in"
-busin = "sources/routing.md#bus-in"
+audio_in = "sources/routing.md#audio-in"
+bus_in = "sources/routing.md#bus-in"
 
 # Samplers
+sample = "sources/samplers.md#pitched-sampler"
+stretch = "sources/samplers.md#time-stretch"
+kit = "sources/samplers.md#kit"
+
+# Legacy aliases
+tubularbell = "sources/physical.md#tubular-bell"
+glockenspiel = "sources/physical.md#glockenspiel"
+bassguitar = "sources/physical.md#bass-guitar"
+hihatclosed = "sources/drums.md#hihat"
+hihatopen = "sources/drums.md#hihat"
+brassstab = "sources/oscillators.md#brass-stab"
+audioin = "sources/routing.md#audio-in"
+busin = "sources/routing.md#bus-in"
 pitchedsampler = "sources/samplers.md#pitched-sampler"
 timestretch = "sources/samplers.md#time-stretch"
-kit = "sources/samplers.md#kit"

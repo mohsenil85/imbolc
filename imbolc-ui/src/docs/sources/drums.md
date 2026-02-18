@@ -1,98 +1,85 @@
 # Drums
 
-Synthesized drum sounds.
+Dedicated drum and percussion source types.
+
+Most drum entries use short envelopes and expose `amp` plus a small set of
+instrument-specific controls.
 
 ## Kick
 
-Bass drum / kick drum synthesis.
+Synthesized bass drum source.
 
-**Parameters:**
-- Pitch: Fundamental frequency
-- Decay: How long the sound rings
-- Click: Initial transient intensity
-- Drive: Distortion/saturation
-
-**Tips:**
-- Lower pitch for sub-bass heavy kicks
-- Add click for punch that cuts through mix
-- Drive adds harmonics for presence on small speakers
+Source-specific controls:
+- `freq`: base drum pitch.
+- `punch`: pitch-envelope intensity.
+- `click`: transient click level.
+- `decay`: body decay time.
 
 ## Snare
 
-Snare drum synthesis with noise burst and body.
+Snare source combining tonal body and noise components.
 
-**Parameters:**
-- Pitch: Body tuning
-- Snare: Wire snare intensity
-- Decay: Ring time
-- Tone: Body brightness
-
-**Tips:**
-- More snare = tighter, less = looser/fatter
-- Short decay = tight, long = open/roomy
+Source-specific controls:
+- `tone_freq`: tonal body frequency.
+- `noise_amt`: noise component level.
+- `snap`: transient snap intensity.
+- `decay`: decay time.
 
 ## HiHat
 
-Hi-hat cymbal synthesis (closed and open variants).
+Shared source for both Hi-Hat Closed and Hi-Hat Open variants (different
+default decay values).
 
-**Parameters:**
-- Decay: Ring time (short=closed, long=open)
-- Tone: Brightness / metallic character
-- Ring: Resonant frequencies
-
-**Tips:**
-- Very short decay for tight closed hats
-- Longer decay with resonance for open hats
+Source-specific controls:
+- `tone`: hat brightness/center frequency.
+- `decay`: ring time.
 
 ## Clap
 
-Hand clap synthesis with layered transients.
+Handclap-style transient source.
 
-**Parameters:**
-- Spread: Timing variation between hits
-- Tone: Frequency content
-- Room: Reverberant tail
+Source-specific controls:
+- `spread`: timing spread between clap transients.
+- `decay`: tail length.
 
 ## Cowbell
 
-Classic cowbell synthesis.
+Metallic tuned percussion source.
 
-**Parameters:**
-- Pitch: Fundamental tuning
-- Decay: Ring time
-- Tone: Brightness
+Source-specific controls:
+- `detune`: offset between partials.
+- `decay`: ring time.
 
 ## Rim
 
-Rim shot / cross-stick synthesis.
+Rimshot/cross-stick style source.
 
-**Parameters:**
-- Pitch: Tuning
-- Crack: Transient sharpness
-- Body: Wooden body resonance
+Source-specific controls:
+- `tone`: body frequency.
+- `click`: transient intensity.
+- `decay`: decay time.
 
 ## Tom
 
-Tom-tom drum synthesis.
+Tuned tom drum source.
 
-**Parameters:**
-- Pitch: Drum tuning
-- Decay: Ring time
-- Attack: Stick impact character
+Source-specific controls:
+- `pitch`: tom pitch.
+- `decay`: ring time.
 
 ## Clave
 
-Wooden clave stick synthesis.
+Clave/wood-block style transient source.
 
-**Parameters:**
-- Pitch: Wood resonance
-- Decay: Ring time
+Source-specific controls:
+- `tone`: clave pitch/brightness.
+- `decay`: decay time.
 
 ## Conga
 
-Conga drum synthesis.
+Conga hand drum source.
 
-**Parameters:**
-- Pitch: Head tuning
-- Slap: Palm slap character
-- Tone: Open tone character
+Source-specific controls:
+- `pitch`: conga tuning.
+- `slap`: slap transient amount.
+- `decay`: ring time.
