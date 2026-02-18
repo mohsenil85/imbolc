@@ -83,7 +83,7 @@ impl AppRuntime {
         if state.tracks.tracks.is_empty() {
             panes.switch_to(PaneId::Add, &state);
         }
-        layer_stack.set_pane_layer(panes.active().id());
+        layer_stack.set_pane_layer(panes.active().layer_name());
 
         let mut audio = AudioHandle::new();
         audio.sync_state(&state);
@@ -137,7 +137,7 @@ impl AppRuntime {
                     } else {
                         panes.switch_to(PaneId::InstrumentEdit, dispatcher.state());
                     }
-                    layer_stack.set_pane_layer(panes.active().id());
+                    layer_stack.set_pane_layer(panes.active().layer_name());
                 }
             } else {
                 let name = load_path
@@ -160,7 +160,7 @@ impl AppRuntime {
                 );
             }
             panes.push_to(PaneId::Confirm, dispatcher.state());
-            layer_stack.set_pane_layer(panes.active().id());
+            layer_stack.set_pane_layer(panes.active().layer_name());
         }
 
         // Auto-start SuperCollider and apply status events
@@ -198,7 +198,8 @@ impl AppRuntime {
     /// Main event loop.
     pub fn run(&mut self, backend: &mut RatatuiBackend) -> std::io::Result<()> {
         loop {
-            self.layer_stack.set_pane_layer(self.panes.active().id());
+            self.layer_stack
+                .set_pane_layer(self.panes.active().layer_name());
             self.dispatcher.set_active_pane(self.panes.active().id());
 
             if self.process_events(backend)? {

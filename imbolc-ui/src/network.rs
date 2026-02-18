@@ -282,7 +282,7 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
     if local_state.tracks.tracks.is_empty() {
         panes.switch_to(PaneId::Add, &local_state);
     }
-    layer_stack.set_pane_layer(panes.active().id());
+    layer_stack.set_pane_layer(panes.active().layer_name());
 
     let app_frame = Frame::new();
     let mut last_render_time = Instant::now();
