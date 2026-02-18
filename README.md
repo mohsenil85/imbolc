@@ -31,9 +31,11 @@ Imbolc is a complete music studio that runs right in your terminal. Write beats,
 - ? - Show keybindings
 - : - Invoke
 - ; - Pane Switcher
-- ^P - Repl
-- ^M - Midi settings
-- ^Q - Quit
+- ^n - New Instrument
+- ^N - Add new instrument to current layer group
+- ^p - Repl
+- ^m - Midi settings
+- ^q - Quit
 
 ## Documentation
 
