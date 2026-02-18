@@ -763,10 +763,51 @@ fn save_mixer(conn: &Connection, session: &SessionState) -> SqlResult<()> {
         )?;
     }
 
+    let master_eq_enabled = if session.mixer.master_eq().is_some() {
+        1i32
+    } else {
+        0i32
+    };
     conn.execute(
-        "INSERT INTO mixer_master (id, level, mute) VALUES (1, ?1, ?2)",
-        params![session.mixer.master_level, session.mixer.master_mute as i32],
+        "INSERT INTO mixer_master (id, level, mute, eq_enabled) VALUES (1, ?1, ?2, ?3)",
+        params![
+            session.mixer.master_level,
+            session.mixer.master_mute as i32,
+            master_eq_enabled,
+        ],
     )?;
+
+    // Save master EQ bands
+    if let Some(eq) = session.mixer.master_eq() {
+        for (i, band) in eq.bands.iter().enumerate() {
+            conn.execute(
+                "INSERT INTO master_eq_bands (band_index, freq, gain, q, enabled)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![i as i32, band.freq, band.gain, band.q, band.enabled as i32],
+            )?;
+        }
+    }
+
+    // Save bus EQ bands
+    for bus in &session.mixer.buses {
+        if let Some(eq) = bus.channel_strip.eq() {
+            for (i, band) in eq.bands.iter().enumerate() {
+                conn.execute(
+                    "INSERT INTO bus_eq_bands (bus_id, band_index, freq, gain, q, enabled)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![
+                        bus.id.get() as i32,
+                        i as i32,
+                        band.freq,
+                        band.gain,
+                        band.q,
+                        band.enabled as i32,
+                    ],
+                )?;
+            }
+        }
+    }
+
     Ok(())
 }
 

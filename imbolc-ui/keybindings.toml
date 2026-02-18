@@ -14,7 +14,6 @@ bindings = [
   { key = "F4", action = "switch:mixer", description = "Mixer" },
   { key = "F5", action = "switch:server", description = "Audio server" },
   { key = "F7", action = "switch:automation", description = "Automation" },
-  { key = "F8", action = "switch:eq", description = "12-Band EQ" },
   { key = "F9", action = "switch:groove", description = "Groove settings" },
   { key = "F10", action = "switch:tuner", description = "Reference tuner" },
   { key = "F11", action = "switch:generative", description = "Generative engine" },

@@ -43,7 +43,7 @@ pub use command_line_pane::CommandLinePane;
 pub use command_palette_pane::CommandPalettePane;
 pub use confirm_pane::{ConfirmPane, PendingAction};
 pub use docs_pane::DocsPane;
-pub use eq_pane::EqPane;
+pub use eq_pane::{EqMode, EqPane};
 pub use file_browser_pane::FileBrowserPane;
 pub use frame_edit_pane::FrameEditPane;
 pub use generative_pane::GenerativePane;

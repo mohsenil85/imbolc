@@ -124,9 +124,20 @@ pub enum AudioCmd {
         param: String,
         value: f32,
     },
+    /// Targeted /n_set to bus EQ node (no routing rebuild).
+    SetBusEqParam {
+        bus_id: BusId,
+        param: String,
+        value: f32,
+    },
     /// Targeted /n_set to layer group EQ node (no routing rebuild).
     SetLayerGroupEqParam {
         group_id: u32,
+        param: String,
+        value: f32,
+    },
+    /// Targeted /n_set to master EQ node (no routing rebuild).
+    SetMasterEqParam {
         param: String,
         value: f32,
     },
@@ -306,8 +317,10 @@ impl AudioCmd {
                 | AudioCmd::SetEffectParam { .. }
                 | AudioCmd::SetLfoParam { .. }
                 | AudioCmd::SetBusEffectParam { .. }
+                | AudioCmd::SetBusEqParam { .. }
                 | AudioCmd::SetGroupEffectParam { .. }
                 | AudioCmd::SetLayerGroupEqParam { .. }
+                | AudioCmd::SetMasterEqParam { .. }
                 | AudioCmd::SetVstParam { .. }
                 // Playback control
                 | AudioCmd::SetPlaying { .. }

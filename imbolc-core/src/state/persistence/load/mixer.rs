@@ -64,6 +64,75 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
         session.mixer.master_mute = mute != 0;
     }
 
+    // Load master EQ
+    if table_exists(conn, "master_eq_bands")? {
+        let eq_enabled: i32 = conn
+            .query_row(
+                "SELECT eq_enabled FROM mixer_master WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        if eq_enabled != 0 {
+            let mut eq = crate::state::track::EqConfig::default();
+            let mut band_stmt = conn.prepare(
+                "SELECT band_index, freq, gain, q, enabled FROM master_eq_bands ORDER BY band_index",
+            )?;
+            let bands = band_stmt
+                .query_map([], |row| {
+                    let band_index: usize = row.get::<_, i32>(0)? as usize;
+                    let freq: f32 = row.get(1)?;
+                    let gain: f32 = row.get(2)?;
+                    let q: f32 = row.get(3)?;
+                    let enabled: bool = row.get::<_, i32>(4)? != 0;
+                    Ok((band_index, freq, gain, q, enabled))
+                })?
+                .collect::<SqlResult<Vec<_>>>()?;
+            for (band_index, freq, gain, q, enabled) in bands {
+                if band_index < eq.bands.len() {
+                    eq.bands[band_index].freq = freq;
+                    eq.bands[band_index].gain = gain;
+                    eq.bands[band_index].q = q;
+                    eq.bands[band_index].enabled = enabled;
+                }
+            }
+            session.mixer.master_eq = Some(eq);
+        }
+    }
+
+    // Load bus EQ bands
+    if table_exists(conn, "bus_eq_bands")? {
+        for bus in &mut session.mixer.buses {
+            let mut band_stmt = conn.prepare(
+                "SELECT band_index, freq, gain, q, enabled FROM bus_eq_bands WHERE bus_id = ?1 ORDER BY band_index",
+            )?;
+            let bands = band_stmt
+                .query_map([bus.id.get() as i32], |row| {
+                    let band_index: usize = row.get::<_, i32>(0)? as usize;
+                    let freq: f32 = row.get(1)?;
+                    let gain: f32 = row.get(2)?;
+                    let q: f32 = row.get(3)?;
+                    let enabled: bool = row.get::<_, i32>(4)? != 0;
+                    Ok((band_index, freq, gain, q, enabled))
+                })?
+                .collect::<SqlResult<Vec<_>>>()?;
+            if !bands.is_empty() {
+                let mut eq = crate::state::track::EqConfig::default();
+                for (band_index, freq, gain, q, enabled) in bands {
+                    if band_index < eq.bands.len() {
+                        eq.bands[band_index].freq = freq;
+                        eq.bands[band_index].gain = gain;
+                        eq.bands[band_index].q = q;
+                        eq.bands[band_index].enabled = enabled;
+                    }
+                }
+                bus.channel_strip
+                    .processing_chain
+                    .insert(0, imbolc_types::ProcessingStage::Eq(eq));
+            }
+        }
+    }
+
     Ok(())
 }
 

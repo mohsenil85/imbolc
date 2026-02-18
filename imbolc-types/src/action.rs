@@ -56,6 +56,7 @@ pub enum PaneId {
     Tuner,
     VstParams,
     Waveform,
+    MasterEq,
 }
 
 impl PaneId {
@@ -96,6 +97,7 @@ impl PaneId {
             PaneId::Tuner => "tuner",
             PaneId::VstParams => "vst_params",
             PaneId::Waveform => "waveform",
+            PaneId::MasterEq => "master_eq",
         }
     }
 
@@ -137,6 +139,7 @@ impl PaneId {
             "tuner" => Some(PaneId::Tuner),
             "vst_params" => Some(PaneId::VstParams),
             "waveform" => Some(PaneId::Waveform),
+            "master_eq" => Some(PaneId::MasterEq),
             _ => None,
         }
     }
@@ -274,6 +277,10 @@ pub enum BusAction {
     ToggleEffectBypass(BusId, EffectId),
     /// Adjust a parameter on a bus effect
     AdjustEffectParam(BusId, EffectId, ParamIndex, f32),
+    /// Toggle EQ on/off for a bus
+    ToggleEqualizer(BusId),
+    /// Set an EQ band parameter on a bus (bus_id, band_index, param, value)
+    SetEqualizerParam(BusId, usize, EqualizerParamKind, f32),
 }
 
 /// Group actions.
@@ -388,6 +395,8 @@ pub enum AudioEffect {
     SetLfoParam(TrackId, LfoParamKind, f32),
     SetBusEffectParam(BusId, EffectId, ParamIndex, f32),
     SetGroupEffectParam(u32, EffectId, ParamIndex, f32),
+    /// Set a master EQ band parameter (SC param name, value)
+    SetMasterEqParam(String, f32),
 }
 
 impl AudioEffect {
@@ -539,6 +548,10 @@ pub enum MixerAction {
     ToggleSend(BusId),
     NextSendTapPoint(BusId),
     AdjustPan(f32),
+    /// Toggle master EQ on/off
+    ToggleMasterEq,
+    /// Set master EQ band parameter (band_index, param, value)
+    SetMasterEqParam(usize, EqualizerParamKind, f32),
 }
 
 /// Session/file actions.
@@ -1311,6 +1324,7 @@ mod tests {
             PaneId::Tuner,
             PaneId::VstParams,
             PaneId::Waveform,
+            PaneId::MasterEq,
         ];
 
         for pane in all {

@@ -14,7 +14,11 @@ fn reduce(state: &mut AppState, action: &BusAction) {
 }
 
 /// Dispatch bus management actions
-pub fn dispatch_bus(action: &BusAction, state: &mut AppState) -> DispatchResult {
+pub fn dispatch_bus(
+    action: &BusAction,
+    state: &mut AppState,
+    audio: &mut AudioHandle,
+) -> DispatchResult {
     // Check bus existence before reducer for Remove (to skip audio effects on no-op)
     let bus_exists = match action {
         BusAction::Remove(bus_id) => state.session.bus(*bus_id).is_some(),
@@ -77,6 +81,24 @@ pub fn dispatch_bus(action: &BusAction, state: &mut AppState) -> DispatchResult 
                     *bus_id, *effect_id, *param_idx, value,
                 ));
             }
+        }
+
+        BusAction::ToggleEqualizer(_) => {
+            result.audio_effects.push(AudioEffect::RebuildBusProcessing);
+            result.audio_effects.push(AudioEffect::RebuildSession);
+        }
+
+        BusAction::SetEqualizerParam(bus_id, band_idx, param, value) => {
+            if audio.is_running() {
+                let sc_param = format!("b{}_{}", band_idx, param.as_str());
+                let sc_value = if *param == EqualizerParamKind::Q {
+                    1.0 / value
+                } else {
+                    *value
+                };
+                let _ = audio.set_bus_eq_param(*bus_id, &sc_param, sc_value);
+            }
+            result.audio_effects.push(AudioEffect::RebuildSession);
         }
     }
 
@@ -175,27 +197,27 @@ mod tests {
     use crate::state::SourceType;
     use imbolc_types::{BusId, OutputTarget, ParamIndex};
 
-    fn setup() -> AppState {
-        AppState::new()
+    fn setup() -> (AppState, AudioHandle) {
+        (AppState::new(), AudioHandle::new())
     }
 
     #[test]
     fn add_bus() {
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         let initial_count = state.session.mixer.buses.len();
 
-        dispatch_bus(&BusAction::Add, &mut state);
+        dispatch_bus(&BusAction::Add, &mut state, &mut audio);
 
         assert_eq!(state.session.mixer.buses.len(), initial_count + 1);
     }
 
     #[test]
     fn add_bus_creates_bus() {
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         state.add_track(SourceType::Saw);
         let initial_bus_count = state.session.mixer.buses.len();
 
-        dispatch_bus(&BusAction::Add, &mut state);
+        dispatch_bus(&BusAction::Add, &mut state, &mut audio);
 
         assert_eq!(state.session.mixer.buses.len(), initial_bus_count + 1);
         // Sends are lazily created now, so instrument sends remain empty
@@ -204,11 +226,11 @@ mod tests {
 
     #[test]
     fn remove_bus_resets_instrument_output() {
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         state.add_track(SourceType::Saw);
         state.tracks.tracks[0].channel_strip.output_target = OutputTarget::Bus(BusId::new(3));
 
-        dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state);
+        dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state, &mut audio);
 
         assert_eq!(
             state.tracks.tracks[0].channel_strip.output_target,
@@ -219,7 +241,7 @@ mod tests {
     #[test]
     fn remove_bus_disables_sends() {
         use imbolc_types::MixerSend;
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         state.add_track(SourceType::Saw);
         // Insert and enable a send to bus 3
         state.tracks.tracks[0].channel_strip.sends.insert(
@@ -232,7 +254,7 @@ mod tests {
             },
         );
 
-        dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state);
+        dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state, &mut audio);
 
         // Send should be disabled but still exist
         let send = state.tracks.tracks[0]
@@ -245,25 +267,26 @@ mod tests {
 
     #[test]
     fn remove_bus_clears_automation() {
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         state
             .session
             .automation
             .add_lane(AutomationTarget::bus_level(BusId::new(3)));
         assert!(!state.session.automation.lanes.is_empty());
 
-        dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state);
+        dispatch_bus(&BusAction::Remove(BusId::new(3)), &mut state, &mut audio);
 
         assert!(state.session.automation.lanes.is_empty());
     }
 
     #[test]
     fn rename_bus() {
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
 
         dispatch_bus(
             &BusAction::Rename(BusId::new(1), "Drums".to_string()),
             &mut state,
+            &mut audio,
         );
 
         assert_eq!(state.session.bus(BusId::new(1)).unwrap().name, "Drums");
@@ -276,10 +299,11 @@ mod tests {
     #[test]
     fn bus_add_effect_dispatch() {
         use crate::state::EffectType;
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         let result = dispatch_bus(
             &BusAction::AddEffect(BusId::new(1), EffectType::Reverb),
             &mut state,
+            &mut audio,
         );
         let bus = state.session.bus(BusId::new(1)).unwrap();
         assert_eq!(bus.channel_strip.effects_vec().len(), 1);
@@ -295,10 +319,11 @@ mod tests {
     #[test]
     fn bus_remove_effect_dispatch() {
         use crate::state::EffectType;
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         dispatch_bus(
             &BusAction::AddEffect(BusId::new(1), EffectType::Reverb),
             &mut state,
+            &mut audio,
         );
         let effect_id = state
             .session
@@ -311,6 +336,7 @@ mod tests {
         let result = dispatch_bus(
             &BusAction::RemoveEffect(BusId::new(1), effect_id),
             &mut state,
+            &mut audio,
         );
         assert!(state
             .session
@@ -327,14 +353,16 @@ mod tests {
     #[test]
     fn bus_move_effect_dispatch() {
         use crate::state::EffectType;
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         dispatch_bus(
             &BusAction::AddEffect(BusId::new(1), EffectType::Reverb),
             &mut state,
+            &mut audio,
         );
         dispatch_bus(
             &BusAction::AddEffect(BusId::new(1), EffectType::Delay),
             &mut state,
+            &mut audio,
         );
         let id0 = state
             .session
@@ -344,7 +372,11 @@ mod tests {
             .effects_vec()[0]
             .id;
 
-        dispatch_bus(&BusAction::MoveEffect(BusId::new(1), id0, 1), &mut state);
+        dispatch_bus(
+            &BusAction::MoveEffect(BusId::new(1), id0, 1),
+            &mut state,
+            &mut audio,
+        );
         let bus = state.session.bus(BusId::new(1)).unwrap();
         assert_eq!(bus.channel_strip.effects_vec()[1].id, id0);
     }
@@ -352,10 +384,11 @@ mod tests {
     #[test]
     fn bus_toggle_effect_bypass_dispatch() {
         use crate::state::EffectType;
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         dispatch_bus(
             &BusAction::AddEffect(BusId::new(1), EffectType::Reverb),
             &mut state,
+            &mut audio,
         );
         let effect_id = state
             .session
@@ -377,6 +410,7 @@ mod tests {
         dispatch_bus(
             &BusAction::ToggleEffectBypass(BusId::new(1), effect_id),
             &mut state,
+            &mut audio,
         );
         assert!(
             !state
@@ -392,10 +426,11 @@ mod tests {
     #[test]
     fn bus_adjust_effect_param_dispatch() {
         use crate::state::EffectType;
-        let mut state = setup();
+        let (mut state, mut audio) = setup();
         dispatch_bus(
             &BusAction::AddEffect(BusId::new(1), EffectType::Reverb),
             &mut state,
+            &mut audio,
         );
         let effect_id = state
             .session
@@ -420,6 +455,7 @@ mod tests {
         let result = dispatch_bus(
             &BusAction::AdjustEffectParam(BusId::new(1), effect_id, ParamIndex::new(0), 1.0),
             &mut state,
+            &mut audio,
         );
         let new_val = match &state
             .session
@@ -444,16 +480,10 @@ mod tests {
     // LayerGroup effect dispatch tests
     // ========================================================================
 
-    use imbolc_audio::AudioHandle;
-
-    fn setup_with_audio() -> (AppState, AudioHandle) {
-        (AppState::new(), AudioHandle::new())
-    }
-
     #[test]
     fn layer_group_add_effect_dispatch() {
         use crate::state::EffectType;
-        let (mut state, mut audio) = setup_with_audio();
+        let (mut state, mut audio) = setup();
         state
             .session
             .mixer
@@ -478,7 +508,7 @@ mod tests {
     #[test]
     fn layer_group_remove_effect_dispatch() {
         use crate::state::EffectType;
-        let (mut state, mut audio) = setup_with_audio();
+        let (mut state, mut audio) = setup();
         state.session.mixer.add_layer_group_mixer(1, &[]);
         state
             .session
@@ -514,7 +544,7 @@ mod tests {
     #[test]
     fn layer_group_toggle_bypass_dispatch() {
         use crate::state::EffectType;
-        let (mut state, mut audio) = setup_with_audio();
+        let (mut state, mut audio) = setup();
         state.session.mixer.add_layer_group_mixer(1, &[]);
         state
             .session
@@ -551,7 +581,7 @@ mod tests {
 
     #[test]
     fn layer_group_toggle_eq_dispatch() {
-        let (mut state, mut audio) = setup_with_audio();
+        let (mut state, mut audio) = setup();
         state.session.mixer.add_layer_group_mixer(1, &[]);
         assert!(state
             .session
@@ -586,7 +616,7 @@ mod tests {
 
     #[test]
     fn layer_group_set_eq_param_dispatch() {
-        let (mut state, mut audio) = setup_with_audio();
+        let (mut state, mut audio) = setup();
         state.session.mixer.add_layer_group_mixer(1, &[]);
 
         let result = dispatch_group(

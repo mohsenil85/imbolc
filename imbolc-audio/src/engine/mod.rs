@@ -27,6 +27,7 @@ pub const GROUP_SOURCES: i32 = 100;
 pub const GROUP_PROCESSING: i32 = 200;
 pub const GROUP_OUTPUT: i32 = 300;
 pub const GROUP_BUS_PROCESSING: i32 = 350;
+pub const GROUP_MASTER: i32 = 375;
 pub const GROUP_RECORD: i32 = 400;
 pub const GROUP_SAFETY: i32 = 999;
 
@@ -144,10 +145,14 @@ pub struct AudioEngine {
     layer_group_send_node_map: HashMap<(u32, BusId), i32>,
     /// Bus effect synth nodes: (bus_id, effect_id) -> node_id
     bus_effect_node_map: HashMap<(BusId, EffectId), i32>,
+    /// Bus EQ synth nodes: bus_id -> node_id
+    bus_eq_node_map: HashMap<BusId, i32>,
     /// Layer group effect synth nodes: (group_id, effect_id) -> node_id
     layer_group_effect_node_map: HashMap<(u32, EffectId), i32>,
     /// Layer group EQ synth nodes: group_id -> node_id
     layer_group_eq_node_map: HashMap<u32, i32>,
+    /// Master EQ synth node ID (in GROUP_MASTER)
+    master_eq_node_id: Option<i32>,
     /// Track final buses: instrument_id -> SC audio bus index (post-effects, pre-mixer)
     pub(crate) instrument_final_buses: HashMap<TrackId, i32>,
     /// Voice allocation, tracking, stealing, and control bus pooling
@@ -211,8 +216,10 @@ impl AudioEngine {
             layer_group_node_map: HashMap::new(),
             layer_group_send_node_map: HashMap::new(),
             bus_effect_node_map: HashMap::new(),
+            bus_eq_node_map: HashMap::new(),
             layer_group_effect_node_map: HashMap::new(),
             layer_group_eq_node_map: HashMap::new(),
+            master_eq_node_id: None,
             instrument_final_buses: HashMap::new(),
             voice_allocator: VoiceAllocator::new(),
             safety_node_id: None,
@@ -1343,11 +1350,12 @@ mod tests {
                 .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild routing");
             let group_count = backend.count(|op| matches!(op, TestOp::CreateGroup { .. }));
-            assert_eq!(group_count, 6, "six execution groups");
+            assert_eq!(group_count, 7, "seven execution groups");
             assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_SOURCES)).is_some());
             assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_PROCESSING)).is_some());
             assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_OUTPUT)).is_some());
             assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_BUS_PROCESSING)).is_some());
+            assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_MASTER)).is_some());
             assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_RECORD)).is_some());
             assert!(backend.find(|op| matches!(op, TestOp::CreateGroup { group_id, .. } if *group_id == GROUP_SAFETY)).is_some());
         }

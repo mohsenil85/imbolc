@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::session::MixerSelection;
-use super::track::{GroupMixer, MixerBus};
+use super::track::{EqConfig, GroupMixer, MixerBus};
 use crate::BusId;
 
 /// Maximum number of buses allowed
@@ -25,6 +25,9 @@ pub struct MixerState {
     /// Per-layer-group sub-mixers
     #[serde(default)]
     pub layer_group_mixers: Vec<GroupMixer>,
+    /// Master output EQ (None = disabled)
+    #[serde(default)]
+    pub master_eq: Option<EqConfig>,
 }
 
 impl MixerState {
@@ -45,6 +48,7 @@ impl MixerState {
             master_mute: false,
             selection: MixerSelection::default(),
             layer_group_mixers: Vec::new(),
+            master_eq: None,
         }
     }
 
@@ -175,6 +179,25 @@ impl MixerState {
     /// Check if any layer group is soloed
     pub fn any_layer_group_solo(&self) -> bool {
         self.layer_group_mixers.iter().any(|g| g.channel_strip.solo)
+    }
+
+    /// Get the master EQ config (if enabled)
+    pub fn master_eq(&self) -> Option<&EqConfig> {
+        self.master_eq.as_ref()
+    }
+
+    /// Get the master EQ config mutably (if enabled)
+    pub fn master_eq_mut(&mut self) -> Option<&mut EqConfig> {
+        self.master_eq.as_mut()
+    }
+
+    /// Toggle master EQ on/off
+    pub fn toggle_master_eq(&mut self) {
+        if self.master_eq.is_some() {
+            self.master_eq = None;
+        } else {
+            self.master_eq = Some(EqConfig::default());
+        }
     }
 
     /// Compute effective mute for a layer group, considering solo state

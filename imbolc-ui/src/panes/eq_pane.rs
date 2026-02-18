@@ -3,20 +3,43 @@ use std::any::Any;
 use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
-use imbolc_types::EqualizerParamKind;
+use crate::ui::{
+    Action, BusAction, Color, GroupAction, InputEvent, Keymap, MixerAction, Pane, Rect, RenderBuf,
+    Style, TrackAction,
+};
+use imbolc_types::{BusId, EqualizerParamKind, MixerSelection};
 
 use crate::state::track::EqBand;
 
+/// Whether the EQ pane targets the current mixer channel or always the master output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EqMode {
+    /// Follows the mixer selection (track, group, bus, or master).
+    Channel,
+    /// Always targets the master output EQ.
+    Master,
+}
+
+/// What the EQ pane is currently targeting.
+#[derive(Debug, Clone, Copy)]
+enum EqTarget {
+    Track(TrackId),
+    Group(u32),
+    Bus(BusId),
+    Master,
+}
+
 pub struct EqPane {
+    mode: EqMode,
     keymap: Keymap,
     selected_band: usize,  // 0-11
     selected_param: usize, // 0=freq, 1=gain, 2=q, 3=enabled
 }
 
 impl EqPane {
-    pub fn new(keymap: Keymap) -> Self {
+    pub fn new(mode: EqMode, keymap: Keymap) -> Self {
         Self {
+            mode,
             keymap,
             selected_band: 0,
             selected_param: 1, // default to gain
@@ -26,21 +49,82 @@ impl EqPane {
 
 impl Default for EqPane {
     fn default() -> Self {
-        Self::new(Keymap::new())
+        Self::new(EqMode::Channel, Keymap::new())
+    }
+}
+
+/// Resolve the EQ target, returning (target, eq_config, title).
+fn resolve_target(mode: EqMode, state: &AppState) -> Option<(EqTarget, Option<&EqConfig>, String)> {
+    match mode {
+        EqMode::Master => {
+            let eq = state.session.mixer.master_eq();
+            Some((EqTarget::Master, eq, "Master".to_string()))
+        }
+        EqMode::Channel => match state.session.mixer.selection {
+            MixerSelection::Track(idx) => {
+                let track = state.tracks.tracks.get(idx)?;
+                let eq = track.eq();
+                Some((EqTarget::Track(track.id), eq, track.name.clone()))
+            }
+            MixerSelection::Group(group_id) => {
+                let gm = state.session.mixer.layer_group_mixer(group_id)?;
+                let eq = gm.eq();
+                let name = gm.name.clone();
+                Some((EqTarget::Group(group_id), eq, name))
+            }
+            MixerSelection::Bus(bus_id) => {
+                let bus = state.session.bus(bus_id)?;
+                let eq = bus.channel_strip.eq();
+                Some((EqTarget::Bus(bus_id), eq, bus.name.clone()))
+            }
+            MixerSelection::Master => {
+                let eq = state.session.mixer.master_eq();
+                Some((EqTarget::Master, eq, "Master".to_string()))
+            }
+        },
+    }
+}
+
+fn make_toggle_action(target: EqTarget) -> Action {
+    match target {
+        EqTarget::Track(id) => Action::Track(TrackAction::ToggleEqualizer(id)),
+        EqTarget::Group(id) => Action::Group(GroupAction::ToggleEqualizer(id)),
+        EqTarget::Bus(id) => Action::Bus(BusAction::ToggleEqualizer(id)),
+        EqTarget::Master => Action::Mixer(MixerAction::ToggleMasterEq),
+    }
+}
+
+fn make_set_action(
+    target: EqTarget,
+    band_idx: usize,
+    param: EqualizerParamKind,
+    value: f32,
+) -> Action {
+    match target {
+        EqTarget::Track(id) => {
+            Action::Track(TrackAction::SetEqualizerParam(id, band_idx, param, value))
+        }
+        EqTarget::Group(id) => {
+            Action::Group(GroupAction::SetEqualizerParam(id, band_idx, param, value))
+        }
+        EqTarget::Bus(id) => Action::Bus(BusAction::SetEqualizerParam(id, band_idx, param, value)),
+        EqTarget::Master => Action::Mixer(MixerAction::SetMasterEqParam(band_idx, param, value)),
     }
 }
 
 impl Pane for EqPane {
     fn id(&self) -> &'static str {
-        "eq"
+        match self.mode {
+            EqMode::Channel => "eq",
+            EqMode::Master => "master_eq",
+        }
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let instrument = match state.tracks.selected_track() {
-            Some(i) => i,
+        let (target, eq, _title) = match resolve_target(self.mode, state) {
+            Some(t) => t,
             None => return Action::None,
         };
-        let instrument_id = instrument.id;
 
         match action {
             ActionId::Eq(EqActionId::PrevBand) => {
@@ -62,8 +146,8 @@ impl Pane for EqPane {
             ActionId::Eq(EqActionId::Increase)
             | ActionId::Eq(EqActionId::IncreaseBig)
             | ActionId::Eq(EqActionId::IncreaseTiny) => adjust_param(
-                instrument_id,
-                instrument.eq(),
+                target,
+                eq,
                 self.selected_band,
                 self.selected_param,
                 true,
@@ -72,26 +156,24 @@ impl Pane for EqPane {
             ActionId::Eq(EqActionId::Decrease)
             | ActionId::Eq(EqActionId::DecreaseBig)
             | ActionId::Eq(EqActionId::DecreaseTiny) => adjust_param(
-                instrument_id,
-                instrument.eq(),
+                target,
+                eq,
                 self.selected_band,
                 self.selected_param,
                 false,
                 action,
             ),
-            ActionId::Eq(EqActionId::ToggleEq) => {
-                Action::Track(TrackAction::ToggleEqualizer(instrument_id))
-            }
+            ActionId::Eq(EqActionId::ToggleEq) => make_toggle_action(target),
             ActionId::Eq(EqActionId::ToggleBand) => {
-                if let Some(eq) = instrument.eq() {
+                if let Some(eq) = eq {
                     let band = &eq.bands[self.selected_band];
                     let new_val = if band.enabled { 0.0 } else { 1.0 };
-                    Action::Track(TrackAction::SetEqualizerParam(
-                        instrument_id,
+                    make_set_action(
+                        target,
                         self.selected_band,
                         EqualizerParamKind::Enabled,
                         new_val,
-                    ))
+                    )
                 } else {
                     Action::None
                 }
@@ -103,25 +185,27 @@ impl Pane for EqPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let rect = center_rect(area, 78, 24);
 
-        let instrument = state.tracks.selected_track();
-        let title = match instrument {
-            Some(i) => format!(" EQ: {} ", i.name),
-            None => " EQ: (none) ".to_string(),
+        let (target_name, eq) = match resolve_target(self.mode, state) {
+            Some((_target, eq, name)) => (name, eq),
+            None => {
+                let border_color = Color::new(100, 180, 255);
+                let border_style = Style::new().fg(border_color);
+                let inner = buf.draw_block(rect, " EQ: (none) ", border_style, border_style);
+                render_centered_text(inner, buf, "(no target selected)", Color::DARK_GRAY);
+                return;
+            }
+        };
+
+        let title = match self.mode {
+            EqMode::Channel => format!(" Channel EQ: {} ", target_name),
+            EqMode::Master => format!(" Master EQ: {} ", target_name),
         };
 
         let border_color = Color::new(100, 180, 255);
         let border_style = Style::new().fg(border_color);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
-        let instrument = match instrument {
-            Some(i) => i,
-            None => {
-                render_centered_text(inner, buf, "(no track selected)", Color::DARK_GRAY);
-                return;
-            }
-        };
-
-        let eq = match instrument.eq() {
+        let eq = match eq {
             Some(eq) => eq,
             None => {
                 render_centered_text(inner, buf, "EQ off — press 'e' to enable", Color::DARK_GRAY);
@@ -209,7 +293,7 @@ fn render_centered_text(area: Rect, buf: &mut RenderBuf, text: &str, color: Colo
 }
 
 fn adjust_param(
-    instrument_id: TrackId,
+    target: EqTarget,
     eq: Option<&EqConfig>,
     band_idx: usize,
     param_idx: usize,
@@ -263,12 +347,7 @@ fn adjust_param(
         (current - delta).max(min)
     };
 
-    Action::Track(TrackAction::SetEqualizerParam(
-        instrument_id,
-        band_idx,
-        param,
-        new_val,
-    ))
+    make_set_action(target, band_idx, param, new_val)
 }
 
 /// Compute biquad magnitude response at a given frequency for one EQ band.

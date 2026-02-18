@@ -857,7 +857,7 @@ pub(crate) fn handle_global_action(
                                     crate::ui::status_bar::StatusLevel::Info,
                                 ),
                                 Err(err) => app_frame.status_bar.push(
-                                    &format!("Stopped playback (node already finished: {})", err),
+                                    format!("Stopped playback (node already finished: {})", err),
                                     crate::ui::status_bar::StatusLevel::Info,
                                 ),
                             }
@@ -918,7 +918,7 @@ pub(crate) fn handle_global_action(
                                         rec.preview_duration_secs = None;
                                         rec.preview_start_norm = None;
                                         app_frame.status_bar.push(
-                                            &format!("Failed to load recording: {}", err),
+                                            format!("Failed to load recording: {}", err),
                                             crate::ui::status_bar::StatusLevel::Info,
                                         );
                                         return GlobalResult::Handled;
@@ -960,7 +960,7 @@ pub(crate) fn handle_global_action(
                                 rec.preview_duration_secs = None;
                                 rec.preview_start_norm = None;
                                 app_frame.status_bar.push(
-                                    &format!("Failed to play recording: {}", err),
+                                    format!("Failed to play recording: {}", err),
                                     crate::ui::status_bar::StatusLevel::Info,
                                 );
                             }

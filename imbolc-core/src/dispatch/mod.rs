@@ -89,7 +89,7 @@ pub fn dispatch_action(
         DomainAction::SampleSlicer(a) => sequencer::dispatch_sample_slicer(a, state, audio),
         DomainAction::Automation(a) => automation::dispatch_automation(a, state, audio),
         DomainAction::Midi(a) => midi::dispatch_midi(a, state),
-        DomainAction::Bus(a) => bus::dispatch_bus(a, state),
+        DomainAction::Bus(a) => bus::dispatch_bus(a, state, audio),
         DomainAction::Group(a) => bus::dispatch_group(a, state, audio),
         DomainAction::VstParam(a) => vst_param::dispatch_vst_param(a, state, audio),
         DomainAction::Click(a) => dispatch_click(a, state, audio),

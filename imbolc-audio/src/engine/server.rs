@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 
 use super::backend::{AudioBackend, RawArg, ScBackend};
 use super::{
-    AudioEngine, ServerStatus, GROUP_BUS_PROCESSING, GROUP_OUTPUT, GROUP_PROCESSING, GROUP_RECORD,
-    GROUP_SAFETY, GROUP_SOURCES,
+    AudioEngine, ServerStatus, GROUP_BUS_PROCESSING, GROUP_MASTER, GROUP_OUTPUT, GROUP_PROCESSING,
+    GROUP_RECORD, GROUP_SAFETY, GROUP_SOURCES,
 };
 use crate::osc_client::{AudioMonitor, OscClient};
 use regex::Regex;
@@ -655,6 +655,9 @@ impl AudioEngine {
             .map_err(|e| e.to_string())?;
         backend
             .create_group(GROUP_BUS_PROCESSING, 1, 0)
+            .map_err(|e| e.to_string())?;
+        backend
+            .create_group(GROUP_MASTER, 1, 0)
             .map_err(|e| e.to_string())?;
         backend
             .create_group(GROUP_RECORD, 1, 0)

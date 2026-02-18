@@ -21,7 +21,7 @@ use std::fs::File;
 
 use panes::{
     AddEffectPane, AddPane, ArpeggiatorPane, AutomationPane, CheckpointListPane, CommandLinePane,
-    CommandPalettePane, ConfirmPane, DocsPane, EqPane, FileBrowserPane, FrameEditPane,
+    CommandPalettePane, ConfirmPane, DocsPane, EqMode, EqPane, FileBrowserPane, FrameEditPane,
     GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PaneSwitcherPane,
     PianoRollPane, ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane,
     ServerPane, TagPickerPane, TagViewPane, TrackEditPane, TrackListPane, TrackPane,
@@ -198,7 +198,9 @@ pub(crate) fn register_all_panes(
         keymaps,
         "automation",
     ))));
-    panes.add_pane(Box::new(EqPane::new(pane_keymap(keymaps, "eq"))));
+    let eq_keymap = pane_keymap(keymaps, "eq");
+    panes.add_pane(Box::new(EqPane::new(EqMode::Channel, eq_keymap.clone())));
+    panes.add_pane(Box::new(EqPane::new(EqMode::Master, eq_keymap)));
     panes.add_pane(Box::new(GroovePane::new(pane_keymap(keymaps, "groove"))));
     panes.add_pane(Box::new(ArpeggiatorPane::new(pane_keymap(
         keymaps,

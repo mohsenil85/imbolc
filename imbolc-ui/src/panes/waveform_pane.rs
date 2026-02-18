@@ -133,6 +133,7 @@ impl DotRaster {
         self.dots[y * self.dot_width + x]
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn char_pattern(&self, char_col: usize, char_row: usize) -> u8 {
         let mut pattern: u8 = 0;
         for dx in 0..2 {

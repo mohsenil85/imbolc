@@ -1,4 +1,4 @@
-use crate::action::{AudioEffect, DispatchResult, MixerAction};
+use crate::action::{AudioEffect, DispatchResult, EqualizerParamKind, MixerAction};
 use crate::dispatch::helpers::{
     apply_bus_update, apply_layer_group_update, maybe_record_automation,
 };
@@ -224,6 +224,24 @@ pub(super) fn dispatch_mixer(
             }
             _ => {}
         },
+
+        MixerAction::ToggleMasterEq => {
+            result.audio_effects.push(AudioEffect::RebuildBusProcessing);
+            result.audio_effects.push(AudioEffect::RebuildSession);
+        }
+
+        MixerAction::SetMasterEqParam(_band_idx, param, value) => {
+            if audio.is_running() {
+                let sc_param = format!("b{}_{}", _band_idx, param.as_str());
+                let sc_value = if *param == EqualizerParamKind::Q {
+                    1.0 / value
+                } else {
+                    *value
+                };
+                let _ = audio.set_master_eq_param(&sc_param, sc_value);
+            }
+            result.audio_effects.push(AudioEffect::RebuildSession);
+        }
 
         MixerAction::AdjustPan(_delta) => match selection {
             MixerSelection::Track(idx) => {

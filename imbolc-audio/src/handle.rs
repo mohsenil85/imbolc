@@ -960,6 +960,14 @@ impl AudioHandle {
         })
     }
 
+    pub fn set_bus_eq_param(&self, bus_id: BusId, param: &str, value: f32) -> Result<(), String> {
+        self.send_cmd(AudioCmd::SetBusEqParam {
+            bus_id,
+            param: param.to_string(),
+            value,
+        })
+    }
+
     pub fn set_layer_group_eq_param(
         &self,
         group_id: u32,
@@ -968,6 +976,13 @@ impl AudioHandle {
     ) -> Result<(), String> {
         self.send_cmd(AudioCmd::SetLayerGroupEqParam {
             group_id,
+            param: param.to_string(),
+            value,
+        })
+    }
+
+    pub fn set_master_eq_param(&self, param: &str, value: f32) -> Result<(), String> {
+        self.send_cmd(AudioCmd::SetMasterEqParam {
             param: param.to_string(),
             value,
         })

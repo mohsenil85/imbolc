@@ -264,7 +264,26 @@ CREATE TABLE IF NOT EXISTS mixer_buses (
 CREATE TABLE IF NOT EXISTS mixer_master (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     level REAL NOT NULL,
-    mute INTEGER NOT NULL
+    mute INTEGER NOT NULL,
+    eq_enabled INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS master_eq_bands (
+    band_index INTEGER PRIMARY KEY,
+    freq REAL NOT NULL,
+    gain REAL NOT NULL,
+    q REAL NOT NULL,
+    enabled INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bus_eq_bands (
+    bus_id INTEGER NOT NULL,
+    band_index INTEGER NOT NULL,
+    freq REAL NOT NULL,
+    gain REAL NOT NULL,
+    q REAL NOT NULL,
+    enabled INTEGER NOT NULL,
+    PRIMARY KEY (bus_id, band_index)
 );
 
 CREATE TABLE IF NOT EXISTS layer_group_mixers (
