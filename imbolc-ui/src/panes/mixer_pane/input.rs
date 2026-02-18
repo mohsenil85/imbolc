@@ -130,6 +130,9 @@ impl MixerPane {
                 }
                 Action::None
             }
+            ActionId::Mixer(MixerActionId::OpenMasterEq) => {
+                Action::Nav(NavAction::SwitchPane(PaneId::MasterEq))
+            }
             _ => Action::None,
         }
     }

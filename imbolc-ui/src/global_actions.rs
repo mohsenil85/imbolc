@@ -100,22 +100,13 @@ pub(crate) fn sync_piano_roll_to_selection(
             if active == "piano_roll" || active == "sequencer" || active == "waveform" {
                 let target = if is_audio_in || is_bus_in {
                     NavPaneId::Waveform
+                } else if is_kit {
+                    NavPaneId::Sequencer
                 } else {
                     NavPaneId::PianoRoll
                 };
                 if active != target.as_str() {
                     panes.switch_to(target, dispatcher.state());
-                }
-                // Set view mode on piano roll when instrument type changes
-                if target == NavPaneId::PianoRoll {
-                    if let Some(pr_pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
-                        use crate::panes::ViewMode;
-                        if is_kit {
-                            pr_pane.set_view_mode(ViewMode::StepSequencer);
-                        } else {
-                            pr_pane.set_view_mode(ViewMode::NoteEditor);
-                        }
-                    }
                 }
             }
         }
@@ -513,28 +504,23 @@ pub(crate) fn handle_global_action(
                 );
             }
             GlobalActionId::SwitchPianoRollOrSequencer => {
-                let (target, is_kit) =
-                    if let Some(inst) = dispatcher.state().tracks.selected_track() {
-                        if inst.source.is_audio_input() || inst.source.is_bus_in() {
-                            (NavPaneId::Waveform, false)
+                let target = if let Some(inst) = dispatcher.state().tracks.selected_track() {
+                    if inst.source.is_audio_input() || inst.source.is_bus_in() {
+                        NavPaneId::Waveform
+                    } else if inst.source.is_kit() {
+                        // Kit: cycle between Sequencer and PianoRoll
+                        if panes.active().id() == "sequencer" {
+                            NavPaneId::PianoRoll
                         } else {
-                            (NavPaneId::PianoRoll, inst.source.is_kit())
+                            NavPaneId::Sequencer
                         }
                     } else {
-                        (NavPaneId::PianoRoll, false)
-                    };
-                switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
-                // Set view mode after switching
-                if target == NavPaneId::PianoRoll {
-                    if let Some(pr_pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
-                        use crate::panes::ViewMode;
-                        if is_kit {
-                            pr_pane.set_view_mode(ViewMode::StepSequencer);
-                        } else {
-                            pr_pane.set_view_mode(ViewMode::NoteEditor);
-                        }
+                        NavPaneId::PianoRoll
                     }
-                }
+                } else {
+                    NavPaneId::PianoRoll
+                };
+                switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
             }
             GlobalActionId::SwitchPane(NavPaneId::Track) => {
                 switch_to_pane(

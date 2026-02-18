@@ -3,7 +3,7 @@ use super::TrackEditPane;
 use crate::state::{AppState, FilterConfig, FilterType, TrackSection};
 use crate::ui::action_id::{ActionId, ModeActionId, TrackEditActionId};
 use crate::ui::{
-    translate_key, Action, FileSelectAction, InputEvent, KeyCode, PaneId, SessionAction,
+    translate_key, Action, FileSelectAction, InputEvent, KeyCode, NavAction, PaneId, SessionAction,
     TrackAction,
 };
 use imbolc_types::ProcessingStage;
@@ -436,6 +436,7 @@ impl TrackEditPane {
                 }
                 self.emit_update()
             }
+            TrackEditActionId::OpenEq => Action::Nav(NavAction::SwitchPane(PaneId::Eq)),
             TrackEditActionId::ToggleLfo => {
                 self.lfo.enabled = !self.lfo.enabled;
                 self.emit_update()

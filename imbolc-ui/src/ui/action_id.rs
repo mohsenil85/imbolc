@@ -273,6 +273,7 @@ define_action_enum! {
         ToggleEffectBypass => "toggle_effect_bypass",
         Done => "done",
         TagParam => "tag_param",
+        OpenEq => "open_eq",
     }
 }
 
@@ -312,6 +313,7 @@ define_action_enum! {
         ClearSend => "clear_send",
         Increase => "increase",
         Decrease => "decrease",
+        OpenMasterEq => "open_master_eq",
     }
 }
 
@@ -349,9 +351,6 @@ define_action_enum! {
         RenderToWav => "render_to_wav",
         BounceToWav => "bounce_to_wav",
         ExportStems => "export_stems",
-        ToggleViewMode => "toggle_view_mode",
-        NextPatternLength => "cycle_pattern_length",
-        NextStepResolution => "cycle_step_resolution",
     }
 }
 
@@ -1087,6 +1086,7 @@ mod tests {
             TrackEditActionId::ToggleEffectBypass,
             TrackEditActionId::Done,
             TrackEditActionId::TagParam,
+            TrackEditActionId::OpenEq,
         ];
 
         for action in actions {
@@ -1132,6 +1132,7 @@ mod tests {
             MixerActionId::ClearSend,
             MixerActionId::Increase,
             MixerActionId::Decrease,
+            MixerActionId::OpenMasterEq,
         ];
 
         for action in actions {
