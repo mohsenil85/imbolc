@@ -1,6 +1,7 @@
 use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{Color, Rect, RenderBuf, Style};
+use imbolc_types::state::piano_roll::Note;
 
 use super::PianoRollPane;
 
@@ -163,6 +164,12 @@ impl PianoRollPane {
             .height
             .saturating_sub(header_height + footer_height + 1);
 
+        // Compute virtual notes for Kit tracks
+        let is_kit = self.is_kit_track(state);
+        let virtual_notes: Option<Vec<Note>> = self
+            .current_drum_sequencer(state)
+            .map(|seq| seq.to_virtual_notes());
+
         // Border
         let track_label = if let Some(ref ctx) = state.session.arrangement.editing_clip {
             let clip_name = state
@@ -172,6 +179,12 @@ impl PianoRollPane {
                 .map(|c| c.name.as_str())
                 .unwrap_or("?");
             format!(" Piano Roll - Editing: {} ", clip_name)
+        } else if is_kit {
+            format!(
+                " Piano Roll: Kit [{}/{}] (read-only) ",
+                self.current_track + 1,
+                piano_roll.sequence_order.len(),
+            )
         } else if let Some(seq) = piano_roll.sequence_at(self.current_track) {
             let mode = if seq.polyphonic { "POLY" } else { "MONO" };
             format!(
@@ -184,7 +197,11 @@ impl PianoRollPane {
         } else {
             " Piano Roll: (no tracks) ".to_string()
         };
-        let border_style = Style::new().fg(Color::PINK);
+        let border_style = if is_kit {
+            Style::new().fg(Color::ORANGE)
+        } else {
+            Style::new().fg(Color::PINK)
+        };
         buf.draw_block(rect, &track_label, border_style, border_style);
 
         // Header: transport info
@@ -266,6 +283,23 @@ impl PianoRollPane {
             );
         }
 
+        // For Kit tracks, get pad info for key labels
+        let kit_info: Option<(u8, Vec<String>)> = self.current_drum_sequencer(state).map(|seq| {
+            let base = seq.midi_base_note;
+            let pad_names: Vec<String> = seq
+                .pads
+                .iter()
+                .map(|p| {
+                    if p.name.is_empty() {
+                        String::new()
+                    } else {
+                        p.name.chars().take(3).collect()
+                    }
+                })
+                .collect();
+            (base, pad_names)
+        });
+
         // Piano keys column + grid rows
         for row in 0..grid_height {
             let pitch = self
@@ -276,11 +310,27 @@ impl PianoRollPane {
             }
             let y = grid_y + row;
 
-            // Piano key label
-            let name = note_name(pitch);
+            // Piano key label (pad name for Kit tracks, note name otherwise)
+            let (name, is_pad_row) = if let Some((base, ref pad_names)) = kit_info {
+                if pitch >= base && (pitch - base) < pad_names.len() as u8 {
+                    let pad_idx = (pitch - base) as usize;
+                    let pname = &pad_names[pad_idx];
+                    if pname.is_empty() {
+                        (format!("P{}", pad_idx + 1), true)
+                    } else {
+                        (pname.clone(), true)
+                    }
+                } else {
+                    (note_name(pitch), false)
+                }
+            } else {
+                (note_name(pitch), false)
+            };
             let is_black = is_black_key(pitch);
             let key_style = if pitch == self.cursor_pitch {
                 Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+            } else if is_pad_row {
+                Style::new().fg(Color::ORANGE)
             } else if is_black {
                 Style::new().fg(Color::GRAY)
             } else {
@@ -304,16 +354,22 @@ impl PianoRollPane {
                 let tick = self.view_start_tick + col as u32 * self.ticks_per_cell();
                 let x = grid_x + col;
 
-                let has_note = piano_roll
-                    .sequence_at(self.current_track)
-                    .is_some_and(|track| {
-                        track.notes.iter().any(|n| {
-                            n.pitch == pitch && tick >= n.tick && tick < n.tick + n.duration
-                        })
-                    });
-
-                let is_note_start =
-                    piano_roll
+                // Note lookup: virtual notes for Kit, piano roll notes otherwise
+                let (has_note, is_note_start) = if let Some(ref notes) = virtual_notes {
+                    let has = notes
+                        .iter()
+                        .any(|n| n.pitch == pitch && tick >= n.tick && tick < n.tick + n.duration);
+                    let start = notes.iter().any(|n| n.pitch == pitch && n.tick == tick);
+                    (has, start)
+                } else {
+                    let has = piano_roll
+                        .sequence_at(self.current_track)
+                        .is_some_and(|track| {
+                            track.notes.iter().any(|n| {
+                                n.pitch == pitch && tick >= n.tick && tick < n.tick + n.duration
+                            })
+                        });
+                    let start = piano_roll
                         .sequence_at(self.current_track)
                         .is_some_and(|track| {
                             track
@@ -321,6 +377,8 @@ impl PianoRollPane {
                                 .iter()
                                 .any(|n| n.pitch == pitch && n.tick == tick)
                         });
+                    (has, start)
+                };
 
                 let is_cursor = pitch == self.cursor_pitch && tick == self.cursor_tick;
                 let is_playhead = state.audio.playing
@@ -348,6 +406,13 @@ impl PianoRollPane {
                             tick >= t0 && tick < t1 && pitch >= p0 && pitch <= p1
                         });
 
+                // Note colors: orange for Kit, pink/magenta for normal
+                let (note_start_color, note_body_color) = if is_kit {
+                    (Color::ORANGE, Color::new(200, 130, 0))
+                } else {
+                    (Color::PINK, Color::MAGENTA)
+                };
+
                 let (ch, style) = if is_cursor {
                     if has_note {
                         ('█', Style::new().fg(Color::BLACK).bg(Color::WHITE))
@@ -365,9 +430,9 @@ impl PianoRollPane {
                     ('░', Style::new().fg(Color::new(60, 30, 80)))
                 } else if has_note {
                     if is_note_start {
-                        ('█', Style::new().fg(Color::PINK))
+                        ('█', Style::new().fg(note_start_color))
                     } else {
-                        ('█', Style::new().fg(Color::MAGENTA))
+                        ('█', Style::new().fg(note_body_color))
                     }
                 } else if is_playhead {
                     ('│', Style::new().fg(Color::GREEN))
@@ -407,7 +472,13 @@ impl PianoRollPane {
 
         // Status line
         let status_y = footer_y + 1;
-        let vel_str = if let Some((anchor_tick, anchor_pitch)) = self.selection_anchor {
+        let vel_str = if is_kit {
+            format!(
+                "Kit (read-only)  Note:{} Tick:{}",
+                note_name(self.cursor_pitch),
+                self.cursor_tick,
+            )
+        } else if let Some((anchor_tick, anchor_pitch)) = self.selection_anchor {
             let t_diff = (self.cursor_tick as i64 - anchor_tick as i64).unsigned_abs() as u32
                 + self.ticks_per_cell();
             let p_diff = (self.cursor_pitch as i16 - anchor_pitch as i16).abs() + 1;

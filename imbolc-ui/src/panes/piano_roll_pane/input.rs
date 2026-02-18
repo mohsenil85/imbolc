@@ -106,6 +106,36 @@ impl PianoRollPane {
         _event: &InputEvent,
         state: &AppState,
     ) -> Action {
+        // Kit tracks are read-only — block edit actions
+        if self.is_kit_track(state) {
+            match action {
+                // Allow navigation and view actions
+                ActionId::PianoRoll(
+                    PianoRollActionId::Up
+                    | PianoRollActionId::Down
+                    | PianoRollActionId::Left
+                    | PianoRollActionId::Right
+                    | PianoRollActionId::OctaveUp
+                    | PianoRollActionId::OctaveDown
+                    | PianoRollActionId::Home
+                    | PianoRollActionId::End
+                    | PianoRollActionId::ZoomIn
+                    | PianoRollActionId::ZoomOut
+                    | PianoRollActionId::TogglePlayback
+                    | PianoRollActionId::Loop
+                    | PianoRollActionId::LoopStart
+                    | PianoRollActionId::LoopEnd
+                    | PianoRollActionId::ToggleAutomation
+                    | PianoRollActionId::AutomationLanePrev
+                    | PianoRollActionId::AutomationLaneNext
+                    | PianoRollActionId::BounceToWav
+                    | PianoRollActionId::ExportStems,
+                ) => {} // fall through to normal handling
+                // Block all edit actions
+                _ => return Action::None,
+            }
+        }
+
         match action {
             ActionId::PianoRoll(PianoRollActionId::Up) => {
                 self.selection_anchor = None;
@@ -305,12 +335,12 @@ impl PianoRollPane {
         &mut self,
         event: &MouseEvent,
         area: Rect,
-        _state: &AppState,
+        state: &AppState,
     ) -> Action {
-        self.handle_mouse_note_editor(event, area)
+        self.handle_mouse_note_editor(event, area, self.is_kit_track(state))
     }
 
-    fn handle_mouse_note_editor(&mut self, event: &MouseEvent, area: Rect) -> Action {
+    fn handle_mouse_note_editor(&mut self, event: &MouseEvent, area: Rect, is_kit: bool) -> Action {
         let rect = center_rect(area, 97, 29);
         let key_col_width: u16 = 5;
         let header_height: u16 = 2;
@@ -343,13 +373,15 @@ impl PianoRollPane {
                     if pitch <= 127 {
                         self.cursor_pitch = pitch;
                         self.cursor_tick = tick;
-                        return Action::PianoRoll(PianoRollAction::ToggleNote {
-                            pitch,
-                            tick,
-                            duration: self.default_duration,
-                            velocity: self.default_velocity,
-                            track: self.current_track,
-                        });
+                        if !is_kit {
+                            return Action::PianoRoll(PianoRollAction::ToggleNote {
+                                pitch,
+                                tick,
+                                duration: self.default_duration,
+                                velocity: self.default_velocity,
+                                track: self.current_track,
+                            });
+                        }
                     }
                 }
                 if col >= rect.x && col < grid_x && row >= grid_y && row < grid_y + grid_height {

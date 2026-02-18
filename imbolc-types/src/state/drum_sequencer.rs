@@ -1,5 +1,6 @@
 //! Drum sequencer types.
 
+use super::piano_roll::Note;
 use super::sampler::Slice;
 use crate::TrackId;
 use crate::{BufferId, SliceId};
@@ -233,6 +234,32 @@ impl DrumSequencerState {
     pub fn pattern_mut(&mut self) -> &mut DrumPattern {
         &mut self.patterns[self.current_pattern]
     }
+
+    /// Convert the current pattern's active steps to virtual `Note` values
+    /// for read-only display in the piano roll.
+    pub fn to_virtual_notes(&self) -> Vec<Note> {
+        let pattern = self.pattern();
+        let tps = self.step_resolution.ticks_per_step();
+        let mut notes = Vec::new();
+        for (pad_idx, pad_steps) in pattern.steps.iter().enumerate() {
+            let pitch = self.midi_base_note.saturating_add(pad_idx as u8);
+            if pitch > 127 {
+                continue;
+            }
+            for (step_idx, step) in pad_steps.iter().enumerate() {
+                if step.active {
+                    notes.push(Note {
+                        tick: step_idx as u32 * tps,
+                        duration: tps,
+                        pitch,
+                        velocity: step.velocity,
+                        probability: step.probability,
+                    });
+                }
+            }
+        }
+        notes
+    }
 }
 
 impl Default for DrumSequencerState {
@@ -409,5 +436,79 @@ mod tests {
         assert_eq!(result.len(), 3);
         // Clamped to 3 pulses in 3 steps = all true
         assert!(result.iter().all(|&v| v));
+    }
+
+    #[test]
+    fn to_virtual_notes_empty_pattern() {
+        let seq = DrumSequencerState::new();
+        let notes = seq.to_virtual_notes();
+        assert!(notes.is_empty());
+    }
+
+    #[test]
+    fn to_virtual_notes_single_step() {
+        let mut seq = DrumSequencerState::new();
+        seq.pattern_mut().steps[0][0].active = true;
+        seq.pattern_mut().steps[0][0].velocity = 110;
+        let notes = seq.to_virtual_notes();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].pitch, 36); // midi_base_note + pad 0
+        assert_eq!(notes[0].tick, 0);
+        assert_eq!(notes[0].duration, 120); // sixteenth = 120 ticks
+        assert_eq!(notes[0].velocity, 110);
+    }
+
+    #[test]
+    fn to_virtual_notes_multiple_pads_and_steps() {
+        let mut seq = DrumSequencerState::new();
+        seq.pattern_mut().steps[0][0].active = true; // pad 0, step 0
+        seq.pattern_mut().steps[2][4].active = true; // pad 2, step 4
+        seq.pattern_mut().steps[11][15].active = true; // pad 11, step 15
+        let notes = seq.to_virtual_notes();
+        assert_eq!(notes.len(), 3);
+        // pad 0: pitch 36, tick 0
+        assert_eq!(notes[0].pitch, 36);
+        assert_eq!(notes[0].tick, 0);
+        // pad 2: pitch 38, tick 480
+        assert_eq!(notes[1].pitch, 38);
+        assert_eq!(notes[1].tick, 480);
+        // pad 11: pitch 47, tick 1800
+        assert_eq!(notes[2].pitch, 47);
+        assert_eq!(notes[2].tick, 1800);
+    }
+
+    #[test]
+    fn to_virtual_notes_respects_step_resolution() {
+        let mut seq = DrumSequencerState::new();
+        seq.step_resolution = StepResolution::Eighth;
+        seq.pattern_mut().steps[0][1].active = true;
+        let notes = seq.to_virtual_notes();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].tick, 240); // eighth = 240 ticks per step
+        assert_eq!(notes[0].duration, 240);
+    }
+
+    #[test]
+    fn to_virtual_notes_respects_midi_base_note() {
+        let mut seq = DrumSequencerState::new();
+        seq.midi_base_note = 48; // C3
+        seq.pattern_mut().steps[3][0].active = true;
+        let notes = seq.to_virtual_notes();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].pitch, 51); // 48 + 3
+    }
+
+    #[test]
+    fn to_virtual_notes_uses_current_pattern() {
+        let mut seq = DrumSequencerState::new();
+        seq.pattern_mut().steps[0][0].active = true;
+        seq.current_pattern = 1;
+        seq.pattern_mut().steps[0][0].active = true;
+        seq.pattern_mut().steps[1][0].active = true;
+        // Pattern 1 has 2 notes
+        assert_eq!(seq.to_virtual_notes().len(), 2);
+        // Switch back to pattern 0
+        seq.current_pattern = 0;
+        assert_eq!(seq.to_virtual_notes().len(), 1);
     }
 }

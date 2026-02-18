@@ -11,6 +11,7 @@ use crate::ui::{
     Action, InputEvent, Keymap, MouseEvent, Pane, PaneIdStr, PianoKeyboard, PianoRollAction, Rect,
     RenderBuf, ToggleResult,
 };
+use imbolc_types::state::drum_sequencer::{DrumSequencerState, NUM_PADS};
 use imbolc_types::TrackId;
 
 pub struct PianoRollPane {
@@ -153,6 +154,24 @@ impl PianoRollPane {
         }
     }
 
+    /// Returns the drum sequencer state if the current track is a Kit.
+    pub(crate) fn current_drum_sequencer<'a>(
+        &self,
+        state: &'a AppState,
+    ) -> Option<&'a DrumSequencerState> {
+        let inst_id = state
+            .session
+            .piano_roll
+            .sequence_order
+            .get(self.current_track)?;
+        state.tracks.track(*inst_id)?.drum_sequencer()
+    }
+
+    /// Returns true if the current track is a Kit (drum sequencer) track.
+    pub(crate) fn is_kit_track(&self, state: &AppState) -> bool {
+        self.current_drum_sequencer(state).is_some()
+    }
+
     /// Center the view vertically on the current piano octave
     fn center_view_on_piano_octave(&mut self) {
         // Piano octave base note: octave 4 = C4 = MIDI 60
@@ -192,6 +211,23 @@ impl Pane for PianoRollPane {
                     self.current_track = track_idx;
                 }
             }
+        }
+        // For Kit tracks, center view on the drum pad pitch range
+        if let Some(seq) = self.current_drum_sequencer(state) {
+            let base = seq.midi_base_note;
+            // Center the pad range vertically
+            let mid = base.saturating_add((NUM_PADS as u8) / 2);
+            self.view_bottom_pitch = mid.saturating_sub(12);
+            self.cursor_pitch = base;
+            self.cursor_tick = 0;
+            // Set zoom to match step resolution
+            self.zoom_level = match seq.step_resolution.ticks_per_step() {
+                480 => 5, // quarter: widest
+                240 => 4, // eighth
+                120 => 3, // sixteenth (default)
+                60 => 2,  // thirty-second
+                _ => 3,
+            };
         }
     }
 

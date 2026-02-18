@@ -1145,6 +1145,9 @@ fn copy_from_active_pane(
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
+                if pane.is_kit_track(dispatcher.state()) {
+                    return;
+                }
                 let (track, start_tick, end_tick, start_pitch, end_pitch) = pane.selection_region();
                 dispatch_side_effect_free(
                     dispatcher,
@@ -1206,6 +1209,9 @@ fn cut_from_active_pane(
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
+                if pane.is_kit_track(dispatcher.state()) {
+                    return None;
+                }
                 if let Some((anchor_tick, anchor_pitch)) = pane.selection_anchor {
                     let (tick_start, tick_end) = if anchor_tick <= pane.cursor_tick {
                         (anchor_tick, pane.cursor_tick + pane.ticks_per_cell())
@@ -1287,6 +1293,9 @@ fn paste_to_active_pane(state: &mut AppState, panes: &mut PaneManager) -> Option
             ClipboardContents::PianoRollNotes(notes) => {
                 if panes.active().id().0 == "piano_roll" {
                     if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
+                        if pane.is_kit_track(state) {
+                            return None;
+                        }
                         // anchor is cursor position
                         let action = DomainAction::PianoRoll(PianoRollAction::PasteNotes {
                             track: pane.current_track,
@@ -1338,6 +1347,9 @@ fn select_all_in_active_pane(state: &mut AppState, panes: &mut PaneManager) {
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
+                if pane.is_kit_track(state) {
+                    return;
+                }
                 if let Some(seq) = state.session.piano_roll.sequence_at(pane.current_track) {
                     if let Some(min_tick) = seq.notes.iter().map(|n| n.tick).min() {
                         let max_tick = seq
