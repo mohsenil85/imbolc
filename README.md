@@ -21,6 +21,20 @@ Imbolc is a complete music studio that runs right in your terminal. Write beats,
 2. Compile SynthDefs: `imbolc-core/bin/compile-synthdefs`
 3. Run: `cargo run -p imbolc-ui --release`
 
+## Press the buttons
+
+- F1 - Create instruments and groups
+- F2 - Edit patterns
+- F3 - Track View
+- F4 - Mixer
+- F12 - Server settings
+- ? - Show keybindings
+- : - Invoke
+- ; - Pane Switcher
+- ^P - Repl
+- ^M - Midi settings
+- ^Q - Quit
+
 ## Documentation
 
 - [Documentation](docs/README.md)
