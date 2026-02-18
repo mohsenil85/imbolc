@@ -55,6 +55,14 @@ pub(super) fn reduce(
         }
         // RequestFileBrowser: navigation only
         SessionAction::RequestFileBrowser(_) => true,
+        // Runtime waveform import/editing is handled by dispatch/session.rs.
+        SessionAction::LoadWaveformFileResult(_)
+        | SessionAction::DeleteWaveformSelection { .. }
+        | SessionAction::TrimWaveformSelection { .. }
+        | SessionAction::RenameWaveformClip(_)
+        | SessionAction::CreatePitchedSamplerFromWaveformSelection { .. }
+        | SessionAction::CreateTimeStretchFromWaveformSelection { .. }
+        | SessionAction::OpenWaveformSelectionInChopper { .. } => false,
         // File I/O actions: not reducible
         SessionAction::Save
         | SessionAction::SaveAs(_)

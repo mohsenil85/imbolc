@@ -499,6 +499,18 @@ bindings = [
 [layers.waveform]
 bindings = [
   { key = "Tab", action = "cycle_mode", description = "Cycle display mode", hint = "mode" },
+  { key = "l", action = "load_sample", description = "Load WAV file", hint = "load" },
+  { key = "Left", action = "left", description = "Move cursor left" },
+  { key = "Right", action = "right", description = "Move cursor right" },
+  { key = "Shift+Left", action = "jump_left", description = "Jump to previous peak" },
+  { key = "Shift+Right", action = "jump_right", description = "Jump to first sound / next peak" },
+  { key = "Ctrl+Space", action = "toggle_select", description = "Toggle selection mode", hint = "select" },
+  { key = "Delete", action = "delete_selection", description = "Delete selection" },
+  { key = "t", action = "trim_selection", description = "Trim to selection", hint = "trim" },
+  { key = "n", action = "rename_clip", description = "Rename clip", hint = "rename" },
+  { key = "p", action = "create_pitched_sampler", description = "Create pitched sampler from selection", hint = "pitched" },
+  { key = "s", action = "create_timestretch_sampler", description = "Create time-stretch sampler from selection", hint = "stretch" },
+  { key = "c", action = "open_in_chopper", description = "Open selection in sample chopper", hint = "chopper" },
 ]
 
 [layers.midi_settings]

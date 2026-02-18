@@ -508,6 +508,11 @@ pub fn is_undoable(action: &DomainAction) -> bool {
                 | SessionAction::LoadFrom(_)
                 | SessionAction::NewProject
                 | SessionAction::RequestFileBrowser(_)
+                | SessionAction::LoadWaveformFileResult(_)
+                | SessionAction::RenameWaveformClip(_)
+                | SessionAction::CreatePitchedSamplerFromWaveformSelection { .. }
+                | SessionAction::CreateTimeStretchFromWaveformSelection { .. }
+                | SessionAction::OpenWaveformSelectionInChopper { .. }
         ),
         DomainAction::Sequencer(a) => !matches!(
             a,

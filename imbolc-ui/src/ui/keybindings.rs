@@ -83,6 +83,7 @@ fn parse_key(s: &str) -> Option<KeyPattern> {
 /// Returns `None` for unrecognised key names.
 fn parse_named_key(s: &str) -> Option<KeyCode> {
     match s {
+        "Space" => Some(KeyCode::Char(' ')),
         "Up" => Some(KeyCode::Up),
         "Down" => Some(KeyCode::Down),
         "Left" => Some(KeyCode::Left),
@@ -222,6 +223,10 @@ mod tests {
     fn test_parse_key_modifiers() {
         assert_eq!(parse_key("Ctrl+s"), Some(KeyPattern::Ctrl('s')));
         assert_eq!(parse_key("Alt+x"), Some(KeyPattern::Alt('x')));
+        assert_eq!(
+            parse_key("Ctrl+Space"),
+            Some(KeyPattern::CtrlKey(KeyCode::Char(' ')))
+        );
         assert_eq!(
             parse_key("Ctrl+Left"),
             Some(KeyPattern::CtrlKey(KeyCode::Left))

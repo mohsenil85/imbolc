@@ -352,7 +352,10 @@ impl AudioThread {
             | RegisterActiveNote { .. }
             | ClearActiveNotes
             | ReleaseAllVoices
-            | PlayDrumHit { .. } => self.handle_voice_cmd(cmd),
+            | PlayDrumHit { .. }
+            | PlayDrumHitWithReply { .. }
+            | PlaySamplePreviewWithReply { .. }
+            | FreeNode { .. } => self.handle_voice_cmd(cmd),
 
             // Sample & recording
             LoadSample { .. }
@@ -875,6 +878,49 @@ impl AudioThread {
                     rate,
                     offset_secs,
                 );
+            }
+            AudioCmd::PlayDrumHitWithReply {
+                buffer_id,
+                amp,
+                instrument_id,
+                slice_start,
+                slice_end,
+                rate,
+                offset_secs,
+                reply,
+            } => {
+                let result = self.engine.play_drum_hit_to_instrument_with_node(
+                    buffer_id,
+                    amp,
+                    instrument_id,
+                    slice_start,
+                    slice_end,
+                    rate,
+                    offset_secs,
+                );
+                let _ = reply.send(result);
+            }
+            AudioCmd::PlaySamplePreviewWithReply {
+                buffer_id,
+                amp,
+                slice_start,
+                slice_end,
+                rate,
+                offset_secs,
+                reply,
+            } => {
+                let result = self.engine.play_sample_preview_with_node(
+                    buffer_id,
+                    amp,
+                    slice_start,
+                    slice_end,
+                    rate,
+                    offset_secs,
+                );
+                let _ = reply.send(result);
+            }
+            AudioCmd::FreeNode { node_id } => {
+                let _ = self.engine.free_node(node_id);
             }
             _ => {}
         }

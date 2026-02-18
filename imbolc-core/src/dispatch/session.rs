@@ -1,6 +1,6 @@
 use crate::action::{AudioEffect, DispatchResult, IoFeedback, NavIntent, PaneId, SessionAction};
 use crate::scd_parser;
-use crate::state::{AppState, CustomSynthDef, ParamSpec};
+use crate::state::{AppState, CustomSynthDef, ParamSpec, Slice, SourceType, TrackId};
 use imbolc_audio::AudioHandle;
 use imbolc_types::DomainAction;
 use std::path::PathBuf;
@@ -90,6 +90,77 @@ fn dispatch_load(
     result.push_status(audio.status(), "Loading...");
 }
 
+fn add_sampler_track_from_file(
+    state: &mut AppState,
+    audio: &mut AudioHandle,
+    source_type: SourceType,
+    sample_path: &std::path::Path,
+) -> Result<TrackId, String> {
+    let track_id = state.add_track(source_type);
+    let path_str = sample_path.to_string_lossy().to_string();
+    let sample_name = sample_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string());
+
+    let buffer_id = state.tracks.next_sampler_buffer_id;
+    state.tracks.next_sampler_buffer_id += 1;
+
+    if audio.is_running() {
+        let _ = audio.load_sample(buffer_id, &path_str);
+    }
+
+    if let Some(track) = state.tracks.track_mut(track_id) {
+        if let Some(config) = track.sampler_config_mut() {
+            config.buffer_id = Some(buffer_id);
+            config.sample_name = sample_name.clone();
+        }
+        if let Some(name) = sample_name {
+            track.name = name;
+        }
+    }
+
+    Ok(track_id)
+}
+
+fn add_chopper_track_from_file(
+    state: &mut AppState,
+    audio: &mut AudioHandle,
+    sample_path: &std::path::Path,
+) -> Result<TrackId, String> {
+    let path_str = sample_path.to_string_lossy().to_string();
+    let name = sample_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "chop".to_string());
+    let (peaks, duration_secs) = super::helpers::compute_waveform_peaks(&path_str);
+
+    let track_id = state.add_track(SourceType::Kit);
+    let buffer_id = state.tracks.next_sampler_buffer_id;
+    state.tracks.next_sampler_buffer_id += 1;
+
+    if audio.is_running() {
+        let _ = audio.load_sample(buffer_id, &path_str);
+    }
+
+    if let Some(track) = state.tracks.track_mut(track_id) {
+        track.name = format!("{}-kit", name);
+        if let Some(seq) = track.drum_sequencer_mut() {
+            seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
+                buffer_id: Some(buffer_id),
+                path: Some(path_str),
+                name,
+                slices: vec![Slice::full(0)],
+                selected_slice: 0,
+                next_slice_id: 1,
+                waveform_peaks: peaks,
+                duration_secs,
+            });
+        }
+    }
+
+    Ok(track_id)
+}
+
 pub(super) fn dispatch_session(
     action: &SessionAction,
     state: &mut AppState,
@@ -163,6 +234,296 @@ pub(super) fn dispatch_session(
                 &mut state.session,
             );
             result.push_nav(NavIntent::OpenFileBrowser(file_action.clone()));
+        }
+        SessionAction::LoadWaveformFileResult(ref path) => {
+            if !path.exists() {
+                result.push_status(audio.status(), "Waveform file not found");
+                result.push_nav(NavIntent::PopOrSwitchTo(PaneId::Waveform));
+                return result;
+            }
+
+            let path_str = path.to_string_lossy().to_string();
+            let (peaks, duration_secs) = super::helpers::compute_waveform_peaks(&path_str);
+
+            state.recording.last_recording_path = Some(path.clone());
+            state.recording.last_recording_duration_secs = Some(duration_secs);
+            state.recording.last_recording_name = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string());
+            state.recording.pending_recording_path = None;
+            state.recording.append_target_path = None;
+            if let Some(node_id) = state.recording.preview_node_id.take() {
+                let _ = audio.free_node(node_id);
+            }
+            state.recording.preview_started_at = None;
+            state.recording.preview_duration_secs = None;
+            state.recording.preview_start_norm = None;
+
+            if let Some(old_preview) = state.recording.preview_buffer_id.take() {
+                audio.free_samples(vec![old_preview]);
+            }
+            if audio.is_running() {
+                let preview_buffer_id = state.tracks.next_sampler_buffer_id;
+                state.tracks.next_sampler_buffer_id += 1;
+                match audio.load_sample(preview_buffer_id, &path_str) {
+                    Ok(_) => {
+                        state.recording.preview_buffer_id = Some(preview_buffer_id);
+                    }
+                    Err(err) => {
+                        state.recording.preview_buffer_id = None;
+                        result.push_status(
+                            imbolc_audio::ServerStatus::Error,
+                            format!("Failed to preload WAV preview: {}", err),
+                        );
+                    }
+                }
+            } else {
+                state.recording.preview_buffer_id = None;
+            }
+
+            if peaks.is_empty() {
+                state.recorded_waveform_peaks = None;
+                result.push_status(audio.status(), "Loaded WAV, but waveform is empty");
+            } else {
+                state.recorded_waveform_peaks = Some(peaks);
+                result.push_status(audio.status(), format!("Loaded WAV: {}", path.display()));
+            }
+            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::Waveform));
+        }
+        SessionAction::DeleteWaveformSelection { start, end } => {
+            let Some(path) = state.recording.last_recording_path.clone() else {
+                result.push_status(audio.status(), "No waveform loaded");
+                return result;
+            };
+            if !path.exists() {
+                result.push_status(audio.status(), "Waveform file not found");
+                return result;
+            }
+
+            match super::helpers::edit_wav_file_selection(&path, *start, *end, false) {
+                Ok(()) => {
+                    let path_str = path.to_string_lossy().to_string();
+                    let (peaks, duration_secs) = super::helpers::compute_waveform_peaks(&path_str);
+                    state.recording.last_recording_duration_secs = Some(duration_secs);
+                    state.recording.pending_recording_path = None;
+                    state.recording.append_target_path = None;
+                    if let Some(node_id) = state.recording.preview_node_id.take() {
+                        let _ = audio.free_node(node_id);
+                    }
+                    state.recording.preview_started_at = None;
+                    state.recording.preview_duration_secs = None;
+                    state.recording.preview_start_norm = None;
+
+                    if let Some(old_preview) = state.recording.preview_buffer_id.take() {
+                        audio.free_samples(vec![old_preview]);
+                    }
+                    if audio.is_running() {
+                        let preview_buffer_id = state.tracks.next_sampler_buffer_id;
+                        state.tracks.next_sampler_buffer_id += 1;
+                        if audio.load_sample(preview_buffer_id, &path_str).is_ok() {
+                            state.recording.preview_buffer_id = Some(preview_buffer_id);
+                        }
+                    }
+                    state.recorded_waveform_peaks =
+                        if peaks.is_empty() { None } else { Some(peaks) };
+                    result.push_status(audio.status(), "Deleted waveform selection");
+                }
+                Err(err) => {
+                    result.push_status(
+                        imbolc_audio::ServerStatus::Error,
+                        format!("Delete failed: {}", err),
+                    );
+                }
+            }
+        }
+        SessionAction::TrimWaveformSelection { start, end } => {
+            let Some(path) = state.recording.last_recording_path.clone() else {
+                result.push_status(audio.status(), "No waveform loaded");
+                return result;
+            };
+            if !path.exists() {
+                result.push_status(audio.status(), "Waveform file not found");
+                return result;
+            }
+
+            match super::helpers::edit_wav_file_selection(&path, *start, *end, true) {
+                Ok(()) => {
+                    let path_str = path.to_string_lossy().to_string();
+                    let (peaks, duration_secs) = super::helpers::compute_waveform_peaks(&path_str);
+                    state.recording.last_recording_duration_secs = Some(duration_secs);
+                    state.recording.pending_recording_path = None;
+                    state.recording.append_target_path = None;
+                    if let Some(node_id) = state.recording.preview_node_id.take() {
+                        let _ = audio.free_node(node_id);
+                    }
+                    state.recording.preview_started_at = None;
+                    state.recording.preview_duration_secs = None;
+                    state.recording.preview_start_norm = None;
+
+                    if let Some(old_preview) = state.recording.preview_buffer_id.take() {
+                        audio.free_samples(vec![old_preview]);
+                    }
+                    if audio.is_running() {
+                        let preview_buffer_id = state.tracks.next_sampler_buffer_id;
+                        state.tracks.next_sampler_buffer_id += 1;
+                        if audio.load_sample(preview_buffer_id, &path_str).is_ok() {
+                            state.recording.preview_buffer_id = Some(preview_buffer_id);
+                        }
+                    }
+                    state.recorded_waveform_peaks =
+                        if peaks.is_empty() { None } else { Some(peaks) };
+                    result.push_status(audio.status(), "Trimmed waveform to selection");
+                }
+                Err(err) => {
+                    result.push_status(
+                        imbolc_audio::ServerStatus::Error,
+                        format!("Trim failed: {}", err),
+                    );
+                }
+            }
+        }
+        SessionAction::RenameWaveformClip(ref name) => {
+            let trimmed = name.trim();
+            if trimmed.is_empty() {
+                result.push_status(audio.status(), "Clip name cannot be empty");
+            } else {
+                state.recording.last_recording_name = Some(trimmed.to_string());
+                result.push_status(audio.status(), format!("Renamed clip: {}", trimmed));
+            }
+        }
+        SessionAction::CreatePitchedSamplerFromWaveformSelection { start, end } => {
+            let Some(path) = state.recording.last_recording_path.clone() else {
+                result.push_status(audio.status(), "No waveform loaded");
+                return result;
+            };
+            if !path.exists() {
+                result.push_status(audio.status(), "Waveform file not found");
+                return result;
+            }
+            match super::helpers::extract_wav_selection_to_temp(&path, *start, *end, "pitched") {
+                Ok(extracted) => match add_sampler_track_from_file(
+                    state,
+                    audio,
+                    SourceType::PitchedSampler,
+                    &extracted,
+                ) {
+                    Ok(track_id) => {
+                        result.audio_effects.push(AudioEffect::RebuildInstruments);
+                        result.audio_effects.push(AudioEffect::UpdatePianoRoll);
+                        result
+                            .audio_effects
+                            .push(AudioEffect::AddInstrumentRouting(track_id));
+                        result.push_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit));
+                        result.push_status(
+                            audio.status(),
+                            format!(
+                                "Created pitched sampler from selection: {}",
+                                extracted.display()
+                            ),
+                        );
+                    }
+                    Err(err) => {
+                        result.push_status(
+                            imbolc_audio::ServerStatus::Error,
+                            format!("Failed to create pitched sampler: {}", err),
+                        );
+                    }
+                },
+                Err(err) => {
+                    result.push_status(
+                        imbolc_audio::ServerStatus::Error,
+                        format!("Failed to extract selection: {}", err),
+                    );
+                }
+            }
+        }
+        SessionAction::CreateTimeStretchFromWaveformSelection { start, end } => {
+            let Some(path) = state.recording.last_recording_path.clone() else {
+                result.push_status(audio.status(), "No waveform loaded");
+                return result;
+            };
+            if !path.exists() {
+                result.push_status(audio.status(), "Waveform file not found");
+                return result;
+            }
+            match super::helpers::extract_wav_selection_to_temp(&path, *start, *end, "stretch") {
+                Ok(extracted) => match add_sampler_track_from_file(
+                    state,
+                    audio,
+                    SourceType::TimeStretch,
+                    &extracted,
+                ) {
+                    Ok(track_id) => {
+                        result.audio_effects.push(AudioEffect::RebuildInstruments);
+                        result.audio_effects.push(AudioEffect::UpdatePianoRoll);
+                        result
+                            .audio_effects
+                            .push(AudioEffect::AddInstrumentRouting(track_id));
+                        result.push_nav(NavIntent::SwitchTo(PaneId::InstrumentEdit));
+                        result.push_status(
+                            audio.status(),
+                            format!(
+                                "Created time-stretch sampler from selection: {}",
+                                extracted.display()
+                            ),
+                        );
+                    }
+                    Err(err) => {
+                        result.push_status(
+                            imbolc_audio::ServerStatus::Error,
+                            format!("Failed to create time-stretch sampler: {}", err),
+                        );
+                    }
+                },
+                Err(err) => {
+                    result.push_status(
+                        imbolc_audio::ServerStatus::Error,
+                        format!("Failed to extract selection: {}", err),
+                    );
+                }
+            }
+        }
+        SessionAction::OpenWaveformSelectionInChopper { start, end } => {
+            let Some(path) = state.recording.last_recording_path.clone() else {
+                result.push_status(audio.status(), "No waveform loaded");
+                return result;
+            };
+            if !path.exists() {
+                result.push_status(audio.status(), "Waveform file not found");
+                return result;
+            }
+            match super::helpers::extract_wav_selection_to_temp(&path, *start, *end, "chop") {
+                Ok(extracted) => match add_chopper_track_from_file(state, audio, &extracted) {
+                    Ok(track_id) => {
+                        result.audio_effects.push(AudioEffect::RebuildInstruments);
+                        result.audio_effects.push(AudioEffect::UpdatePianoRoll);
+                        result
+                            .audio_effects
+                            .push(AudioEffect::AddInstrumentRouting(track_id));
+                        result.push_nav(NavIntent::PushTo(PaneId::SampleSlicer));
+                        result.push_status(
+                            audio.status(),
+                            format!(
+                                "Opened selection in sample chopper: {}",
+                                extracted.display()
+                            ),
+                        );
+                    }
+                    Err(err) => {
+                        result.push_status(
+                            imbolc_audio::ServerStatus::Error,
+                            format!("Failed to open in chopper: {}", err),
+                        );
+                    }
+                },
+                Err(err) => {
+                    result.push_status(
+                        imbolc_audio::ServerStatus::Error,
+                        format!("Failed to extract selection: {}", err),
+                    );
+                }
+            }
         }
         SessionAction::ImportCustomSynthDef(ref path) => {
             let path = path.clone();

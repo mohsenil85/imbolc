@@ -65,8 +65,10 @@ pub(super) fn dispatch_server(
         }
         ServerAction::ToggleRecordMaster => {
             if audio.is_recording() {
-                // Stop recording — path comes back via AudioFeedback::RecordingStopped
-                let _ = audio.stop_recording();
+                // Stop recording and mark path for post-flush waveform load.
+                if let Some(path) = audio.stop_recording() {
+                    state.recording.pending_recording_path = Some(path);
+                }
 
                 // Auto-deactivate AudioIn instrument on stop
                 if let Some(inst) = state.tracks.selected_track_mut() {
@@ -76,9 +78,13 @@ pub(super) fn dispatch_server(
                         result.audio_effects.push(AudioEffect::RebuildRouting);
                     }
                 }
-                // Don't set pending_recording_path here — AudioFeedback::RecordingStopped handles it
                 result.push_status(audio.status(), "Stopping recording...");
             } else if audio.is_running() {
+                if state.recording.pending_recording_path.is_some() {
+                    result.push_status(audio.status(), "Finalizing previous recording...");
+                    return result;
+                }
+                state.recorded_waveform_peaks = None;
                 // Auto-activate AudioIn instrument on start
                 if let Some(inst) = state.tracks.selected_track_mut() {
                     if inst.source.is_audio_input() && !inst.channel_strip.active {
@@ -87,9 +93,58 @@ pub(super) fn dispatch_server(
                         result.audio_effects.push(AudioEffect::RebuildRouting);
                     }
                 }
-                let path = super::recording_path("master");
-                let _ = audio.start_recording(0, &path);
-                result.push_status(audio.status(), format!("Recording to {}", path.display()));
+
+                // Free any previous preview buffer so it doesn't leak.
+                if let Some(buffer_id) = state.recording.preview_buffer_id.take() {
+                    audio.free_samples(vec![buffer_id]);
+                }
+                // Stop any active preview playback before recording.
+                if let Some(node_id) = state.recording.preview_node_id.take() {
+                    let _ = audio.free_node(node_id);
+                }
+                state.recording.preview_started_at = None;
+                state.recording.preview_duration_secs = None;
+                state.recording.preview_start_norm = None;
+
+                // Ctrl+r after a completed take appends into the previous file.
+                let append_target = state
+                    .recording
+                    .last_recording_path
+                    .clone()
+                    .filter(|p| p.exists());
+                let path = if append_target.is_some() {
+                    super::recording_path("master_append")
+                } else {
+                    super::recording_path("master")
+                };
+                state.recording.append_target_path = append_target.clone();
+
+                match audio.start_recording(0, &path) {
+                    Ok(()) => {
+                        if let Some(target) = append_target {
+                            result.push_status(
+                                audio.status(),
+                                format!(
+                                    "Appending to {} (recording segment {})",
+                                    target.display(),
+                                    path.display()
+                                ),
+                            );
+                        } else {
+                            result.push_status(
+                                audio.status(),
+                                format!("Recording to {}", path.display()),
+                            );
+                        }
+                    }
+                    Err(err) => {
+                        state.recording.append_target_path = None;
+                        result.push_status(
+                            imbolc_audio::ServerStatus::Error,
+                            format!("Failed to start recording: {}", err),
+                        );
+                    }
+                }
             } else {
                 result.push_status(
                     imbolc_audio::ServerStatus::Stopped,
@@ -99,8 +154,9 @@ pub(super) fn dispatch_server(
         }
         ServerAction::ToggleRecordInput => {
             if audio.is_recording() {
-                // Stop recording — path comes back via AudioFeedback::RecordingStopped
-                let _ = audio.stop_recording();
+                if let Some(path) = audio.stop_recording() {
+                    state.recording.pending_recording_path = Some(path);
+                }
 
                 // Auto-deactivate AudioIn instrument on stop
                 if let Some(inst) = state.tracks.selected_track_mut() {
@@ -110,10 +166,14 @@ pub(super) fn dispatch_server(
                         result.audio_effects.push(AudioEffect::RebuildRouting);
                     }
                 }
-                // Don't set pending_recording_path here — AudioFeedback::RecordingStopped handles it
                 result.push_status(audio.status(), "Stopping recording...");
             } else if audio.is_running() {
                 // Record from the selected instrument's source_out bus
+                if state.recording.pending_recording_path.is_some() {
+                    result.push_status(audio.status(), "Finalizing previous recording...");
+                    return result;
+                }
+                state.recording.append_target_path = None;
                 if let Some(inst) = state.tracks.selected_track() {
                     let inst_id = inst.id;
                     // Auto-activate AudioIn instrument on start

@@ -91,7 +91,53 @@ pub fn dispatch_audio_feedback(
         },
         AudioFeedback::PendingBufferFreed => {
             if let Some(path) = state.recording.pending_recording_path.take() {
-                let (peaks, _) = super::helpers::compute_waveform_peaks(&path.to_string_lossy());
+                // Append segment into previous take if requested.
+                let final_path = if let Some(target) = state.recording.append_target_path.take() {
+                    match super::helpers::append_wav_files(&target, &path) {
+                        Ok(()) => target,
+                        Err(err) => {
+                            result.push_status(
+                                audio.status(),
+                                format!("Append failed (using latest take): {}", err),
+                            );
+                            path.clone()
+                        }
+                    }
+                } else {
+                    path.clone()
+                };
+
+                let (peaks, duration_secs) =
+                    super::helpers::compute_waveform_peaks(&final_path.to_string_lossy());
+                state.recording.last_recording_path = Some(final_path.clone());
+                state.recording.last_recording_duration_secs = Some(duration_secs);
+                state.recording.last_recording_name = final_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string());
+                // Preload recording preview buffer so Space playback can trigger reliably.
+                if let Some(old_preview) = state.recording.preview_buffer_id.take() {
+                    audio.free_samples(vec![old_preview]);
+                }
+                if audio.is_running() {
+                    let preview_buffer_id = state.tracks.next_sampler_buffer_id;
+                    state.tracks.next_sampler_buffer_id += 1;
+                    let path_str = final_path.to_string_lossy().to_string();
+                    match audio.load_sample(preview_buffer_id, &path_str) {
+                        Ok(_) => {
+                            state.recording.preview_buffer_id = Some(preview_buffer_id);
+                        }
+                        Err(err) => {
+                            result.push_status(
+                                audio.status(),
+                                format!("Failed to preload recording preview: {}", err),
+                            );
+                            state.recording.preview_buffer_id = None;
+                        }
+                    }
+                } else {
+                    state.recording.preview_buffer_id = None;
+                }
                 if !peaks.is_empty() {
                     state.recorded_waveform_peaks = Some(peaks);
                     result.push_nav(NavIntent::SwitchTo(PaneId::Waveform));

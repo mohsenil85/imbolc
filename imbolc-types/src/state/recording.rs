@@ -2,6 +2,7 @@ use crate::TrackId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::time::Instant;
 
 /// Runtime recording state.
 /// Tracks audio recording status and automation recording mode.
@@ -19,6 +20,33 @@ pub struct RecordingState {
     /// Path to a recently stopped recording, pending waveform load
     #[serde(skip)]
     pub pending_recording_path: Option<PathBuf>,
+    /// Most recently completed recording path (used for waveform playback/append).
+    #[serde(skip)]
+    pub last_recording_path: Option<PathBuf>,
+    /// Duration of the last completed recording, in seconds.
+    #[serde(skip)]
+    pub last_recording_duration_secs: Option<f32>,
+    /// Display name for the last loaded/recorded waveform clip.
+    #[serde(skip)]
+    pub last_recording_name: Option<String>,
+    /// If set, the just-stopped recording should be appended into this target WAV.
+    #[serde(skip)]
+    pub append_target_path: Option<PathBuf>,
+    /// Temporary preview buffer for playback inside the waveform pane.
+    #[serde(skip)]
+    pub preview_buffer_id: Option<u32>,
+    /// Active preview node ID (if waveform playback is currently running).
+    #[serde(skip)]
+    pub preview_node_id: Option<i32>,
+    /// Wall-clock start time of the current preview playback.
+    #[serde(skip)]
+    pub preview_started_at: Option<Instant>,
+    /// Expected preview duration in seconds.
+    #[serde(skip)]
+    pub preview_duration_secs: Option<f32>,
+    /// Normalized start position (0..1) for current preview playback.
+    #[serde(skip)]
+    pub preview_start_norm: Option<f32>,
     /// Tracks armed for recording (instrument IDs)
     #[serde(skip)]
     pub armed_tracks: HashSet<TrackId>,
@@ -93,5 +121,14 @@ mod tests {
         assert!(!state.automation_recording);
         assert_eq!(state.recording_secs, 0);
         assert!(state.pending_recording_path.is_none());
+        assert!(state.last_recording_path.is_none());
+        assert!(state.last_recording_duration_secs.is_none());
+        assert!(state.last_recording_name.is_none());
+        assert!(state.append_target_path.is_none());
+        assert!(state.preview_buffer_id.is_none());
+        assert!(state.preview_node_id.is_none());
+        assert!(state.preview_started_at.is_none());
+        assert!(state.preview_duration_secs.is_none());
+        assert!(state.preview_start_norm.is_none());
     }
 }

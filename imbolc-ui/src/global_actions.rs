@@ -7,7 +7,7 @@ use crate::dispatch::LocalDispatcher;
 use crate::panes::{
     AutomationPane, CommandPalettePane, ConfirmPane, DocsPane, FileBrowserPane, FrameEditPane,
     HelpPane, PaneSwitcherPane, PendingAction, PianoRollPane, SaveAsPane, SequencerPane,
-    ServerPane, TrackEditPane, TrackListPane, VstParamPane,
+    ServerPane, TrackEditPane, TrackListPane, VstParamPane, WaveformPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -209,6 +209,9 @@ pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &
                 .is_some_and(|p| p.is_editing_scsynth_args()),
             "instrument" => panes
                 .get_pane_mut::<TrackListPane>("instrument")
+                .is_some_and(|p| p.is_editing()),
+            "waveform" => panes
+                .get_pane_mut::<WaveformPane>("waveform")
                 .is_some_and(|p| p.is_editing()),
             _ => false,
         };
@@ -793,6 +796,179 @@ pub(crate) fn handle_global_action(
                 layer_stack.push("pane_switcher");
             }
             GlobalActionId::TogglePlayback => {
+                if panes.active().id() == "waveform" {
+                    // In waveform view, Space acts on recording first.
+                    if audio.is_recording() {
+                        let mut r = dispatcher.dispatch_domain(
+                            &DomainAction::Server(ui::ServerAction::ToggleRecordMaster),
+                            audio,
+                        );
+                        if r.needs_full_sync {
+                            *needs_full_sync = true;
+                        }
+                        pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
+                        apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
+                        return GlobalResult::Handled;
+                    }
+
+                    // Wait until disk buffer flush completes before allowing preview.
+                    if dispatcher
+                        .state()
+                        .recording
+                        .pending_recording_path
+                        .is_some()
+                    {
+                        app_frame.status_bar.push(
+                            "Finalizing recording...",
+                            crate::ui::status_bar::StatusLevel::Info,
+                        );
+                        return GlobalResult::Handled;
+                    }
+
+                    // After recording, Space toggles preview playback of the last recording.
+                    if let Some(path) = dispatcher.state().recording.last_recording_path.clone() {
+                        // Auto-clear stale preview flags once expected playback duration elapsed.
+                        {
+                            let rec = &mut dispatcher.state_mut().recording;
+                            if let (Some(started), Some(duration)) =
+                                (rec.preview_started_at, rec.preview_duration_secs)
+                            {
+                                if started.elapsed().as_secs_f32() >= duration.max(0.0) {
+                                    rec.preview_node_id = None;
+                                    rec.preview_started_at = None;
+                                    rec.preview_duration_secs = None;
+                                    rec.preview_start_norm = None;
+                                }
+                            }
+                        }
+
+                        // If preview is currently active, Space stops it.
+                        if let Some(node_id) = dispatcher.state().recording.preview_node_id {
+                            let stop_result = audio.free_node(node_id);
+                            let rec = &mut dispatcher.state_mut().recording;
+                            rec.preview_node_id = None;
+                            rec.preview_started_at = None;
+                            rec.preview_duration_secs = None;
+                            rec.preview_start_norm = None;
+
+                            match stop_result {
+                                Ok(()) => app_frame.status_bar.push(
+                                    "Stopped recording playback",
+                                    crate::ui::status_bar::StatusLevel::Info,
+                                ),
+                                Err(err) => app_frame.status_bar.push(
+                                    &format!("Stopped playback (node already finished: {})", err),
+                                    crate::ui::status_bar::StatusLevel::Info,
+                                ),
+                            }
+                            return GlobalResult::Handled;
+                        }
+
+                        if !audio.is_running() {
+                            app_frame.status_bar.push(
+                                "Audio engine not running",
+                                crate::ui::status_bar::StatusLevel::Info,
+                            );
+                            return GlobalResult::Handled;
+                        }
+                        if !path.exists() {
+                            app_frame.status_bar.push(
+                                "Recording file not found",
+                                crate::ui::status_bar::StatusLevel::Info,
+                            );
+                            return GlobalResult::Handled;
+                        }
+
+                        let cursor_start_norm = if let Some(waveform) =
+                            panes.get_pane_mut::<WaveformPane>("waveform")
+                        {
+                            waveform.playback_start_norm(dispatcher.state())
+                        } else {
+                            0.0
+                        };
+
+                        let total_duration_secs = dispatcher
+                            .state()
+                            .recording
+                            .last_recording_duration_secs
+                            .unwrap_or(0.0)
+                            .max(0.0);
+                        let preview_duration_secs =
+                            (total_duration_secs * (1.0 - cursor_start_norm)).max(0.0);
+
+                        let buffer_id =
+                            if let Some(id) = dispatcher.state().recording.preview_buffer_id {
+                                id
+                            } else {
+                                let id = {
+                                    let state = dispatcher.state_mut();
+                                    let id = state.tracks.next_sampler_buffer_id;
+                                    state.tracks.next_sampler_buffer_id += 1;
+                                    state.recording.preview_buffer_id = Some(id);
+                                    id
+                                };
+                                let path_str = path.to_string_lossy().to_string();
+                                match audio.load_sample(id, &path_str) {
+                                    Ok(_) => id,
+                                    Err(err) => {
+                                        let rec = &mut dispatcher.state_mut().recording;
+                                        rec.preview_buffer_id = None;
+                                        rec.preview_node_id = None;
+                                        rec.preview_started_at = None;
+                                        rec.preview_duration_secs = None;
+                                        rec.preview_start_norm = None;
+                                        app_frame.status_bar.push(
+                                            &format!("Failed to load recording: {}", err),
+                                            crate::ui::status_bar::StatusLevel::Info,
+                                        );
+                                        return GlobalResult::Handled;
+                                    }
+                                }
+                            };
+
+                        {
+                            let rec = &mut dispatcher.state_mut().recording;
+                            rec.preview_node_id = None;
+                            rec.preview_started_at = None;
+                            rec.preview_duration_secs = None;
+                            rec.preview_start_norm = None;
+                        }
+
+                        match audio.play_sample_preview_with_node(
+                            buffer_id,
+                            1.0,
+                            cursor_start_norm,
+                            1.0,
+                            1.0,
+                            0.0,
+                        ) {
+                            Ok(node_id) => {
+                                let rec = &mut dispatcher.state_mut().recording;
+                                rec.preview_node_id = Some(node_id);
+                                rec.preview_started_at = Some(std::time::Instant::now());
+                                rec.preview_duration_secs = Some(preview_duration_secs.max(0.01));
+                                rec.preview_start_norm = Some(cursor_start_norm);
+                                app_frame.status_bar.push(
+                                    "Playing recording (Space to stop)",
+                                    crate::ui::status_bar::StatusLevel::Info,
+                                );
+                            }
+                            Err(err) => {
+                                let rec = &mut dispatcher.state_mut().recording;
+                                rec.preview_node_id = None;
+                                rec.preview_started_at = None;
+                                rec.preview_duration_secs = None;
+                                rec.preview_start_norm = None;
+                                app_frame.status_bar.push(
+                                    &format!("Failed to play recording: {}", err),
+                                    crate::ui::status_bar::StatusLevel::Info,
+                                );
+                            }
+                        }
+                        return GlobalResult::Handled;
+                    }
+                }
+
                 // Skip during export/render
                 if dispatcher.state().io.pending_export.is_some()
                     || dispatcher.state().io.pending_render.is_some()

@@ -742,6 +742,18 @@ define_action_enum! {
     /// Waveform layer actions
     pub enum WaveformActionId {
         CycleMode => "cycle_mode",
+        LoadSample => "load_sample",
+        Left => "left",
+        Right => "right",
+        JumpLeft => "jump_left",
+        JumpRight => "jump_right",
+        ToggleSelect => "toggle_select",
+        DeleteSelection => "delete_selection",
+        TrimSelection => "trim_selection",
+        RenameClip => "rename_clip",
+        CreatePitchedSampler => "create_pitched_sampler",
+        CreateTimeStretchSampler => "create_timestretch_sampler",
+        OpenInChopper => "open_in_chopper",
     }
 }
 

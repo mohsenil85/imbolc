@@ -327,6 +327,7 @@ pub enum FileSelectAction {
     LoadDrumSample(usize), // pad index
     LoadSlicerSample,
     LoadPitchedSample(TrackId),
+    LoadWaveformFile,
     LoadImpulseResponse(TrackId, EffectId), // instrument_id, effect_id
     ImportProject,
 }
@@ -551,6 +552,28 @@ pub enum SessionAction {
     SetSession(MusicalSettings),
     SetSessionLive(MusicalSettings),
     RequestFileBrowser(FileSelectAction),
+    LoadWaveformFileResult(PathBuf),
+    DeleteWaveformSelection {
+        start: f32,
+        end: f32,
+    },
+    TrimWaveformSelection {
+        start: f32,
+        end: f32,
+    },
+    RenameWaveformClip(String),
+    CreatePitchedSamplerFromWaveformSelection {
+        start: f32,
+        end: f32,
+    },
+    CreateTimeStretchFromWaveformSelection {
+        start: f32,
+        end: f32,
+    },
+    OpenWaveformSelectionInChopper {
+        start: f32,
+        end: f32,
+    },
     ImportCustomSynthDef(PathBuf),
     ImportVstPlugin(PathBuf, VstPluginKind),
     AdjustHumanizeVelocity(f32),

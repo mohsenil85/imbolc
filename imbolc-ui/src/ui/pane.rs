@@ -205,7 +205,7 @@ impl PaneManager {
                 height: area.height - 1,
             };
             self.panes[self.active_index].render(pane_area, buf, state);
-            Self::render_hint_line(&hints, area, buf);
+            Self::render_hint_line(&hints, pane_area, buf);
         } else {
             self.panes[self.active_index].render(area, buf, state);
         }
@@ -215,6 +215,13 @@ impl PaneManager {
     fn render_hint_line(hints: &[(String, &str)], area: Rect, buf: &mut RenderBuf) {
         let y = area.y + area.height - 1;
         let max_x = area.x + area.width;
+
+        // Clear the hint row (it overlaps pane content area)
+        let clear_style = Style::new();
+        for cx in area.x..max_x {
+            buf.set_cell(cx, y, ' ', clear_style);
+        }
+
         let mut x = area.x + 1;
 
         let key_style = Style::new().fg(Color::CYAN);

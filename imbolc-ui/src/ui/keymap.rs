@@ -40,12 +40,21 @@ impl KeyPattern {
                     && !event.modifiers.shift
             }
             KeyPattern::Ctrl(ch) => {
-                matches!(event.key, KeyCode::Char(c) if c == *ch) && event.modifiers.ctrl
+                if *ch == ' ' {
+                    matches!(event.key, KeyCode::Char(' ') | KeyCode::Char('\0'))
+                        && event.modifiers.ctrl
+                } else {
+                    matches!(event.key, KeyCode::Char(c) if c == *ch) && event.modifiers.ctrl
+                }
             }
             KeyPattern::Alt(ch) => {
                 matches!(event.key, KeyCode::Char(c) if c == *ch) && event.modifiers.alt
             }
             KeyPattern::AltKey(code) => event.key == *code && event.modifiers.alt,
+            KeyPattern::CtrlKey(KeyCode::Char(' ')) => {
+                matches!(event.key, KeyCode::Char(' ') | KeyCode::Char('\0'))
+                    && event.modifiers.ctrl
+            }
             KeyPattern::CtrlKey(code) => event.key == *code && event.modifiers.ctrl,
             KeyPattern::ShiftKey(code) => event.key == *code && event.modifiers.shift,
         }
@@ -286,6 +295,15 @@ mod tests {
 
         let event_no_ctrl = InputEvent::new(KeyCode::Char('s'), Modifiers::none());
         assert!(!pattern.matches(&event_no_ctrl));
+    }
+
+    #[test]
+    fn test_ctrl_space_matches_null_fallback() {
+        let pattern = KeyPattern::CtrlKey(KeyCode::Char(' '));
+        let event_space = InputEvent::new(KeyCode::Char(' '), Modifiers::ctrl());
+        let event_null = InputEvent::new(KeyCode::Char('\0'), Modifiers::ctrl());
+        assert!(pattern.matches(&event_space));
+        assert!(pattern.matches(&event_null));
     }
 
     #[test]

@@ -799,9 +799,8 @@ impl AudioEngine {
         Ok(())
     }
 
-    /// Play a one-shot drum sample routed through an instrument's signal chain
     #[allow(clippy::too_many_arguments)]
-    pub fn play_drum_hit_to_instrument(
+    fn play_drum_hit_to_instrument_inner(
         &mut self,
         buffer_id: BufferId,
         amp: f32,
@@ -810,7 +809,7 @@ impl AudioEngine {
         slice_end: f32,
         rate: f32,
         offset_secs: f64,
-    ) -> Result<(), String> {
+    ) -> Result<i32, String> {
         if self.backend.is_none() {
             return Err("Not connected".to_string());
         }
@@ -846,7 +845,106 @@ impl AudioEngine {
         };
         self.queue_timed_bundle(vec![msg], offset_secs)?;
 
+        Ok(node_id)
+    }
+
+    /// Play a one-shot drum sample routed through an instrument's signal chain
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_drum_hit_to_instrument(
+        &mut self,
+        buffer_id: BufferId,
+        amp: f32,
+        instrument_id: TrackId,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+    ) -> Result<(), String> {
+        self.play_drum_hit_to_instrument_inner(
+            buffer_id,
+            amp,
+            instrument_id,
+            slice_start,
+            slice_end,
+            rate,
+            offset_secs,
+        )
+        .map(|_| ())
+    }
+
+    /// Same as `play_drum_hit_to_instrument`, but returns the spawned node ID.
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_drum_hit_to_instrument_with_node(
+        &mut self,
+        buffer_id: BufferId,
+        amp: f32,
+        instrument_id: TrackId,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+    ) -> Result<i32, String> {
+        self.play_drum_hit_to_instrument_inner(
+            buffer_id,
+            amp,
+            instrument_id,
+            slice_start,
+            slice_end,
+            rate,
+            offset_secs,
+        )
+    }
+
+    /// Free an active node on the SuperCollider server.
+    pub fn free_node(&mut self, node_id: i32) -> Result<(), String> {
+        let backend = self.backend.as_ref().ok_or("Not connected")?;
+        backend.free_node(node_id).map_err(|e| e.to_string())?;
+        self.node_registry.unregister(node_id);
         Ok(())
+    }
+
+    /// Play a one-shot sample directly to the master output bus (out=0).
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_sample_preview_with_node(
+        &mut self,
+        buffer_id: BufferId,
+        amp: f32,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+    ) -> Result<i32, String> {
+        if self.backend.is_none() {
+            return Err("Not connected".to_string());
+        }
+        let bufnum = *self.buffer_map.get(&buffer_id).ok_or("Buffer not loaded")?;
+
+        let node_id = self.next_node_id;
+        self.next_node_id += 1;
+
+        let msg = BackendMessage {
+            addr: "/s_new".to_string(),
+            args: vec![
+                RawArg::Str("imbolc_sampler_oneshot".to_string()),
+                RawArg::Int(node_id),
+                RawArg::Int(0), // addToHead
+                RawArg::Int(GROUP_SOURCES),
+                RawArg::Str("bufnum".to_string()),
+                RawArg::Int(bufnum),
+                RawArg::Str("amp".to_string()),
+                RawArg::Float(amp),
+                RawArg::Str("sliceStart".to_string()),
+                RawArg::Float(slice_start),
+                RawArg::Str("sliceEnd".to_string()),
+                RawArg::Float(slice_end),
+                RawArg::Str("rate".to_string()),
+                RawArg::Float(rate),
+                RawArg::Str("out".to_string()),
+                RawArg::Int(0), // Route directly to master output.
+            ],
+        };
+        self.queue_timed_bundle(vec![msg], offset_secs)?;
+        Ok(node_id)
     }
 
     /// Trigger an instrument as a one-shot (spawn voice + immediate release).

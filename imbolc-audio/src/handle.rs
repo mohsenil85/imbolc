@@ -1041,6 +1041,64 @@ impl AudioHandle {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_drum_hit_to_instrument_with_node(
+        &mut self,
+        buffer_id: BufferId,
+        amp: f32,
+        instrument_id: TrackId,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+    ) -> Result<i32, String> {
+        let (reply_tx, reply_rx) = mpsc::channel();
+        self.send_cmd(AudioCmd::PlayDrumHitWithReply {
+            buffer_id,
+            amp,
+            instrument_id,
+            slice_start,
+            slice_end,
+            rate,
+            offset_secs,
+            reply: reply_tx,
+        })?;
+        match reply_rx.recv() {
+            Ok(result) => result,
+            Err(_) => Err("Audio thread disconnected".to_string()),
+        }
+    }
+
+    pub fn free_node(&mut self, node_id: i32) -> Result<(), String> {
+        self.send_cmd(AudioCmd::FreeNode { node_id })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_sample_preview_with_node(
+        &mut self,
+        buffer_id: BufferId,
+        amp: f32,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+    ) -> Result<i32, String> {
+        let (reply_tx, reply_rx) = mpsc::channel();
+        self.send_cmd(AudioCmd::PlaySamplePreviewWithReply {
+            buffer_id,
+            amp,
+            slice_start,
+            slice_end,
+            rate,
+            offset_secs,
+            reply: reply_tx,
+        })?;
+        match reply_rx.recv() {
+            Ok(result) => result,
+            Err(_) => Err("Audio thread disconnected".to_string()),
+        }
+    }
+
     // ── Recording ─────────────────────────────────────────────────
 
     pub fn start_instrument_render(

@@ -69,6 +69,17 @@ impl AppRuntime {
                 .recording_elapsed()
                 .map(|d| d.as_secs())
                 .unwrap_or(0);
+            if let (Some(started), Some(duration_secs)) = (
+                state.recording.preview_started_at,
+                state.recording.preview_duration_secs,
+            ) {
+                if started.elapsed().as_secs_f32() >= duration_secs.max(0.0) {
+                    state.recording.preview_node_id = None;
+                    state.recording.preview_started_at = None;
+                    state.recording.preview_duration_secs = None;
+                    state.recording.preview_start_norm = None;
+                }
+            }
             self.app_frame.recording = state.recording.recording;
             self.app_frame.recording_secs = state.recording.recording_secs;
         }

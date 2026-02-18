@@ -63,6 +63,7 @@ impl FileBrowserPane {
             FileSelectAction::LoadDrumSample(_)
             | FileSelectAction::LoadSlicerSample
             | FileSelectAction::LoadPitchedSample(_)
+            | FileSelectAction::LoadWaveformFile
             | FileSelectAction::LoadImpulseResponse(_, _) => Some(vec![
                 "wav".to_string(),
                 "aiff".to_string(),
@@ -209,6 +210,9 @@ impl Pane for FileBrowserPane {
                             FileSelectAction::LoadPitchedSample(id) => {
                                 Action::Track(TrackAction::LoadSampleResult(id, entry.path.clone()))
                             }
+                            FileSelectAction::LoadWaveformFile => Action::Session(
+                                SessionAction::LoadWaveformFileResult(entry.path.clone()),
+                            ),
                             FileSelectAction::LoadImpulseResponse(id, fx_idx) => Action::Track(
                                 TrackAction::LoadIRResult(id, fx_idx, entry.path.clone()),
                             ),
@@ -283,6 +287,7 @@ impl Pane for FileBrowserPane {
                 " Load Sample "
             }
             FileSelectAction::LoadPitchedSample(_) => " Load Sample ",
+            FileSelectAction::LoadWaveformFile => " Load Waveform ",
             FileSelectAction::LoadImpulseResponse(_, _) => " Load Impulse Response ",
             FileSelectAction::ImportProject => " Import Project ",
         };
@@ -476,6 +481,13 @@ impl Pane for FileBrowserPane {
                                             id,
                                             self.entries[clicked_idx].path.clone(),
                                         ));
+                                    }
+                                    FileSelectAction::LoadWaveformFile => {
+                                        return Action::Session(
+                                            SessionAction::LoadWaveformFileResult(
+                                                self.entries[clicked_idx].path.clone(),
+                                            ),
+                                        );
                                     }
                                     FileSelectAction::ImportVstInstrument => {
                                         return Action::Session(SessionAction::ImportVstPlugin(

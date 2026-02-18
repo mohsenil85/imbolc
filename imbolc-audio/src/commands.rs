@@ -170,6 +170,28 @@ pub enum AudioCmd {
         rate: f32,
         offset_secs: f64,
     },
+    PlayDrumHitWithReply {
+        buffer_id: BufferId,
+        amp: f32,
+        instrument_id: TrackId,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+        reply: Sender<Result<i32, String>>,
+    },
+    PlaySamplePreviewWithReply {
+        buffer_id: BufferId,
+        amp: f32,
+        slice_start: f32,
+        slice_end: f32,
+        rate: f32,
+        offset_secs: f64,
+        reply: Sender<Result<i32, String>>,
+    },
+    FreeNode {
+        node_id: i32,
+    },
 
     // ── Samples ───────────────────────────────────────────────────
     LoadSample {
@@ -274,6 +296,9 @@ impl AudioCmd {
             AudioCmd::SpawnVoice { .. }
                 | AudioCmd::ReleaseVoice { .. }
                 | AudioCmd::PlayDrumHit { .. }
+                | AudioCmd::PlayDrumHitWithReply { .. }
+                | AudioCmd::PlaySamplePreviewWithReply { .. }
+                | AudioCmd::FreeNode { .. }
                 // Individual param changes (need low latency for knob tweaks)
                 | AudioCmd::SetSourceParam { .. }
                 | AudioCmd::SetEqParam { .. }
