@@ -120,6 +120,10 @@ impl Pane for EqPane {
         }
     }
 
+    fn layer_name(&self) -> &'static str {
+        "eq"
+    }
+
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
         let (target, eq, _title) = match resolve_target(self.mode, state) {
             Some(t) => t,

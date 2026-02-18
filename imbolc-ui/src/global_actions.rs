@@ -158,7 +158,7 @@ fn dispatch_side_effect_free(
 pub(crate) fn sync_pane_layer(panes: &mut PaneManager, layer_stack: &mut LayerStack) {
     let had_piano = layer_stack.has_layer("piano_mode");
     let had_pad = layer_stack.has_layer("pad_mode");
-    layer_stack.set_pane_layer(panes.active().id());
+    layer_stack.set_pane_layer(panes.active().layer_name());
 
     if had_piano || had_pad {
         if panes.active_mut().supports_performance_mode() {

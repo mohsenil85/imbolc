@@ -1035,6 +1035,24 @@ impl SourceType {
                     min: 20.0,
                     max: 2000.0,
                 },
+                Param {
+                    name: "fb_suppress".to_string(),
+                    value: ParamValue::Float(0.0),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
+                    name: "fb_threshold".to_string(),
+                    value: ParamValue::Float(0.5),
+                    min: 0.05,
+                    max: 1.0,
+                },
+                Param {
+                    name: "fb_q".to_string(),
+                    value: ParamValue::Float(0.005),
+                    min: 0.001,
+                    max: 0.05,
+                },
             ],
             SourceType::BusIn => vec![
                 Param {

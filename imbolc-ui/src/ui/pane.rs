@@ -18,6 +18,12 @@ pub trait Pane {
     /// Unique identifier for this pane
     fn id(&self) -> &'static str;
 
+    /// Layer name for keybinding resolution (defaults to id()).
+    /// Override when multiple panes share the same keybinding layer.
+    fn layer_name(&self) -> &'static str {
+        self.id()
+    }
+
     /// Handle a resolved action ID from the layer system
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action;
 
