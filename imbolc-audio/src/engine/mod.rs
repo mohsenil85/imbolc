@@ -1909,6 +1909,105 @@ mod tests {
         }
 
         #[test]
+        fn requested_effects_receive_musical_context_params() {
+            let (mut engine, backend) = engine_with_test_backend();
+            let mut state = AppState::new();
+            state.session.key = imbolc_types::Key::D;
+            state.session.scale = imbolc_types::Scale::Major;
+            state.session.tuning_a4 = 442.0;
+
+            let inst_id = state.add_track(SourceType::Saw);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
+                inst.add_effect(EffectType::Resonator);
+                inst.add_effect(EffectType::RingMod);
+                inst.add_effect(EffectType::Vocoder);
+                inst.add_effect(EffectType::FreqShifter);
+                inst.add_effect(EffectType::WahPedal);
+                inst.add_effect(EffectType::MultibandComp);
+                inst.add_effect(EffectType::ParaEq);
+            }
+
+            engine
+                .rebuild_instrument_routing(&state.tracks, &state.session)
+                .expect("rebuild routing");
+
+            let expected_table =
+                imbolc_types::scale_quantization_table(state.session.key, state.session.scale);
+            let expected_ref_offset = imbolc_types::tuning_ref_offset(state.session.tuning_a4);
+            let expected_root = imbolc_types::key_root_freq(state.session.key, state.session.tuning_a4);
+
+            let synths = backend.synths_created();
+            let find_params = |def_name: &str| {
+                synths
+                    .iter()
+                    .find_map(|op| {
+                        if let TestOp::CreateSynth {
+                            def_name: created_name,
+                            params,
+                            ..
+                        } = op
+                        {
+                            if created_name == def_name {
+                                return Some(params);
+                            }
+                        }
+                        None
+                    })
+                    .unwrap_or_else(|| panic!("missing synth {}", def_name))
+            };
+
+            for def_name in [
+                "imbolc_resonator",
+                "imbolc_ringmod",
+                "imbolc_wah_pedal",
+                "imbolc_para_eq",
+                "imbolc_freq_shifter",
+            ] {
+                let params = find_params(def_name);
+                let q0 = params
+                    .iter()
+                    .find(|(k, _)| k == "q0")
+                    .map(|(_, v)| *v)
+                    .expect("missing q0");
+                let q11 = params
+                    .iter()
+                    .find(|(k, _)| k == "q11")
+                    .map(|(_, v)| *v)
+                    .expect("missing q11");
+                assert!((q0 - expected_table[0]).abs() < 1e-6, "{}", def_name);
+                assert!((q11 - expected_table[11]).abs() < 1e-6, "{}", def_name);
+
+                let ref_offset = params
+                    .iter()
+                    .find(|(k, _)| k == "ref_offset")
+                    .map(|(_, v)| *v)
+                    .expect("missing ref_offset");
+                assert!((ref_offset - expected_ref_offset).abs() < 1e-6, "{}", def_name);
+
+                let snap = params
+                    .iter()
+                    .find(|(k, _)| k == "snap")
+                    .map(|(_, v)| *v)
+                    .expect("missing snap");
+                assert_eq!(snap, 1.0, "{}", def_name);
+            }
+
+            for def_name in [
+                "imbolc_vocoder",
+                "imbolc_multiband_comp",
+                "imbolc_freq_shifter",
+            ] {
+                let params = find_params(def_name);
+                let root_freq = params
+                    .iter()
+                    .find(|(k, _)| k == "root_freq")
+                    .map(|(_, v)| *v)
+                    .expect("missing root_freq");
+                assert!((root_freq - expected_root).abs() < 1e-5, "{}", def_name);
+            }
+        }
+
+        #[test]
         fn layer_group_effect_creates_synth_in_bus_processing() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();
