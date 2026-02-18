@@ -38,6 +38,15 @@ impl AddPane {
     /// Base source options shared by all builds
     fn base_source_options() -> Vec<AddOption> {
         vec![
+            // Audio / Routing
+            AddOption::Separator("── Routing ──"),
+            AddOption::Source(SourceType::AudioIn),
+            AddOption::Source(SourceType::BusIn),
+            // Samplers
+            AddOption::Separator("── Samplers ──"),
+            AddOption::Source(SourceType::PitchedSampler),
+            AddOption::Source(SourceType::TimeStretch),
+            AddOption::Source(SourceType::Kit),
             // Basic Oscillators
             AddOption::Separator("── Oscillators ──"),
             AddOption::Source(SourceType::Saw),
@@ -109,15 +118,6 @@ impl AddPane {
             AddOption::Source(SourceType::Additive),
             AddOption::Source(SourceType::Wavetable),
             AddOption::Source(SourceType::Granular),
-            // Audio / Routing
-            AddOption::Separator("── Routing ──"),
-            AddOption::Source(SourceType::AudioIn),
-            AddOption::Source(SourceType::BusIn),
-            // Samplers
-            AddOption::Separator("── Samplers ──"),
-            AddOption::Source(SourceType::PitchedSampler),
-            AddOption::Source(SourceType::TimeStretch),
-            AddOption::Source(SourceType::Kit),
         ]
     }
 
