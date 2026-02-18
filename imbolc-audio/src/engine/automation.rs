@@ -251,7 +251,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandFreq(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_freq", band);
                         backend
                             .set_param(eq_node, &param_name, value)
@@ -261,7 +261,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandGain(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_gain", band);
                         backend
                             .set_param(eq_node, &param_name, value)
@@ -271,7 +271,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandQ(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_q", band);
                         // Q is inverted in SC
                         let sc_value = 1.0 / value;
@@ -283,7 +283,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandSlope(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_slope", band);
                         let slope = imbolc_types::FilterSlope::from_normalized(value);
                         backend
@@ -577,7 +577,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandFreq(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_freq", band);
                         msgs.push(build_n_set_message(eq_node, &param_name, value));
                     }
@@ -585,7 +585,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandGain(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_gain", band);
                         msgs.push(build_n_set_message(eq_node, &param_name, value));
                     }
@@ -593,7 +593,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandQ(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_q", band);
                         let sc_value = 1.0 / value;
                         msgs.push(build_n_set_message(eq_node, &param_name, sc_value));
@@ -602,7 +602,7 @@ impl AudioEngine {
             }
             ParameterTarget::EqBandSlope(band) => {
                 if let Some(nodes) = self.node_map.get(&instrument_id) {
-                    if let Some(eq_node) = nodes.eq {
+                    if let Some(&eq_node) = nodes.eq_nodes.values().next() {
                         let param_name = format!("b{}_slope", band);
                         let slope = imbolc_types::FilterSlope::from_normalized(value);
                         msgs.push(build_n_set_message(

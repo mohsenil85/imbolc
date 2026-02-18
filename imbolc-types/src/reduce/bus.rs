@@ -90,9 +90,21 @@ pub(super) fn reduce_bus(
             }
             true
         }
-        BusAction::SetEqualizerParam(bus_id, band_idx, param, value) => {
+        BusAction::AddEqualizer(bus_id) => {
             if let Some(bus) = session.bus_mut(*bus_id) {
-                if let Some(eq) = bus.channel_strip.eq_mut() {
+                bus.channel_strip.add_eq();
+            }
+            true
+        }
+        BusAction::RemoveEqualizer(bus_id, effect_id) => {
+            if let Some(bus) = session.bus_mut(*bus_id) {
+                bus.channel_strip.remove_eq(*effect_id);
+            }
+            true
+        }
+        BusAction::SetEqualizerParam(bus_id, effect_id, band_idx, param, value) => {
+            if let Some(bus) = session.bus_mut(*bus_id) {
+                if let Some(eq) = bus.channel_strip.eq_by_id_mut(*effect_id) {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
                         match param {
                             EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
@@ -166,9 +178,21 @@ pub(super) fn reduce_group(action: &GroupAction, session: &mut SessionState) -> 
             }
             true
         }
-        GroupAction::SetEqualizerParam(group_id, band_idx, param, value) => {
+        GroupAction::AddEqualizer(group_id) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
-                if let Some(eq) = gm.eq_mut() {
+                gm.add_eq();
+            }
+            true
+        }
+        GroupAction::RemoveEqualizer(group_id, effect_id) => {
+            if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
+                gm.remove_eq(*effect_id);
+            }
+            true
+        }
+        GroupAction::SetEqualizerParam(group_id, effect_id, band_idx, param, value) => {
+            if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
+                if let Some(eq) = gm.eq_by_id_mut(*effect_id) {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
                         match param {
                             EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
@@ -237,8 +261,16 @@ pub(super) fn reduce_master(action: &MasterAction, session: &mut SessionState) -
             cs.toggle_eq();
             true
         }
-        MasterAction::SetEqualizerParam(band_idx, param, value) => {
-            if let Some(eq) = cs.eq_mut() {
+        MasterAction::AddEqualizer => {
+            cs.add_eq();
+            true
+        }
+        MasterAction::RemoveEqualizer(effect_id) => {
+            cs.remove_eq(*effect_id);
+            true
+        }
+        MasterAction::SetEqualizerParam(effect_id, band_idx, param, value) => {
+            if let Some(eq) = cs.eq_by_id_mut(*effect_id) {
                 if let Some(band) = eq.bands.get_mut(*band_idx) {
                     match param {
                         EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),

@@ -147,7 +147,6 @@ impl AudioEngine {
         let mut source_node: Option<i32> = None;
         let mut lfo_node: Option<i32> = None;
         let mut filter_node: Option<i32> = None;
-        let mut eq_node: Option<i32> = None;
         let mut effect_nodes: HashMap<EffectId, i32> = HashMap::new();
         let mut effect_order: Vec<EffectId> = Vec::new();
 
@@ -431,14 +430,15 @@ impl AudioEngine {
             current_bus = effect_out_bus;
         }
 
-        // EQ (6-band parametric, if present)
+        // EQ (6-band parametric, one node per EQ in the processing chain)
         // Note: EQ doesn't have mono variants yet, stays stereo
-        if let Some(eq) = instrument.eq() {
+        let mut eq_nodes_map: HashMap<EffectId, i32> = HashMap::new();
+        for (eq_effect_id, eq) in instrument.eqs() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let eq_out_bus = self
                 .bus_allocator
-                .get_or_alloc_audio_bus(instrument.id, "eq_out");
+                .get_or_alloc_audio_bus(instrument.id, &format!("eq_{}_out", eq_effect_id));
 
             let mut params: Vec<(String, f32)> = vec![
                 ("in".to_string(), current_bus as f32),
@@ -461,7 +461,7 @@ impl AudioEngine {
                 .create_synth("imbolc_eq6", node_id, GROUP_PROCESSING, &params)
                 .map_err(|e| e.to_string())?;
 
-            eq_node = Some(node_id);
+            eq_nodes_map.insert(eq_effect_id, node_id);
             current_bus = eq_out_bus;
         }
 
@@ -530,7 +530,7 @@ impl AudioEngine {
             source: source_node,
             lfo: lfo_node,
             filter: filter_node,
-            eq: eq_node,
+            eq_nodes: eq_nodes_map,
             effects: effect_nodes,
             effect_order,
             output: output_node_id,
@@ -733,13 +733,14 @@ impl AudioEngine {
             current_bus = effect_out_bus;
         }
 
-        // EQ (6-band parametric, if present) — inserted after effects
-        if let Some(eq) = bus.channel_strip.eq() {
+        // EQ (6-band parametric) — inserted after effects, one node per EQ
+        for (eq_effect_id, eq) in bus.channel_strip.eqs() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
-            let eq_out_bus = self
-                .bus_allocator
-                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - bus.id.get() as u32), "bus_eq_out");
+            let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
+                TrackId::new(u32::MAX - bus.id.get() as u32),
+                &format!("bus_eq_{}_out", eq_effect_id),
+            );
 
             let mut params: Vec<(String, f32)> = vec![
                 ("in".to_string(), current_bus as f32),
@@ -763,7 +764,7 @@ impl AudioEngine {
                 .map_err(|e| e.to_string())?;
 
             self.node_registry.register(node_id);
-            self.bus_eq_node_map.insert(bus.id, node_id);
+            self.bus_eq_node_map.insert((bus.id, eq_effect_id), node_id);
             current_bus = eq_out_bus;
         }
 
@@ -854,13 +855,13 @@ impl AudioEngine {
             current_bus = effect_out_bus;
         }
 
-        // EQ (6-band parametric, if present) — inserted after effects
-        if let Some(eq) = gm.eq() {
+        // EQ (6-band parametric) — inserted after effects, one node per EQ
+        for (eq_effect_id, eq) in gm.eqs() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
                 TrackId::new(u32::MAX - 256 - gm.group_id.get()),
-                "group_eq_out",
+                &format!("group_eq_{}_out", eq_effect_id),
             );
 
             let mut params: Vec<(String, f32)> = vec![
@@ -885,7 +886,8 @@ impl AudioEngine {
                 .map_err(|e| e.to_string())?;
 
             self.node_registry.register(node_id);
-            self.layer_group_eq_node_map.insert(gm.group_id, node_id);
+            self.layer_group_eq_node_map
+                .insert((gm.group_id, eq_effect_id), node_id);
             current_bus = eq_out_bus;
         }
 
@@ -946,7 +948,7 @@ impl AudioEngine {
             for &node_id in self.layer_group_eq_node_map.values() {
                 let _ = client.free_node(node_id);
             }
-            if let Some(node_id) = self.master_eq_node_id.take() {
+            for &node_id in self.master_eq_node_map.values() {
                 let _ = client.free_node(node_id);
             }
             for &node_id in self.master_effect_node_map.values() {
@@ -969,6 +971,7 @@ impl AudioEngine {
         self.bus_audio_buses.clear();
         self.instrument_final_buses.clear();
         self.master_effect_node_map.clear();
+        self.master_eq_node_map.clear();
         self.bus_allocator.reset();
         self.node_registry.invalidate_all();
 
@@ -1466,7 +1469,7 @@ impl AudioEngine {
                     for &node_id in self.layer_group_eq_node_map.values() {
                         let _ = client.free_node(node_id);
                     }
-                    if let Some(node_id) = self.master_eq_node_id.take() {
+                    for &node_id in self.master_eq_node_map.values() {
                         let _ = client.free_node(node_id);
                     }
                     for &node_id in self.master_effect_node_map.values() {
@@ -1489,6 +1492,7 @@ impl AudioEngine {
                 self.bus_audio_buses.clear();
                 self.instrument_final_buses.clear();
                 self.master_effect_node_map.clear();
+                self.master_eq_node_map.clear();
                 self.bus_allocator.reset();
                 self.node_registry.invalidate_all();
 
@@ -1804,6 +1808,7 @@ impl AudioEngine {
     pub fn set_eq_param(
         &self,
         instrument_id: TrackId,
+        effect_id: EffectId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1813,7 +1818,7 @@ impl AudioEngine {
         let client = self.backend.as_ref().ok_or("Not connected")?;
 
         if let Some(nodes) = self.node_map.get(&instrument_id) {
-            if let Some(eq_node) = nodes.eq {
+            if let Some(&eq_node) = nodes.eq_nodes.get(&effect_id) {
                 let _ = client.set_param(eq_node, param, value);
             }
         }
@@ -1932,6 +1937,7 @@ impl AudioEngine {
     pub fn set_layer_group_eq_param(
         &self,
         group_id: GroupId,
+        effect_id: EffectId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -1940,7 +1946,7 @@ impl AudioEngine {
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
 
-        if let Some(&node_id) = self.layer_group_eq_node_map.get(&group_id) {
+        if let Some(&node_id) = self.layer_group_eq_node_map.get(&(group_id, effect_id)) {
             let _ = client.set_param(node_id, param, value);
         }
 
@@ -1948,13 +1954,19 @@ impl AudioEngine {
     }
 
     /// Set a bus EQ parameter in real-time (targeted /n_set, no rebuild).
-    pub fn set_bus_eq_param(&self, bus_id: BusId, param: &str, value: f32) -> Result<(), String> {
+    pub fn set_bus_eq_param(
+        &self,
+        bus_id: BusId,
+        effect_id: EffectId,
+        param: &str,
+        value: f32,
+    ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
 
-        if let Some(&node_id) = self.bus_eq_node_map.get(&bus_id) {
+        if let Some(&node_id) = self.bus_eq_node_map.get(&(bus_id, effect_id)) {
             let _ = client.set_param(node_id, param, value);
         }
 
@@ -1962,13 +1974,18 @@ impl AudioEngine {
     }
 
     /// Set a master EQ parameter in real-time (targeted /n_set, no rebuild).
-    pub fn set_master_eq_param(&self, param: &str, value: f32) -> Result<(), String> {
+    pub fn set_master_eq_param(
+        &self,
+        effect_id: EffectId,
+        param: &str,
+        value: f32,
+    ) -> Result<(), String> {
         if !self.is_running {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
 
-        if let Some(node_id) = self.master_eq_node_id {
+        if let Some(&node_id) = self.master_eq_node_map.get(&effect_id) {
             let _ = client.set_param(node_id, param, value);
         }
 
@@ -1999,11 +2016,12 @@ impl AudioEngine {
     ///
     /// Effects are chained through intermediate buses starting from bus 0 (the master mix).
     /// When effects are present, a `imbolc_replace_out` synth copies the final processed
-    /// signal back to bus 0 via ReplaceOut. When only EQ is present (no effects),
-    /// `imbolc_eq6_replace` operates in-place on bus 0 (same as the old code path).
+    /// signal back to bus 0 via ReplaceOut. When only EQ is present (no effects) and there
+    /// is exactly one EQ, `imbolc_eq6_replace` operates in-place on bus 0. Multiple EQs
+    /// without effects use the intermediate-bus chain path.
     fn build_master_effect_chain(&mut self, session: &SessionState) -> Result<(), String> {
-        // Tear down existing master effect nodes
-        if let Some(node_id) = self.master_eq_node_id.take() {
+        // Tear down existing master EQ and effect nodes
+        for (_, node_id) in self.master_eq_node_map.drain() {
             self.node_registry.unregister(node_id);
             if let Some(client) = self.backend.as_ref() {
                 let _ = client.free_node(node_id);
@@ -2018,7 +2036,8 @@ impl AudioEngine {
 
         let cs = &session.mixer.master_channel_strip;
         let has_effects = cs.effects().any(|e| e.enabled);
-        let has_eq = cs.eq().is_some();
+        let eqs: Vec<(EffectId, &imbolc_types::EqConfig)> = cs.eqs().collect();
+        let has_eq = !eqs.is_empty();
 
         if !has_effects && !has_eq {
             return Ok(());
@@ -2027,8 +2046,35 @@ impl AudioEngine {
         // Use a sentinel TrackId for master bus allocations
         let master_alloc_id = TrackId::new(u32::MAX - 512);
 
-        if has_effects {
-            // Effects chain through intermediate buses, starting from bus 0
+        // Use the in-place optimization only when there is exactly one EQ and no effects
+        let use_inplace = !has_effects && eqs.len() == 1;
+
+        if use_inplace {
+            // Only one EQ, no effects — use imbolc_eq6_replace in-place on bus 0
+            let (eq_effect_id, eq) = &eqs[0];
+            let node_id = self.next_node_id;
+            self.next_node_id += 1;
+            let mut params: Vec<(String, f32)> = vec![("out".to_string(), 0.0)];
+            for (i, band) in eq.bands.iter().enumerate() {
+                let prefix = format!("b{i}_");
+                params.push((format!("{prefix}freq"), band.freq));
+                params.push((format!("{prefix}gain"), band.gain));
+                params.push((format!("{prefix}q"), 1.0 / band.q));
+                params.push((format!("{prefix}on"), if band.enabled { 1.0 } else { 0.0 }));
+                params.push((
+                    format!("{prefix}type"),
+                    band.band_type.sc_type_index() as f32,
+                ));
+                params.push((format!("{prefix}slope"), band.slope.sc_slope_value() as f32));
+            }
+            let client = self.backend.as_ref().ok_or("Not connected")?;
+            client
+                .create_synth("imbolc_eq6_replace", node_id, GROUP_MASTER, &params)
+                .map_err(|e| e.to_string())?;
+            self.node_registry.register(node_id);
+            self.master_eq_node_map.insert(*eq_effect_id, node_id);
+        } else {
+            // Effects and/or multiple EQs — chain through intermediate buses from bus 0
             let mut current_bus: i32 = 0;
 
             for effect in cs.effects() {
@@ -2105,13 +2151,14 @@ impl AudioEngine {
                 current_bus = effect_out_bus;
             }
 
-            // EQ after effects (uses regular imbolc_eq6 with in/out buses)
-            if let Some(eq) = cs.eq() {
+            // EQ(s) after effects (uses regular imbolc_eq6 with in/out buses)
+            for (eq_effect_id, eq) in &eqs {
                 let node_id = self.next_node_id;
                 self.next_node_id += 1;
-                let eq_out_bus = self
-                    .bus_allocator
-                    .get_or_alloc_audio_bus(master_alloc_id, "master_eq_out");
+                let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
+                    master_alloc_id,
+                    &format!("master_eq_{}_out", eq_effect_id),
+                );
 
                 let mut params: Vec<(String, f32)> = vec![
                     ("in".to_string(), current_bus as f32),
@@ -2135,7 +2182,7 @@ impl AudioEngine {
                     .create_synth("imbolc_eq6", node_id, GROUP_MASTER, &params)
                     .map_err(|e| e.to_string())?;
                 self.node_registry.register(node_id);
-                self.master_eq_node_id = Some(node_id);
+                self.master_eq_node_map.insert(*eq_effect_id, node_id);
                 current_bus = eq_out_bus;
             }
 
@@ -2158,31 +2205,6 @@ impl AudioEngine {
             // Store the replace_out node using a sentinel EffectId so it gets cleaned up
             self.master_effect_node_map
                 .insert(EffectId::new(u32::MAX), replace_node_id);
-        } else {
-            // Only EQ, no effects — use imbolc_eq6_replace in-place on bus 0
-            if let Some(eq) = cs.eq() {
-                let node_id = self.next_node_id;
-                self.next_node_id += 1;
-                let mut params: Vec<(String, f32)> = vec![("out".to_string(), 0.0)];
-                for (i, band) in eq.bands.iter().enumerate() {
-                    let prefix = format!("b{i}_");
-                    params.push((format!("{prefix}freq"), band.freq));
-                    params.push((format!("{prefix}gain"), band.gain));
-                    params.push((format!("{prefix}q"), 1.0 / band.q));
-                    params.push((format!("{prefix}on"), if band.enabled { 1.0 } else { 0.0 }));
-                    params.push((
-                        format!("{prefix}type"),
-                        band.band_type.sc_type_index() as f32,
-                    ));
-                    params.push((format!("{prefix}slope"), band.slope.sc_slope_value() as f32));
-                }
-                let client = self.backend.as_ref().ok_or("Not connected")?;
-                client
-                    .create_synth("imbolc_eq6_replace", node_id, GROUP_MASTER, &params)
-                    .map_err(|e| e.to_string())?;
-                self.node_registry.register(node_id);
-                self.master_eq_node_id = Some(node_id);
-            }
         }
 
         Ok(())

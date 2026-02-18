@@ -8,7 +8,7 @@ use crate::ui::{
     PaneIdStr, Rect, RenderBuf, Style, TrackAction,
 };
 use imbolc_types::FilterSlope;
-use imbolc_types::{BusId, EqualizerParamKind, GroupId, MixerSelection};
+use imbolc_types::{BusId, EffectId, EqualizerParamKind, GroupId, MixerSelection};
 
 use crate::state::track::EqBand;
 
@@ -54,33 +54,72 @@ impl Default for EqPane {
     }
 }
 
-/// Resolve the EQ target, returning (target, eq_config, title).
-fn resolve_target(mode: EqMode, state: &AppState) -> Option<(EqTarget, Option<&EqConfig>, String)> {
+/// Resolved EQ target info.
+struct ResolvedEq<'a> {
+    target: EqTarget,
+    eq: Option<&'a EqConfig>,
+    /// EffectId of the first (or targeted) EQ stage.
+    effect_id: Option<EffectId>,
+    title: String,
+}
+
+/// Resolve the EQ target, returning target info with the first EQ's EffectId.
+fn resolve_target(mode: EqMode, state: &AppState) -> Option<ResolvedEq<'_>> {
     match mode {
         EqMode::Master => {
             let eq = state.session.mixer.master_eq();
-            Some((EqTarget::Master, eq, "Master".to_string()))
+            let eid = state.session.mixer.master_channel_strip.first_eq_id();
+            Some(ResolvedEq {
+                target: EqTarget::Master,
+                eq,
+                effect_id: eid,
+                title: "Master".to_string(),
+            })
         }
         EqMode::Channel => match state.session.mixer.selection {
             MixerSelection::Track(id) => {
                 let track = state.tracks.track(id)?;
                 let eq = track.eq();
-                Some((EqTarget::Track(track.id), eq, track.name.clone()))
+                let eid = track.first_eq_id();
+                Some(ResolvedEq {
+                    target: EqTarget::Track(track.id),
+                    eq,
+                    effect_id: eid,
+                    title: track.name.clone(),
+                })
             }
             MixerSelection::Group(group_id) => {
                 let gm = state.session.mixer.layer_group_mixer(group_id)?;
                 let eq = gm.eq();
+                let eid = gm.channel_strip.first_eq_id();
                 let name = gm.name.clone();
-                Some((EqTarget::Group(group_id), eq, name))
+                Some(ResolvedEq {
+                    target: EqTarget::Group(group_id),
+                    eq,
+                    effect_id: eid,
+                    title: name,
+                })
             }
             MixerSelection::Bus(bus_id) => {
                 let bus = state.session.bus(bus_id)?;
                 let eq = bus.channel_strip.eq();
-                Some((EqTarget::Bus(bus_id), eq, bus.name.clone()))
+                let eid = bus.channel_strip.first_eq_id();
+                Some(ResolvedEq {
+                    target: EqTarget::Bus(bus_id),
+                    eq,
+                    effect_id: eid,
+                    title: bus.name.clone(),
+                })
             }
             MixerSelection::Master => {
                 let eq = state.session.mixer.master_eq();
-                Some((EqTarget::Master, eq, "Master".to_string()))
+                let eid = state.session.mixer.master_channel_strip.first_eq_id();
+                Some(ResolvedEq {
+                    target: EqTarget::Master,
+                    eq,
+                    effect_id: eid,
+                    title: "Master".to_string(),
+                })
             }
         },
     }
@@ -97,19 +136,24 @@ fn make_toggle_action(target: EqTarget) -> Action {
 
 fn make_set_action(
     target: EqTarget,
+    effect_id: EffectId,
     band_idx: usize,
     param: EqualizerParamKind,
     value: f32,
 ) -> Action {
     match target {
-        EqTarget::Track(id) => {
-            Action::Track(TrackAction::SetEqualizerParam(id, band_idx, param, value))
-        }
-        EqTarget::Group(id) => {
-            Action::Group(GroupAction::SetEqualizerParam(id, band_idx, param, value))
-        }
-        EqTarget::Bus(id) => Action::Bus(BusAction::SetEqualizerParam(id, band_idx, param, value)),
-        EqTarget::Master => Action::Master(MasterAction::SetEqualizerParam(band_idx, param, value)),
+        EqTarget::Track(id) => Action::Track(TrackAction::SetEqualizerParam(
+            id, effect_id, band_idx, param, value,
+        )),
+        EqTarget::Group(id) => Action::Group(GroupAction::SetEqualizerParam(
+            id, effect_id, band_idx, param, value,
+        )),
+        EqTarget::Bus(id) => Action::Bus(BusAction::SetEqualizerParam(
+            id, effect_id, band_idx, param, value,
+        )),
+        EqTarget::Master => Action::Master(MasterAction::SetEqualizerParam(
+            effect_id, band_idx, param, value,
+        )),
     }
 }
 
@@ -161,15 +205,30 @@ impl Pane for EqPane {
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
-        let (target, eq, _title) = match resolve_target(self.mode, state) {
-            Some(t) => t,
+        let resolved = match resolve_target(self.mode, state) {
+            Some(r) => r,
             None => return Action::None,
+        };
+        let ResolvedEq {
+            target,
+            eq,
+            effect_id,
+            ..
+        } = resolved;
+        // If no EQ exists yet, only toggle is valid
+        let eid = match effect_id {
+            Some(id) => id,
+            None => {
+                return match action {
+                    ActionId::Eq(EqActionId::ToggleEq) => make_toggle_action(target),
+                    _ => Action::None,
+                };
+            }
         };
 
         match action {
             ActionId::Eq(EqActionId::PrevBand) => {
                 self.selected_band = self.selected_band.saturating_sub(1);
-                // Clamp param index to new band's param count
                 if let Some(eq) = eq {
                     let max_param =
                         param_count_for_band(&eq.bands[self.selected_band]).saturating_sub(1);
@@ -201,6 +260,7 @@ impl Pane for EqPane {
             | ActionId::Eq(EqActionId::IncreaseBig)
             | ActionId::Eq(EqActionId::IncreaseTiny) => adjust_param(
                 target,
+                eid,
                 eq,
                 self.selected_band,
                 self.selected_param,
@@ -211,6 +271,7 @@ impl Pane for EqPane {
             | ActionId::Eq(EqActionId::DecreaseBig)
             | ActionId::Eq(EqActionId::DecreaseTiny) => adjust_param(
                 target,
+                eid,
                 eq,
                 self.selected_band,
                 self.selected_param,
@@ -224,6 +285,7 @@ impl Pane for EqPane {
                     let new_val = if band.enabled { 0.0 } else { 1.0 };
                     make_set_action(
                         target,
+                        eid,
                         self.selected_band,
                         EqualizerParamKind::Enabled,
                         new_val,
@@ -244,6 +306,7 @@ impl Pane for EqPane {
                         let next_idx = (cur_idx + 1) % allowed.len();
                         make_set_action(
                             target,
+                            eid,
                             self.selected_band,
                             EqualizerParamKind::BandType,
                             next_idx as f32,
@@ -262,6 +325,7 @@ impl Pane for EqPane {
                         let next = band.slope.next();
                         make_set_action(
                             target,
+                            eid,
                             self.selected_band,
                             EqualizerParamKind::Slope,
                             next.to_normalized(),
@@ -281,7 +345,7 @@ impl Pane for EqPane {
         let rect = center_rect(area, 78, 24);
 
         let (target_name, eq) = match resolve_target(self.mode, state) {
-            Some((_target, eq, name)) => (name, eq),
+            Some(r) => (r.title, r.eq),
             None => {
                 let border_color = Color::new(100, 180, 255);
                 let border_style = Style::new().fg(border_color);
@@ -389,6 +453,7 @@ fn render_centered_text(area: Rect, buf: &mut RenderBuf, text: &str, color: Colo
 
 fn adjust_param(
     target: EqTarget,
+    effect_id: EffectId,
     eq: Option<&EqConfig>,
     band_idx: usize,
     param_idx: usize,
@@ -426,7 +491,13 @@ fn adjust_param(
             } else {
                 (band.freq - delta).max(20.0)
             };
-            make_set_action(target, band_idx, EqualizerParamKind::Freq, new_val)
+            make_set_action(
+                target,
+                effect_id,
+                band_idx,
+                EqualizerParamKind::Freq,
+                new_val,
+            )
         }
         EqualizerParamKind::Gain => {
             let delta =
@@ -442,7 +513,13 @@ fn adjust_param(
             } else {
                 (band.gain - delta).max(-24.0)
             };
-            make_set_action(target, band_idx, EqualizerParamKind::Gain, new_val)
+            make_set_action(
+                target,
+                effect_id,
+                band_idx,
+                EqualizerParamKind::Gain,
+                new_val,
+            )
         }
         EqualizerParamKind::Q => {
             let delta =
@@ -458,7 +535,7 @@ fn adjust_param(
             } else {
                 (band.q - delta).max(0.1)
             };
-            make_set_action(target, band_idx, EqualizerParamKind::Q, new_val)
+            make_set_action(target, effect_id, band_idx, EqualizerParamKind::Q, new_val)
         }
         EqualizerParamKind::Slope => {
             // Cycle slope: increase goes next, decrease goes prev
@@ -469,6 +546,7 @@ fn adjust_param(
             };
             make_set_action(
                 target,
+                effect_id,
                 band_idx,
                 EqualizerParamKind::Slope,
                 new_slope.to_normalized(),
@@ -491,6 +569,7 @@ fn adjust_param(
             };
             make_set_action(
                 target,
+                effect_id,
                 band_idx,
                 EqualizerParamKind::BandType,
                 next_idx as f32,

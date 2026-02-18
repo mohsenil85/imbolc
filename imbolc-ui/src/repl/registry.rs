@@ -33,7 +33,7 @@ repl_actions! {
         "cycle-chord-shape"        => NextChordShape(id: TrackId);                               "Cycle chord shape forward"
         "cycle-chord-shape-rev"    => PrevChordShape(id: TrackId);                        "Cycle chord shape reverse"
         "clear-chord-shape"        => ClearChordShape(id: TrackId);                               "Clear chord shape"
-        "set-eq-param"             => SetEqualizerParam(id: TrackId, band: usize, kind: EqualizerParamKind, v: f32); "Set EQ band parameter"
+        "set-eq-param"             => SetEqualizerParam(id: TrackId, eid: EffectId, band: usize, kind: EqualizerParamKind, v: f32); "Set EQ band parameter"
         "toggle-eq"                => ToggleEqualizer(id: TrackId);                                      "Toggle EQ on/off"
         "link-layer"               => LinkLayer(id: TrackId, target: TrackId);               "Link track to layer group"
         "unlink-layer"             => UnlinkLayer(id: TrackId);                                   "Unlink track from layer group"
@@ -181,7 +181,7 @@ repl_actions! {
         "toggle-effect-bypass"  => ToggleEffectBypass(gid: GroupId, fx_id: EffectId);                  "Toggle layer group effect bypass"
         "adjust-effect-param"   => AdjustEffectParam(gid: GroupId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust layer group effect param"
         "toggle-eq"             => ToggleEqualizer(gid: GroupId);                                             "Toggle layer group EQ"
-        "set-eq-param"          => SetEqualizerParam(gid: GroupId, band: usize, kind: EqualizerParamKind, v: f32);   "Set layer group EQ band param"
+        "set-eq-param"          => SetEqualizerParam(gid: GroupId, eid: EffectId, band: usize, kind: EqualizerParamKind, v: f32);   "Set layer group EQ band param"
         "rename"                => Rename(gid: GroupId, name: String);                                  "Rename layer group"
     }
 

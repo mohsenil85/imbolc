@@ -66,7 +66,7 @@ impl ChannelStrip {
 
     /// Create a layer-group-style channel strip (always active, with default EQ).
     pub fn new_layer_group() -> Self {
-        Self {
+        let mut cs = Self {
             level: 0.8,
             pan: 0.0,
             mute: false,
@@ -75,9 +75,11 @@ impl ChannelStrip {
             output_target: OutputTarget::Master,
             channel_config: ChannelConfig::default(),
             sends: BTreeMap::new(),
-            processing_chain: vec![ProcessingStage::Eq(EqConfig::default())],
+            processing_chain: Vec::new(),
             next_effect_id: EffectId::new(0),
-        }
+        };
+        cs.add_eq();
+        cs
     }
 
     /// Disable sends for a removed bus (keeps the entry for undo support).
@@ -121,40 +123,94 @@ impl ChannelStrip {
         })
     }
 
-    /// Get the EQ config (single instance).
+    /// Get the first EQ config.
     pub fn eq(&self) -> Option<&EqConfig> {
         self.processing_chain.iter().find_map(|s| match s {
-            ProcessingStage::Eq(eq) => Some(eq),
+            ProcessingStage::Eq(_, eq) => Some(eq),
             _ => None,
         })
     }
 
-    /// Get the EQ config mutably.
+    /// Get the first EQ config mutably.
     pub fn eq_mut(&mut self) -> Option<&mut EqConfig> {
         self.processing_chain.iter_mut().find_map(|s| match s {
-            ProcessingStage::Eq(eq) => Some(eq),
+            ProcessingStage::Eq(_, eq) => Some(eq),
             _ => None,
         })
     }
 
-    /// Check whether an EQ is present.
+    /// Get the EffectId of the first EQ, if present.
+    pub fn first_eq_id(&self) -> Option<EffectId> {
+        self.processing_chain.iter().find_map(|s| s.eq_id())
+    }
+
+    /// Get an EQ config by its EffectId.
+    pub fn eq_by_id(&self, id: EffectId) -> Option<&EqConfig> {
+        self.processing_chain.iter().find_map(|s| match s {
+            ProcessingStage::Eq(eid, eq) if *eid == id => Some(eq),
+            _ => None,
+        })
+    }
+
+    /// Get a mutable EQ config by its EffectId.
+    pub fn eq_by_id_mut(&mut self, id: EffectId) -> Option<&mut EqConfig> {
+        self.processing_chain.iter_mut().find_map(|s| match s {
+            ProcessingStage::Eq(eid, eq) if *eid == id => Some(eq),
+            _ => None,
+        })
+    }
+
+    /// Iterate over all EQs as (EffectId, &EqConfig).
+    pub fn eqs(&self) -> impl Iterator<Item = (EffectId, &EqConfig)> {
+        self.processing_chain.iter().filter_map(|s| match s {
+            ProcessingStage::Eq(id, eq) => Some((*id, eq)),
+            _ => None,
+        })
+    }
+
+    /// Chain index of a specific EQ by its EffectId.
+    pub fn eq_chain_index_by_id(&self, id: EffectId) -> Option<usize> {
+        self.processing_chain
+            .iter()
+            .position(|s| matches!(s, ProcessingStage::Eq(eid, _) if *eid == id))
+    }
+
+    /// Check whether any EQ is present.
     pub fn has_eq(&self) -> bool {
         self.processing_chain.iter().any(|s| s.is_eq())
     }
 
-    /// Toggle EQ: remove if present, or insert after last filter.
+    /// Add a new EQ to the chain (after last filter, before effects). Returns its EffectId.
+    pub fn add_eq(&mut self) -> EffectId {
+        let id = self.next_effect_id;
+        self.next_effect_id = EffectId::new(self.next_effect_id.get() + 1);
+        let insert_at = self
+            .processing_chain
+            .iter()
+            .rposition(|s| s.is_filter())
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        self.processing_chain
+            .insert(insert_at, ProcessingStage::Eq(id, EqConfig::default()));
+        id
+    }
+
+    /// Remove an EQ by its EffectId. Returns true if removed.
+    pub fn remove_eq(&mut self, id: EffectId) -> bool {
+        if let Some(idx) = self.eq_chain_index_by_id(id) {
+            self.processing_chain.remove(idx);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggle first EQ: remove if present, or add new one after last filter.
     pub fn toggle_eq(&mut self) {
         if let Some(idx) = self.eq_chain_index() {
             self.processing_chain.remove(idx);
         } else {
-            let insert_at = self
-                .processing_chain
-                .iter()
-                .rposition(|s| s.is_filter())
-                .map(|i| i + 1)
-                .unwrap_or(0);
-            self.processing_chain
-                .insert(insert_at, ProcessingStage::Eq(EqConfig::default()));
+            self.add_eq();
         }
     }
 
@@ -201,7 +257,7 @@ impl ChannelStrip {
         self.processing_chain.iter().position(|s| s.is_filter())
     }
 
-    /// Chain index of the EQ.
+    /// Chain index of the first EQ.
     pub fn eq_chain_index(&self) -> Option<usize> {
         self.processing_chain.iter().position(|s| s.is_eq())
     }
@@ -299,12 +355,11 @@ impl ChannelStrip {
         effects_max_cursor(&effects)
     }
 
-    /// Recalculate next_effect_id from existing effects in the chain (used after loading).
+    /// Recalculate next_effect_id from existing effects and EQs in the chain (used after loading).
     pub fn recalculate_next_effect_id(&mut self) {
-        self.next_effect_id = self
-            .effects()
-            .map(|e| e.id.get())
-            .max()
-            .map_or(EffectId::new(0), |m| EffectId::new(m + 1));
+        let max_effect = self.effects().map(|e| e.id.get()).max();
+        let max_eq = self.eqs().map(|(id, _)| id.get()).max();
+        let max_id = max_effect.into_iter().chain(max_eq).max();
+        self.next_effect_id = max_id.map_or(EffectId::new(0), |m| EffectId::new(m + 1));
     }
 }

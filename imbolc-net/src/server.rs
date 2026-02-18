@@ -291,7 +291,9 @@ impl DirtyFlags {
             | BusAction::ToggleEffectBypass(id, ..)
             | BusAction::AdjustEffectParam(id, ..)
             | BusAction::ToggleEqualizer(id)
-            | BusAction::SetEqualizerParam(id, ..) => {
+            | BusAction::SetEqualizerParam(id, ..)
+            | BusAction::AddEqualizer(id)
+            | BusAction::RemoveEqualizer(id, ..) => {
                 self.dirty_mixer_buses.insert(*id);
             }
             // Structural changes

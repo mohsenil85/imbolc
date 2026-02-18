@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult, EqualizerParamKind};
 use crate::state::automation::AutomationTarget;
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
-use imbolc_types::{DomainAction, TrackAction};
+use imbolc_types::{DomainAction, EffectId, TrackAction};
 
 use super::super::automation::record_automation_point;
 
@@ -10,6 +10,7 @@ pub(super) fn handle_set_eq_param(
     state: &mut AppState,
     audio: &mut AudioHandle,
     instrument_id: crate::state::TrackId,
+    effect_id: EffectId,
     band_idx: usize,
     param: EqualizerParamKind,
     value: f32,
@@ -17,6 +18,7 @@ pub(super) fn handle_set_eq_param(
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(TrackAction::SetEqualizerParam(
             instrument_id,
+            effect_id,
             band_idx,
             param,
             value,
@@ -40,7 +42,7 @@ pub(super) fn handle_set_eq_param(
             }
             _ => value,
         };
-        let _ = audio.set_eq_param(instrument_id, &sc_param, sc_value);
+        let _ = audio.set_eq_param(instrument_id, effect_id, &sc_param, sc_value);
     }
 
     let mut result = DispatchResult::none();
@@ -76,6 +78,41 @@ pub(super) fn handle_toggle_eq(
 ) -> DispatchResult {
     imbolc_types::reduce::reduce_action(
         &DomainAction::Track(TrackAction::ToggleEqualizer(instrument_id)),
+        &mut state.tracks,
+        &mut state.session,
+    );
+    let mut result = DispatchResult::none();
+    result.audio_effects.push(AudioEffect::RebuildInstruments);
+    result
+        .audio_effects
+        .push(AudioEffect::RebuildRoutingForInstrument(instrument_id));
+    result
+}
+
+pub(super) fn handle_add_eq(
+    state: &mut AppState,
+    instrument_id: crate::state::TrackId,
+) -> DispatchResult {
+    imbolc_types::reduce::reduce_action(
+        &DomainAction::Track(TrackAction::AddEqualizer(instrument_id)),
+        &mut state.tracks,
+        &mut state.session,
+    );
+    let mut result = DispatchResult::none();
+    result.audio_effects.push(AudioEffect::RebuildInstruments);
+    result
+        .audio_effects
+        .push(AudioEffect::RebuildRoutingForInstrument(instrument_id));
+    result
+}
+
+pub(super) fn handle_remove_eq(
+    state: &mut AppState,
+    instrument_id: crate::state::TrackId,
+    effect_id: EffectId,
+) -> DispatchResult {
+    imbolc_types::reduce::reduce_action(
+        &DomainAction::Track(TrackAction::RemoveEqualizer(instrument_id, effect_id)),
         &mut state.tracks,
         &mut state.session,
     );

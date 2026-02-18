@@ -78,7 +78,7 @@ pub fn dispatch_master(
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        MasterAction::SetEqualizerParam(band_idx, param, value) => {
+        MasterAction::SetEqualizerParam(effect_id, band_idx, param, value) => {
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", band_idx, param.as_str());
                 let sc_value = match param {
@@ -93,8 +93,15 @@ pub fn dispatch_master(
                     }
                     _ => *value,
                 };
-                let _ = audio.set_master_eq_param(&sc_param, sc_value);
+                let _ = audio.set_master_eq_param(*effect_id, &sc_param, sc_value);
             }
+            result.audio_effects.push(AudioEffect::RebuildSession);
+        }
+
+        MasterAction::AddEqualizer | MasterAction::RemoveEqualizer(_) => {
+            result
+                .audio_effects
+                .push(AudioEffect::RebuildMasterProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
     }
@@ -218,9 +225,15 @@ mod tests {
         let (mut state, mut audio) = setup();
         // Enable EQ first
         dispatch_master(&MasterAction::ToggleEqualizer, &mut state, &mut audio);
+        let eq_id = state
+            .session
+            .mixer
+            .master_channel_strip
+            .first_eq_id()
+            .unwrap();
 
         let result = dispatch_master(
-            &MasterAction::SetEqualizerParam(0, EqualizerParamKind::Gain, 6.0),
+            &MasterAction::SetEqualizerParam(eq_id, 0, EqualizerParamKind::Gain, 6.0),
             &mut state,
             &mut audio,
         );

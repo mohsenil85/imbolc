@@ -274,7 +274,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                 if let Some(e) = eq.take() {
                     inst.channel_strip
                         .processing_chain
-                        .push(ProcessingStage::Eq(e));
+                        .push(ProcessingStage::Eq(imbolc_types::EffectId::new(0), e));
                 }
             } else {
                 for (stage_type, eff_id) in &ordering {
@@ -288,9 +288,10 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                         }
                         "eq" => {
                             if let Some(e) = eq.take() {
+                                let eq_id = imbolc_types::EffectId::new(eff_id.unwrap_or(0));
                                 inst.channel_strip
                                     .processing_chain
-                                    .push(ProcessingStage::Eq(e));
+                                    .push(ProcessingStage::Eq(eq_id, e));
                             }
                         }
                         "effect" => {
@@ -319,7 +320,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
             if let Some(e) = eq.take() {
                 inst.channel_strip
                     .processing_chain
-                    .push(ProcessingStage::Eq(e));
+                    .push(ProcessingStage::Eq(imbolc_types::EffectId::new(0), e));
             }
         }
         // Append any effects not covered by ordering (defensive)
@@ -350,6 +351,9 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         if let Some(seq) = load_drum_sequencer(conn, r.id)? {
             inst.source_extra = SourceExtra::Kit(seq);
         }
+
+        // Ensure next_effect_id covers both effects and EQ stages
+        inst.channel_strip.recalculate_next_effect_id();
 
         tracks.tracks.push(inst);
     }

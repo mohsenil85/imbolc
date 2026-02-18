@@ -253,9 +253,9 @@ pub(super) fn reduce(
         // ShowVstEffectParams: navigation only, no state mutation
         TrackAction::ShowVstEffectParams(_, _) => true,
 
-        TrackAction::SetEqualizerParam(instrument_id, band_idx, param, value) => {
+        TrackAction::SetEqualizerParam(instrument_id, effect_id, band_idx, param, value) => {
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
-                if let Some(eq) = instrument.eq_mut() {
+                if let Some(eq) = instrument.eq_by_id_mut(*effect_id) {
                     if let Some(band) = eq.bands.get_mut(*band_idx) {
                         match param {
                             EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
@@ -285,6 +285,18 @@ pub(super) fn reduce(
         TrackAction::ToggleEqualizer(instrument_id) => {
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 instrument.toggle_eq();
+            }
+            true
+        }
+        TrackAction::AddEqualizer(instrument_id) => {
+            if let Some(instrument) = instruments.track_mut(*instrument_id) {
+                instrument.add_eq();
+            }
+            true
+        }
+        TrackAction::RemoveEqualizer(instrument_id, effect_id) => {
+            if let Some(instrument) = instruments.track_mut(*instrument_id) {
+                instrument.remove_eq(*effect_id);
             }
             true
         }

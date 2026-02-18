@@ -88,6 +88,7 @@ pub enum AudioCmd {
     },
     SetEqParam {
         instrument_id: TrackId,
+        effect_id: EffectId,
         param: String,
         value: f32,
     },
@@ -127,17 +128,20 @@ pub enum AudioCmd {
     /// Targeted /n_set to bus EQ node (no routing rebuild).
     SetBusEqParam {
         bus_id: BusId,
+        effect_id: EffectId,
         param: String,
         value: f32,
     },
     /// Targeted /n_set to layer group EQ node (no routing rebuild).
     SetLayerGroupEqParam {
         group_id: GroupId,
+        effect_id: EffectId,
         param: String,
         value: f32,
     },
     /// Targeted /n_set to master EQ node (no routing rebuild).
     SetMasterEqParam {
+        effect_id: EffectId,
         param: String,
         value: f32,
     },

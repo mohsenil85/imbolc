@@ -897,11 +897,13 @@ impl AudioHandle {
     pub fn set_eq_param(
         &self,
         instrument_id: TrackId,
+        effect_id: EffectId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
         self.send_cmd(AudioCmd::SetEqParam {
             instrument_id,
+            effect_id,
             param: param.to_string(),
             value,
         })
@@ -978,9 +980,16 @@ impl AudioHandle {
         })
     }
 
-    pub fn set_bus_eq_param(&self, bus_id: BusId, param: &str, value: f32) -> Result<(), String> {
+    pub fn set_bus_eq_param(
+        &self,
+        bus_id: BusId,
+        effect_id: EffectId,
+        param: &str,
+        value: f32,
+    ) -> Result<(), String> {
         self.send_cmd(AudioCmd::SetBusEqParam {
             bus_id,
+            effect_id,
             param: param.to_string(),
             value,
         })
@@ -989,18 +998,26 @@ impl AudioHandle {
     pub fn set_layer_group_eq_param(
         &self,
         group_id: GroupId,
+        effect_id: EffectId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
         self.send_cmd(AudioCmd::SetLayerGroupEqParam {
             group_id,
+            effect_id,
             param: param.to_string(),
             value,
         })
     }
 
-    pub fn set_master_eq_param(&self, param: &str, value: f32) -> Result<(), String> {
+    pub fn set_master_eq_param(
+        &self,
+        effect_id: EffectId,
+        param: &str,
+        value: f32,
+    ) -> Result<(), String> {
         self.send_cmd(AudioCmd::SetMasterEqParam {
+            effect_id,
             param: param.to_string(),
             value,
         })

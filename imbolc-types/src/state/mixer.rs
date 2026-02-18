@@ -406,7 +406,8 @@ mod tests {
         use crate::EffectId;
         let mut gm = GroupMixer::new(GroupId::new(1), &[BusId::new(1), BusId::new(2)]);
         let id = gm.channel_strip.add_effect(EffectType::TapeComp);
-        assert_eq!(id, EffectId::new(0));
+        // EQ takes EffectId(0) via new_layer_group(), so first effect gets EffectId(1)
+        assert_eq!(id, EffectId::new(1));
         let effects = gm.channel_strip.effects_vec();
         assert_eq!(effects.len(), 1);
         assert_eq!(effects[0].effect_type, EffectType::TapeComp);

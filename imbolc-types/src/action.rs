@@ -283,8 +283,12 @@ pub enum BusAction {
     AdjustEffectParam(BusId, EffectId, ParamIndex, f32),
     /// Toggle EQ on/off for a bus
     ToggleEqualizer(BusId),
-    /// Set an EQ band parameter on a bus (bus_id, band_index, param, value)
-    SetEqualizerParam(BusId, usize, EqualizerParamKind, f32),
+    /// Set an EQ band parameter on a bus (bus_id, effect_id, band_index, param, value)
+    SetEqualizerParam(BusId, EffectId, usize, EqualizerParamKind, f32),
+    /// Add a new EQ to a bus
+    AddEqualizer(BusId),
+    /// Remove an EQ from a bus
+    RemoveEqualizer(BusId, EffectId),
 }
 
 /// Group actions.
@@ -302,8 +306,12 @@ pub enum GroupAction {
     AdjustEffectParam(GroupId, EffectId, ParamIndex, f32),
     /// Toggle EQ on/off for a group
     ToggleEqualizer(GroupId),
-    /// Set an EQ band parameter on a group (group_id, band_index, param, value)
-    SetEqualizerParam(GroupId, usize, EqualizerParamKind, f32),
+    /// Set an EQ band parameter on a group (group_id, effect_id, band_index, param, value)
+    SetEqualizerParam(GroupId, EffectId, usize, EqualizerParamKind, f32),
+    /// Add a new EQ to a group
+    AddEqualizer(GroupId),
+    /// Remove an EQ from a group
+    RemoveEqualizer(GroupId, EffectId),
     /// Rename a group
     Rename(GroupId, String),
 }
@@ -323,8 +331,12 @@ pub enum MasterAction {
     AdjustEffectParam(EffectId, ParamIndex, f32),
     /// Toggle master EQ on/off
     ToggleEqualizer,
-    /// Set master EQ band parameter (band_index, param, value)
-    SetEqualizerParam(usize, EqualizerParamKind, f32),
+    /// Set master EQ band parameter (effect_id, band_index, param, value)
+    SetEqualizerParam(EffectId, usize, EqualizerParamKind, f32),
+    /// Add a new EQ to the master bus
+    AddEqualizer,
+    /// Remove an EQ from the master bus
+    RemoveEqualizer(EffectId),
 }
 
 /// Sample slicer actions.
@@ -418,8 +430,8 @@ pub enum AudioEffect {
     SetLfoParam(TrackId, LfoParamKind, f32),
     SetBusEffectParam(BusId, EffectId, ParamIndex, f32),
     SetGroupEffectParam(GroupId, EffectId, ParamIndex, f32),
-    /// Set a master EQ band parameter (SC param name, value)
-    SetMasterEqParam(String, f32),
+    /// Set a master EQ band parameter (effect_id, SC param name, value)
+    SetMasterEqParam(EffectId, String, f32),
     /// Set a master bus effect parameter (effect_id, param_index, value)
     SetMasterEffectParam(EffectId, ParamIndex, f32),
     /// Rebuild master bus processing (effect chain + EQ)
@@ -932,8 +944,10 @@ pub enum TrackAction {
     ClearChordShape(TrackId),
     LoadIRResult(TrackId, EffectId, PathBuf), // instrument_id, effect_id, path
     ShowVstEffectParams(TrackId, EffectId),   // instrument_id, effect_id
-    SetEqualizerParam(TrackId, usize, EqualizerParamKind, f32), // instrument_id, band_index, param, value
+    SetEqualizerParam(TrackId, EffectId, usize, EqualizerParamKind, f32), // instrument_id, effect_id, band_index, param, value
     ToggleEqualizer(TrackId),
+    AddEqualizer(TrackId),
+    RemoveEqualizer(TrackId, EffectId),
     LinkLayer(TrackId, TrackId),
     UnlinkLayer(TrackId),
     AdjustLayerOctaveOffset(TrackId, i8),
@@ -1008,8 +1022,10 @@ impl TrackAction {
             | Self::ClearChordShape(id)
             | Self::LoadIRResult(id, _, _)
             | Self::ShowVstEffectParams(id, _)
-            | Self::SetEqualizerParam(id, _, _, _)
+            | Self::SetEqualizerParam(id, _, _, _, _)
             | Self::ToggleEqualizer(id)
+            | Self::AddEqualizer(id)
+            | Self::RemoveEqualizer(id, _)
             | Self::LinkLayer(id, _)
             | Self::UnlinkLayer(id)
             | Self::AdjustLayerOctaveOffset(id, _)

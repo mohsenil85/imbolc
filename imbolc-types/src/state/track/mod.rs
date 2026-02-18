@@ -205,6 +205,26 @@ impl GroupMixer {
         self.channel_strip.eq_mut()
     }
 
+    pub fn eq_by_id(&self, id: EffectId) -> Option<&EqConfig> {
+        self.channel_strip.eq_by_id(id)
+    }
+
+    pub fn eq_by_id_mut(&mut self, id: EffectId) -> Option<&mut EqConfig> {
+        self.channel_strip.eq_by_id_mut(id)
+    }
+
+    pub fn eqs(&self) -> impl Iterator<Item = (EffectId, &EqConfig)> {
+        self.channel_strip.eqs()
+    }
+
+    pub fn add_eq(&mut self) -> EffectId {
+        self.channel_strip.add_eq()
+    }
+
+    pub fn remove_eq(&mut self, id: EffectId) -> bool {
+        self.channel_strip.remove_eq(id)
+    }
+
     /// Delegate disable_send_for_bus to channel_strip.
     pub fn disable_send_for_bus(&mut self, bus_id: BusId) {
         self.channel_strip.disable_send_for_bus(bus_id);
@@ -232,7 +252,7 @@ pub enum ModSource {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProcessingStage {
     Filter(FilterConfig),
-    Eq(EqConfig),
+    Eq(EffectId, EqConfig),
     Effect(EffectSlot),
 }
 
@@ -242,7 +262,15 @@ impl ProcessingStage {
     }
 
     pub fn is_eq(&self) -> bool {
-        matches!(self, ProcessingStage::Eq(_))
+        matches!(self, ProcessingStage::Eq(..))
+    }
+
+    /// Returns the EffectId if this is an Eq stage.
+    pub fn eq_id(&self) -> Option<EffectId> {
+        match self {
+            ProcessingStage::Eq(id, _) => Some(*id),
+            _ => None,
+        }
     }
 
     pub fn is_effect(&self) -> bool {
@@ -253,7 +281,7 @@ impl ProcessingStage {
     pub fn row_count(&self) -> usize {
         match self {
             ProcessingStage::Filter(f) => 3 + f.extra_params.len(),
-            ProcessingStage::Eq(_) => 1,
+            ProcessingStage::Eq(..) => 1,
             ProcessingStage::Effect(e) => 1 + e.params.len(),
         }
     }
@@ -461,8 +489,26 @@ impl Track {
     pub fn eq_mut(&mut self) -> Option<&mut EqConfig> {
         self.channel_strip.eq_mut()
     }
+    pub fn first_eq_id(&self) -> Option<EffectId> {
+        self.channel_strip.first_eq_id()
+    }
+    pub fn eq_by_id(&self, id: EffectId) -> Option<&EqConfig> {
+        self.channel_strip.eq_by_id(id)
+    }
+    pub fn eq_by_id_mut(&mut self, id: EffectId) -> Option<&mut EqConfig> {
+        self.channel_strip.eq_by_id_mut(id)
+    }
+    pub fn eqs(&self) -> impl Iterator<Item = (EffectId, &EqConfig)> {
+        self.channel_strip.eqs()
+    }
     pub fn has_eq(&self) -> bool {
         self.channel_strip.has_eq()
+    }
+    pub fn add_eq(&mut self) -> EffectId {
+        self.channel_strip.add_eq()
+    }
+    pub fn remove_eq(&mut self, id: EffectId) -> bool {
+        self.channel_strip.remove_eq(id)
     }
     pub fn effects(&self) -> impl Iterator<Item = &EffectSlot> {
         self.channel_strip.effects()
@@ -951,7 +997,7 @@ mod tests {
     #[test]
     fn processing_stage_is_methods() {
         let f = ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf));
-        let e = ProcessingStage::Eq(EqConfig::default());
+        let e = ProcessingStage::Eq(EffectId::new(0), EqConfig::default());
         let fx = ProcessingStage::Effect(EffectSlot::new(EffectId::new(0), EffectType::Delay));
         assert!(f.is_filter());
         assert!(!f.is_eq());
@@ -970,7 +1016,7 @@ mod tests {
 
     #[test]
     fn processing_stage_row_count_eq() {
-        let eq = ProcessingStage::Eq(EqConfig::default());
+        let eq = ProcessingStage::Eq(EffectId::new(0), EqConfig::default());
         assert_eq!(eq.row_count(), 1);
     }
 
@@ -1013,7 +1059,7 @@ mod tests {
 
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(EqConfig::default()));
+            .push(ProcessingStage::Eq(EffectId::new(0), EqConfig::default()));
         assert!(inst.eq().is_some());
         assert!(inst.has_eq());
 
@@ -1044,7 +1090,7 @@ mod tests {
         let id = inst.add_effect(EffectType::Delay);
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(EqConfig::default()));
+            .push(ProcessingStage::Eq(EffectId::new(0), EqConfig::default()));
         assert!(inst.effect_by_id(id).is_some());
         assert_eq!(
             inst.effect_by_id(id).unwrap().effect_type,
@@ -1179,7 +1225,7 @@ mod tests {
             .push(ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(EqConfig::default()));
+            .push(ProcessingStage::Eq(EffectId::new(0), EqConfig::default()));
 
         let source_rows = inst.source_params.len().max(1);
         let delay_rows = 1 + EffectType::Delay.default_params().len();
@@ -1270,9 +1316,10 @@ mod tests {
             0,
             ProcessingStage::Filter(FilterConfig::new(FilterType::Lpf)),
         );
-        inst.channel_strip
-            .processing_chain
-            .insert(1, ProcessingStage::Eq(EqConfig::default()));
+        inst.channel_strip.processing_chain.insert(
+            1,
+            ProcessingStage::Eq(EffectId::new(0), EqConfig::default()),
+        );
         assert_eq!(inst.filter_chain_index(), Some(0));
         assert_eq!(inst.eq_chain_index(), Some(1));
         assert_eq!(inst.effect_chain_index(id), Some(2));

@@ -132,9 +132,10 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
                         eq.bands[band_index].enabled = enabled;
                     }
                 }
-                bus.channel_strip
-                    .processing_chain
-                    .insert(0, imbolc_types::ProcessingStage::Eq(eq));
+                bus.channel_strip.processing_chain.insert(
+                    0,
+                    imbolc_types::ProcessingStage::Eq(imbolc_types::EffectId::new(0), eq),
+                );
             }
         }
     }
@@ -268,9 +269,10 @@ pub(super) fn load_layer_group_mixers(
                     }
                 }
                 // Insert EQ at beginning of processing chain (before effects)
-                gm.channel_strip
-                    .processing_chain
-                    .insert(0, imbolc_types::ProcessingStage::Eq(eq));
+                gm.channel_strip.processing_chain.insert(
+                    0,
+                    imbolc_types::ProcessingStage::Eq(imbolc_types::EffectId::new(0), eq),
+                );
             }
         }
 

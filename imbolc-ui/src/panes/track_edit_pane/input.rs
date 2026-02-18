@@ -111,7 +111,7 @@ impl TrackEditPane {
                                         }
                                     }
                                 },
-                                Some(ProcessingStage::Eq(_)) => {} // EQ — no text edit
+                                Some(ProcessingStage::Eq(..)) => {} // EQ — no text edit
                                 Some(ProcessingStage::Effect(e)) => {
                                     if local_idx > 0 {
                                         let param_idx = local_idx - 1;
@@ -182,7 +182,7 @@ impl TrackEditPane {
                                         }
                                     }
                                 },
-                                Some(ProcessingStage::Eq(_)) => {}
+                                Some(ProcessingStage::Eq(..)) => {}
                                 Some(ProcessingStage::Effect(e)) => {
                                     if local_idx > 0 {
                                         let param_idx = local_idx - 1;
@@ -289,7 +289,7 @@ impl TrackEditPane {
                 if let TrackSection::Processing(i) = section {
                     match self.processing_chain.get(i) {
                         Some(ProcessingStage::Effect(_)) if local_idx == 0 => return Action::None,
-                        Some(ProcessingStage::Eq(_)) => return Action::None,
+                        Some(ProcessingStage::Eq(..)) => return Action::None,
                         Some(ProcessingStage::Filter(_)) if local_idx == 0 => return Action::None, // filter type row
                         None => return Action::None,
                         _ => {}
@@ -431,7 +431,10 @@ impl TrackEditPane {
                         .unwrap_or(0);
                     self.processing_chain.insert(
                         insert_pos,
-                        ProcessingStage::Eq(crate::state::EqConfig::default()),
+                        ProcessingStage::Eq(
+                            imbolc_types::EffectId::new(0),
+                            crate::state::EqConfig::default(),
+                        ),
                     );
                 }
                 self.emit_update()

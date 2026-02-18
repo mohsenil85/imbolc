@@ -522,7 +522,7 @@ fn save_processing_chain(
     for (pos, stage) in chain.iter().enumerate() {
         let (stage_type, effect_id): (&str, Option<u32>) = match stage {
             imbolc_types::ProcessingStage::Filter(_) => ("filter", None),
-            imbolc_types::ProcessingStage::Eq(_) => ("eq", None),
+            imbolc_types::ProcessingStage::Eq(id, _) => ("eq", Some(id.get())),
             imbolc_types::ProcessingStage::Effect(e) => ("effect", Some(e.id.get())),
         };
         stmt.execute(params![track_id, pos as i32, stage_type, effect_id])?;

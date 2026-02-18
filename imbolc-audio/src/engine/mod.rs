@@ -88,7 +88,7 @@ pub struct TrackNodes {
     pub source: Option<i32>,
     pub lfo: Option<i32>,
     pub filter: Option<i32>,
-    pub eq: Option<i32>,
+    pub eq_nodes: HashMap<EffectId, i32>,
     pub effects: HashMap<EffectId, i32>,
     /// Ordered list of effect IDs matching the signal chain order (only enabled effects)
     pub effect_order: Vec<EffectId>,
@@ -107,8 +107,8 @@ impl TrackNodes {
         if let Some(id) = self.filter {
             ids.push(id);
         }
-        if let Some(id) = self.eq {
-            ids.push(id);
+        for &nid in self.eq_nodes.values() {
+            ids.push(nid);
         }
         for eid in &self.effect_order {
             if let Some(&nid) = self.effects.get(eid) {
@@ -145,14 +145,14 @@ pub struct AudioEngine {
     layer_group_send_node_map: HashMap<(GroupId, BusId), i32>,
     /// Bus effect synth nodes: (bus_id, effect_id) -> node_id
     bus_effect_node_map: HashMap<(BusId, EffectId), i32>,
-    /// Bus EQ synth nodes: bus_id -> node_id
-    bus_eq_node_map: HashMap<BusId, i32>,
+    /// Bus EQ synth nodes: (bus_id, effect_id) -> node_id
+    bus_eq_node_map: HashMap<(BusId, EffectId), i32>,
     /// Layer group effect synth nodes: (group_id, effect_id) -> node_id
     layer_group_effect_node_map: HashMap<(GroupId, EffectId), i32>,
-    /// Layer group EQ synth nodes: group_id -> node_id
-    layer_group_eq_node_map: HashMap<GroupId, i32>,
-    /// Master EQ synth node ID (in GROUP_MASTER)
-    master_eq_node_id: Option<i32>,
+    /// Layer group EQ synth nodes: (group_id, effect_id) -> node_id
+    layer_group_eq_node_map: HashMap<(GroupId, EffectId), i32>,
+    /// Master EQ synth nodes: effect_id -> node_id (in GROUP_MASTER)
+    master_eq_node_map: HashMap<EffectId, i32>,
     /// Master effect synth nodes: effect_id -> node_id (in GROUP_MASTER)
     master_effect_node_map: HashMap<EffectId, i32>,
     /// Track final buses: instrument_id -> SC audio bus index (post-effects, pre-mixer)
@@ -221,7 +221,7 @@ impl AudioEngine {
             bus_eq_node_map: HashMap::new(),
             layer_group_effect_node_map: HashMap::new(),
             layer_group_eq_node_map: HashMap::new(),
-            master_eq_node_id: None,
+            master_eq_node_map: HashMap::new(),
             master_effect_node_map: HashMap::new(),
             instrument_final_buses: HashMap::new(),
             voice_allocator: VoiceAllocator::new(),

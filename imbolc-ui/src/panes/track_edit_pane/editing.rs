@@ -111,7 +111,7 @@ impl TrackEditPane {
                             }
                         }
                     }
-                    Some(ProcessingStage::Eq(_)) => {
+                    Some(ProcessingStage::Eq(..)) => {
                         // EQ row is a toggle — not adjustable via slider
                     }
                     Some(ProcessingStage::Effect(e)) => {
@@ -237,7 +237,7 @@ impl TrackEditPane {
                             }
                         }
                     }
-                    Some(ProcessingStage::Eq(_)) => {} // EQ toggle — no zero
+                    Some(ProcessingStage::Eq(..)) => {} // EQ toggle — no zero
                     Some(ProcessingStage::Effect(e)) => {
                         if local_idx == 0 {
                             return;
@@ -308,7 +308,7 @@ impl TrackEditPane {
                             }
                         }
                     }
-                    Some(ProcessingStage::Eq(_)) => {} // EQ — no reset
+                    Some(ProcessingStage::Eq(..)) => {} // EQ — no reset
                     Some(ProcessingStage::Effect(e)) => {
                         if local_idx == 0 {
                             return;
@@ -367,7 +367,7 @@ impl TrackEditPane {
                             param.zero();
                         }
                     }
-                    Some(ProcessingStage::Eq(_)) => {} // EQ — no zero
+                    Some(ProcessingStage::Eq(..)) => {} // EQ — no zero
                     Some(ProcessingStage::Effect(e)) => {
                         for param in &mut e.params {
                             param.zero();
@@ -420,7 +420,7 @@ impl TrackEditPane {
                             .unwrap_or_default()
                     }
                 },
-                Some(ProcessingStage::Eq(_)) => String::new(),
+                Some(ProcessingStage::Eq(..)) => String::new(),
                 Some(ProcessingStage::Effect(e)) => {
                     if local_idx == 0 {
                         return String::new();

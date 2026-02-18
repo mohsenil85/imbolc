@@ -5,7 +5,7 @@ use crate::state::param::ParamValue;
 use crate::state::session::SessionState;
 use crate::state::track::{EffectType, FilterType, SourceType};
 use crate::state::track_state::TrackState;
-use imbolc_types::{BusId, GroupId};
+use imbolc_types::{BusId, EffectId, GroupId};
 
 #[test]
 fn round_trip_bus_effects() {
@@ -138,9 +138,10 @@ fn round_trip_layer_group_effects() {
         .find(|g| g.group_id == GroupId::new(1))
         .unwrap();
     assert_eq!(loaded_gm.channel_strip.effects_vec().len(), 2);
+    // EQ takes EffectId(0), TapeComp gets EffectId(1), Limiter gets EffectId(2)
     assert_eq!(
         loaded_gm.channel_strip.next_effect_id,
-        imbolc_types::EffectId::new(2)
+        imbolc_types::EffectId::new(3)
     );
 
     let loaded_comp = loaded_gm.channel_strip.effect_by_id(comp_id).unwrap();
@@ -293,7 +294,7 @@ fn round_trip_processing_chain_order() {
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(crate::state::track::EqConfig::default()));
+            .push(ProcessingStage::Eq(EffectId::new(0), crate::state::track::EqConfig::default()));
     }
 
     session.piano_roll.add_sequence(inst_id);
@@ -355,7 +356,7 @@ fn round_trip_processing_chain_interleaved() {
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(crate::state::track::EqConfig::default()));
+            .push(ProcessingStage::Eq(EffectId::new(0), crate::state::track::EqConfig::default()));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(

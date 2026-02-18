@@ -291,7 +291,7 @@ impl TrackEditPane {
                             global_row += 1;
                         }
                     }
-                    ProcessingStage::Eq(_eq) => {
+                    ProcessingStage::Eq(..) => {
                         // Single selectable row: "EQ [ON]  (e: toggle)"
                         if is_visible(global_row) && visual_y < max_y {
                             let is_sel = self.selected_row == global_row;

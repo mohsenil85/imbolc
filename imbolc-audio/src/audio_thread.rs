@@ -752,10 +752,13 @@ impl AudioThread {
             }
             AudioCmd::SetEqParam {
                 instrument_id,
+                effect_id,
                 param,
                 value,
             } => {
-                let _ = self.engine.set_eq_param(instrument_id, &param, value);
+                let _ = self
+                    .engine
+                    .set_eq_param(instrument_id, effect_id, &param, value);
             }
             AudioCmd::SetFilterParam {
                 instrument_id,
@@ -803,22 +806,30 @@ impl AudioThread {
             }
             AudioCmd::SetBusEqParam {
                 bus_id,
-                param,
-                value,
-            } => {
-                let _ = self.engine.set_bus_eq_param(bus_id, &param, value);
-            }
-            AudioCmd::SetLayerGroupEqParam {
-                group_id,
+                effect_id,
                 param,
                 value,
             } => {
                 let _ = self
                     .engine
-                    .set_layer_group_eq_param(group_id, &param, value);
+                    .set_bus_eq_param(bus_id, effect_id, &param, value);
             }
-            AudioCmd::SetMasterEqParam { param, value } => {
-                let _ = self.engine.set_master_eq_param(&param, value);
+            AudioCmd::SetLayerGroupEqParam {
+                group_id,
+                effect_id,
+                param,
+                value,
+            } => {
+                let _ = self
+                    .engine
+                    .set_layer_group_eq_param(group_id, effect_id, &param, value);
+            }
+            AudioCmd::SetMasterEqParam {
+                effect_id,
+                param,
+                value,
+            } => {
+                let _ = self.engine.set_master_eq_param(effect_id, &param, value);
             }
             AudioCmd::SetMasterEffectParam {
                 effect_id,

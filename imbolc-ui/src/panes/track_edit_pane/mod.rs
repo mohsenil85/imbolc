@@ -261,7 +261,7 @@ impl TrackEditPane {
                             return None;
                         }
                     },
-                    ProcessingStage::Eq(_) => return None,
+                    ProcessingStage::Eq(..) => return None,
                     ProcessingStage::Effect(e) => {
                         if local_idx == 0 {
                             return None; // effect header

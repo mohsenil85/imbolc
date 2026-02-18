@@ -88,7 +88,7 @@ pub fn dispatch_bus(
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        BusAction::SetEqualizerParam(bus_id, band_idx, param, value) => {
+        BusAction::SetEqualizerParam(bus_id, effect_id, band_idx, param, value) => {
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", band_idx, param.as_str());
                 let sc_value = match param {
@@ -103,8 +103,13 @@ pub fn dispatch_bus(
                     }
                     _ => *value,
                 };
-                let _ = audio.set_bus_eq_param(*bus_id, &sc_param, sc_value);
+                let _ = audio.set_bus_eq_param(*bus_id, *effect_id, &sc_param, sc_value);
             }
+            result.audio_effects.push(AudioEffect::RebuildSession);
+        }
+
+        BusAction::AddEqualizer(_) | BusAction::RemoveEqualizer(_, _) => {
+            result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
     }
@@ -176,7 +181,7 @@ pub fn dispatch_group(
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
-        GroupAction::SetEqualizerParam(group_id, band_idx, param, value) => {
+        GroupAction::SetEqualizerParam(group_id, effect_id, band_idx, param, value) => {
             // Send real-time param update to audio engine
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", band_idx, param.as_str());
@@ -192,8 +197,13 @@ pub fn dispatch_group(
                     }
                     _ => *value,
                 };
-                let _ = audio.set_layer_group_eq_param(*group_id, &sc_param, sc_value);
+                let _ = audio.set_layer_group_eq_param(*group_id, *effect_id, &sc_param, sc_value);
             }
+            result.audio_effects.push(AudioEffect::RebuildSession);
+        }
+
+        GroupAction::AddEqualizer(_) | GroupAction::RemoveEqualizer(_, _) => {
+            result.audio_effects.push(AudioEffect::RebuildBusProcessing);
             result.audio_effects.push(AudioEffect::RebuildSession);
         }
 
@@ -656,9 +666,24 @@ mod tests {
             .session
             .mixer
             .add_layer_group_mixer(GroupId::new(1), &[]);
+        // Layer groups start with an EQ — get its EffectId
+        let eq_id = state
+            .session
+            .mixer
+            .layer_group_mixer(GroupId::new(1))
+            .unwrap()
+            .channel_strip
+            .first_eq_id()
+            .unwrap();
 
         let result = dispatch_group(
-            &GroupAction::SetEqualizerParam(GroupId::new(1), 0, EqualizerParamKind::Gain, 6.0),
+            &GroupAction::SetEqualizerParam(
+                GroupId::new(1),
+                eq_id,
+                0,
+                EqualizerParamKind::Gain,
+                6.0,
+            ),
             &mut state,
             &mut audio,
         );

@@ -81,11 +81,25 @@ pub(super) fn dispatch_instrument(
         TrackAction::ShowVstEffectParams(instrument_id, effect_id) => {
             effects::handle_open_vst_effect_params(*instrument_id, *effect_id)
         }
-        TrackAction::SetEqualizerParam(instrument_id, band_idx, param, value) => {
-            eq::handle_set_eq_param(state, audio, *instrument_id, *band_idx, *param, *value)
+        TrackAction::SetEqualizerParam(instrument_id, effect_id, band_idx, param, value) => {
+            eq::handle_set_eq_param(
+                state,
+                audio,
+                *instrument_id,
+                *effect_id,
+                *band_idx,
+                *param,
+                *value,
+            )
         }
         TrackAction::ToggleEqualizer(instrument_id) => {
             eq::handle_toggle_eq(state, *instrument_id)
+        }
+        TrackAction::AddEqualizer(instrument_id) => {
+            eq::handle_add_eq(state, *instrument_id)
+        }
+        TrackAction::RemoveEqualizer(instrument_id, effect_id) => {
+            eq::handle_remove_eq(state, *instrument_id, *effect_id)
         }
         TrackAction::LinkLayer(a, b) => layer::handle_link_layer(state, *a, *b),
         TrackAction::UnlinkLayer(id) => layer::handle_unlink_layer(state, *id),
