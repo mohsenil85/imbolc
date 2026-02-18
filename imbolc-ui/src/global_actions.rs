@@ -5,9 +5,9 @@ use crate::action::{
 use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
 use crate::panes::{
-    CommandPalettePane, ConfirmPane, DocsPane, FileBrowserPane, FrameEditPane, HelpPane,
-    PaneSwitcherPane, PendingAction, PianoRollPane, SaveAsPane, SequencerPane, ServerPane,
-    TrackEditPane, TrackListPane, VstParamPane, WaveformPane,
+    CommandPalettePane, ConfirmPane, FileBrowserPane, FrameEditPane, HelpPane, PaneSwitcherPane,
+    PendingAction, PianoRollPane, SaveAsPane, SequencerPane, ServerPane, TrackEditPane,
+    TrackListPane, VstParamPane, WaveformPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -688,27 +688,6 @@ pub(crate) fn handle_global_action(
                     }
                     panes.push_to(NavPaneId::Help, dispatcher.state());
                 }
-            }
-            GlobalActionId::OpenDocs => {
-                // Open docs for the currently selected instrument's source type
-                if let Some(docs) = panes.get_pane_mut::<DocsPane>("docs") {
-                    if let Some(inst) = dispatcher.state().tracks.selected_track() {
-                        let short_name = inst.source.short_name().to_lowercase();
-                        docs.open_for_source(&short_name);
-                    } else {
-                        docs.open_browser();
-                    }
-                }
-                panes.push_to(NavPaneId::Docs, dispatcher.state());
-                sync_pane_layer(panes, layer_stack);
-            }
-            GlobalActionId::OpenLearn => {
-                // Open the topic browser
-                if let Some(docs) = panes.get_pane_mut::<DocsPane>("docs") {
-                    docs.open_browser();
-                }
-                panes.push_to(NavPaneId::Docs, dispatcher.state());
-                sync_pane_layer(panes, layer_stack);
             }
             GlobalActionId::SelectInstrument(n) => {
                 select_instrument(n as usize, dispatcher, panes, audio);

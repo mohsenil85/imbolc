@@ -268,7 +268,6 @@ Effects are collected in `DispatchResult.audio_effects: Vec<AudioEffect>` and ap
 | `frame_edit_pane.rs` | frame_edit | BPM/key/scale/tuning editor |
 | `midi_settings_pane.rs` | midi_settings | MIDI port + CC mapping |
 | `vst_param_pane/` | vst_params | VST parameter editor |
-| `docs_pane/` | docs | Built-in documentation viewer |
 | `checkpoint_list_pane.rs` | checkpoint_list | Undo checkpoint browser |
 | `groove_pane.rs` | groove | Swing/humanize/timing settings |
 | `tuner_pane.rs` | tuner | Reference pitch player |

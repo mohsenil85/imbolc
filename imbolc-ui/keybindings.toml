@@ -49,8 +49,6 @@ bindings = [
   { key = "Ctrl+a", action = "select_all", description = "Select all" },
   { key = "Ctrl+n", action = "add_instrument", description = "Add instrument" },
   { key = ":", action = "command_palette", description = "Command palette" },
-  { key = "F6", action = "open_docs", description = "Docs: selected instrument" },
-  { key = "Shift+F6", action = "open_learn", description = "Learn: topic browser" },
   { key = ";", action = "pane_switcher", description = "Pane switcher" },
   { key = "Space", action = "play_stop", description = "Play / Stop" },
   { key = "M", action = "click_track_toggle", description = "Toggle metronome" },
@@ -278,21 +276,6 @@ bindings = [
   { key = "Down", action = "down", description = "Scroll down" },
   { key = "Home", action = "top", description = "Go to top" },
   { key = "End", action = "bottom", description = "Go to bottom" },
-]
-
-[layers.docs]
-bindings = [
-  { key = "Escape", action = "close", description = "Close docs" },
-  { key = "q", action = "close", description = "Close docs" },
-  { key = "Up", action = "scroll_up", description = "Scroll up" },
-  { key = "Down", action = "scroll_down", description = "Scroll down" },
-  { key = "Ctrl+u", action = "page_up", description = "Page up" },
-  { key = "Ctrl+d", action = "page_down", description = "Page down" },
-  { key = "Home", action = "top", description = "Go to top" },
-  { key = "End", action = "bottom", description = "Go to bottom" },
-  { key = "Enter", action = "follow_link", description = "Follow link / select topic", hint = "follow" },
-  { key = "Backspace", action = "back", description = "Go back", hint = "back" },
-  { key = "Tab", action = "toggle_mode", description = "Toggle contextual/browser", hint = "mode" },
 ]
 
 [layers.frame_edit]

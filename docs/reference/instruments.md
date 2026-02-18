@@ -2,7 +2,7 @@
 
 All 55 built-in instrument types available in Imbolc.
 
-Select any instrument in the Instruments pane (F1) and press `F6` for detailed in-app documentation with parameter descriptions and sound design tips. Add a new track with `Ctrl+n` or `a` in the Instruments pane.
+Add a new track with `Ctrl+n` or `a` in the Instruments pane.
 
 ---
 

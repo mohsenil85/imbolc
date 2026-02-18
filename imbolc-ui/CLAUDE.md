@@ -62,9 +62,8 @@ Single-file panes (23):
 - `tuner_pane.rs` — Reference tuner
 - `waveform_pane.rs` — Waveform display
 
-Module panes (input/rendering split, 7):
+Module panes (input/rendering split, 6):
 - `automation_pane/` — Automation lane editor
-- `docs_pane/` — Built-in documentation viewer
 - `track_edit_pane/` — Track parameter editor
 - `mixer_pane/` — Mixer view
 - `piano_roll_pane/` — Note editor
@@ -143,7 +142,7 @@ When adding a new action:
 
 ### Navigation
 
-Pane switching uses function keys: `F1`=track list, `F2`=piano roll / sequencer / waveform (context-driven), `F3`=track, `F4`=mixer, `F5`=server, `F6`=docs, `F7`=automation, `F8`=EQ, `F9`=groove, `F10`=tuner. `` ` ``/`~` for back/forward. `?` for context-sensitive help. `Ctrl+f` opens the frame settings.
+Pane switching uses function keys: `F1`=track list, `F2`=piano roll / sequencer / waveform (context-driven), `F3`=track, `F4`=mixer, `F5`=server, `F7`=automation, `F8`=EQ, `F9`=groove, `F10`=tuner. `` ` ``/`~` for back/forward. `?` for context-sensitive help. `Ctrl+f` opens the frame settings.
 
 Number keys select tracks: `1`-`9` select tracks 1-9, `0` selects 10, `_` enters two-digit track selection.
 

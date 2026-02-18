@@ -19,8 +19,6 @@ Available everywhere in Imbolc.
 | `F3` | Track view |
 | `F4` | Mixer |
 | `F5` | Audio server |
-| `F6` | Docs (selected instrument) |
-| `Shift+F6` | Learn (topic browser) |
 | `F7` | Automation |
 | `F8` | EQ (12-band) |
 | `F9` | Groove settings |

@@ -21,7 +21,7 @@ use std::fs::File;
 
 use panes::{
     AddEffectPane, AddPane, ArpeggiatorPane, CheckpointListPane, CommandLinePane,
-    CommandPalettePane, ConfirmPane, DocsPane, EqMode, EqPane, FileBrowserPane, FrameEditPane,
+    CommandPalettePane, ConfirmPane, EqMode, EqPane, FileBrowserPane, FrameEditPane,
     GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PaneSwitcherPane,
     PianoRollPane, ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane,
     ServerPane, TagPickerPane, TagViewPane, TrackEditPane, TrackListPane, TrackPane,
@@ -237,7 +237,6 @@ pub(crate) fn register_all_panes(
         "midi_settings",
     ))));
     panes.add_pane(Box::new(TunerPane::new(pane_keymap(keymaps, "tuner"))));
-    panes.add_pane(Box::new(DocsPane::new(pane_keymap(keymaps, "docs"))));
     panes.add_pane(Box::new(CheckpointListPane::new(pane_keymap(
         keymaps,
         "checkpoint_list",
