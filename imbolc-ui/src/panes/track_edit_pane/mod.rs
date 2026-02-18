@@ -11,7 +11,9 @@ use crate::state::{
 use crate::ui::action_id::ActionId;
 use crate::ui::performance::PerformanceController;
 use crate::ui::widgets::TextInput;
-use crate::ui::{Action, InputEvent, Keymap, MouseEvent, Pane, Rect, RenderBuf, ToggleResult};
+use crate::ui::{
+    Action, InputEvent, Keymap, MouseEvent, Pane, PaneIdStr, Rect, RenderBuf, ToggleResult,
+};
 use imbolc_types::{ChannelConfig, ProcessingStage};
 
 pub struct TrackEditPane {
@@ -291,8 +293,8 @@ impl TrackEditPane {
 }
 
 impl Pane for TrackEditPane {
-    fn id(&self) -> &'static str {
-        "instrument_edit"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("instrument_edit")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {

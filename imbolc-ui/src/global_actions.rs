@@ -83,7 +83,7 @@ pub(crate) fn sync_piano_roll_to_selection(
             }
 
             // Sync mixer selection via dispatch
-            let active = panes.active().id();
+            let active = panes.active().id().0;
             if active == "mixer" {
                 if let MixerSelection::Track(_) = dispatcher.state().session.mixer.selection {
                     dispatch_side_effect_free(
@@ -115,7 +115,7 @@ pub(crate) fn sync_piano_roll_to_selection(
 
 /// If the instrument edit pane is active, reload it with the currently selected instrument.
 pub(crate) fn sync_instrument_edit(state: &AppState, panes: &mut PaneManager) {
-    if panes.active().id() == "instrument_edit" {
+    if panes.active().id().0 == "instrument_edit" {
         if let Some(inst) = state.tracks.selected_track() {
             if let Some(edit_pane) = panes.get_pane_mut::<TrackEditPane>("instrument_edit") {
                 edit_pane.set_instrument(inst);
@@ -149,7 +149,7 @@ fn dispatch_side_effect_free(
 pub(crate) fn sync_pane_layer(panes: &mut PaneManager, layer_stack: &mut LayerStack) {
     let had_piano = layer_stack.has_layer("piano_mode");
     let had_pad = layer_stack.has_layer("pad_mode");
-    layer_stack.set_pane_layer(panes.active().layer_name());
+    layer_stack.set_pane_layer(panes.active());
 
     if had_piano || had_pad {
         if panes.active_mut().supports_performance_mode() {
@@ -188,7 +188,7 @@ pub(crate) fn process_layer_actions(
 /// Auto-pop text_edit layer when pane is no longer editing.
 pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &mut LayerStack) {
     if layer_stack.has_layer("text_edit") {
-        let still_editing = match panes.active().id() {
+        let still_editing = match panes.active().id().0 {
             "instrument_edit" => panes
                 .get_pane_mut::<TrackEditPane>("instrument_edit")
                 .is_some_and(|p| p.is_editing()),
@@ -231,7 +231,7 @@ pub(crate) fn process_pane_switcher_auto_pop(
     layer_stack: &mut LayerStack,
     state: &AppState,
 ) {
-    if layer_stack.has_layer("pane_switcher") && panes.active().id() != "pane_switcher" {
+    if layer_stack.has_layer("pane_switcher") && panes.active().id().0 != "pane_switcher" {
         layer_stack.pop("pane_switcher");
         if let Some(switcher) = panes.get_pane_mut::<PaneSwitcherPane>("pane_switcher") {
             if let Some(pane_id) = switcher.take_pane() {
@@ -282,7 +282,7 @@ pub(crate) fn handle_global_action(
 ) -> GlobalResult {
     // Helper to capture current view state
     let capture_view = |panes: &mut PaneManager, state: &AppState| -> ViewState {
-        let pane_id = panes.active().id().to_string();
+        let pane_id = panes.active().id().0.to_string();
         let inst_selection = state.tracks.selected;
         let edit_tab = panes
             .get_pane_mut::<TrackEditPane>("instrument_edit")
@@ -315,7 +315,7 @@ pub(crate) fn handle_global_action(
                           app_frame: &mut Frame,
                           layer_stack: &mut LayerStack| {
         // Stop tuner tone when leaving tuner pane
-        if panes.active().id() == "tuner" {
+        if panes.active().id().0 == "tuner" {
             audio.stop_tuner_tone();
         }
         let current = capture_view(panes, dispatcher.state());
@@ -509,7 +509,7 @@ pub(crate) fn handle_global_action(
                         NavPaneId::Waveform
                     } else if inst.source.is_kit() {
                         // Kit: cycle between Sequencer and PianoRoll
-                        if panes.active().id() == "sequencer" {
+                        if panes.active().id().0 == "sequencer" {
                             NavPaneId::PianoRoll
                         } else {
                             NavPaneId::Sequencer
@@ -623,7 +623,7 @@ pub(crate) fn handle_global_action(
                 );
             }
             GlobalActionId::SwitchPane(NavPaneId::FrameEdit) => {
-                if panes.active().id() == "frame_edit" {
+                if panes.active().id().0 == "frame_edit" {
                     panes.pop(dispatcher.state());
                 } else {
                     panes.push_to(NavPaneId::FrameEdit, dispatcher.state());
@@ -655,8 +655,8 @@ pub(crate) fn handle_global_action(
                 }
             }
             GlobalActionId::Help => {
-                if panes.active().id() != "help" {
-                    let current_id = panes.active().id();
+                if panes.active().id().0 != "help" {
+                    let current_id = panes.active().id().0;
                     let current_keymap = panes.active().keymap().clone();
                     let title = match current_id {
                         "instrument" => "Tracks",
@@ -782,7 +782,7 @@ pub(crate) fn handle_global_action(
                 layer_stack.push("pane_switcher");
             }
             GlobalActionId::TogglePlayback => {
-                if panes.active().id() == "waveform" {
+                if panes.active().id().0 == "waveform" {
                     // In waveform view, Space acts on recording first.
                     if audio.is_recording() {
                         let mut r = dispatcher.dispatch_domain(
@@ -1137,7 +1137,7 @@ fn copy_from_active_pane(
     panes: &mut PaneManager,
     audio: &mut AudioHandle,
 ) {
-    let pane_id = panes.active().id();
+    let pane_id = panes.active().id().0;
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
@@ -1198,7 +1198,7 @@ fn cut_from_active_pane(
     copy_from_active_pane(dispatcher, panes, audio);
 
     // Then return delete action
-    let pane_id = panes.active().id();
+    let pane_id = panes.active().id().0;
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
@@ -1281,7 +1281,7 @@ fn paste_to_active_pane(state: &mut AppState, panes: &mut PaneManager) -> Option
     if let Some(contents) = &state.clipboard.contents {
         match contents {
             ClipboardContents::PianoRollNotes(notes) => {
-                if panes.active().id() == "piano_roll" {
+                if panes.active().id().0 == "piano_roll" {
                     if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {
                         // anchor is cursor position
                         let action = DomainAction::PianoRoll(PianoRollAction::PasteNotes {
@@ -1297,7 +1297,7 @@ fn paste_to_active_pane(state: &mut AppState, panes: &mut PaneManager) -> Option
                 }
             }
             ClipboardContents::DrumSteps { steps } => {
-                if panes.active().id() == "sequencer" {
+                if panes.active().id().0 == "sequencer" {
                     if let Some(pane) = panes.get_pane_mut::<SequencerPane>("sequencer") {
                         let action = DomainAction::Sequencer(SequencerAction::PasteSteps {
                             anchor_pad: pane.cursor_pad,
@@ -1310,7 +1310,7 @@ fn paste_to_active_pane(state: &mut AppState, panes: &mut PaneManager) -> Option
                 }
             }
             ClipboardContents::AutomationPoints { points } => {
-                if panes.active().id() == "automation" {
+                if panes.active().id().0 == "automation" {
                     if let Some(pane) = panes.get_pane_mut::<AutomationPane>("automation") {
                         if let Some(lane_id) = pane.selected_lane_id(state) {
                             let action = DomainAction::Automation(AutomationAction::PastePoints(
@@ -1330,7 +1330,7 @@ fn paste_to_active_pane(state: &mut AppState, panes: &mut PaneManager) -> Option
 }
 
 fn select_all_in_active_pane(state: &mut AppState, panes: &mut PaneManager) {
-    let pane_id = panes.active().id();
+    let pane_id = panes.active().id().0;
     match pane_id {
         "piano_roll" => {
             if let Some(pane) = panes.get_pane_mut::<PianoRollPane>("piano_roll") {

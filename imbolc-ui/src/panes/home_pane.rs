@@ -5,7 +5,7 @@ use crate::ui::action_id::{ActionId, HomeActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
-    PaneId, Rect, RenderBuf, Style,
+    PaneId, PaneIdStr, Rect, RenderBuf, Style,
 };
 
 /// Menu item for the home screen
@@ -56,8 +56,8 @@ impl Default for HomePane {
 }
 
 impl Pane for HomePane {
-    fn id(&self) -> &'static str {
-        "home"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("home")
     }
 
     fn handle_action(

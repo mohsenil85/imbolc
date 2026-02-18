@@ -5,7 +5,9 @@ use crate::state::{AppState, MusicalSettings};
 use crate::ui::action_id::{ActionId, FrameEditActionId, ModeActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, SessionAction, Style};
+use crate::ui::{
+    Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
+};
 
 /// Fields editable in the frame editor
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -197,8 +199,8 @@ impl Default for FrameEditPane {
 }
 
 impl Pane for FrameEditPane {
-    fn id(&self) -> &'static str {
-        "frame_edit"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("frame_edit")
     }
 
     fn handle_action(

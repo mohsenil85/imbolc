@@ -7,7 +7,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, CheckpointListActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, NavAction, Pane, Rect, RenderBuf, SessionAction, Style,
+    Action, Color, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
+    Style,
 };
 
 pub struct CheckpointListPane {
@@ -42,8 +43,8 @@ impl CheckpointListPane {
 }
 
 impl Pane for CheckpointListPane {
-    fn id(&self) -> &'static str {
-        "checkpoint_list"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("checkpoint_list")
     }
 
     fn on_enter(&mut self, state: &AppState) {

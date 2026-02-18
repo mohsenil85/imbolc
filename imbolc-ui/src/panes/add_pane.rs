@@ -7,7 +7,8 @@ use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, FileSelectAction, InputEvent, Keymap, ListSelector, MouseButton, MouseEvent,
-    MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf, SessionAction, Style, TrackAction,
+    MouseEventKind, NavAction, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
+    TrackAction,
 };
 
 /// Options available in the Add Track menu
@@ -394,8 +395,8 @@ impl Default for AddPane {
 }
 
 impl Pane for AddPane {
-    fn id(&self) -> &'static str {
-        "add"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("add")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

@@ -5,7 +5,7 @@ use crate::state::automation::{AutomationTarget, AutomationTargetExt};
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, MidiSettingsActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style};
+use crate::ui::{Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Section {
@@ -148,8 +148,8 @@ impl MidiSettingsPane {
 }
 
 impl Pane for MidiSettingsPane {
-    fn id(&self) -> &'static str {
-        "midi_settings"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("midi_settings")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
@@ -478,7 +478,7 @@ mod tests {
     #[test]
     fn midi_settings_pane_id() {
         let pane = MidiSettingsPane::new(Keymap::new());
-        assert_eq!(pane.id(), "midi_settings");
+        assert_eq!(pane.id().0, "midi_settings");
     }
 
     #[test]

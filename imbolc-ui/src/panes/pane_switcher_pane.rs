@@ -5,7 +5,8 @@ use crate::ui::action_id::{ActionId, ModeActionId};
 use crate::ui::filterable_list::{FilterableItem, FilterableList};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneId, Rect, RenderBuf, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneId, PaneIdStr, Rect,
+    RenderBuf, Style,
 };
 
 struct PaneEntry {
@@ -86,8 +87,8 @@ impl PaneSwitcherPane {
 }
 
 impl Pane for PaneSwitcherPane {
-    fn id(&self) -> &'static str {
-        "pane_switcher"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("pane_switcher")
     }
 
     fn handle_action(

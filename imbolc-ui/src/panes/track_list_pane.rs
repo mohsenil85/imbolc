@@ -7,8 +7,8 @@ use crate::ui::performance::PerformanceController;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
     translate_key, Action, Color, InputEvent, KeyCode, Keymap, MouseButton, MouseEvent,
-    MouseEventKind, NavAction, Pane, PaneId, Rect, RenderBuf, SessionAction, Style, ToggleResult,
-    TrackAction,
+    MouseEventKind, NavAction, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
+    ToggleResult, TrackAction,
 };
 use imbolc_types::{GroupAction, TrackId};
 
@@ -121,8 +121,8 @@ impl Default for TrackListPane {
 }
 
 impl Pane for TrackListPane {
-    fn id(&self) -> &'static str {
-        "instrument"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("instrument")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {

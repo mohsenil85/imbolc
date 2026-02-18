@@ -4,7 +4,7 @@ use crate::state::AppState;
 use crate::ui::action_id::ActionId;
 use crate::ui::input::{MouseButton, MouseEventKind};
 use crate::ui::pane::*;
-use crate::ui::{InputEvent, Keymap, MouseEvent, Rect, RenderBuf};
+use crate::ui::{InputEvent, Keymap, MouseEvent, PaneIdStr, Rect, RenderBuf};
 use imbolc_types::{AutomationTarget, TagAction};
 
 /// Modal pane for assigning a parameter to a tag.
@@ -50,8 +50,8 @@ impl TagPickerPane {
 }
 
 impl Pane for TagPickerPane {
-    fn id(&self) -> &'static str {
-        PaneId::TagPicker.as_str()
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr(PaneId::TagPicker.as_str())
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

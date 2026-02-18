@@ -6,7 +6,7 @@ use crate::ui::action_id::{ActionId, SequencerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
-    PaneId, Rect, RenderBuf, SequencerAction, Style,
+    PaneId, PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
 };
 
 pub struct SequencerPane {
@@ -68,8 +68,8 @@ impl Default for SequencerPane {
 }
 
 impl Pane for SequencerPane {
-    fn id(&self) -> &'static str {
-        "sequencer"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("sequencer")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

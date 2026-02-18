@@ -6,7 +6,7 @@ use std::any::Any;
 use crate::panes::add_effect_pane::EffectTarget;
 use crate::state::{AppState, TrackId};
 use crate::ui::action_id::ActionId;
-use crate::ui::{Action, InputEvent, Keymap, MouseEvent, Pane, Rect, RenderBuf};
+use crate::ui::{Action, InputEvent, Keymap, MouseEvent, Pane, PaneIdStr, Rect, RenderBuf};
 use imbolc_types::BusId;
 
 const CHANNEL_WIDTH: u16 = 8;
@@ -300,8 +300,8 @@ impl Default for MixerPane {
 }
 
 impl Pane for MixerPane {
-    fn id(&self) -> &'static str {
-        "mixer"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("mixer")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {

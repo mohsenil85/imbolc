@@ -15,7 +15,7 @@ use crate::ui::action_id::{ActionId, DocsActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
-    Rect, RenderBuf, Style,
+    PaneIdStr, Rect, RenderBuf, Style,
 };
 
 use content::{load_doc, load_sources_map, load_topic_index, TopicEntry};
@@ -158,8 +158,8 @@ impl DocsPane {
 }
 
 impl Pane for DocsPane {
-    fn id(&self) -> &'static str {
-        "docs"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("docs")
     }
 
     fn handle_action(

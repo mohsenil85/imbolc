@@ -4,7 +4,7 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, TagViewActionId};
 use crate::ui::pane::*;
 use crate::ui::style::{Color, Style};
-use crate::ui::{InputEvent, Keymap, MouseEvent, Rect, RenderBuf};
+use crate::ui::{InputEvent, Keymap, MouseEvent, PaneIdStr, Rect, RenderBuf};
 use imbolc_types::{
     AutomationTarget, BusParameter, GlobalParameter, ParameterTarget, TagAction, TrackParameter,
 };
@@ -53,8 +53,8 @@ impl TagViewPane {
 }
 
 impl Pane for TagViewPane {
-    fn id(&self) -> &'static str {
-        PaneId::TagView.as_str()
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr(PaneId::TagView.as_str())
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

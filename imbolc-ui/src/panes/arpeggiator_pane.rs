@@ -3,7 +3,9 @@ use std::any::Any;
 use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, ArpeggiatorActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
+use crate::ui::{
+    Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style, TrackAction,
+};
 
 /// Parameter indices for the arpeggiator pane
 const PARAM_ENABLED: usize = 0;
@@ -35,8 +37,8 @@ impl Default for ArpeggiatorPane {
 }
 
 impl Pane for ArpeggiatorPane {
-    fn id(&self) -> &'static str {
-        "arpeggiator"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("arpeggiator")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

@@ -5,7 +5,7 @@ use crate::ui::action_id::{ActionId, HelpActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
-    Rect, RenderBuf, Style,
+    PaneIdStr, Rect, RenderBuf, Style,
 };
 
 pub struct HelpPane {
@@ -53,8 +53,8 @@ impl Default for HelpPane {
 }
 
 impl Pane for HelpPane {
-    fn id(&self) -> &'static str {
-        "help"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("help")
     }
 
     fn handle_action(

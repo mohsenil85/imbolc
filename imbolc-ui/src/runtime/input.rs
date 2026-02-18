@@ -137,7 +137,7 @@ impl AppRuntime {
             // Log UI actions
             if let RoutedAction::Ui(ref ui_action) = routed_action {
                 if let Some(ui_log) = &mut self.ui_log {
-                    ui_log.log_ui(self.panes.active().id(), ui_action);
+                    ui_log.log_ui(self.panes.active().id().0, ui_action);
                 }
             }
 
@@ -153,7 +153,7 @@ impl AppRuntime {
                     &routed_action,
                     RoutedAction::Ui(UiAction::Nav(action::NavAction::PopPane))
                 )
-                && self.panes.active().id() == "save_as"
+                && self.panes.active().id().0 == "save_as"
             {
                 self.quit_after_save = false;
             }
@@ -164,7 +164,7 @@ impl AppRuntime {
                 RoutedAction::Ui(UiAction::Nav(action::NavAction::PushPane(
                     action::PaneId::AddEffect
                 )))
-            ) && self.panes.active().id() == "mixer"
+            ) && self.panes.active().id().0 == "mixer"
             {
                 if let Some(mixer) = self.panes.get_pane_mut::<MixerPane>("mixer") {
                     let target = mixer.effect_target();
@@ -191,7 +191,7 @@ impl AppRuntime {
                     .arrangement
                     .editing_clip
                     .is_some()
-                && self.panes.active().id() != "piano_roll"
+                && self.panes.active().id().0 != "piano_roll"
             {
                 let mut exit_result = self.dispatcher.dispatch_domain(
                     &action::DomainAction::Arrangement(action::ArrangementAction::ExitClipEdit),
@@ -213,7 +213,7 @@ impl AppRuntime {
 
             // Auto-pop command_palette layer and re-dispatch confirmed command
             if self.layer_stack.has_layer("command_palette")
-                && self.panes.active().id() != "command_palette"
+                && self.panes.active().id().0 != "command_palette"
             {
                 self.layer_stack.pop("command_palette");
                 if let Some(palette) = self
@@ -287,7 +287,7 @@ impl AppRuntime {
             }
 
             // Auto-pop command_line and dispatch pending action
-            if self.panes.active().id() != "command_line" {
+            if self.panes.active().id().0 != "command_line" {
                 if let Some(cl) = self.panes.get_pane_mut::<CommandLinePane>("command_line") {
                     if let Some(action) = cl.take_action() {
                         let mut r = self.dispatcher.dispatch_domain(&action, &mut self.audio);

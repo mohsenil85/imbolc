@@ -6,7 +6,7 @@ use std::any::Any;
 use crate::action::VstTarget;
 use crate::state::{AppState, TrackId};
 use crate::ui::action_id::ActionId;
-use crate::ui::{Action, InputEvent, Keymap, Pane, Rect, RenderBuf};
+use crate::ui::{Action, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf};
 
 pub struct VstParamPane {
     keymap: Keymap,
@@ -109,8 +109,8 @@ impl VstParamPane {
 }
 
 impl Pane for VstParamPane {
-    fn id(&self) -> &'static str {
-        "vst_params"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("vst_params")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {
@@ -144,6 +144,6 @@ mod tests {
     #[test]
     fn vst_param_pane_id() {
         let pane = VstParamPane::new(Keymap::new());
-        assert_eq!(pane.id(), "vst_params");
+        assert_eq!(pane.id().0, "vst_params");
     }
 }

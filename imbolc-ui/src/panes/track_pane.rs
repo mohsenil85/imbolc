@@ -5,7 +5,7 @@ use crate::state::{AppState, SourceType};
 use crate::ui::action_id::{ActionId, TrackActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, ArrangementAction, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style,
+    Action, ArrangementAction, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style,
 };
 
 fn source_color(source: SourceType) -> Color {
@@ -67,8 +67,8 @@ impl Default for TrackPane {
 }
 
 impl Pane for TrackPane {
-    fn id(&self) -> &'static str {
-        "track"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("track")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

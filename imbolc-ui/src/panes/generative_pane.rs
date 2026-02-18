@@ -3,7 +3,7 @@ use std::any::Any;
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, GenerativeActionId};
 use crate::ui::{
-    Action, Color, GenerativeAction, InputEvent, Keymap, Pane, Rect, RenderBuf, Style,
+    Action, Color, GenerativeAction, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style,
 };
 use imbolc_types::state::generative::{EuclideanConfig, GenerativeAlgorithm};
 
@@ -83,8 +83,8 @@ impl Default for GenerativePane {
 }
 
 impl Pane for GenerativePane {
-    fn id(&self) -> &'static str {
-        "generative"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("generative")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
@@ -791,7 +791,7 @@ mod tests {
     #[test]
     fn pane_id() {
         let pane = GenerativePane::default();
-        assert_eq!(pane.id(), "generative");
+        assert_eq!(pane.id().0, "generative");
     }
 
     #[test]

@@ -85,7 +85,7 @@ impl AppRuntime {
         }
 
         // Update visualization data only when waveform pane is active
-        if self.panes.active().id() == "waveform" {
+        if self.panes.active().id().0 == "waveform" {
             let state = self.dispatcher.state_mut();
             state.audio.visualization.spectrum_bands = self.audio.spectrum_bands();
             let (peak_l, peak_r, rms_l, rms_r) = self.audio.lufs_data();
@@ -99,7 +99,7 @@ impl AppRuntime {
         }
 
         // Update waveform cache for waveform pane
-        if self.panes.active().id() == "waveform" {
+        if self.panes.active().id().0 == "waveform" {
             if let Some(wf) = self.panes.get_pane_mut::<WaveformPane>("waveform") {
                 if self.dispatcher.state().recorded_waveform_peaks.is_none() {
                     let inst_data = self

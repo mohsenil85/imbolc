@@ -5,7 +5,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, ConfirmActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, NavAction, Pane, Rect, RenderBuf, SessionAction, Style,
+    Action, Color, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
+    Style,
 };
 
 /// What to do when the user confirms the dialog
@@ -56,8 +57,8 @@ impl ConfirmPane {
 }
 
 impl Pane for ConfirmPane {
-    fn id(&self) -> &'static str {
-        "confirm"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("confirm")
     }
 
     fn handle_action(

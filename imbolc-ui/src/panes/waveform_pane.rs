@@ -5,8 +5,8 @@ use crate::ui::action_id::{ActionId, ModeActionId, WaveformActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, Pane, Rect, RenderBuf, SessionAction,
-    Style,
+    Action, Color, FileSelectAction, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf,
+    SessionAction, Style,
 };
 
 /// Waveform display characters (8 levels) - used for spectrum/meters
@@ -1214,8 +1214,8 @@ impl WaveformPane {
 }
 
 impl Pane for WaveformPane {
-    fn id(&self) -> &'static str {
-        "waveform"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("waveform")
     }
 
     fn handle_action(

@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, SampleSlicerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, NavAction, Pane, Rect, RenderBuf,
-    SampleSlicerAction, Style,
+    Action, Color, FileSelectAction, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect,
+    RenderBuf, SampleSlicerAction, Style,
 };
 
 pub struct SampleSlicerPane {
@@ -58,8 +58,8 @@ impl Default for SampleSlicerPane {
 }
 
 impl Pane for SampleSlicerPane {
-    fn id(&self) -> &'static str {
-        "sample_slicer"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("sample_slicer")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {

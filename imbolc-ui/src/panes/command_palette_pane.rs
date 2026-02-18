@@ -5,7 +5,7 @@ use crate::ui::action_id::{ActionId, ModeActionId};
 use crate::ui::filterable_list::{FilterableItem, FilterableList};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, Rect, RenderBuf, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, Style,
 };
 
 struct CommandEntry {
@@ -59,8 +59,8 @@ impl CommandPalettePane {
 }
 
 impl Pane for CommandPalettePane {
-    fn id(&self) -> &'static str {
-        "command_palette"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("command_palette")
     }
 
     fn handle_action(

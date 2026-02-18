@@ -8,8 +8,8 @@ use crate::state::AppState;
 use crate::ui::action_id::ActionId;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, InputEvent, Keymap, MouseEvent, Pane, PianoKeyboard, PianoRollAction, Rect, RenderBuf,
-    ToggleResult,
+    Action, InputEvent, Keymap, MouseEvent, Pane, PaneIdStr, PianoKeyboard, PianoRollAction, Rect,
+    RenderBuf, ToggleResult,
 };
 use imbolc_types::TrackId;
 
@@ -173,8 +173,8 @@ impl Default for PianoRollPane {
 }
 
 impl Pane for PianoRollPane {
-    fn id(&self) -> &'static str {
-        "piano_roll"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("piano_roll")
     }
 
     fn on_enter(&mut self, state: &AppState) {

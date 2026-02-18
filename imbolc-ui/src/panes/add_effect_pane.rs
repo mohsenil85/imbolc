@@ -6,7 +6,7 @@ use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind,
-    NavAction, Pane, Rect, RenderBuf, SessionAction, Style, TrackAction,
+    NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style, TrackAction,
 };
 use imbolc_types::{BusId, VstPluginId};
 
@@ -222,8 +222,8 @@ impl Default for AddEffectPane {
 }
 
 impl Pane for AddEffectPane {
-    fn id(&self) -> &'static str {
-        "add_effect"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("add_effect")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

@@ -65,7 +65,8 @@ impl LayerStack {
 
     /// Set the pane layer at position 1 (between global at 0 and mode layers at 2+).
     /// If the layer doesn't exist in the loaded layers, position 1 is left empty.
-    pub fn set_pane_layer(&mut self, name: &'static str) {
+    pub fn set_pane_layer(&mut self, pane: &dyn super::pane::Pane) {
+        let name = pane.layer_name().0;
         // Collect mode layers (everything above position 1)
         let mode_layers: Vec<&'static str> = if self.active.len() > 2 {
             self.active[2..].to_vec()
@@ -118,6 +119,7 @@ mod tests {
     use super::*;
     use crate::ui::action_id::GlobalActionId;
     use crate::ui::input::KeyCode;
+    use crate::ui::pane::PaneIdStr;
 
     fn make_layer(name: &'static str, key: char, transparent: bool) -> Layer {
         let action = ActionId::Global(GlobalActionId::Quit);
@@ -130,6 +132,39 @@ mod tests {
 
     fn make_event(ch: char) -> InputEvent {
         InputEvent::key(KeyCode::Char(ch))
+    }
+
+    /// Minimal stub pane for testing set_pane_layer.
+    struct StubPane {
+        name: &'static str,
+    }
+
+    impl crate::ui::pane::Pane for StubPane {
+        fn id(&self) -> PaneIdStr {
+            PaneIdStr(self.name)
+        }
+        fn handle_action(
+            &mut self,
+            _action: ActionId,
+            _event: &InputEvent,
+            _state: &crate::state::AppState,
+        ) -> crate::ui::Action {
+            crate::ui::Action::None
+        }
+        fn render(
+            &mut self,
+            _area: crate::ui::Rect,
+            _buf: &mut crate::ui::RenderBuf,
+            _state: &crate::state::AppState,
+        ) {
+        }
+        fn keymap(&self) -> &Keymap {
+            // This is test-only; we never call this.
+            unreachable!()
+        }
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self
+        }
     }
 
     #[test]
@@ -202,7 +237,8 @@ mod tests {
         stack.push("global"); // position 0
         stack.push("pane_a"); // position 1
 
-        stack.set_pane_layer("pane_b");
+        let pane_b = StubPane { name: "pane_b" };
+        stack.set_pane_layer(&pane_b);
         assert!(stack.has_layer("global"));
         assert!(stack.has_layer("pane_b"));
         assert!(!stack.has_layer("pane_a"));

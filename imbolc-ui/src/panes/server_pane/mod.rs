@@ -9,7 +9,7 @@ use crate::audio::devices::{self, AudioDevice, BufferSize};
 use crate::audio::ServerStatus;
 use crate::state::AppState;
 use crate::ui::action_id::ActionId;
-use crate::ui::{Action, InputEvent, Keymap, Pane, Rect, RenderBuf};
+use crate::ui::{Action, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf};
 
 pub(super) struct DiagnosticCheck {
     pub label: String,
@@ -363,8 +363,8 @@ impl Default for ServerPane {
 }
 
 impl Pane for ServerPane {
-    fn id(&self) -> &'static str {
-        "server"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("server")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {

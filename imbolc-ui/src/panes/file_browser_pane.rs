@@ -8,8 +8,8 @@ use crate::ui::action_id::{ActionId, FileBrowserActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, Color, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind,
-    NavAction, Pane, Rect, RenderBuf, SampleSlicerAction, SequencerAction, SessionAction, Style,
-    TrackAction,
+    NavAction, Pane, PaneIdStr, Rect, RenderBuf, SampleSlicerAction, SequencerAction,
+    SessionAction, Style, TrackAction,
 };
 
 struct DirEntry {
@@ -164,8 +164,8 @@ impl Default for FileBrowserPane {
 }
 
 impl Pane for FileBrowserPane {
-    fn id(&self) -> &'static str {
-        "file_browser"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("file_browser")
     }
 
     fn handle_action(

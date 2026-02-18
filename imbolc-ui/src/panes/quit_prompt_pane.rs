@@ -4,7 +4,7 @@ use crate::state::AppState;
 use crate::ui::action_id::ActionId;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, Rect, RenderBuf, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, Style,
 };
 
 /// Which button is selected in the quit prompt
@@ -30,8 +30,8 @@ impl QuitPromptPane {
 }
 
 impl Pane for QuitPromptPane {
-    fn id(&self) -> &'static str {
-        "quit_prompt"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("quit_prompt")
     }
 
     fn handle_action(

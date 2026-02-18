@@ -13,15 +13,23 @@ pub use crate::action::{
     TrackAction, TrackUpdate, VstParamAction,
 };
 
+/// Unique pane identity (for PaneManager lookup, logging, etc.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PaneIdStr(pub &'static str);
+
+/// Keybinding layer name (for LayerStack resolution).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LayerName(pub &'static str);
+
 /// Trait for UI panes (screens/views).
 pub trait Pane {
     /// Unique identifier for this pane
-    fn id(&self) -> &'static str;
+    fn id(&self) -> PaneIdStr;
 
     /// Layer name for keybinding resolution (defaults to id()).
     /// Override when multiple panes share the same keybinding layer.
-    fn layer_name(&self) -> &'static str {
-        self.id()
+    fn layer_name(&self) -> LayerName {
+        LayerName(self.id().0)
     }
 
     /// Handle a resolved action ID from the layer system
@@ -113,7 +121,7 @@ impl PaneManager {
 
     /// Switch to a pane by ID (flat navigation — clears the stack)
     pub fn switch_to(&mut self, id: PaneId, state: &AppState) -> bool {
-        if let Some(index) = self.panes.iter().position(|p| p.id() == id.as_str()) {
+        if let Some(index) = self.panes.iter().position(|p| p.id().0 == id.as_str()) {
             if index != self.active_index {
                 self.panes[self.active_index].on_exit(state);
                 self.active_index = index;
@@ -128,7 +136,7 @@ impl PaneManager {
 
     /// Push current pane onto the stack and switch to a new pane (for modals/overlays)
     pub fn push_to(&mut self, id: PaneId, state: &AppState) -> bool {
-        if let Some(index) = self.panes.iter().position(|p| p.id() == id.as_str()) {
+        if let Some(index) = self.panes.iter().position(|p| p.id().0 == id.as_str()) {
             self.stack.push(self.active_index);
             self.panes[self.active_index].on_exit(state);
             self.active_index = index;
@@ -182,7 +190,7 @@ impl PaneManager {
                     self.pop(state);
                 }
                 NavIntent::ConditionalPop(pane_id) => {
-                    if self.active().id() == pane_id.as_str() {
+                    if self.active().id().0 == pane_id.as_str() {
                         self.pop(state);
                     }
                 }
@@ -259,14 +267,14 @@ impl PaneManager {
     /// Get all registered pane IDs
     #[allow(dead_code)]
     pub fn pane_ids(&self) -> Vec<&'static str> {
-        self.panes.iter().map(|p| p.id()).collect()
+        self.panes.iter().map(|p| p.id().0).collect()
     }
 
     /// Get a mutable reference to a pane by ID, downcasted to a specific type
     pub fn get_pane_mut<T: 'static>(&mut self, id: &str) -> Option<&mut T> {
         self.panes
             .iter_mut()
-            .find(|p| p.id() == id)
+            .find(|p| p.id().0 == id)
             .and_then(|p| p.as_any_mut().downcast_mut::<T>())
     }
 }

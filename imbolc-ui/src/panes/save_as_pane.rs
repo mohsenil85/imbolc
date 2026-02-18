@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, Rect, RenderBuf, SessionAction,
-    Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf,
+    SessionAction, Style,
 };
 
 pub struct SaveAsPane {
@@ -47,8 +47,8 @@ impl SaveAsPane {
 }
 
 impl Pane for SaveAsPane {
-    fn id(&self) -> &'static str {
-        "save_as"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("save_as")
     }
 
     fn handle_action(

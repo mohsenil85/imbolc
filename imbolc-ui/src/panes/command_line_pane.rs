@@ -7,7 +7,7 @@ use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, Rect, RenderBuf, Style,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, Style,
 };
 
 pub struct CommandLinePane {
@@ -40,8 +40,8 @@ impl CommandLinePane {
 }
 
 impl Pane for CommandLinePane {
-    fn id(&self) -> &'static str {
-        "command_line"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("command_line")
     }
 
     fn on_enter(&mut self, _state: &AppState) {

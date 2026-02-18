@@ -4,7 +4,7 @@ use crate::action::TunerAction;
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, TunerActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style};
+use crate::ui::{Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style};
 
 // ── Track presets ──────────────────────────────────────────────────
 
@@ -81,8 +81,8 @@ impl Default for TunerPane {
 }
 
 impl Pane for TunerPane {
-    fn id(&self) -> &'static str {
-        "tuner"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("tuner")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

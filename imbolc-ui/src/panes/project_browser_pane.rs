@@ -7,7 +7,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, ProjectBrowserActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, NavAction, Pane, Rect, RenderBuf, SessionAction, Style,
+    Action, Color, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
+    Style,
 };
 
 pub struct ProjectBrowserPane {
@@ -76,8 +77,8 @@ impl ProjectBrowserPane {
 }
 
 impl Pane for ProjectBrowserPane {
-    fn id(&self) -> &'static str {
-        "project_browser"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("project_browser")
     }
 
     fn on_enter(&mut self, _state: &AppState) {

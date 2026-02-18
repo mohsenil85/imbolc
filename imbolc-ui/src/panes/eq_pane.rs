@@ -4,8 +4,8 @@ use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, Color, GroupAction, InputEvent, Keymap, MixerAction, Pane, Rect, RenderBuf,
-    Style, TrackAction,
+    Action, BusAction, Color, GroupAction, InputEvent, Keymap, LayerName, MixerAction, Pane,
+    PaneIdStr, Rect, RenderBuf, Style, TrackAction,
 };
 use imbolc_types::{BusId, EqualizerParamKind, MixerSelection};
 
@@ -113,15 +113,15 @@ fn make_set_action(
 }
 
 impl Pane for EqPane {
-    fn id(&self) -> &'static str {
+    fn id(&self) -> PaneIdStr {
         match self.mode {
-            EqMode::Channel => "eq",
-            EqMode::Master => "master_eq",
+            EqMode::Channel => PaneIdStr("eq"),
+            EqMode::Master => PaneIdStr("master_eq"),
         }
     }
 
-    fn layer_name(&self) -> &'static str {
-        "eq"
+    fn layer_name(&self) -> LayerName {
+        LayerName("eq")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

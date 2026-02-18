@@ -7,7 +7,7 @@ use crate::state::automation::{AutomationLaneId, AutomationTarget};
 use crate::state::AppState;
 use crate::ui::action_id::ActionId;
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style};
+use crate::ui::{Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style};
 
 /// Focus area within the automation pane
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,8 +90,8 @@ impl AutomationPane {
 }
 
 impl Pane for AutomationPane {
-    fn id(&self) -> &'static str {
-        "automation"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("automation")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn automation_pane_id() {
         let pane = AutomationPane::new(Keymap::new());
-        assert_eq!(pane.id(), "automation");
+        assert_eq!(pane.id().0, "automation");
     }
 
     #[test]

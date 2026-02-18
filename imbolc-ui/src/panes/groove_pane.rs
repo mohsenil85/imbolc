@@ -3,7 +3,9 @@ use std::any::Any;
 use crate::state::{AppState, SwingGrid, TrackId};
 use crate::ui::action_id::{ActionId, GrooveActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, Rect, RenderBuf, Style, TrackAction};
+use crate::ui::{
+    Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style, TrackAction,
+};
 
 /// Parameter indices for the groove pane
 const PARAM_SWING: usize = 0;
@@ -34,8 +36,8 @@ impl Default for GroovePane {
 }
 
 impl Pane for GroovePane {
-    fn id(&self) -> &'static str {
-        "groove"
+    fn id(&self) -> PaneIdStr {
+        PaneIdStr("groove")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
