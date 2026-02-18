@@ -6,6 +6,7 @@ Imbolc is a complete music studio that runs right in your terminal. Write beats,
 
 ## Highlights
 
+- **Supercollider** -- uses Supercollider for DSP and sythdefs
 - **58 built-in instruments** -- oscillators, FM synthesis, physical models, drums, classic synths, samplers, and more
 - **39 built-in effects** -- delays, reverbs, compressors, modulation, distortion, granular, spectral, and more
 - **Piano roll and drum sequencer** -- per-note velocity and probability, variable grid resolution, groove and humanize
