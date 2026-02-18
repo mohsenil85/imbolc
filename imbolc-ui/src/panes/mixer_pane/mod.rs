@@ -25,6 +25,7 @@ enum DetailTarget {
     Track(usize),
     Group(u32),
     Bus(BusId),
+    Master,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,7 +165,7 @@ impl MixerPane {
     ) -> Option<(usize, &'a crate::state::Track)> {
         match self.detail_mode? {
             DetailTarget::Track(idx) => state.tracks.tracks.get(idx).map(|inst| (idx, inst)),
-            DetailTarget::Group(_) | DetailTarget::Bus(_) => None,
+            DetailTarget::Group(_) | DetailTarget::Bus(_) | DetailTarget::Master => None,
         }
     }
 
@@ -275,11 +276,36 @@ impl MixerPane {
         gm.channel_strip.decode_effect_cursor(self.detail_cursor)
     }
 
+    /// Max cursor for master detail section
+    fn master_max_cursor(&self, state: &AppState) -> usize {
+        match self.bus_detail_section {
+            BusDetailSection::Effects => state
+                .session
+                .mixer
+                .master_channel_strip
+                .effects_max_cursor(),
+            BusDetailSection::Output => 0, // master level only
+        }
+    }
+
+    /// Decode master effect cursor into (effect_id, param_index) where None = header
+    fn decode_master_effect_cursor(
+        &self,
+        state: &AppState,
+    ) -> Option<(crate::state::EffectId, Option<imbolc_types::ParamIndex>)> {
+        state
+            .session
+            .mixer
+            .master_channel_strip
+            .decode_effect_cursor(self.detail_cursor)
+    }
+
     /// Get the current effect target based on detail mode (for add_effect pane bridging)
     pub fn effect_target(&self) -> EffectTarget {
         match self.detail_mode {
             Some(DetailTarget::Bus(id)) => EffectTarget::Bus(id),
             Some(DetailTarget::Group(gid)) => EffectTarget::Group(gid),
+            Some(DetailTarget::Master) => EffectTarget::Master,
             _ => EffectTarget::Track,
         }
     }
@@ -317,6 +343,7 @@ impl Pane for MixerPane {
             Some(DetailTarget::Track(_)) => self.render_detail_buf(buf, area, state),
             Some(DetailTarget::Group(gid)) => self.render_group_detail_buf(buf, area, state, gid),
             Some(DetailTarget::Bus(id)) => self.render_bus_detail_buf(buf, area, state, id),
+            Some(DetailTarget::Master) => self.render_master_detail_buf(buf, area, state),
             None => self.render_mixer_buf(buf, area, state),
         }
     }

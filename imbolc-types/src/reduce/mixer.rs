@@ -1,6 +1,5 @@
 use crate::{
-    BusId, EqualizerParamKind, MixerAction, MixerSelection, MixerSend, OutputTarget, SessionState,
-    TrackState,
+    BusId, MixerAction, MixerSelection, MixerSend, OutputTarget, SessionState, TrackState,
 };
 
 pub(super) fn reduce(
@@ -337,37 +336,6 @@ pub(super) fn reduce(
                     }
                 }
                 _ => {}
-            }
-            true
-        }
-        MixerAction::ToggleMasterEq => {
-            session.mixer.toggle_master_eq();
-            true
-        }
-        MixerAction::SetMasterEqParam(band_idx, param, value) => {
-            if let Some(eq) = session.mixer.master_eq_mut() {
-                if let Some(band) = eq.bands.get_mut(*band_idx) {
-                    match param {
-                        EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
-                        EqualizerParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
-                        EqualizerParamKind::Q => band.q = value.clamp(0.1, 10.0),
-                        EqualizerParamKind::Enabled => band.enabled = *value > 0.5,
-                        EqualizerParamKind::Slope => {
-                            band.slope = crate::FilterSlope::from_normalized(*value)
-                        }
-                        EqualizerParamKind::BandType => {
-                            let allowed = crate::EqBandType::allowed_types(*band_idx);
-                            let idx = (*value as usize).min(allowed.len().saturating_sub(1));
-                            let new_type = allowed[idx];
-                            if new_type != band.band_type {
-                                band.band_type = new_type;
-                                if !new_type.has_gain() {
-                                    band.gain = 0.0;
-                                }
-                            }
-                        }
-                    }
-                }
             }
             true
         }

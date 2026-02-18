@@ -8,9 +8,9 @@ use crate::state::AppState;
 // Re-export all action types from the core crate
 pub use crate::action::{
     Action, ArrangementAction, AutomationAction, BusAction, DispatchResult, FileSelectAction,
-    GenerativeAction, GroupAction, MixerAction, NavAction, NavIntent, PaneId, PianoRollAction,
-    SampleSlicerAction, SequencerAction, ServerAction, SessionAction, StatusEvent, ToggleResult,
-    TrackAction, TrackUpdate, VstParamAction,
+    GenerativeAction, GroupAction, MasterAction, MixerAction, NavAction, NavIntent, PaneId,
+    PianoRollAction, SampleSlicerAction, SequencerAction, ServerAction, SessionAction, StatusEvent,
+    ToggleResult, TrackAction, TrackUpdate, VstParamAction,
 };
 
 /// Unique pane identity (for PaneManager lookup, logging, etc.)

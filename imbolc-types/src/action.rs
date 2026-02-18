@@ -308,6 +308,25 @@ pub enum GroupAction {
     Rename(u32, String),
 }
 
+/// Master bus actions (effect chain + EQ on the master output).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum MasterAction {
+    /// Add an effect to the master bus
+    AddEffect(EffectType),
+    /// Remove an effect from the master bus
+    RemoveEffect(EffectId),
+    /// Move an effect up/down on the master bus
+    MoveEffect(EffectId, i8),
+    /// Toggle bypass on a master bus effect
+    ToggleEffectBypass(EffectId),
+    /// Adjust a parameter on a master bus effect
+    AdjustEffectParam(EffectId, ParamIndex, f32),
+    /// Toggle master EQ on/off
+    ToggleEqualizer,
+    /// Set master EQ band parameter (band_index, param, value)
+    SetEqualizerParam(usize, EqualizerParamKind, f32),
+}
+
 /// Sample slicer actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SampleSlicerAction {
@@ -401,6 +420,10 @@ pub enum AudioEffect {
     SetGroupEffectParam(u32, EffectId, ParamIndex, f32),
     /// Set a master EQ band parameter (SC param name, value)
     SetMasterEqParam(String, f32),
+    /// Set a master bus effect parameter (effect_id, param_index, value)
+    SetMasterEffectParam(EffectId, ParamIndex, f32),
+    /// Rebuild master bus processing (effect chain + EQ)
+    RebuildMasterProcessing,
 }
 
 impl AudioEffect {
@@ -552,10 +575,6 @@ pub enum MixerAction {
     ToggleSend(BusId),
     NextSendTapPoint(BusId),
     AdjustPan(f32),
-    /// Toggle master EQ on/off
-    ToggleMasterEq,
-    /// Set master EQ band parameter (band_index, param, value)
-    SetMasterEqParam(usize, EqualizerParamKind, f32),
 }
 
 /// Session/file actions.
@@ -1141,6 +1160,7 @@ pub enum Action {
     Midi(MidiAction),
     Bus(BusAction),
     Group(GroupAction),
+    Master(MasterAction),
     VstParam(VstParamAction),
     Click(ClickAction),
     Tuner(TunerAction),
@@ -1213,6 +1233,7 @@ pub enum DomainAction {
     Midi(MidiAction),
     Bus(BusAction),
     Group(GroupAction),
+    Master(MasterAction),
     VstParam(VstParamAction),
     Click(ClickAction),
     Tuner(TunerAction),
@@ -1240,6 +1261,7 @@ impl Action {
             Self::Midi(a) => RoutedAction::Domain(DomainAction::Midi(a)),
             Self::Bus(a) => RoutedAction::Domain(DomainAction::Bus(a)),
             Self::Group(a) => RoutedAction::Domain(DomainAction::Group(a)),
+            Self::Master(a) => RoutedAction::Domain(DomainAction::Master(a)),
             Self::VstParam(a) => RoutedAction::Domain(DomainAction::VstParam(a)),
             Self::Click(a) => RoutedAction::Domain(DomainAction::Click(a)),
             Self::Tuner(a) => RoutedAction::Domain(DomainAction::Tuner(a)),
@@ -1275,6 +1297,7 @@ impl From<DomainAction> for Action {
             DomainAction::Midi(a) => Self::Midi(a),
             DomainAction::Bus(a) => Self::Bus(a),
             DomainAction::Group(a) => Self::Group(a),
+            DomainAction::Master(a) => Self::Master(a),
             DomainAction::VstParam(a) => Self::VstParam(a),
             DomainAction::Click(a) => Self::Click(a),
             DomainAction::Tuner(a) => Self::Tuner(a),

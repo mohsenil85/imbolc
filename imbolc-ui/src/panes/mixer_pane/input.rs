@@ -6,7 +6,7 @@ use crate::state::{AppState, MixerSelection, TrackId};
 use crate::ui::action_id::{ActionId, MixerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, GroupAction, InputEvent, MixerAction, MouseButton, MouseEvent,
+    Action, BusAction, GroupAction, InputEvent, MasterAction, MixerAction, MouseButton, MouseEvent,
     MouseEventKind, NavAction, PaneId, Rect, TrackAction,
 };
 use imbolc_types::{BusId, EffectId};
@@ -24,6 +24,9 @@ impl MixerPane {
         }
         if let Some(DetailTarget::Group(_)) = self.detail_mode {
             return self.handle_group_detail_action(action, state);
+        }
+        if let Some(DetailTarget::Master) = self.detail_mode {
+            return self.handle_master_detail_action(action, state);
         }
         if self.detail_mode.is_some() {
             return self.handle_detail_action(action, state);
@@ -126,7 +129,12 @@ impl MixerPane {
                         self.detail_cursor = 0;
                         self.effect_scroll = 0;
                     }
-                    _ => {}
+                    MixerSelection::Master => {
+                        self.detail_mode = Some(DetailTarget::Master);
+                        self.bus_detail_section = BusDetailSection::Effects;
+                        self.detail_cursor = 0;
+                        self.effect_scroll = 0;
+                    }
                 }
                 Action::None
             }
@@ -696,6 +704,124 @@ impl MixerPane {
                 }
                 _ => Action::None,
             },
+        }
+    }
+
+    fn handle_master_detail_action(&mut self, action: ActionId, state: &AppState) -> Action {
+        match action {
+            ActionId::Mixer(MixerActionId::Escape) | ActionId::Mixer(MixerActionId::ClearSend) => {
+                self.detail_mode = None;
+                self.send_target = None;
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::Section) => {
+                self.bus_detail_section = self.bus_detail_section.next();
+                self.detail_cursor = 0;
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::SectionPrev) => {
+                self.bus_detail_section = self.bus_detail_section.prev();
+                self.detail_cursor = 0;
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::LevelUp) | ActionId::Mixer(MixerActionId::Prev) => {
+                if self.detail_cursor > 0 {
+                    self.detail_cursor -= 1;
+                }
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::LevelDown) | ActionId::Mixer(MixerActionId::Next) => {
+                let max = self.master_max_cursor(state);
+                if self.detail_cursor < max {
+                    self.detail_cursor += 1;
+                }
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::Increase)
+            | ActionId::Mixer(MixerActionId::FineRight)
+            | ActionId::Mixer(MixerActionId::LevelUpBig)
+            | ActionId::Mixer(MixerActionId::First) => {
+                let delta = if matches!(
+                    action,
+                    ActionId::Mixer(MixerActionId::LevelUpBig)
+                        | ActionId::Mixer(MixerActionId::First)
+                ) {
+                    5.0
+                } else {
+                    1.0
+                };
+                self.adjust_master_detail_param(state, delta)
+            }
+            ActionId::Mixer(MixerActionId::Decrease)
+            | ActionId::Mixer(MixerActionId::FineLeft)
+            | ActionId::Mixer(MixerActionId::LevelDownBig)
+            | ActionId::Mixer(MixerActionId::Last) => {
+                let delta = if matches!(
+                    action,
+                    ActionId::Mixer(MixerActionId::LevelDownBig)
+                        | ActionId::Mixer(MixerActionId::Last)
+                ) {
+                    -5.0
+                } else {
+                    -1.0
+                };
+                self.adjust_master_detail_param(state, delta)
+            }
+            ActionId::Mixer(MixerActionId::AddEffect) => {
+                Action::Nav(NavAction::PushPane(PaneId::AddEffect))
+            }
+            ActionId::Mixer(MixerActionId::RemoveEffect) => {
+                if self.bus_detail_section == BusDetailSection::Effects {
+                    if let Some((ei, _)) = self.decode_master_effect_cursor(state) {
+                        let max_after = self.master_max_cursor(state).saturating_sub(1);
+                        if self.detail_cursor > max_after {
+                            self.detail_cursor = max_after;
+                        }
+                        return Action::Master(MasterAction::RemoveEffect(ei));
+                    }
+                }
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::ToggleEffect) => {
+                if self.bus_detail_section == BusDetailSection::Effects {
+                    if let Some((ei, _)) = self.decode_master_effect_cursor(state) {
+                        return Action::Master(MasterAction::ToggleEffectBypass(ei));
+                    }
+                }
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::MoveUp) => {
+                if self.bus_detail_section == BusDetailSection::Effects {
+                    if let Some((ei, _)) = self.decode_master_effect_cursor(state) {
+                        if ei > EffectId::new(0) {
+                            return Action::Master(MasterAction::MoveEffect(ei, -1));
+                        }
+                    }
+                }
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::MoveDown) => {
+                if self.bus_detail_section == BusDetailSection::Effects {
+                    if let Some((ei, _)) = self.decode_master_effect_cursor(state) {
+                        return Action::Master(MasterAction::MoveEffect(ei, 1));
+                    }
+                }
+                Action::None
+            }
+            ActionId::Mixer(MixerActionId::Mute) => Action::Mixer(MixerAction::ToggleMute),
+            _ => Action::None,
+        }
+    }
+
+    fn adjust_master_detail_param(&self, state: &AppState, delta: f32) -> Action {
+        match self.bus_detail_section {
+            BusDetailSection::Effects => {
+                if let Some((ei, Some(pi))) = self.decode_master_effect_cursor(state) {
+                    return Action::Master(MasterAction::AdjustEffectParam(ei, pi, delta));
+                }
+                Action::None
+            }
+            BusDetailSection::Output => Action::Mixer(MixerAction::AdjustLevel(delta * 0.01)),
         }
     }
 

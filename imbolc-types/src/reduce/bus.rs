@@ -1,6 +1,6 @@
 use crate::{
-    BusAction, EqualizerParamKind, GroupAction, MixerSelection, OutputTarget, SessionState,
-    TrackState,
+    BusAction, EqualizerParamKind, GroupAction, MasterAction, MixerSelection, OutputTarget,
+    SessionState, TrackState,
 };
 
 pub(super) fn reduce_bus(
@@ -198,6 +198,69 @@ pub(super) fn reduce_group(action: &GroupAction, session: &mut SessionState) -> 
         GroupAction::Rename(group_id, name) => {
             if let Some(gm) = session.mixer.layer_group_mixer_mut(*group_id) {
                 gm.name = name.clone();
+            }
+            true
+        }
+    }
+}
+
+pub(super) fn reduce_master(action: &MasterAction, session: &mut SessionState) -> bool {
+    let cs = &mut session.mixer.master_channel_strip;
+    match action {
+        MasterAction::AddEffect(effect_type) => {
+            cs.add_effect(*effect_type);
+            true
+        }
+        MasterAction::RemoveEffect(effect_id) => {
+            cs.remove_effect(*effect_id);
+            true
+        }
+        MasterAction::MoveEffect(effect_id, direction) => {
+            cs.move_effect(*effect_id, *direction);
+            true
+        }
+        MasterAction::ToggleEffectBypass(effect_id) => {
+            if let Some(effect) = cs.effect_by_id_mut(*effect_id) {
+                effect.enabled = !effect.enabled;
+            }
+            true
+        }
+        MasterAction::AdjustEffectParam(effect_id, param_idx, delta) => {
+            if let Some(effect) = cs.effect_by_id_mut(*effect_id) {
+                if let Some(param) = effect.params.get_mut(param_idx.get()) {
+                    param.adjust_delta(*delta);
+                }
+            }
+            true
+        }
+        MasterAction::ToggleEqualizer => {
+            cs.toggle_eq();
+            true
+        }
+        MasterAction::SetEqualizerParam(band_idx, param, value) => {
+            if let Some(eq) = cs.eq_mut() {
+                if let Some(band) = eq.bands.get_mut(*band_idx) {
+                    match param {
+                        EqualizerParamKind::Freq => band.freq = value.clamp(20.0, 20000.0),
+                        EqualizerParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
+                        EqualizerParamKind::Q => band.q = value.clamp(0.1, 10.0),
+                        EqualizerParamKind::Enabled => band.enabled = *value > 0.5,
+                        EqualizerParamKind::Slope => {
+                            band.slope = crate::FilterSlope::from_normalized(*value)
+                        }
+                        EqualizerParamKind::BandType => {
+                            let allowed = crate::EqBandType::allowed_types(*band_idx);
+                            let idx = (*value as usize).min(allowed.len().saturating_sub(1));
+                            let new_type = allowed[idx];
+                            if new_type != band.band_type {
+                                band.band_type = new_type;
+                                if !new_type.has_gain() {
+                                    band.gain = 0.0;
+                                }
+                            }
+                        }
+                    }
+                }
             }
             true
         }

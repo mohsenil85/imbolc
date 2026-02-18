@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use super::channel_strip::ChannelStrip;
 use super::session::MixerSelection;
 use super::track::{EqConfig, GroupMixer, MixerBus};
 use crate::BusId;
@@ -25,9 +26,9 @@ pub struct MixerState {
     /// Per-layer-group sub-mixers
     #[serde(default)]
     pub layer_group_mixers: Vec<GroupMixer>,
-    /// Master output EQ (None = disabled)
-    #[serde(default)]
-    pub master_eq: Option<EqConfig>,
+    /// Master output channel strip (EQ + effects chain)
+    #[serde(default = "ChannelStrip::new_bus")]
+    pub master_channel_strip: ChannelStrip,
 }
 
 impl MixerState {
@@ -48,7 +49,7 @@ impl MixerState {
             master_mute: false,
             selection: MixerSelection::default(),
             layer_group_mixers: Vec::new(),
-            master_eq: None,
+            master_channel_strip: ChannelStrip::new_bus(),
         }
     }
 
@@ -183,21 +184,17 @@ impl MixerState {
 
     /// Get the master EQ config (if enabled)
     pub fn master_eq(&self) -> Option<&EqConfig> {
-        self.master_eq.as_ref()
+        self.master_channel_strip.eq()
     }
 
     /// Get the master EQ config mutably (if enabled)
     pub fn master_eq_mut(&mut self) -> Option<&mut EqConfig> {
-        self.master_eq.as_mut()
+        self.master_channel_strip.eq_mut()
     }
 
     /// Toggle master EQ on/off
     pub fn toggle_master_eq(&mut self) {
-        if self.master_eq.is_some() {
-            self.master_eq = None;
-        } else {
-            self.master_eq = Some(EqConfig::default());
-        }
+        self.master_channel_strip.toggle_eq();
     }
 
     /// Compute effective mute for a layer group, considering solo state

@@ -153,6 +153,8 @@ pub struct AudioEngine {
     layer_group_eq_node_map: HashMap<u32, i32>,
     /// Master EQ synth node ID (in GROUP_MASTER)
     master_eq_node_id: Option<i32>,
+    /// Master effect synth nodes: effect_id -> node_id (in GROUP_MASTER)
+    master_effect_node_map: HashMap<EffectId, i32>,
     /// Track final buses: instrument_id -> SC audio bus index (post-effects, pre-mixer)
     pub(crate) instrument_final_buses: HashMap<TrackId, i32>,
     /// Voice allocation, tracking, stealing, and control bus pooling
@@ -220,6 +222,7 @@ impl AudioEngine {
             layer_group_effect_node_map: HashMap::new(),
             layer_group_eq_node_map: HashMap::new(),
             master_eq_node_id: None,
+            master_effect_node_map: HashMap::new(),
             instrument_final_buses: HashMap::new(),
             voice_allocator: VoiceAllocator::new(),
             safety_node_id: None,

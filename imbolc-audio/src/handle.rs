@@ -326,7 +326,9 @@ impl AudioHandle {
                 }
                 AudioEffect::AddInstrumentRouting(id) => add_instrument_routing = Some(*id),
                 AudioEffect::DeleteInstrumentRouting(id) => delete_instrument_routing = Some(*id),
-                AudioEffect::RebuildBusProcessing => rebuild_bus_processing = true,
+                AudioEffect::RebuildBusProcessing | AudioEffect::RebuildMasterProcessing => {
+                    rebuild_bus_processing = true
+                }
                 AudioEffect::UpdateMixerParams => mixer_dirty = true,
                 _ => {}
             }
@@ -515,6 +517,22 @@ impl AudioHandle {
                                 ) {
                                     log::warn!(target: "audio", "set_layer_group_effect_param dropped: {}", e);
                                 }
+                            }
+                        }
+                    }
+                }
+                AudioEffect::SetMasterEffectParam(effect_id, param_idx, value) => {
+                    if let Some(effect) = state
+                        .session()
+                        .mixer
+                        .master_channel_strip
+                        .effect_by_id(*effect_id)
+                    {
+                        if let Some(param) = effect.params.get(param_idx.get()) {
+                            if let Err(e) =
+                                self.set_master_effect_param(*effect_id, &param.name, *value)
+                            {
+                                log::warn!(target: "audio", "set_master_effect_param dropped: {}", e);
                             }
                         }
                     }
@@ -983,6 +1001,19 @@ impl AudioHandle {
 
     pub fn set_master_eq_param(&self, param: &str, value: f32) -> Result<(), String> {
         self.send_cmd(AudioCmd::SetMasterEqParam {
+            param: param.to_string(),
+            value,
+        })
+    }
+
+    pub fn set_master_effect_param(
+        &self,
+        effect_id: EffectId,
+        param: &str,
+        value: f32,
+    ) -> Result<(), String> {
+        self.send_cmd(AudioCmd::SetMasterEffectParam {
+            effect_id,
             param: param.to_string(),
             value,
         })

@@ -96,7 +96,13 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
                     eq.bands[band_index].enabled = enabled;
                 }
             }
-            session.mixer.master_eq = Some(eq);
+            // Enable EQ on master channel strip if not already present
+            if !session.mixer.master_channel_strip.has_eq() {
+                session.mixer.master_channel_strip.toggle_eq();
+            }
+            if let Some(master_eq) = session.mixer.master_channel_strip.eq_mut() {
+                *master_eq = eq;
+            }
         }
     }
 

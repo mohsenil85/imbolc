@@ -4,7 +4,7 @@ use crate::state::{AppState, EqBandType, EqConfig, TrackId};
 use crate::ui::action_id::{ActionId, EqActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, BusAction, Color, GroupAction, InputEvent, Keymap, LayerName, MixerAction, Pane,
+    Action, BusAction, Color, GroupAction, InputEvent, Keymap, LayerName, MasterAction, Pane,
     PaneIdStr, Rect, RenderBuf, Style, TrackAction,
 };
 use imbolc_types::FilterSlope;
@@ -91,7 +91,7 @@ fn make_toggle_action(target: EqTarget) -> Action {
         EqTarget::Track(id) => Action::Track(TrackAction::ToggleEqualizer(id)),
         EqTarget::Group(id) => Action::Group(GroupAction::ToggleEqualizer(id)),
         EqTarget::Bus(id) => Action::Bus(BusAction::ToggleEqualizer(id)),
-        EqTarget::Master => Action::Mixer(MixerAction::ToggleMasterEq),
+        EqTarget::Master => Action::Master(MasterAction::ToggleEqualizer),
     }
 }
 
@@ -109,7 +109,7 @@ fn make_set_action(
             Action::Group(GroupAction::SetEqualizerParam(id, band_idx, param, value))
         }
         EqTarget::Bus(id) => Action::Bus(BusAction::SetEqualizerParam(id, band_idx, param, value)),
-        EqTarget::Master => Action::Mixer(MixerAction::SetMasterEqParam(band_idx, param, value)),
+        EqTarget::Master => Action::Master(MasterAction::SetEqualizerParam(band_idx, param, value)),
     }
 }
 

@@ -45,6 +45,7 @@ pub fn is_reducible(action: &DomainAction) -> bool {
         DomainAction::Mixer(_) => true,
         DomainAction::Bus(_) => true,
         DomainAction::Group(_) => true,
+        DomainAction::Master(_) => true,
         DomainAction::Click(_) => true,
         DomainAction::Generative(_) => true,
 
@@ -106,6 +107,7 @@ pub fn reduce_action(
         DomainAction::Automation(a) => automation::reduce(a, session),
         DomainAction::Bus(a) => bus::reduce_bus(a, session, instruments),
         DomainAction::Group(a) => bus::reduce_group(a, session),
+        DomainAction::Master(a) => bus::reduce_master(a, session),
         DomainAction::VstParam(a) => vst_param::reduce(a, instruments, session),
         DomainAction::Session(a) => session::reduce(a, session, instruments),
         DomainAction::Click(a) => {

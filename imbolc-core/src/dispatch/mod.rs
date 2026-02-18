@@ -5,6 +5,7 @@ mod bus;
 mod generative;
 mod helpers;
 mod local;
+mod master;
 mod midi;
 mod mixer;
 mod piano_roll;
@@ -91,6 +92,7 @@ pub fn dispatch_action(
         DomainAction::Midi(a) => midi::dispatch_midi(a, state),
         DomainAction::Bus(a) => bus::dispatch_bus(a, state, audio),
         DomainAction::Group(a) => bus::dispatch_group(a, state, audio),
+        DomainAction::Master(a) => master::dispatch_master(a, state, audio),
         DomainAction::VstParam(a) => vst_param::dispatch_vst_param(a, state, audio),
         DomainAction::Click(a) => dispatch_click(a, state, audio),
         DomainAction::Tuner(a) => dispatch_tuner(a, audio),

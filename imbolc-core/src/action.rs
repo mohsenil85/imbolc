@@ -13,8 +13,8 @@ use crate::state::track_state::TrackState;
 pub use imbolc_types::{
     Action, ArrangementAction, AudioEffect, AudioFeedback, AutomationAction, BusAction,
     ClickAction, DispatchResult, DomainAction, EqualizerParamKind, FileSelectAction,
-    FilterParamKind, GenerativeAction, GroupAction, LfoParamKind, MidiAction, MixerAction,
-    NavAction, NavIntent, PaneId, PianoRollAction, RoutedAction, SampleSlicerAction,
+    FilterParamKind, GenerativeAction, GroupAction, LfoParamKind, MasterAction, MidiAction,
+    MixerAction, NavAction, NavIntent, PaneId, PianoRollAction, RoutedAction, SampleSlicerAction,
     SequencerAction, ServerAction, SessionAction, StatusEvent, ToggleResult, TrackAction,
     TrackUpdate, TunerAction, UiAction, VstParamAction, VstTarget,
 };

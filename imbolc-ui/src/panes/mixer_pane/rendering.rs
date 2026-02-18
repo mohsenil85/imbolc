@@ -981,6 +981,140 @@ impl MixerPane {
         }
     }
 
+    pub(super) fn render_master_detail_buf(
+        &self,
+        buf: &mut RenderBuf,
+        area: Rect,
+        state: &AppState,
+    ) {
+        let cs = &state.session.mixer.master_channel_strip;
+        let title = " MIXER --- MASTER ";
+
+        let box_width = area.width.min(60);
+        let box_height = area.height.min(24);
+        let rect = center_rect(area, box_width, box_height);
+
+        buf.draw_block(
+            rect,
+            title,
+            Style::new().fg(Color::PURPLE),
+            Style::new().fg(Color::PURPLE),
+        );
+
+        let inner_x = rect.x + 2;
+        let inner_y = rect.y + 1;
+        let inner_h = rect.height.saturating_sub(3);
+
+        let dim = Style::new().fg(Color::DARK_GRAY);
+        let normal = Style::new().fg(Color::WHITE);
+        let active_section = Style::new().fg(Color::WHITE).bold();
+        let selected_style = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG);
+
+        // Section indicator bar
+        let section_bar_y = rect.y;
+        let sections = [BusDetailSection::Effects, BusDetailSection::Output];
+        let mut sx = rect.x + (title.len() as u16) + 1;
+        for &section in &sections {
+            if sx + section.label().len() as u16 + 2 >= rect.x + rect.width {
+                break;
+            }
+            let sstyle = if section == self.bus_detail_section {
+                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+            } else {
+                Style::new().fg(Color::DARK_GRAY)
+            };
+            let label = format!(" {} ", section.label());
+            Self::write_str(buf, sx, section_bar_y, &label, sstyle);
+            sx += label.len() as u16 + 1;
+        }
+
+        match self.bus_detail_section {
+            BusDetailSection::Effects => {
+                Self::write_str(buf, inner_x, inner_y, "EFFECTS CHAIN", active_section);
+
+                let mut ey = inner_y + 1;
+                let mut cursor_pos = 0;
+                for (ei, effect) in cs.effects().enumerate() {
+                    if ey >= inner_y + inner_h {
+                        break;
+                    }
+
+                    let bypass_char = if effect.enabled {
+                        '\u{25CF}'
+                    } else {
+                        '\u{25CB}'
+                    };
+                    let effect_label =
+                        format!("{} [{}] {:?}", ei + 1, bypass_char, effect.effect_type);
+                    let style = if self.detail_cursor == cursor_pos {
+                        selected_style
+                    } else {
+                        normal
+                    };
+                    Self::write_str(buf, inner_x, ey, &effect_label, style);
+                    ey += 1;
+                    cursor_pos += 1;
+
+                    for param in effect.params.iter().take(4) {
+                        if ey >= inner_y + inner_h {
+                            break;
+                        }
+                        let val_str = match &param.value {
+                            ParamValue::Float(v) => format!("{:.2}", v),
+                            ParamValue::Int(v) => format!("{}", v),
+                            ParamValue::Bool(b) => {
+                                if *b {
+                                    "ON".to_string()
+                                } else {
+                                    "OFF".to_string()
+                                }
+                            }
+                        };
+                        let param_text = format!("  {} {}", param.name, val_str);
+                        let pstyle = if self.detail_cursor == cursor_pos {
+                            selected_style
+                        } else {
+                            dim
+                        };
+                        Self::write_str(buf, inner_x + 1, ey, &param_text, pstyle);
+                        ey += 1;
+                        cursor_pos += 1;
+                    }
+                }
+                if cs.effects().next().is_none() {
+                    Self::write_str(buf, inner_x, inner_y + 1, "(no effects)", dim);
+                }
+            }
+            BusDetailSection::Output => {
+                Self::write_str(buf, inner_x, inner_y, "OUTPUT", active_section);
+
+                let db_str = Self::level_to_db(state.session.mixer.master_level);
+                let meter_len = (state.session.mixer.master_level * 10.0) as usize;
+                let meter_bar: String = "\u{258E}".repeat(meter_len)
+                    + &"\u{2591}".repeat(10usize.saturating_sub(meter_len));
+                let level_text = format!("{} {}", meter_bar, db_str);
+                let level_style = if self.detail_cursor == 0 {
+                    selected_style
+                } else {
+                    normal
+                };
+                Self::write_str(buf, inner_x, inner_y + 1, &level_text, level_style);
+
+                let mute_str = if state.session.mixer.master_mute {
+                    "[M]"
+                } else {
+                    " M "
+                };
+                let mute_style = if state.session.mixer.master_mute {
+                    Style::new().fg(Color::MUTE_COLOR).bold()
+                } else {
+                    dim
+                };
+                Self::write_str(buf, inner_x, inner_y + 3, mute_str, mute_style);
+            }
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn render_channel_buf(
         buf: &mut RenderBuf,

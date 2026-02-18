@@ -346,6 +346,7 @@ impl AudioThread {
             | SetGroupEffectParam { .. }
             | SetLayerGroupEqParam { .. }
             | SetMasterEqParam { .. }
+            | SetMasterEffectParam { .. }
             | ApplyAutomation { .. } => self.handle_mixer_cmd(cmd),
 
             // Voice management
@@ -818,6 +819,15 @@ impl AudioThread {
             }
             AudioCmd::SetMasterEqParam { param, value } => {
                 let _ = self.engine.set_master_eq_param(&param, value);
+            }
+            AudioCmd::SetMasterEffectParam {
+                effect_id,
+                param,
+                value,
+            } => {
+                let _ = self
+                    .engine
+                    .set_master_effect_param(effect_id, &param, value);
             }
             AudioCmd::ApplyAutomation { target, value } => {
                 let _ =

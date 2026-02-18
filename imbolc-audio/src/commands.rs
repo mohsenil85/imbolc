@@ -141,6 +141,12 @@ pub enum AudioCmd {
         param: String,
         value: f32,
     },
+    /// Targeted /n_set to master effect node (no routing rebuild).
+    SetMasterEffectParam {
+        effect_id: EffectId,
+        param: String,
+        value: f32,
+    },
     SetInstrumentMixerParams {
         instrument_id: TrackId,
         level: f32,
@@ -321,6 +327,7 @@ impl AudioCmd {
                 | AudioCmd::SetGroupEffectParam { .. }
                 | AudioCmd::SetLayerGroupEqParam { .. }
                 | AudioCmd::SetMasterEqParam { .. }
+                | AudioCmd::SetMasterEffectParam { .. }
                 | AudioCmd::SetVstParam { .. }
                 // Playback control
                 | AudioCmd::SetPlaying { .. }
