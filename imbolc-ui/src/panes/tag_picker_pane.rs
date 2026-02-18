@@ -92,7 +92,8 @@ impl Pane for TagPickerPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
-        use crate::ui::style::{Color, Style};
+        use crate::ui::style::{Palette, Style};
+        let p = Palette::from(&state.session.theme);
 
         let tags = &state.session.param_tags.tags;
         let count = self.tag_count(state);
@@ -100,13 +101,13 @@ impl Pane for TagPickerPane {
         let modal = crate::ui::layout_helpers::center_rect(area, 40, height);
 
         // Border + Title
-        let border_style = Style::new().fg(Color::new(100, 200, 255));
+        let border_style = Style::new().fg(p.accent);
         buf.draw_block(modal, " Tag Parameter ", border_style, border_style);
 
         // Pending target info
         if let Some(ref target) = state.session.param_tags.pending_target {
             let desc = describe_target(target, state);
-            let desc_style = Style::new().fg(Color::new(180, 180, 180));
+            let desc_style = Style::new().fg(p.dim);
             let truncated: String = desc.chars().take((modal.width - 4) as usize).collect();
             buf.draw_str(modal.x + 2, modal.y + 1, &truncated, desc_style);
         }
@@ -120,9 +121,9 @@ impl Pane for TagPickerPane {
             }
             let label = format!("  {}  ({} params)", tag.name, tag.targets.len());
             let style = if i == self.selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                Style::new().fg(p.fg).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::WHITE)
+                Style::new().fg(p.fg)
             };
             let truncated: String = label.chars().take((modal.width - 2) as usize).collect();
             buf.draw_str(modal.x + 1, y, &truncated, style);
@@ -141,11 +142,9 @@ impl Pane for TagPickerPane {
         let new_y = content_y + tags.len() as u16;
         if new_y < modal.y + modal.height - 1 {
             let style = if self.selected == tags.len() {
-                Style::new()
-                    .fg(Color::new(100, 255, 100))
-                    .bg(Color::SELECTION_BG)
+                Style::new().fg(p.success).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::new(100, 255, 100))
+                Style::new().fg(p.success)
             };
             let label = "  + New tag...";
             buf.draw_str(modal.x + 1, new_y, label, style);

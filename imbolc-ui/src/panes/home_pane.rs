@@ -4,7 +4,7 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, HomeActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
+    Action, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Palette, Pane,
     PaneId, PaneIdStr, Rect, RenderBuf, Style,
 };
 
@@ -87,31 +87,32 @@ impl Pane for HomePane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 50, 12);
 
-        let border_style = Style::new().fg(Color::MAGENTA);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " IMBOLC ", border_style, border_style);
 
-        let item_colors = [Color::CYAN, Color::PURPLE, Color::GOLD];
+        let item_colors = [p.accent, p.bus_color, p.master_color];
 
         for (i, item) in self.items.iter().enumerate() {
             let y = inner.y + 1 + (i as u16 * 2);
             let is_selected = i == self.selected;
-            let item_color = item_colors.get(i).copied().unwrap_or(Color::WHITE);
+            let item_color = item_colors.get(i).copied().unwrap_or(p.fg);
 
             let label_text = format!(" [{}] {} ", i + 1, item.label);
 
             let label_style = if is_selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
                 Style::new().fg(item_color)
             };
 
             let desc_style = if is_selected {
-                Style::new().fg(Color::SKY_BLUE)
+                Style::new().fg(p.accent)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.muted)
             };
             let desc_text = format!("  {}", item.description);
 

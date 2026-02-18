@@ -7,8 +7,8 @@ use crate::state::VstPluginKind;
 use crate::ui::action_id::{ActionId, FileBrowserActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind,
-    NavAction, Pane, PaneIdStr, Rect, RenderBuf, SampleSlicerAction, SequencerAction,
+    Action, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind,
+    NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf, SampleSlicerAction, SequencerAction,
     SessionAction, Style, TrackAction,
 };
 
@@ -276,7 +276,8 @@ impl Pane for FileBrowserPane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 97, 29);
 
         let title = match self.on_select_action {
@@ -291,7 +292,7 @@ impl Pane for FileBrowserPane {
             FileSelectAction::LoadImpulseResponse(_, _) => " Load Impulse Response ",
             FileSelectAction::ImportProject => " Import Project ",
         };
-        let border_style = Style::new().fg(Color::PURPLE);
+        let border_style = Style::new().fg(p.bus_color);
         let inner = buf.draw_block(rect, title, border_style, border_style);
 
         let content_x = inner.x + 1;
@@ -307,7 +308,7 @@ impl Pane for FileBrowserPane {
         };
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
-            &[(&display_path, Style::new().fg(Color::CYAN).bold())],
+            &[(&display_path, Style::new().fg(p.accent).bold())],
         );
 
         // File list
@@ -325,7 +326,7 @@ impl Pane for FileBrowserPane {
             eff_scroll = selected - visible_height + 1;
         }
 
-        let sel_bg = Style::new().bg(Color::SELECTION_BG);
+        let sel_bg = Style::new().bg(p.selection_bg);
 
         if entries.is_empty() {
             let ext_label = self
@@ -336,7 +337,7 @@ impl Pane for FileBrowserPane {
             let empty_msg = format!("(no .{} files found)", ext_label);
             buf.draw_line(
                 Rect::new(content_x, list_y, inner.width.saturating_sub(2), 1),
-                &[(&empty_msg, Style::new().fg(Color::DARK_GRAY))],
+                &[(&empty_msg, Style::new().fg(p.muted))],
             );
         } else {
             for (i, entry) in entries
@@ -360,18 +361,18 @@ impl Pane for FileBrowserPane {
                         content_x,
                         y,
                         '>',
-                        Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                        Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                     );
                 }
 
                 let (icon, icon_color) = if entry.is_dir {
-                    ("/", Color::CYAN)
+                    ("/", p.accent)
                 } else {
-                    (" ", Color::CUSTOM_COLOR)
+                    (" ", p.custom_color)
                 };
 
                 let icon_style = if is_selected {
-                    Style::new().fg(icon_color).bg(Color::SELECTION_BG)
+                    Style::new().fg(icon_color).bg(p.selection_bg)
                 } else {
                     Style::new().fg(icon_color)
                 };
@@ -383,13 +384,9 @@ impl Pane for FileBrowserPane {
                     entry.name.clone()
                 };
 
-                let name_color = if entry.is_dir {
-                    Color::CYAN
-                } else {
-                    Color::WHITE
-                };
+                let name_color = if entry.is_dir { p.accent } else { p.fg };
                 let name_style = if is_selected {
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                    Style::new().fg(p.fg).bg(p.selection_bg)
                 } else {
                     Style::new().fg(name_color)
                 };
@@ -402,7 +399,7 @@ impl Pane for FileBrowserPane {
             }
 
             // Scroll indicators
-            let scroll_style = Style::new().fg(Color::DARK_GRAY);
+            let scroll_style = Style::new().fg(p.dim);
             if eff_scroll > 0 {
                 buf.draw_line(
                     Rect::new(rect.x + rect.width - 5, list_y, 3, 1),

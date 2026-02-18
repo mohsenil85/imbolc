@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use super::action_id::ActionId;
-use super::style::{Color, Style};
+use super::style::{Palette, Style};
 use super::{InputEvent, Keymap, MouseEvent, Rect, RenderBuf};
 use crate::state::AppState;
 
@@ -210,6 +210,7 @@ impl PaneManager {
 
     /// Render the active pane to the buffer, with hint bar if applicable.
     pub fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let hints = self.panes[self.active_index].keymap().hint_bindings();
         if !hints.is_empty() && area.height > 2 {
             // Render pane with full area; draw_block auto-registers the hint anchor.
@@ -223,10 +224,10 @@ impl PaneManager {
                     width: anchor.width,
                     height: 1,
                 };
-                Self::render_hint_line(&hints, hint_area, buf);
+                Self::render_hint_line(&hints, hint_area, buf, &p);
             } else {
                 // No dialog drawn — fall back to bottom of area
-                Self::render_hint_line(&hints, area, buf);
+                Self::render_hint_line(&hints, area, buf, &p);
             }
         } else {
             self.panes[self.active_index].render(area, buf, state);
@@ -234,7 +235,7 @@ impl PaneManager {
     }
 
     /// Render the hint bar at the bottom row of the given area.
-    fn render_hint_line(hints: &[(String, &str)], area: Rect, buf: &mut RenderBuf) {
+    fn render_hint_line(hints: &[(String, &str)], area: Rect, buf: &mut RenderBuf, p: &Palette) {
         let y = area.y + area.height - 1;
         let max_x = area.x + area.width;
 
@@ -246,8 +247,8 @@ impl PaneManager {
 
         let mut x = area.x + 1;
 
-        let key_style = Style::new().fg(Color::CYAN);
-        let label_style = Style::new().fg(Color::DARK_GRAY);
+        let key_style = Style::new().fg(p.accent);
+        let label_style = Style::new().fg(p.dim);
 
         for (i, (key, label)) in hints.iter().enumerate() {
             if i > 0 {

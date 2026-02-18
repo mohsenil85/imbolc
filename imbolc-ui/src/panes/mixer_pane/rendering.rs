@@ -1197,7 +1197,7 @@ impl MixerPane {
         let db_style = if selected {
             Style::new().fg(p.fg).bg(p.selection_bg)
         } else {
-            Style::new().fg(Color::SKY_BLUE)
+            Style::new().fg(p.accent)
         };
         let db_str = Self::level_to_db(level);
         for (j, ch) in db_str.chars().enumerate() {

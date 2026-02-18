@@ -5,7 +5,7 @@ use crate::state::automation::{AutomationTarget, AutomationTargetExt};
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, MidiSettingsActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style};
+use crate::ui::{InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, Style};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Section {
@@ -78,7 +78,7 @@ impl MidiSettingsPane {
         }
     }
 
-    fn render_target_picker(&self, buf: &mut RenderBuf, area: Rect, state: &AppState) {
+    fn render_target_picker(&self, buf: &mut RenderBuf, area: Rect, state: &AppState, p: &Palette) {
         if let TargetPickerState::Active {
             ref options,
             cursor,
@@ -88,15 +88,15 @@ impl MidiSettingsPane {
             let picker_height = (options.len() as u16 + 2).min(area.height.saturating_sub(2));
             let picker_rect = center_rect(area, picker_width, picker_height);
 
-            let clear_style = Style::new().bg(Color::new(20, 20, 30));
+            let clear_style = Style::new().bg(p.bg);
             for y in picker_rect.y..picker_rect.y + picker_rect.height {
                 for x in picker_rect.x..picker_rect.x + picker_rect.width {
                     buf.set_cell(x, y, ' ', clear_style);
                 }
             }
 
-            let border_style = Style::new().fg(Color::CYAN);
-            let title_style = Style::new().fg(Color::CYAN);
+            let border_style = Style::new().fg(p.accent);
+            let title_style = Style::new().fg(p.accent);
             let inner = buf.draw_block(
                 picker_rect,
                 " MIDI Learn Target ",
@@ -125,9 +125,9 @@ impl MidiSettingsPane {
                 let display_name = target.name_with_context(inst, vst_registry);
                 let text = format!("{} {}", if is_selected { ">" } else { " " }, display_name);
                 let style = if is_selected {
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                    Style::new().fg(p.fg).bg(p.selection_bg).bold()
                 } else {
-                    Style::new().fg(Color::GRAY)
+                    Style::new().fg(p.dim)
                 };
 
                 for (j, ch) in text.chars().enumerate() {
@@ -267,7 +267,8 @@ impl Pane for MidiSettingsPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
-        let border_style = Style::new().fg(Color::CYAN);
+        let p = Palette::from(&state.session.theme);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(area, " MIDI Settings ", border_style, border_style);
 
         if inner.height < 3 || inner.width < 20 {
@@ -276,14 +277,14 @@ impl Pane for MidiSettingsPane {
 
         let section_style = |s: Section| {
             if s == self.section {
-                Style::new().fg(Color::CYAN).bold()
+                Style::new().fg(p.accent).bold()
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             }
         };
-        let normal = Style::new().fg(Color::GRAY);
-        let dim = Style::new().fg(Color::DARK_GRAY);
-        let highlight = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold();
+        let normal = Style::new().fg(p.dim);
+        let dim = Style::new().fg(p.muted);
+        let highlight = Style::new().fg(p.fg).bg(p.selection_bg).bold();
 
         let mut y = inner.y;
         let x = inner.x + 1;
@@ -291,7 +292,7 @@ impl Pane for MidiSettingsPane {
 
         // Learn mode banner
         if state.session.midi_recording.is_learning() {
-            let learn_style = Style::new().fg(Color::BLACK).bg(Color::MIDI_COLOR).bold();
+            let learn_style = Style::new().fg(p.bg).bg(p.midi_color).bold();
             let target_name = state
                 .session
                 .midi_recording
@@ -453,7 +454,7 @@ impl Pane for MidiSettingsPane {
         }
 
         // Render target picker overlay (if active)
-        self.render_target_picker(buf, area, state);
+        self.render_target_picker(buf, area, state, &p);
     }
 
     fn keymap(&self) -> &Keymap {

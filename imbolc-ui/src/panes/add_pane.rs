@@ -6,9 +6,9 @@ use crate::state::{
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, ListSelector, MouseButton, MouseEvent,
-    MouseEventKind, NavAction, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
-    TrackAction,
+    Action, FileSelectAction, InputEvent, Keymap, ListSelector, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, Palette, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction,
+    Style, TrackAction,
 };
 
 /// Options available in the Add Track menu
@@ -216,10 +216,11 @@ impl AddPane {
         buf: &mut RenderBuf,
         registry: &CustomSynthDefRegistry,
         vst_registry: &VstPluginRegistry,
+        p: &Palette,
     ) {
         let rect = center_rect(area, 97, 29);
 
-        let border_style = Style::new().fg(Color::LIME);
+        let border_style = Style::new().fg(p.success);
         let inner = buf.draw_block(rect, " Add Track ", border_style, border_style);
 
         let content_x = inner.x + 1;
@@ -228,11 +229,11 @@ impl AddPane {
         // Title
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
-            &[("Select source type:", Style::new().fg(Color::LIME).bold())],
+            &[("Select source type:", Style::new().fg(p.success).bold())],
         );
 
         let list_y = content_y + 2;
-        let sel_bg = Style::new().bg(Color::SELECTION_BG);
+        let sel_bg = Style::new().bg(p.selection_bg);
 
         // Scroll offset: keep selected item visible
         let visible_rows = (inner.y + inner.height).saturating_sub(list_y) as usize;
@@ -248,7 +249,7 @@ impl AddPane {
             let arrow_y = list_y.saturating_sub(1);
             if arrow_y >= inner.y {
                 let arrow_x = inner.x + inner.width.saturating_sub(2);
-                buf.set_cell(arrow_x, arrow_y, '▲', Style::new().fg(Color::DARK_GRAY));
+                buf.set_cell(arrow_x, arrow_y, '▲', Style::new().fg(p.dim));
             }
         }
 
@@ -266,7 +267,7 @@ impl AddPane {
                 AddOption::Separator(label) => {
                     buf.draw_line(
                         Rect::new(content_x, y, inner.width.saturating_sub(2), 1),
-                        &[(*label, Style::new().fg(Color::DARK_GRAY))],
+                        &[(*label, Style::new().fg(p.dim))],
                     );
                 }
                 AddOption::Source(source) => {
@@ -276,34 +277,34 @@ impl AddPane {
                             content_x,
                             y,
                             '>',
-                            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                            Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                         );
                     }
 
                     let color = match source {
-                        SourceType::AudioIn => Color::AUDIO_IN_COLOR,
-                        SourceType::BusIn => Color::BUS_IN_COLOR,
+                        SourceType::AudioIn => p.audio_in_color,
+                        SourceType::BusIn => p.bus_in_color,
                         SourceType::PitchedSampler | SourceType::TimeStretch | SourceType::Kit => {
-                            Color::SAMPLE_COLOR
+                            p.sample_color
                         }
-                        SourceType::Custom(_) => Color::CUSTOM_COLOR,
-                        SourceType::Vst(_) => Color::VST_COLOR,
-                        _ => Color::OSC_COLOR,
+                        SourceType::Custom(_) => p.custom_color,
+                        SourceType::Vst(_) => p.vst_color,
+                        _ => p.osc_color,
                     };
 
                     let short = format!("{:12}", source.short_name_vst(registry, vst_registry));
                     let name = source.display_name_vst(registry, vst_registry);
 
                     let short_style = if is_selected {
-                        Style::new().fg(color).bg(Color::SELECTION_BG)
+                        Style::new().fg(color).bg(p.selection_bg)
                     } else {
                         Style::new().fg(color)
                     };
                     let name_display = format!("  {}", name);
                     let name_style = if is_selected {
-                        Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                        Style::new().fg(p.fg).bg(p.selection_bg)
                     } else {
-                        Style::new().fg(Color::DARK_GRAY)
+                        Style::new().fg(p.muted)
                     };
 
                     buf.draw_line(
@@ -326,14 +327,14 @@ impl AddPane {
                             content_x,
                             y,
                             '>',
-                            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                            Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                         );
                     }
 
                     let text_style = if is_selected {
-                        Style::new().fg(Color::PURPLE).bg(Color::SELECTION_BG)
+                        Style::new().fg(p.bus_color).bg(p.selection_bg)
                     } else {
-                        Style::new().fg(Color::PURPLE)
+                        Style::new().fg(p.bus_color)
                     };
                     buf.draw_line(
                         Rect::new(content_x + 2, y, inner.width.saturating_sub(4), 1),
@@ -354,14 +355,14 @@ impl AddPane {
                             content_x,
                             y,
                             '>',
-                            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                            Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                         );
                     }
 
                     let text_style = if is_selected {
-                        Style::new().fg(Color::VST_COLOR).bg(Color::SELECTION_BG)
+                        Style::new().fg(p.vst_color).bg(p.selection_bg)
                     } else {
-                        Style::new().fg(Color::VST_COLOR)
+                        Style::new().fg(p.vst_color)
                     };
                     buf.draw_line(
                         Rect::new(content_x + 2, y, inner.width.saturating_sub(4), 1),
@@ -384,7 +385,7 @@ impl AddPane {
             let arrow_y = list_y + visible_rows as u16;
             if arrow_y < inner.y + inner.height {
                 let arrow_x = inner.x + inner.width.saturating_sub(2);
-                buf.set_cell(arrow_x, arrow_y, '▼', Style::new().fg(Color::DARK_GRAY));
+                buf.set_cell(arrow_x, arrow_y, '▼', Style::new().fg(p.dim));
             }
         }
     }
@@ -460,11 +461,13 @@ impl Pane for AddPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         self.render_buf_with_registries(
             area,
             buf,
             &state.session.custom_synthdefs,
             &state.session.vst_plugins,
+            &p,
         );
     }
 

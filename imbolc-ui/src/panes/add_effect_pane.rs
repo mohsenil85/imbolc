@@ -5,8 +5,9 @@ use crate::state::{AppState, EffectType, EffectTypeExt, VstPluginRegistry};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, MasterAction, MouseButton, MouseEvent,
-    MouseEventKind, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style, TrackAction,
+    Action, FileSelectAction, InputEvent, Keymap, MasterAction, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
+    TrackAction,
 };
 use imbolc_types::{BusId, GroupId, VstPluginId};
 
@@ -292,10 +293,11 @@ impl Pane for AddEffectPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let vst_registry = &state.session.vst_plugins;
         let rect = center_rect(area, 40, 20);
 
-        let border_style = Style::new().fg(Color::FX_COLOR);
+        let border_style = Style::new().fg(p.fx_color);
         let inner = buf.draw_block(rect, " Add Effect ", border_style, border_style);
 
         let content_x = inner.x + 1;
@@ -304,14 +306,11 @@ impl Pane for AddEffectPane {
         // Title
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
-            &[(
-                "Select effect type:",
-                Style::new().fg(Color::FX_COLOR).bold(),
-            )],
+            &[("Select effect type:", Style::new().fg(p.fx_color).bold())],
         );
 
         let list_y = content_y + 2;
-        let sel_bg = Style::new().bg(Color::SELECTION_BG);
+        let sel_bg = Style::new().bg(p.selection_bg);
 
         for (visual_i, i) in (self.scroll_offset..self.cached_options.len()).enumerate() {
             if visual_i >= LIST_HEIGHT {
@@ -327,7 +326,7 @@ impl Pane for AddEffectPane {
                 AddEffectOption::Separator(label) => {
                     buf.draw_line(
                         Rect::new(content_x, y, inner.width.saturating_sub(2), 1),
-                        &[(*label, Style::new().fg(Color::DARK_GRAY))],
+                        &[(*label, Style::new().fg(p.dim))],
                     );
                 }
                 AddEffectOption::Effect(effect_type) => {
@@ -336,19 +335,19 @@ impl Pane for AddEffectPane {
                             content_x,
                             y,
                             '>',
-                            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                            Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                         );
                     }
 
                     let color = if effect_type.is_vst() {
-                        Color::VST_COLOR
+                        p.vst_color
                     } else {
-                        Color::FX_COLOR
+                        p.fx_color
                     };
                     let name = effect_type.display_name(vst_registry);
 
                     let name_style = if is_selected {
-                        Style::new().fg(color).bg(Color::SELECTION_BG)
+                        Style::new().fg(color).bg(p.selection_bg)
                     } else {
                         Style::new().fg(color)
                     };
@@ -372,14 +371,14 @@ impl Pane for AddEffectPane {
                             content_x,
                             y,
                             '>',
-                            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                            Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                         );
                     }
 
                     let text_style = if is_selected {
-                        Style::new().fg(Color::VST_COLOR).bg(Color::SELECTION_BG)
+                        Style::new().fg(p.vst_color).bg(p.selection_bg)
                     } else {
-                        Style::new().fg(Color::VST_COLOR)
+                        Style::new().fg(p.vst_color)
                     };
                     let label = "+ Import VST Effect...";
                     buf.draw_line(

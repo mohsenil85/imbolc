@@ -5,7 +5,7 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, SampleSlicerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, FileSelectAction, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect,
+    Action, FileSelectAction, InputEvent, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
     RenderBuf, SampleSlicerAction, Style,
 };
 
@@ -127,6 +127,7 @@ impl Pane for SampleSlicerPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         // Delegate to file browser before unwrapping RenderBuf
         if let Some(drum_seq) = self.selected_drum_sequencer(state) {
             if drum_seq.chopper.is_none() {
@@ -138,19 +139,16 @@ impl Pane for SampleSlicerPane {
         let rect = center_rect(area, 97, 29);
 
         if self.selected_drum_sequencer(state).is_none() {
-            let border_style = Style::new().fg(Color::GRAY);
+            let border_style = Style::new().fg(p.dim);
             let inner = buf.draw_block(rect, " Sample Slicer ", border_style, border_style);
             buf.draw_line(
                 Rect::new(inner.x + 1, inner.y + 1, inner.width.saturating_sub(2), 1),
-                &[(
-                    "No drum machine track selected.",
-                    Style::new().fg(Color::DARK_GRAY),
-                )],
+                &[("No drum machine track selected.", Style::new().fg(p.muted))],
             );
             return;
         }
 
-        let border_style = Style::new().fg(Color::GRAY);
+        let border_style = Style::new().fg(p.dim);
         let _inner = buf.draw_block(rect, " Sample Slicer ", border_style, border_style);
 
         // Get slicer state
@@ -159,7 +157,7 @@ impl Pane for SampleSlicerPane {
             None => {
                 buf.draw_line(
                     Rect::new(rect.x + 2, rect.y + 2, rect.width.saturating_sub(4), 1),
-                    &[("No sample loaded.", Style::new().fg(Color::DARK_GRAY))],
+                    &[("No sample loaded.", Style::new().fg(p.muted))],
                 );
                 return;
             }
@@ -182,7 +180,7 @@ impl Pane for SampleSlicerPane {
             .unwrap_or_else(|| "No Sample".to_string());
         buf.draw_line(
             Rect::new(content_x, content_y, rect.width.saturating_sub(4), 1),
-            &[(&filename, Style::new().fg(Color::CYAN).bold())],
+            &[(&filename, Style::new().fg(p.accent).bold())],
         );
 
         let info = format!(
@@ -198,7 +196,7 @@ impl Pane for SampleSlicerPane {
                 rect.width.saturating_sub(info_x - rect.x),
                 1,
             ),
-            &[(&info, Style::new().fg(Color::DARK_GRAY))],
+            &[(&info, Style::new().fg(p.muted))],
         );
 
         // Waveform
@@ -206,7 +204,7 @@ impl Pane for SampleSlicerPane {
         let wave_height: u16 = 8;
         let wave_width = (rect.width - 4) as usize;
 
-        let green_style = Style::new().fg(Color::GREEN);
+        let green_style = Style::new().fg(p.success);
         if !chopper.waveform_peaks.is_empty() {
             let peaks = &chopper.waveform_peaks;
             for i in 0..wave_width {
@@ -224,16 +222,16 @@ impl Pane for SampleSlicerPane {
         } else {
             buf.draw_line(
                 Rect::new(content_x, wave_y + wave_height / 2, 20, 1),
-                &[("(No waveform data)", Style::new().fg(Color::DARK_GRAY))],
+                &[("(No waveform data)", Style::new().fg(p.muted))],
             );
         }
 
         // Draw slices
         let slice_y_start = wave_y;
         let slice_y_end = wave_y + wave_height;
-        let dark_gray_style = Style::new().fg(Color::DARK_GRAY);
-        let sel_bg_style = Style::new().bg(Color::SELECTION_BG);
-        let sel_white_style = Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG);
+        let dark_gray_style = Style::new().fg(p.dim);
+        let sel_bg_style = Style::new().bg(p.selection_bg);
+        let sel_white_style = Style::new().fg(p.fg).bg(p.selection_bg);
 
         for (i, slice) in chopper.slices.iter().enumerate() {
             let start_x = (slice.start * wave_width as f32) as u16;
@@ -273,7 +271,7 @@ impl Pane for SampleSlicerPane {
 
         // Draw cursor
         let cursor_screen_x = (self.cursor_pos * wave_width as f32) as u16;
-        let yellow_style = Style::new().fg(Color::YELLOW);
+        let yellow_style = Style::new().fg(p.warning);
         for y in slice_y_start..=slice_y_end {
             buf.set_cell(content_x + cursor_screen_x, y, '┆', yellow_style);
         }
@@ -294,14 +292,14 @@ impl Pane for SampleSlicerPane {
             let y = list_y + i as u16;
 
             if i == chopper.selected_slice {
-                buf.set_cell(content_x, y, '>', Style::new().fg(Color::WHITE).bold());
+                buf.set_cell(content_x, y, '>', Style::new().fg(p.fg).bold());
             }
 
             let text = format!("{:<2} {:.3}-{:.3}", i + 1, slice.start, slice.end);
             let style = Style::new().fg(if i == chopper.selected_slice {
-                Color::WHITE
+                p.fg
             } else {
-                Color::GRAY
+                p.dim
             });
             buf.draw_line(
                 Rect::new(content_x + 2, y, text.len() as u16, 1),

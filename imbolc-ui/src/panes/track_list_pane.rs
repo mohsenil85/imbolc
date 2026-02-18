@@ -487,7 +487,7 @@ impl Pane for TrackListPane {
             let piano_x = rect.x + rect.width - piano_str.len() as u16 - 1;
             buf.draw_line(
                 Rect::new(piano_x, rect.y, piano_str.len() as u16, 1),
-                &[(&piano_str, Style::new().fg(p.bg).bg(Color::PINK))],
+                &[(&piano_str, Style::new().fg(p.bg).bg(p.fx_color))],
             );
         }
 

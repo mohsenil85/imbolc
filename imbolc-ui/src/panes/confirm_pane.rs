@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, ConfirmActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
-    Style,
+    Action, InputEvent, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf,
+    SessionAction, Style,
 };
 
 /// What to do when the user confirms the dialog
@@ -100,29 +100,30 @@ impl Pane for ConfirmPane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let width = (self.message.len() as u16 + 6)
             .max(30)
             .min(area.width.saturating_sub(4));
         let rect = center_rect(area, width, 7);
 
-        let border_style = Style::new().fg(Color::YELLOW);
+        let border_style = Style::new().fg(p.warning);
         let inner = buf.draw_block(rect, " Confirm ", border_style, border_style);
 
         // Message
         let msg_area = Rect::new(inner.x + 1, inner.y + 1, inner.width.saturating_sub(2), 1);
-        buf.draw_line(msg_area, &[(&self.message, Style::new().fg(Color::WHITE))]);
+        buf.draw_line(msg_area, &[(&self.message, Style::new().fg(p.fg))]);
 
         // Buttons: [No]  [Yes]
         let no_style = if !self.selected {
-            Style::new().fg(Color::BLACK).bg(Color::WHITE).bold()
+            Style::new().fg(p.bg).bg(p.fg).bold()
         } else {
-            Style::new().fg(Color::DARK_GRAY)
+            Style::new().fg(p.muted)
         };
         let yes_style = if self.selected {
-            Style::new().fg(Color::BLACK).bg(Color::YELLOW).bold()
+            Style::new().fg(p.bg).bg(p.warning).bold()
         } else {
-            Style::new().fg(Color::DARK_GRAY)
+            Style::new().fg(p.muted)
         };
 
         let btn_y = inner.y + 3;

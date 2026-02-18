@@ -5,8 +5,8 @@ use crate::ui::action_id::{ActionId, ModeActionId};
 use crate::ui::filterable_list::{FilterableItem, FilterableList};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
-    RenderBuf, Style,
+    Action, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf,
+    Style,
 };
 
 struct CommandEntry {
@@ -104,14 +104,14 @@ impl Pane for CommandPalettePane {
         let rect = center_rect(area, width, total_height);
 
         // Clear background
-        let bg_style = Style::new().bg(Color::new(20, 20, 30));
+        let bg_style = Style::new().bg(p.bg);
         for y in rect.y..rect.y + rect.height {
             for x in rect.x..rect.x + rect.width {
                 buf.set_cell(x, y, ' ', bg_style);
             }
         }
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Command Palette ", border_style, border_style);
 
         if inner.height == 0 || inner.width == 0 {
@@ -122,7 +122,7 @@ impl Pane for CommandPalettePane {
         let prompt_y = inner.y;
         buf.draw_line(
             Rect::new(inner.x, prompt_y, 2, 1),
-            &[(": ", Style::new().fg(Color::CYAN).bold())],
+            &[(": ", Style::new().fg(p.accent).bold())],
         );
         self.list.text_input.render_buf(
             buf.raw_buf(),
@@ -138,7 +138,7 @@ impl Pane for CommandPalettePane {
             let divider = "\u{2500}".repeat(inner.width as usize);
             buf.draw_line(
                 Rect::new(inner.x, div_y, inner.width, 1),
-                &[(&divider, Style::new().fg(Color::DARK_GRAY))],
+                &[(&divider, Style::new().fg(p.muted))],
             );
         }
 
@@ -150,10 +150,7 @@ impl Pane for CommandPalettePane {
             if available_rows > 0 {
                 let no_match_area =
                     Rect::new(inner.x + 1, list_start_y, inner.width.saturating_sub(2), 1);
-                buf.draw_line(
-                    no_match_area,
-                    &[("No matches", Style::new().fg(Color::DARK_GRAY))],
-                );
+                buf.draw_line(no_match_area, &[("No matches", Style::new().fg(p.muted))]);
             }
             return;
         }
@@ -180,24 +177,24 @@ impl Pane for CommandPalettePane {
 
             if is_selected {
                 for x in row_area.x..row_area.x + row_area.width {
-                    buf.set_cell(x, y, ' ', Style::new().bg(Color::SELECTION_BG));
+                    buf.set_cell(x, y, ' ', Style::new().bg(p.selection_bg));
                 }
             }
 
             let action_style = if is_selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                Style::new().fg(p.fg).bg(p.selection_bg).bold()
             } else {
-                Style::new().fg(Color::WHITE)
+                Style::new().fg(p.fg)
             };
             let desc_style = if is_selected {
-                Style::new().fg(Color::GRAY).bg(Color::SELECTION_BG)
+                Style::new().fg(p.dim).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::GRAY)
+                Style::new().fg(p.dim)
             };
             let key_style = if is_selected {
-                Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                Style::new().fg(p.muted).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.muted)
             };
 
             let w = inner.width as usize;

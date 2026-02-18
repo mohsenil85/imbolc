@@ -3,7 +3,7 @@ use std::any::Any;
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, GenerativeActionId};
 use crate::ui::{
-    Action, Color, GenerativeAction, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    Action, GenerativeAction, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, Style,
 };
 use imbolc_types::state::generative::{EuclideanConfig, GenerativeAlgorithm};
 
@@ -235,10 +235,11 @@ impl Pane for GenerativePane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let gen = &state.session.generative;
 
         // Title bar
-        let title_style = Style::new().fg(Color::new(180, 140, 255));
+        let title_style = Style::new().fg(p.accent);
         let enabled_str = if gen.enabled { "ON" } else { "OFF" };
         let capture_str = if gen.capture_enabled { "REC" } else { "OFF" };
         let title = format!(
@@ -270,9 +271,9 @@ impl Pane for GenerativePane {
             content_h,
         );
 
-        self.render_macros(macros_area, buf, state);
-        self.render_constraints(constraints_area, buf, state);
-        self.render_voices(voices_area, buf, state);
+        self.render_macros(macros_area, buf, state, &p);
+        self.render_constraints(constraints_area, buf, state, &p);
+        self.render_voices(voices_area, buf, state, &p);
 
         // Section headers with selection indicator
         let sections = ["Macros", "Constraints", "Voices"];
@@ -283,9 +284,9 @@ impl Pane for GenerativePane {
             .enumerate()
         {
             let style = if i == self.focus_section {
-                Style::new().fg(Color::new(100, 220, 255))
+                Style::new().fg(p.accent)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             buf.draw_line(
                 Rect::new(x, header_y, name.len() as u16, 1),
@@ -525,7 +526,7 @@ impl GenerativePane {
         }
     }
 
-    fn render_macros(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_macros(&self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let gen = &state.session.generative;
         let macros = &gen.macros;
         let is_focused = self.focus_section == SECTION_MACROS;
@@ -544,9 +545,9 @@ impl GenerativePane {
             let y = area.y + i as u16;
             let selected = is_focused && self.selected_param == i;
             let label_style = if selected {
-                Style::new().fg(Color::new(100, 220, 255))
+                Style::new().fg(p.accent)
             } else {
-                Style::new().fg(Color::WHITE)
+                Style::new().fg(p.fg)
             };
             let bar = render_bar(*value, 12);
             let val_str = format!("{}: {} {:.0}%", name, bar, value * 100.0);
@@ -557,7 +558,7 @@ impl GenerativePane {
         }
     }
 
-    fn render_constraints(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_constraints(&self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let gen = &state.session.generative;
         let c = &gen.constraints;
         let is_focused = self.focus_section == SECTION_CONSTRAINTS;
@@ -604,9 +605,9 @@ impl GenerativePane {
             let y = area.y + row as u16;
             let selected = is_focused && self.selected_param == *idx;
             let style = if selected {
-                Style::new().fg(Color::new(100, 220, 255))
+                Style::new().fg(p.accent)
             } else {
-                Style::new().fg(Color::WHITE)
+                Style::new().fg(p.fg)
             };
             buf.draw_line(
                 Rect::new(area.x + 1, y, text.len() as u16, 1),
@@ -615,13 +616,13 @@ impl GenerativePane {
         }
     }
 
-    fn render_voices(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_voices(&self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let gen = &state.session.generative;
         let is_focused = self.focus_section == SECTION_VOICES;
 
         if gen.voices.is_empty() {
             let msg = "(no voices - press 'a' to add)";
-            let style = Style::new().fg(Color::DARK_GRAY);
+            let style = Style::new().fg(p.muted);
             buf.draw_line(
                 Rect::new(area.x + 1, area.y, msg.len() as u16, 1),
                 &[(msg, style)],
@@ -655,11 +656,11 @@ impl GenerativePane {
                 voice.name,
             );
             let style = if is_selected_voice && is_focused {
-                Style::new().fg(Color::new(100, 220, 255))
+                Style::new().fg(p.accent)
             } else if is_selected_voice {
-                Style::new().fg(Color::WHITE)
+                Style::new().fg(p.fg)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let max_w = (area.width.saturating_sub(1)) as usize;
             let truncated: String = summary.chars().take(max_w).collect();
@@ -680,9 +681,9 @@ impl GenerativePane {
                 }
                 let selected = is_focused && self.selected_param == i;
                 let style = if selected {
-                    Style::new().fg(Color::new(100, 220, 255))
+                    Style::new().fg(p.accent)
                 } else {
-                    Style::new().fg(Color::WHITE)
+                    Style::new().fg(p.fg)
                 };
                 let max_w = (area.width.saturating_sub(1)) as usize;
                 let text: String = label.chars().take(max_w).collect();

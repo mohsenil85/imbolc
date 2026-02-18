@@ -7,8 +7,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, ProjectBrowserActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
-    Style,
+    Action, InputEvent, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf,
+    SessionAction, Style,
 };
 
 pub struct ProjectBrowserPane {
@@ -153,22 +153,20 @@ impl Pane for ProjectBrowserPane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let width = 56_u16.min(area.width.saturating_sub(4));
         let height = (self.entries.len() as u16 + 8)
             .min(area.height.saturating_sub(4))
             .max(10);
         let rect = center_rect(area, width, height);
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Projects ", border_style, border_style);
 
         // Section header
         let header_area = Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), 1);
-        buf.draw_line(
-            header_area,
-            &[("Recent Projects", Style::new().fg(Color::DARK_GRAY))],
-        );
+        buf.draw_line(header_area, &[("Recent Projects", Style::new().fg(p.dim))]);
 
         if self.entries.is_empty() {
             let empty_y = inner.y + 2;
@@ -176,7 +174,7 @@ impl Pane for ProjectBrowserPane {
                 let empty_area = Rect::new(inner.x + 1, empty_y, inner.width.saturating_sub(2), 1);
                 buf.draw_line(
                     empty_area,
-                    &[("No recent projects", Style::new().fg(Color::DARK_GRAY))],
+                    &[("No recent projects", Style::new().fg(p.muted))],
                 );
             }
         }
@@ -209,25 +207,17 @@ impl Pane for ProjectBrowserPane {
 
             let (name_style, time_style) = if is_selected {
                 (
-                    Style::new().fg(Color::BLACK).bg(Color::CYAN).bold(),
-                    Style::new().fg(Color::BLACK).bg(Color::CYAN),
+                    Style::new().fg(p.bg).bg(p.accent).bold(),
+                    Style::new().fg(p.bg).bg(p.accent),
                 )
             } else {
-                (
-                    Style::new().fg(Color::WHITE),
-                    Style::new().fg(Color::DARK_GRAY),
-                )
+                (Style::new().fg(p.fg), Style::new().fg(p.muted))
             };
 
             // Clear the line for selected item
             if is_selected {
                 for x in (inner.x + 1)..(inner.x + 1 + inner.width.saturating_sub(2)) {
-                    buf.set_cell(
-                        x,
-                        y,
-                        ' ',
-                        Style::new().fg(Color::BLACK).bg(Color::CYAN).bold(),
-                    );
+                    buf.set_cell(x, y, ' ', Style::new().fg(p.bg).bg(p.accent).bold());
                 }
             }
 
@@ -251,8 +241,8 @@ impl Pane for ProjectBrowserPane {
         // Footer
         let footer_y = rect.y + rect.height.saturating_sub(2);
         if footer_y < area.y + area.height {
-            let hi = Style::new().fg(Color::CYAN).bold();
-            let lo = Style::new().fg(Color::DARK_GRAY);
+            let hi = Style::new().fg(p.accent).bold();
+            let lo = Style::new().fg(p.dim);
             let footer_area = Rect::new(inner.x + 1, footer_y, inner.width.saturating_sub(2), 1);
             buf.draw_line(
                 footer_area,

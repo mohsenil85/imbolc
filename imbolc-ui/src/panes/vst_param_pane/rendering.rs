@@ -1,18 +1,19 @@
 use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Color, Rect, RenderBuf, Style};
+use crate::ui::{Palette, Rect, RenderBuf, Style};
 
 use super::VstParamPane;
 
 impl VstParamPane {
     pub(super) fn render_impl(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 80.min(area.width), 30.min(area.height));
 
         // Determine plugin name and instrument number
         let plugin_name = self
             .get_plugin_id(state)
             .and_then(|pid| state.session.vst_plugins.get(pid))
-            .map(|p| p.name.clone())
+            .map(|plug| plug.name.clone())
             .unwrap_or_else(|| "—".to_string());
         let inst_label = self
             .instrument_id
@@ -31,7 +32,7 @@ impl VstParamPane {
             }
         };
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         if inner.height < 3 || inner.width < 10 {
@@ -41,9 +42,9 @@ impl VstParamPane {
         // Search bar (top row)
         let search_y = inner.y;
         let search_style = if self.search_active {
-            Style::new().fg(Color::WHITE)
+            Style::new().fg(p.fg)
         } else {
-            Style::new().fg(Color::DARK_GRAY)
+            Style::new().fg(p.dim)
         };
         let search_text = if self.search_active || !self.search_text.is_empty() {
             format!("/ {}", self.search_text)
@@ -84,7 +85,7 @@ impl VstParamPane {
                 Rect::new(inner.x + 2, list_y + 1, inner.width.saturating_sub(2), 1),
                 &[(
                     "No params discovered. Press 'd' to discover.",
-                    Style::new().fg(Color::DARK_GRAY),
+                    Style::new().fg(p.muted),
                 )],
             );
         }
@@ -153,9 +154,9 @@ impl VstParamPane {
             );
 
             let style = if is_selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                Style::new().fg(p.fg).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::new(180, 180, 180))
+                Style::new().fg(p.dim)
             };
 
             buf.draw_line(

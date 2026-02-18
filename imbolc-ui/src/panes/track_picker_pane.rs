@@ -4,7 +4,7 @@ use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
+    Action, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Palette, Pane,
     PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
 };
 
@@ -172,9 +172,10 @@ impl Pane for TrackPickerPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 40, 18);
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Assign Track ", border_style, border_style);
 
         let content_x = inner.x + 1;
@@ -192,23 +193,20 @@ impl Pane for TrackPickerPane {
         let title = format!("Select track for Pad {}:", pad_num);
         buf.draw_line(
             Rect::new(content_x, content_y, inner.width.saturating_sub(2), 1),
-            &[(&title, Style::new().fg(Color::CYAN).bold())],
+            &[(&title, Style::new().fg(p.accent).bold())],
         );
 
         let list_y = content_y + 2;
-        let sel_bg = Style::new().bg(Color::SELECTION_BG);
+        let sel_bg = Style::new().bg(p.selection_bg);
 
         if self.cached_instruments.is_empty() {
             buf.draw_line(
                 Rect::new(content_x, list_y, inner.width.saturating_sub(2), 1),
-                &[("No tracks available.", Style::new().fg(Color::DARK_GRAY))],
+                &[("No tracks available.", Style::new().fg(p.muted))],
             );
             buf.draw_line(
                 Rect::new(content_x, list_y + 1, inner.width.saturating_sub(2), 1),
-                &[(
-                    "Add a synth track first.",
-                    Style::new().fg(Color::DARK_GRAY),
-                )],
+                &[("Add a synth track first.", Style::new().fg(p.muted))],
             );
         } else {
             for (visual_i, i) in (self.scroll_offset..self.cached_instruments.len()).enumerate() {
@@ -232,20 +230,20 @@ impl Pane for TrackPickerPane {
                         content_x,
                         y,
                         '>',
-                        Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                        Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                     );
                 }
 
                 let name_style = if is_selected {
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                    Style::new().fg(p.fg).bg(p.selection_bg)
                 } else {
-                    Style::new().fg(Color::WHITE)
+                    Style::new().fg(p.fg)
                 };
 
                 let source_style = if is_selected {
-                    Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                    Style::new().fg(p.muted).bg(p.selection_bg)
                 } else {
-                    Style::new().fg(Color::DARK_GRAY)
+                    Style::new().fg(p.muted)
                 };
 
                 // Display name

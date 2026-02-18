@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
-    RenderBuf, SessionAction, Style,
+    Action, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf,
+    SessionAction, Style,
 };
 
 pub struct SaveAsPane {
@@ -89,15 +89,12 @@ impl Pane for SaveAsPane {
         let height = if self.error.is_some() { 8 } else { 7 };
         let rect = center_rect(area, width, height);
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Save As ", border_style, border_style);
 
         // Label
         let label_area = Rect::new(inner.x + 1, inner.y + 1, inner.width.saturating_sub(2), 1);
-        buf.draw_line(
-            label_area,
-            &[("Project name:", Style::new().fg(Color::DARK_GRAY))],
-        );
+        buf.draw_line(label_area, &[("Project name:", Style::new().fg(p.muted))]);
 
         // Text input field (rat-widget backed)
         let field_y = inner.y + 2;
@@ -110,10 +107,7 @@ impl Pane for SaveAsPane {
             let err_y = inner.y + 3;
             if err_y < inner.y + inner.height {
                 let err_area = Rect::new(inner.x + 1, err_y, inner.width.saturating_sub(2), 1);
-                buf.draw_line(
-                    err_area,
-                    &[(error.as_str(), Style::new().fg(Color::MUTE_COLOR))],
-                );
+                buf.draw_line(err_area, &[(error.as_str(), Style::new().fg(p.mute_color))]);
             }
         }
 
@@ -123,10 +117,7 @@ impl Pane for SaveAsPane {
             let footer_area = Rect::new(inner.x + 1, footer_y, inner.width.saturating_sub(2), 1);
             buf.draw_line(
                 footer_area,
-                &[(
-                    "[Enter] Save  [Esc] Cancel",
-                    Style::new().fg(Color::DARK_GRAY),
-                )],
+                &[("[Enter] Save  [Esc] Cancel", Style::new().fg(p.muted))],
             );
         }
     }

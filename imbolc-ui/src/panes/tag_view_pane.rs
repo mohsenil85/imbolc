@@ -3,8 +3,8 @@ use std::any::Any;
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, TagViewActionId};
 use crate::ui::pane::*;
-use crate::ui::style::{Color, Style};
-use crate::ui::{InputEvent, Keymap, MouseEvent, PaneIdStr, Rect, RenderBuf};
+use crate::ui::style::Style;
+use crate::ui::{InputEvent, Keymap, MouseEvent, Palette, PaneIdStr, Rect, RenderBuf};
 use imbolc_types::{
     AutomationTarget, BusParameter, GlobalParameter, ParameterTarget, TagAction, TrackParameter,
 };
@@ -139,13 +139,14 @@ impl Pane for TagViewPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let tags = &state.session.param_tags;
 
         // Header: tag tabs
         let header_y = area.y;
-        let dim = Style::new().fg(Color::new(100, 100, 100));
-        let active_tab = Style::new().fg(Color::WHITE).bg(Color::new(60, 60, 80));
-        let inactive_tab = Style::new().fg(Color::new(160, 160, 160));
+        let dim = Style::new().fg(p.dim);
+        let active_tab = Style::new().fg(p.fg).bg(p.selection_bg);
+        let inactive_tab = Style::new().fg(p.dim);
 
         if tags.tags.is_empty() {
             let msg = "No tags. Press 'T' in track edit to tag a parameter.";
@@ -225,9 +226,9 @@ impl Pane for TagViewPane {
             let is_selected = vi == self.selected_row;
 
             let row_style = if is_selected {
-                Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                Style::new().fg(p.fg).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::new(200, 200, 200))
+                Style::new().fg(p.fg)
             };
 
             // Clear row
@@ -238,11 +239,9 @@ impl Pane for TagViewPane {
             let inst_name = target_instrument_name(target, state);
             let inst_truncated: String = inst_name.chars().take(inst_col_w as usize).collect();
             let inst_style = if is_selected {
-                Style::new()
-                    .fg(Color::new(150, 200, 255))
-                    .bg(Color::SELECTION_BG)
+                Style::new().fg(p.accent).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::new(100, 150, 200))
+                Style::new().fg(p.accent)
             };
             buf.draw_str(area.x + 1, y, &inst_truncated, inst_style);
 
@@ -261,7 +260,7 @@ impl Pane for TagViewPane {
 
                 // Slider bar
                 let bar_x = area.x + 1 + inst_col_w + 1 + param_col_w + 1;
-                draw_slider(buf, bar_x, y, bar_w, normalized, is_selected);
+                draw_slider(buf, bar_x, y, bar_w, normalized, is_selected, &p);
 
                 // Value text
                 let val_str = format_value(value);
@@ -274,9 +273,9 @@ impl Pane for TagViewPane {
                     let cc_str = format!("CC{}", cc_num);
                     let cc_x = val_x + value_col_w;
                     let cc_style = if is_selected {
-                        Style::new().fg(Color::MIDI_COLOR).bg(Color::SELECTION_BG)
+                        Style::new().fg(p.midi_color).bg(p.selection_bg)
                     } else {
-                        Style::new().fg(Color::MIDI_COLOR)
+                        Style::new().fg(p.midi_color)
                     };
                     buf.draw_str(cc_x, y, &cc_str, cc_style);
                 }
@@ -319,25 +318,25 @@ impl Pane for TagViewPane {
     }
 }
 
-fn draw_slider(buf: &mut RenderBuf, x: u16, y: u16, width: u16, normalized: f32, selected: bool) {
+fn draw_slider(
+    buf: &mut RenderBuf,
+    x: u16,
+    y: u16,
+    width: u16,
+    normalized: f32,
+    selected: bool,
+    p: &Palette,
+) {
     let filled = (normalized * width as f32) as u16;
-    let bar_fg = if selected {
-        Color::new(100, 200, 255)
-    } else {
-        Color::new(80, 160, 200)
-    };
-    let bar_bg_color = if selected {
-        Color::SELECTION_BG
-    } else {
-        Color::new(40, 40, 40)
-    };
+    let bar_fg = p.accent;
+    let bar_bg_color = if selected { p.selection_bg } else { p.dim };
 
     for i in 0..width {
         let ch = if i < filled { "\u{2588}" } else { "\u{2591}" };
         let style = if i < filled {
             Style::new().fg(bar_fg).bg(bar_bg_color)
         } else {
-            Style::new().fg(Color::new(60, 60, 60)).bg(bar_bg_color)
+            Style::new().fg(p.muted).bg(bar_bg_color)
         };
         buf.draw_str(x + i, y, ch, style);
     }

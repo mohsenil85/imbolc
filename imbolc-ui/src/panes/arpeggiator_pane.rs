@@ -4,7 +4,8 @@ use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, ArpeggiatorActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style, TrackAction,
+    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    TrackAction,
 };
 
 /// Parameter indices for the arpeggiator pane
@@ -74,6 +75,7 @@ impl Pane for ArpeggiatorPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 44, 12);
 
         let instrument = state.tracks.selected_track();
@@ -82,14 +84,13 @@ impl Pane for ArpeggiatorPane {
             None => " Arpeggiator: (none) ".to_string(),
         };
 
-        let border_color = Color::new(120, 160, 220);
-        let border_style = Style::new().fg(border_color);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         let instrument = match instrument {
             Some(i) => i,
             None => {
-                render_centered_text(inner, buf, "(no track selected)", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "(no track selected)", p.muted);
                 return;
             }
         };
@@ -101,10 +102,10 @@ impl Pane for ArpeggiatorPane {
         let label_x = inner.x + 2;
         let value_x = inner.x + 18;
 
-        let normal_style = Style::new().fg(Color::WHITE);
-        let selected_style = Style::new().fg(Color::new(100, 180, 255));
-        let on_style = Style::new().fg(Color::new(100, 220, 100));
-        let off_style = Style::new().fg(Color::DARK_GRAY);
+        let normal_style = Style::new().fg(p.fg);
+        let selected_style = Style::new().fg(p.accent);
+        let on_style = Style::new().fg(p.success);
+        let off_style = Style::new().fg(p.dim);
 
         // Enabled
         let enabled_str = if arp.enabled { "ON" } else { "OFF" };

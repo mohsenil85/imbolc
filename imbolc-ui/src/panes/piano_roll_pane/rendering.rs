@@ -1,7 +1,7 @@
 use crate::state::automation::{AutomationTargetExt, CurveType};
 use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Color, Palette, Rect, RenderBuf, Style};
+use crate::ui::{Palette, Rect, RenderBuf, Style};
 use imbolc_types::state::piano_roll::Note;
 
 use super::{PianoRollPane, TargetPickerState};
@@ -81,11 +81,11 @@ impl PianoRollPane {
         let border_color = if is_kit {
             p.accent_secondary
         } else if self.automation_visible && !self.automation_focus {
-            Color::PINK
+            p.fx_color
         } else if self.automation_visible {
             p.border
         } else {
-            Color::PINK
+            p.fx_color
         };
         let border_style = Style::new().fg(border_color);
         buf.draw_block(rect, &track_label, border_style, border_style);
@@ -161,7 +161,7 @@ impl PianoRollPane {
                 "\u{2591}".repeat(empty),
                 progress * 100.0,
             );
-            let style = Style::new().fg(p.fg).bg(Color::new(200, 120, 0));
+            let style = Style::new().fg(p.fg).bg(p.accent_secondary);
             let x = rect.x + rect.width - text.len() as u16 - 2;
             buf.draw_line(
                 Rect::new(x, header_y, text.len() as u16, 1),
@@ -294,9 +294,9 @@ impl PianoRollPane {
 
                 // Note colors: orange for Kit, pink/magenta for normal
                 let (note_start_color, note_body_color) = if is_kit {
-                    (p.accent_secondary, Color::new(200, 130, 0))
+                    (p.accent_secondary, p.accent_secondary)
                 } else {
-                    (Color::PINK, Color::MAGENTA)
+                    (p.fx_color, p.fx_color)
                 };
 
                 let (ch, style) = if is_cursor {
@@ -307,10 +307,10 @@ impl PianoRollPane {
                     }
                 } else if in_selection && has_note {
                     // Selected note
-                    ('\u{2588}', Style::new().fg(p.fg).bg(Color::new(60, 30, 80)))
+                    ('\u{2588}', Style::new().fg(p.fg).bg(p.selection_bg))
                 } else if in_selection {
                     // Selection region background
-                    ('\u{2591}', Style::new().fg(Color::new(60, 30, 80)))
+                    ('\u{2591}', Style::new().fg(p.selection_bg))
                 } else if has_note {
                     if is_note_start {
                         ('\u{2588}', Style::new().fg(note_start_color))
@@ -322,9 +322,9 @@ impl PianoRollPane {
                 } else if is_bar_line {
                     ('\u{250a}', Style::new().fg(p.border))
                 } else if is_beat_line {
-                    ('\u{00b7}', Style::new().fg(Color::new(40, 40, 40)))
+                    ('\u{00b7}', Style::new().fg(p.dim))
                 } else if is_black {
-                    ('\u{00b7}', Style::new().fg(Color::new(25, 25, 25)))
+                    ('\u{00b7}', Style::new().fg(p.muted))
                 } else {
                     (' ', Style::new())
                 };
@@ -399,7 +399,7 @@ impl PianoRollPane {
                 indicator_x += rec_str.len() as u16;
             }
 
-            let piano_style = Style::new().fg(p.bg).bg(Color::PINK);
+            let piano_style = Style::new().fg(p.bg).bg(p.fx_color);
             for (j, ch) in piano_str.chars().enumerate() {
                 buf.set_cell(indicator_x + j as u16, status_y, ch, piano_style);
             }
@@ -418,7 +418,7 @@ impl PianoRollPane {
         let sep_y = rect.y + note_height;
 
         let sep_color = if self.automation_focus {
-            Color::CYAN
+            p.accent
         } else {
             p.border
         };
@@ -440,7 +440,7 @@ impl PianoRollPane {
             .unwrap_or_else(|| " (no lane) ".to_string());
 
         let title_style = Style::new().fg(if self.automation_focus {
-            Color::CYAN
+            p.accent
         } else {
             p.dim
         });
@@ -481,7 +481,7 @@ impl PianoRollPane {
             Some(l) => l,
             None => {
                 let text = "(press 'a' to add a lane)";
-                let style = Style::new().fg(Color::DARK_GRAY);
+                let style = Style::new().fg(p.muted);
                 let x = area.x + (area.width.saturating_sub(text.len() as u16)) / 2;
                 let y = area.y + area.height / 2;
                 buf.draw_line(Rect::new(x, y, text.len() as u16, 1), &[(text, style)]);
@@ -495,8 +495,8 @@ impl PianoRollPane {
         let graph_y = area.y;
 
         // Grid dots
-        let bar_style = Style::new().fg(Color::new(55, 55, 55));
-        let bg_style = Style::new().fg(Color::new(30, 30, 30));
+        let bar_style = Style::new().fg(p.border);
+        let bg_style = Style::new().fg(p.muted);
         for col in 0..graph_width {
             let tick = self.view_start_tick + col as u32 * tpc;
             let is_bar = tick.is_multiple_of(1920);
@@ -514,13 +514,9 @@ impl PianoRollPane {
         }
 
         // Draw automation curve
-        let curve_color = if lane.enabled {
-            Color::CYAN
-        } else {
-            Color::DARK_GRAY
-        };
+        let curve_color = if lane.enabled { p.accent } else { p.muted };
         let curve_style = Style::new().fg(curve_color);
-        let point_style = Style::new().fg(Color::WHITE).bg(curve_color);
+        let point_style = Style::new().fg(p.fg).bg(curve_color);
 
         if !lane.points.is_empty() && graph_height > 0 {
             for col in 0..graph_width {
@@ -563,10 +559,9 @@ impl PianoRollPane {
                     if let Some(cell) = buf.raw_buf().cell_mut((x, y)) {
                         if row == cursor_row {
                             cell.set_char('\u{25c6}')
-                                .set_style(Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG));
+                                .set_style(Style::new().fg(p.fg).bg(p.selection_bg));
                         } else if cell.symbol() == " " {
-                            cell.set_char('\u{2502}')
-                                .set_style(Style::new().fg(Color::new(50, 50, 60)));
+                            cell.set_char('\u{2502}').set_style(Style::new().fg(p.dim));
                         }
                     }
                 }
@@ -597,7 +592,7 @@ impl PianoRollPane {
         // Beat markers row
         let marker_y = graph_y + graph_height;
         if marker_y < area.y + area.height {
-            let marker_style = Style::new().fg(Color::DARK_GRAY);
+            let marker_style = Style::new().fg(p.muted);
             for col in 0..graph_width {
                 let tick = self.view_start_tick + col as u32 * tpc;
                 if tick.is_multiple_of(1920) {
@@ -639,8 +634,8 @@ impl PianoRollPane {
                 rec_indicator,
             );
 
-            let normal_style = Style::new().fg(Color::GRAY);
-            let rec_style = Style::new().fg(Color::WHITE).bg(Color::RED);
+            let normal_style = Style::new().fg(p.dim);
+            let rec_style = Style::new().fg(p.fg).bg(p.error);
 
             for (i, ch) in status.chars().enumerate() {
                 let x = area.x + i as u16;
@@ -660,6 +655,7 @@ impl PianoRollPane {
 
     /// Render the target picker overlay
     pub(super) fn render_target_picker(&self, buf: &mut RenderBuf, area: Rect, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         if let TargetPickerState::Active {
             ref options,
             cursor,
@@ -670,15 +666,15 @@ impl PianoRollPane {
             let picker_rect = center_rect(area, picker_width, picker_height);
 
             // Clear background
-            let clear_style = Style::new().bg(Color::new(20, 20, 30));
+            let clear_style = Style::new().bg(p.bg);
             for y in picker_rect.y..picker_rect.y + picker_rect.height {
                 for x in picker_rect.x..picker_rect.x + picker_rect.width {
                     buf.set_cell(x, y, ' ', clear_style);
                 }
             }
 
-            let border_style = Style::new().fg(Color::CYAN);
-            let title_style = Style::new().fg(Color::CYAN);
+            let border_style = Style::new().fg(p.accent);
+            let title_style = Style::new().fg(p.accent);
             let inner = buf.draw_block(picker_rect, " Add Lane ", border_style, title_style);
 
             let inst = state.tracks.selected_track();
@@ -703,9 +699,9 @@ impl PianoRollPane {
                 let display_name = target.name_with_context(inst, vst_registry);
                 let text = format!("{} {}", if is_selected { ">" } else { " " }, display_name);
                 let style = if is_selected {
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold()
+                    Style::new().fg(p.fg).bg(p.selection_bg).bold()
                 } else {
-                    Style::new().fg(Color::GRAY)
+                    Style::new().fg(p.dim)
                 };
 
                 for (j, ch) in text.chars().enumerate() {

@@ -11,7 +11,7 @@ impl TrackEditPane {
         let rect = center_rect(area, 97, 29);
 
         let title = format!(" Edit: {} ({}) ", self.instrument_name, self.source.name());
-        let border_style = Style::new().fg(Color::ORANGE);
+        let border_style = Style::new().fg(p.accent_secondary);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         let content_x = inner.x + 1;
@@ -33,19 +33,15 @@ impl TrackEditPane {
 
         // Mode indicators in header
         let mode_x = rect.x + rect.width - 18;
-        let poly_style = Style::new().fg(if self.polyphonic {
-            Color::LIME
-        } else {
-            Color::DARK_GRAY
-        });
+        let poly_style = Style::new().fg(if self.polyphonic { p.success } else { p.dim });
         let poly_str = if self.polyphonic { " POLY " } else { " MONO " };
         buf.draw_line(Rect::new(mode_x, rect.y, 6, 1), &[(poly_str, poly_style)]);
 
         // Channel config indicator (STEREO/MONO)
         let channel_style = Style::new().fg(if self.channel_config.is_stereo() {
-            Color::CYAN
+            p.accent
         } else {
-            Color::YELLOW
+            p.warning
         });
         let channel_str = if self.channel_config.is_stereo() {
             " ST "
@@ -59,11 +55,7 @@ impl TrackEditPane {
 
         // Active/Inactive indicator for AudioIn instruments
         if self.source.is_audio_input() {
-            let active_style = Style::new().fg(if self.active {
-                Color::LIME
-            } else {
-                Color::new(220, 40, 40)
-            });
+            let active_style = Style::new().fg(if self.active { p.success } else { p.error });
             let active_str = if self.active {
                 " ACTIVE "
             } else {
@@ -79,14 +71,14 @@ impl TrackEditPane {
         // Piano/Pad mode indicator
         if self.perf.pad.is_active() {
             let pad_str = self.perf.pad.status_label();
-            let pad_style = Style::new().fg(Color::BLACK).bg(Color::KIT_COLOR);
+            let pad_style = Style::new().fg(p.bg).bg(p.kit_color);
             buf.draw_line(
                 Rect::new(rect.x + 1, rect.y, pad_str.len() as u16, 1),
                 &[(&pad_str, pad_style)],
             );
         } else if self.perf.piano.is_active() {
             let piano_str = self.perf.piano.status_label();
-            let piano_style = Style::new().fg(Color::BLACK).bg(Color::PINK);
+            let piano_style = Style::new().fg(p.bg).bg(p.fx_color);
             buf.draw_line(
                 Rect::new(rect.x + 1, rect.y, piano_str.len() as u16, 1),
                 &[(&piano_str, piano_style)],
@@ -119,7 +111,7 @@ impl TrackEditPane {
             };
             buf.draw_line(
                 Rect::new(content_x, visual_y, inner.width.saturating_sub(2), 1),
-                &[(&source_header, Style::new().fg(Color::CYAN).bold())],
+                &[(&source_header, Style::new().fg(p.accent).bold())],
             );
             visual_y += 1;
         }
@@ -135,8 +127,9 @@ impl TrackEditPane {
                     visual_y,
                     "Sample",
                     display_name,
-                    Color::CYAN,
+                    p.accent,
                     is_sel,
+                    &p,
                 );
                 visual_y += 1;
             }
@@ -147,9 +140,9 @@ impl TrackEditPane {
             if is_visible(global_row) && visual_y < max_y {
                 let is_sel = self.selected_row == global_row;
                 let style = if is_sel {
-                    Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                    Style::new().fg(p.dim).bg(p.selection_bg)
                 } else {
-                    Style::new().fg(Color::DARK_GRAY)
+                    Style::new().fg(p.dim)
                 };
                 buf.draw_line(
                     Rect::new(content_x + 2, visual_y, inner.width.saturating_sub(4), 1),
@@ -189,9 +182,9 @@ impl TrackEditPane {
             if is_visible(global_row) && visual_y < max_y {
                 let is_sel = self.selected_row == global_row;
                 let style = if is_sel {
-                    Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                    Style::new().fg(p.dim).bg(p.selection_bg)
                 } else {
-                    Style::new().fg(Color::DARK_GRAY)
+                    Style::new().fg(p.dim)
                 };
                 buf.draw_line(
                     Rect::new(content_x + 2, visual_y, inner.width.saturating_sub(4), 1),
@@ -214,7 +207,7 @@ impl TrackEditPane {
                                 format!("FILTER: {}  (f: off, t: cycle)", f.filter_type.name());
                             buf.draw_line(
                                 Rect::new(content_x, visual_y, inner.width.saturating_sub(2), 1),
-                                &[(&filter_label, Style::new().fg(Color::FILTER_COLOR).bold())],
+                                &[(&filter_label, Style::new().fg(p.filter_color).bold())],
                             );
                             visual_y += 1;
                         }
@@ -228,8 +221,9 @@ impl TrackEditPane {
                                 visual_y,
                                 "Type",
                                 f.filter_type.name(),
-                                Color::FILTER_COLOR,
+                                p.filter_color,
                                 is_sel,
+                                &p,
                             );
                             visual_y += 1;
                         }
@@ -307,8 +301,9 @@ impl TrackEditPane {
                                 visual_y,
                                 "EQ",
                                 "ON",
-                                Color::FILTER_COLOR,
+                                p.filter_color,
                                 is_sel,
+                                &p,
                             );
                             let _ = eq_text; // suppress unused
                             visual_y += 1;
@@ -324,7 +319,7 @@ impl TrackEditPane {
                                     content_x,
                                     visual_y,
                                     '>',
-                                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                                    Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                                 );
                             }
 
@@ -332,9 +327,9 @@ impl TrackEditPane {
                             let effect_text =
                                 format!("{:10} [{}]", effect.effect_type.name(), enabled_str);
                             let effect_style = if is_sel {
-                                Style::new().fg(Color::FX_COLOR).bg(Color::SELECTION_BG)
+                                Style::new().fg(p.fx_color).bg(p.selection_bg)
                             } else {
-                                Style::new().fg(Color::FX_COLOR)
+                                Style::new().fg(p.fx_color)
                             };
                             buf.draw_line(
                                 Rect::new(content_x + 2, visual_y, 18, 1),
@@ -382,7 +377,7 @@ impl TrackEditPane {
             let lfo_header = format!("LFO [{}]  (l: toggle, s: shape, m: target)", lfo_status);
             buf.draw_line(
                 Rect::new(content_x, visual_y, inner.width.saturating_sub(2), 1),
-                &[(&lfo_header, Style::new().fg(Color::PINK).bold())],
+                &[(&lfo_header, Style::new().fg(p.lfo_color).bold())],
             );
             visual_y += 1;
         }
@@ -397,8 +392,9 @@ impl TrackEditPane {
                 visual_y,
                 "Enabled",
                 enabled_val,
-                Color::PINK,
+                p.lfo_color,
                 is_sel,
+                &p,
             );
             visual_y += 1;
         }
@@ -422,9 +418,9 @@ impl TrackEditPane {
             );
             // Hz label
             let hz_style = if is_sel {
-                Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                Style::new().fg(p.dim).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             for (j, ch) in "Hz".chars().enumerate() {
                 buf.set_cell(content_x + 44 + j as u16, visual_y, ch, hz_style);
@@ -463,8 +459,9 @@ impl TrackEditPane {
                 visual_y,
                 "Shape/Dest",
                 &shape_val,
-                Color::PINK,
+                p.lfo_color,
                 is_sel,
+                &p,
             );
             visual_y += 1;
         }
@@ -486,7 +483,7 @@ impl TrackEditPane {
                     Rect::new(content_x, visual_y, inner.width.saturating_sub(2), 1),
                     &[(
                         "ENVELOPE (ADSR)  (p: poly, r: track)",
-                        Style::new().fg(Color::ENV_COLOR).bold(),
+                        Style::new().fg(p.env_color).bold(),
                     )],
                 );
                 visual_y += 1;
@@ -597,19 +594,14 @@ fn render_param_row_buf(
 ) {
     // Selection indicator
     if is_selected {
-        buf.set_cell(
-            x,
-            y,
-            '>',
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
-        );
+        buf.set_cell(x, y, '>', Style::new().fg(p.fg).bg(p.selection_bg).bold());
     }
 
     // Param name
     let name_style = if is_selected {
-        Style::new().fg(Color::CYAN).bg(Color::SELECTION_BG)
+        Style::new().fg(p.accent).bg(p.selection_bg)
     } else {
-        Style::new().fg(Color::CYAN)
+        Style::new().fg(p.accent)
     };
     let name_str = format!("{:12}", param.name);
     for (j, ch) in name_str.chars().enumerate() {
@@ -624,9 +616,9 @@ fn render_param_row_buf(
     };
     let slider = render_slider(val, min, max, 16);
     let slider_style = if is_selected {
-        Style::new().fg(Color::LIME).bg(Color::SELECTION_BG)
+        Style::new().fg(p.success).bg(p.selection_bg)
     } else {
-        Style::new().fg(Color::LIME)
+        Style::new().fg(p.success)
     };
     for (j, ch) in slider.chars().enumerate() {
         buf.set_cell(x + 15 + j as u16, y, ch, slider_style);
@@ -642,9 +634,9 @@ fn render_param_row_buf(
             ParamValue::Bool(v) => format!("{}", v),
         };
         let val_style = if is_selected {
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+            Style::new().fg(p.fg).bg(p.selection_bg)
         } else {
-            Style::new().fg(Color::WHITE)
+            Style::new().fg(p.fg)
         };
         let formatted = format!("{:10}", value_str);
         for (j, ch) in formatted.chars().enumerate() {
@@ -701,19 +693,14 @@ fn render_value_row_with_default_buf(
 ) {
     // Selection indicator
     if is_selected {
-        buf.set_cell(
-            x,
-            y,
-            '>',
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
-        );
+        buf.set_cell(x, y, '>', Style::new().fg(p.fg).bg(p.selection_bg).bold());
     }
 
     // Label with optional default annotation
     let name_style = if is_selected {
-        Style::new().fg(Color::CYAN).bg(Color::SELECTION_BG)
+        Style::new().fg(p.accent).bg(p.selection_bg)
     } else {
-        Style::new().fg(Color::CYAN)
+        Style::new().fg(p.accent)
     };
     let name_str = format!("{:12}", name);
     for (j, ch) in name_str.chars().enumerate() {
@@ -723,9 +710,9 @@ fn render_value_row_with_default_buf(
     // Slider with default marker
     let slider = render_slider_with_default(value, min, max, 16, default);
     let slider_style = if is_selected {
-        Style::new().fg(Color::LIME).bg(Color::SELECTION_BG)
+        Style::new().fg(p.success).bg(p.selection_bg)
     } else {
-        Style::new().fg(Color::LIME)
+        Style::new().fg(p.success)
     };
     for (j, ch) in slider.chars().enumerate() {
         buf.set_cell(x + 15 + j as u16, y, ch, slider_style);
@@ -736,9 +723,9 @@ fn render_value_row_with_default_buf(
         edit_input.render_buf(buf.raw_buf(), x + 34, y, 10, p);
     } else {
         let val_style = if is_selected {
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+            Style::new().fg(p.fg).bg(p.selection_bg)
         } else {
-            Style::new().fg(Color::WHITE)
+            Style::new().fg(p.fg)
         };
         let formatted = format!("{:.2}", value);
         for (j, ch) in formatted.chars().enumerate() {
@@ -748,9 +735,9 @@ fn render_value_row_with_default_buf(
         // Show default value annotation after current value
         if let Some(def) = default {
             let def_style = if is_selected {
-                Style::new().fg(Color::DARK_GRAY).bg(Color::SELECTION_BG)
+                Style::new().fg(p.dim).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             };
             let def_str = format!(" (def: {:.2})", def);
             for (j, ch) in def_str.chars().enumerate() {
@@ -761,6 +748,7 @@ fn render_value_row_with_default_buf(
 }
 
 /// Render a label-value row (no slider, for type/enabled/shape rows)
+#[allow(clippy::too_many_arguments)]
 fn render_label_value_row_buf(
     buf: &mut RenderBuf,
     x: u16,
@@ -769,20 +757,16 @@ fn render_label_value_row_buf(
     value: &str,
     color: Color,
     is_selected: bool,
+    p: &Palette,
 ) {
     // Selection indicator
     if is_selected {
-        buf.set_cell(
-            x,
-            y,
-            '>',
-            Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
-        );
+        buf.set_cell(x, y, '>', Style::new().fg(p.fg).bg(p.selection_bg).bold());
     }
 
     let text = format!("{:12}  {}", label, value);
     let style = if is_selected {
-        Style::new().fg(color).bg(Color::SELECTION_BG)
+        Style::new().fg(color).bg(p.selection_bg)
     } else {
         Style::new().fg(color)
     };

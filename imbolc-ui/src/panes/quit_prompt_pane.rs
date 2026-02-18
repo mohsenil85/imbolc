@@ -4,7 +4,8 @@ use crate::state::AppState;
 use crate::ui::action_id::ActionId;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    Action, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf,
+    Style,
 };
 
 /// Which button is selected in the quit prompt
@@ -84,29 +85,27 @@ impl Pane for QuitPromptPane {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut RenderBuf, _state: &AppState) {
+    fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let width = 44_u16.min(area.width.saturating_sub(4));
         let rect = center_rect(area, width, 7);
 
-        let border_style = Style::new().fg(Color::YELLOW);
+        let border_style = Style::new().fg(p.warning);
         let inner = buf.draw_block(rect, " Quit ", border_style, border_style);
 
         // Message
         let msg_area = Rect::new(inner.x + 1, inner.y + 1, inner.width.saturating_sub(2), 1);
         buf.draw_line(
             msg_area,
-            &[(
-                "Save changes before quitting?",
-                Style::new().fg(Color::WHITE),
-            )],
+            &[("Save changes before quitting?", Style::new().fg(p.fg))],
         );
 
         // Buttons: [S]ave  [D]on't Save  [C]ancel
         let active_style = |sel: QuitSelection| {
             if self.selected == sel {
-                Style::new().fg(Color::BLACK).bg(Color::YELLOW).bold()
+                Style::new().fg(p.bg).bg(p.warning).bold()
             } else {
-                Style::new().fg(Color::DARK_GRAY)
+                Style::new().fg(p.dim)
             }
         };
 

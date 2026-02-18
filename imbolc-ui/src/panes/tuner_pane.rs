@@ -4,7 +4,7 @@ use crate::action::TunerAction;
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, TunerActionId};
 use crate::ui::layout_helpers::center_rect;
-use crate::ui::{Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style};
+use crate::ui::{Action, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, Style};
 
 // ── Track presets ──────────────────────────────────────────────────
 
@@ -156,13 +156,14 @@ impl Pane for TunerPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let preset = self.preset();
         let height = (preset.strings.len() as u16) + 6; // title + instrument + a4 + gap + strings
         let width = 44;
         let inner = center_rect(area, width, height);
 
         // Background
-        let bg = Color::new(25, 25, 35);
+        let bg = p.bg;
         for y in inner.y..inner.y + inner.height {
             for x in inner.x..inner.x + inner.width {
                 buf.set_cell(x, y, ' ', Style::new().bg(bg));
@@ -174,7 +175,7 @@ impl Pane for TunerPane {
         // Title
         let title = "Reference Tuner";
         let tx = inner.x + (inner.width.saturating_sub(title.len() as u16)) / 2;
-        buf.draw_str(tx, y, title, Style::new().fg(Color::WHITE).bg(bg));
+        buf.draw_str(tx, y, title, Style::new().fg(p.fg).bg(bg));
         y += 2;
 
         // Track selector
@@ -184,19 +185,14 @@ impl Pane for TunerPane {
             ix,
             y,
             &inst_line,
-            Style::new().fg(Color::new(255, 200, 100)).bg(bg),
+            Style::new().fg(p.accent_secondary).bg(bg),
         );
         y += 1;
 
         // A4 tuning value
         let a4_line = format!("A4 = {:.1} Hz", state.session.tuning_a4);
         let ax = inner.x + (inner.width.saturating_sub(a4_line.len() as u16)) / 2;
-        buf.draw_str(
-            ax,
-            y,
-            &a4_line,
-            Style::new().fg(Color::new(120, 120, 140)).bg(bg),
-        );
+        buf.draw_str(ax, y, &a4_line, Style::new().fg(p.dim).bg(bg));
         y += 2;
 
         // String list
@@ -216,9 +212,9 @@ impl Pane for TunerPane {
             let sx = inner.x + (inner.width.saturating_sub(line.len() as u16)) / 2;
 
             let style = if is_selected {
-                Style::new().fg(Color::new(100, 220, 255)).bg(bg)
+                Style::new().fg(p.accent).bg(bg)
             } else {
-                Style::new().fg(Color::new(180, 180, 190)).bg(bg)
+                Style::new().fg(p.dim).bg(bg)
             };
 
             buf.draw_str(sx, y, &line, style);

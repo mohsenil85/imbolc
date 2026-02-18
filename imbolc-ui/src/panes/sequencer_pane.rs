@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, SequencerActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Pane,
-    PaneId, PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
+    Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Palette,
+    Pane, PaneId, PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
 };
 
 pub struct SequencerPane {
@@ -228,10 +228,11 @@ impl Pane for SequencerPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let box_width: u16 = 97;
         let rect = center_rect(area, box_width, 29);
 
-        let border_style = Style::new().fg(Color::ORANGE);
+        let border_style = Style::new().fg(p.accent_secondary);
 
         let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
@@ -240,10 +241,7 @@ impl Pane for SequencerPane {
                 let cy = rect.y + rect.height / 2;
                 buf.draw_line(
                     Rect::new(inner.x + 11, cy, inner.width.saturating_sub(12), 1),
-                    &[(
-                        "No drum machine track selected.",
-                        Style::new().fg(Color::DARK_GRAY),
-                    )],
+                    &[("No drum machine track selected.", Style::new().fg(p.muted))],
                 );
                 return;
             }
@@ -279,11 +277,7 @@ impl Pane for SequencerPane {
             _ => "?",
         };
         let play_label = if seq.playing { "PLAY" } else { "STOP" };
-        let play_color = if seq.playing {
-            Color::GREEN
-        } else {
-            Color::GRAY
-        };
+        let play_color = if seq.playing { p.success } else { p.dim };
         let grid_label = seq.step_resolution.label();
 
         let pat_str = format!("Pattern {}", pattern_label);
@@ -294,10 +288,10 @@ impl Pane for SequencerPane {
         buf.draw_line(
             Rect::new(cx, cy, rect.width.saturating_sub(4), 1),
             &[
-                (&pat_str, Style::new().fg(Color::WHITE).bold()),
-                (&len_str, Style::new().fg(Color::DARK_GRAY)),
-                (&grid_str, Style::new().fg(Color::CYAN)),
-                (&bpm_str, Style::new().fg(Color::DARK_GRAY)),
+                (&pat_str, Style::new().fg(p.fg).bold()),
+                (&len_str, Style::new().fg(p.dim)),
+                (&grid_str, Style::new().fg(p.accent)),
+                (&bpm_str, Style::new().fg(p.dim)),
                 (&play_str, Style::new().fg(play_color).bold()),
             ],
         );
@@ -307,7 +301,7 @@ impl Pane for SequencerPane {
         let label_width: u16 = 11;
         let step_col_start = cx + label_width;
 
-        let dark_gray = Style::new().fg(Color::DARK_GRAY);
+        let dark_gray = Style::new().fg(p.dim);
         for i in 0..steps_shown {
             let step_num = view_start + i + 1;
             let x = step_col_start + (i as u16) * 3;
@@ -342,9 +336,9 @@ impl Pane for SequencerPane {
             };
 
             let label_style = if is_cursor_row {
-                Style::new().fg(Color::WHITE).bold()
+                Style::new().fg(p.fg).bold()
             } else {
-                Style::new().fg(Color::GRAY)
+                Style::new().fg(p.dim)
             };
             for (j, ch) in label.chars().enumerate() {
                 buf.set_cell(cx + j as u16, y, ch, label_style);
@@ -378,29 +372,29 @@ impl Pane for SequencerPane {
 
                 let (fg, bg) = if is_cursor {
                     if step.active {
-                        (Color::BLACK, Color::WHITE)
+                        (p.bg, p.fg)
                     } else {
-                        (Color::WHITE, Color::SELECTION_BG)
+                        (p.fg, p.selection_bg)
                     }
                 } else if in_selection {
                     if step.active {
-                        (Color::BLACK, Color::new(60, 30, 80))
+                        (p.bg, p.selection_bg)
                     } else {
-                        (Color::WHITE, Color::new(60, 30, 80))
+                        (p.fg, p.selection_bg)
                     }
                 } else if is_playhead {
                     if step.active {
-                        (Color::BLACK, Color::GREEN)
+                        (p.bg, p.success)
                     } else {
-                        (Color::GREEN, Color::new(20, 50, 20))
+                        (p.success, Color::new(20, 50, 20))
                     }
                 } else if step.active {
                     let intensity = (step.velocity as f32 / 127.0 * 200.0) as u8 + 55;
-                    (Color::new(intensity, intensity / 3, 0), Color::BLACK)
+                    (Color::new(intensity, intensity / 3, 0), p.bg)
                 } else if is_beat {
-                    (Color::new(60, 60, 60), Color::BLACK)
+                    (p.dim, p.bg)
                 } else {
-                    (Color::new(40, 40, 40), Color::BLACK)
+                    (p.muted, p.bg)
                 };
 
                 let style = Style::new().fg(fg).bg(bg);
@@ -421,13 +415,13 @@ impl Pane for SequencerPane {
             let sel_str = format!("Sel: {} pads x {} steps", pads, steps);
             buf.draw_line(
                 Rect::new(cx, detail_y, 30, 1),
-                &[(&sel_str, Style::new().fg(Color::ORANGE).bold())],
+                &[(&sel_str, Style::new().fg(p.accent_secondary).bold())],
             );
         } else {
             let pad_label = format!("Pad {:>2}", self.cursor_pad + 1);
             buf.draw_line(
                 Rect::new(cx, detail_y, 8, 1),
-                &[(&pad_label, Style::new().fg(Color::ORANGE).bold())],
+                &[(&pad_label, Style::new().fg(p.accent_secondary).bold())],
             );
 
             // Display either instrument trigger info or sample name
@@ -441,13 +435,13 @@ impl Pane for SequencerPane {
                 } else {
                     format!("{} {}", pad.name, freq_str)
                 };
-                (name, Color::CYAN)
+                (name, p.accent)
             } else if pad.name.is_empty() {
-                ("(empty)".to_string(), Color::DARK_GRAY)
+                ("(empty)".to_string(), p.muted)
             } else if pad.name.len() > 20 {
-                (pad.name[..20].to_string(), Color::WHITE)
+                (pad.name[..20].to_string(), p.fg)
             } else {
-                (pad.name.clone(), Color::WHITE)
+                (pad.name.clone(), p.fg)
             };
             buf.draw_line(
                 Rect::new(cx + 8, detail_y, 22, 1),
@@ -466,9 +460,9 @@ impl Pane for SequencerPane {
         let filled = (pad.level * bar_width as f32) as usize;
         for i in 0..bar_width {
             let (ch, style) = if i < filled {
-                ('\u{2588}', Style::new().fg(Color::ORANGE))
+                ('\u{2588}', Style::new().fg(p.accent_secondary))
             } else {
-                ('\u{2591}', Style::new().fg(Color::new(40, 40, 40)))
+                ('\u{2591}', Style::new().fg(p.muted))
             };
             buf.set_cell(bar_x + i as u16, detail_y, ch, style);
         }
@@ -484,12 +478,7 @@ impl Pane for SequencerPane {
         }
         let info_str = info_parts.join(" ");
         for (j, ch) in info_str.chars().enumerate() {
-            buf.set_cell(
-                info_x + j as u16,
-                detail_y,
-                ch,
-                Style::new().fg(Color::CYAN),
-            );
+            buf.set_cell(info_x + j as u16, detail_y, ch, Style::new().fg(p.accent));
         }
         let info_offset = if info_str.is_empty() {
             0

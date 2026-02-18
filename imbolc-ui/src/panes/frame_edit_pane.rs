@@ -6,8 +6,7 @@ use crate::ui::action_id::{ActionId, FrameEditActionId, ModeActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, SessionAction,
-    Style,
+    Action, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
 };
 
 /// Fields editable in the frame editor
@@ -310,7 +309,7 @@ impl Pane for FrameEditPane {
         let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 50, 13);
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Session ", border_style, border_style);
 
         let label_col = inner.x + 2;
@@ -322,7 +321,7 @@ impl Pane for FrameEditPane {
                 break;
             }
             let is_selected = i == self.selected;
-            let sel_bg = Style::new().bg(Color::SELECTION_BG);
+            let sel_bg = Style::new().bg(p.selection_bg);
 
             // Indicator
             if is_selected {
@@ -330,15 +329,15 @@ impl Pane for FrameEditPane {
                     label_col,
                     y,
                     '>',
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG).bold(),
+                    Style::new().fg(p.fg).bg(p.selection_bg).bold(),
                 );
             }
 
             // Label
             let label_style = if is_selected {
-                Style::new().fg(Color::CYAN).bg(Color::SELECTION_BG)
+                Style::new().fg(p.accent).bg(p.selection_bg)
             } else {
-                Style::new().fg(Color::CYAN)
+                Style::new().fg(p.accent)
             };
             let label = format!("{:14}", Self::field_label(*field));
             buf.draw_line(Rect::new(label_col + 2, y, 14, 1), &[(&label, label_style)]);
@@ -355,9 +354,9 @@ impl Pane for FrameEditPane {
                 );
             } else {
                 let val_style = if is_selected {
-                    Style::new().fg(Color::WHITE).bg(Color::SELECTION_BG)
+                    Style::new().fg(p.fg).bg(p.selection_bg)
                 } else {
-                    Style::new().fg(Color::WHITE)
+                    Style::new().fg(p.fg)
                 };
                 let val = self.field_value(*field);
                 buf.draw_line(

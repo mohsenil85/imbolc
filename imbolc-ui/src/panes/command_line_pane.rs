@@ -7,8 +7,8 @@ use crate::state::AppState;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::widgets::TextInput;
 use crate::ui::{
-    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
-    RenderBuf, Style,
+    Action, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf,
+    Style,
 };
 
 pub struct CommandLinePane {
@@ -143,14 +143,14 @@ impl Pane for CommandLinePane {
         let rect = center_rect(area, 97, 29);
 
         // Clear background
-        let bg_style = Style::new().bg(Color::new(20, 20, 30));
+        let bg_style = Style::new().bg(p.bg);
         for y in rect.y..rect.y + rect.height {
             for x in rect.x..rect.x + rect.width {
                 buf.set_cell(x, y, ' ', bg_style);
             }
         }
 
-        let border_style = Style::new().fg(Color::CYAN);
+        let border_style = Style::new().fg(p.accent);
         let inner = buf.draw_block(rect, " Command Line ", border_style, border_style);
 
         if inner.height == 0 || inner.width == 0 {
@@ -173,9 +173,9 @@ impl Pane for CommandLinePane {
                 let y = inner.y + i as u16;
                 let line = &self.output[line_idx];
                 let style = if line.starts_with(": ") {
-                    Style::new().fg(Color::CYAN)
+                    Style::new().fg(p.accent)
                 } else {
-                    Style::new().fg(Color::GRAY)
+                    Style::new().fg(p.dim)
                 };
                 let display = if line.len() > inner.width as usize {
                     &line[..inner.width as usize]
@@ -196,13 +196,13 @@ impl Pane for CommandLinePane {
             };
             buf.draw_line(
                 Rect::new(inner.x, divider_y, inner.width, 1),
-                &[(err_display, Style::new().fg(Color::MUTE_COLOR))],
+                &[(err_display, Style::new().fg(p.mute_color))],
             );
         } else {
             let divider = "\u{2500}".repeat(inner.width as usize);
             buf.draw_line(
                 Rect::new(inner.x, divider_y, inner.width, 1),
-                &[(&divider, Style::new().fg(Color::DARK_GRAY))],
+                &[(&divider, Style::new().fg(p.muted))],
             );
         }
 
@@ -210,7 +210,7 @@ impl Pane for CommandLinePane {
         let input_y = inner.y + inner.height.saturating_sub(1);
         buf.draw_line(
             Rect::new(inner.x, input_y, 2, 1),
-            &[(": ", Style::new().fg(Color::CYAN).bold())],
+            &[(": ", Style::new().fg(p.accent).bold())],
         );
         self.text_input.render_buf(
             buf.raw_buf(),

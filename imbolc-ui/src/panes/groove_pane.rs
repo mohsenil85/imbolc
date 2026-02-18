@@ -4,7 +4,8 @@ use crate::state::{AppState, SwingGrid, TrackId};
 use crate::ui::action_id::{ActionId, GrooveActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, Pane, PaneIdStr, Rect, RenderBuf, Style, TrackAction,
+    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, Style,
+    TrackAction,
 };
 
 /// Parameter indices for the groove pane
@@ -83,6 +84,7 @@ impl Pane for GroovePane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         let rect = center_rect(area, 40, 12);
 
         let instrument = state.tracks.selected_track();
@@ -91,14 +93,13 @@ impl Pane for GroovePane {
             None => " Groove: (none) ".to_string(),
         };
 
-        let border_color = Color::new(180, 140, 80);
-        let border_style = Style::new().fg(border_color);
+        let border_style = Style::new().fg(p.accent_secondary);
         let inner = buf.draw_block(rect, &title, border_style, border_style);
 
         let instrument = match instrument {
             Some(i) => i,
             None => {
-                render_centered_text(inner, buf, "(no track selected)", Color::DARK_GRAY);
+                render_centered_text(inner, buf, "(no track selected)", p.muted);
                 return;
             }
         };
@@ -126,9 +127,9 @@ impl Pane for GroovePane {
         let label_x = inner.x + 2;
         let value_x = inner.x + 18;
 
-        let normal_style = Style::new().fg(Color::WHITE);
-        let global_style = Style::new().fg(Color::DARK_GRAY);
-        let selected_style = Style::new().fg(Color::new(255, 200, 50));
+        let normal_style = Style::new().fg(p.fg);
+        let global_style = Style::new().fg(p.dim);
+        let selected_style = Style::new().fg(p.warning);
 
         // Swing amount
         render_param_row(

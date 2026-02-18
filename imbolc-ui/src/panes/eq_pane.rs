@@ -677,15 +677,14 @@ fn render_frequency_curve(
     }
 
     // Zero-line
-    let grid_style = Style::new().fg(Color::new(40, 40, 40));
+    let grid_style = Style::new().fg(p.muted);
     let zero_row = y + height / 2;
     for col in x..x + width {
         buf.set_cell(col, zero_row, '-', grid_style);
     }
 
     // Compute response at each column (log-spaced 20Hz..20kHz)
-    let curve_color = Color::new(100, 200, 255);
-    let curve_style = Style::new().fg(curve_color);
+    let curve_style = Style::new().fg(p.eq_color);
 
     let db_range = 24.0_f32;
     let mut responses = Vec::with_capacity(width as usize);
@@ -722,7 +721,7 @@ fn render_frequency_curve(
             let py = y + row.min(height - 1);
 
             let marker_color = if i == selected_band {
-                Color::new(255, 200, 50)
+                p.warning
             } else if !band.enabled {
                 p.dim
             } else {
@@ -751,16 +750,12 @@ fn render_band_info(
         let bx = x + (i as u16) * band_width;
         let is_selected = i == selected_band;
 
-        let type_color = if is_selected {
-            Color::new(255, 200, 50)
-        } else {
-            p.fg
-        };
+        let type_color = if is_selected { p.warning } else { p.fg };
 
         // Row 0: type + freq (param 0 = freq)
         let label = format!("{} {}", band.band_type.name(), format_freq(band.freq));
         let label_style = Style::new().fg(if is_selected && selected_param == 0 {
-            Color::new(255, 200, 50)
+            p.warning
         } else {
             type_color
         });
@@ -770,7 +765,7 @@ fn render_band_info(
             // HPF/LPF layout: row 1 = slope, row 2 = enabled
             let slope_str = format!("{}dB/oct", band.slope.name());
             let slope_style = Style::new().fg(if is_selected && selected_param == 1 {
-                Color::new(255, 200, 50)
+                p.warning
             } else {
                 p.fg
             });
@@ -780,16 +775,16 @@ fn render_band_info(
             let on_color = if !band.enabled {
                 p.dim
             } else if is_selected && selected_param == 2 {
-                Color::new(255, 200, 50)
+                p.warning
             } else {
-                Color::new(80, 200, 80)
+                p.success
             };
             render_text_at(bx, y + 2, on_str, Style::new().fg(on_color), width, buf);
         } else {
             // Bell/Shelf layout: row 1 = gain, row 2 = Q, row 3 = type, row 4 = enabled
             let gain_str = format!("{:+.1}dB", band.gain);
             let gain_style = Style::new().fg(if is_selected && selected_param == 1 {
-                Color::new(255, 200, 50)
+                p.warning
             } else {
                 p.fg
             });
@@ -797,7 +792,7 @@ fn render_band_info(
 
             let q_str = format!("Q:{:.2}", band.q);
             let q_style = Style::new().fg(if is_selected && selected_param == 2 {
-                Color::new(255, 200, 50)
+                p.warning
             } else {
                 p.fg
             });
@@ -808,9 +803,9 @@ fn render_band_info(
             if allowed.len() > 1 {
                 let type_str = format!("[{}]", band.band_type.name());
                 let type_style = Style::new().fg(if is_selected && selected_param == 3 {
-                    Color::new(255, 200, 50)
+                    p.warning
                 } else {
-                    Color::new(120, 160, 200)
+                    p.accent
                 });
                 render_text_at(bx, y + 3, &type_str, type_style, width, buf);
             }
@@ -819,9 +814,9 @@ fn render_band_info(
             let on_color = if !band.enabled {
                 p.dim
             } else if is_selected && selected_param == 4 {
-                Color::new(255, 200, 50)
+                p.warning
             } else {
-                Color::new(80, 200, 80)
+                p.success
             };
             render_text_at(bx, y + 4, on_str, Style::new().fg(on_color), width, buf);
         }

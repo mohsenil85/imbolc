@@ -24,15 +24,6 @@ const BRAILLE_DOT_OFFSETS: [[u8; 4]; 2] = [
 /// Spectrum band labels
 const SPECTRUM_LABELS: [&str; 7] = ["60", "150", "400", "1k", "2.5k", "6k", "15k"];
 
-/// Fixed waveform palette from center to edge.
-/// Center: green -> yellow -> orange -> red at extremes.
-const WAVEFORM_PALETTE: [Color; 4] = [
-    Color::new(70, 210, 90),
-    Color::new(245, 215, 70),
-    Color::new(255, 155, 45),
-    Color::new(235, 70, 70),
-];
-
 /// Lightweight shared layout for centered visual panes.
 #[derive(Debug, Clone, Copy)]
 struct PlotLayout {
@@ -155,22 +146,21 @@ fn braille_char(pattern: u8) -> char {
 }
 
 /// Resolve waveform color based on distance from center.
-fn waveform_gradient_color(frac_from_center: f32) -> Color {
+fn waveform_gradient_color(frac_from_center: f32, p: &Palette) -> Color {
     let frac = frac_from_center.clamp(0.0, 1.0);
-    let idx = ((frac * WAVEFORM_PALETTE.len() as f32) as usize).min(WAVEFORM_PALETTE.len() - 1);
-    WAVEFORM_PALETTE[idx]
+    let gradient = &p.waveform_gradient;
+    let idx = ((frac * gradient.len() as f32) as usize).min(gradient.len() - 1);
+    gradient[idx]
 }
 
 /// Color a meter bar by its normalized height fraction (0.0=bottom, 1.0=top).
-fn meter_color(frac: f32) -> Color {
+fn meter_color(frac: f32, p: &Palette) -> Color {
     if frac > 0.85 {
-        Color::new(235, 70, 70) // red
-    } else if frac > 0.65 {
-        Color::new(255, 155, 45) // orange
-    } else if frac > 0.4 {
-        Color::new(245, 215, 70) // yellow
+        p.meter_high
+    } else if frac > 0.5 {
+        p.meter_mid
     } else {
-        Color::new(70, 210, 90) // green
+        p.meter_low
     }
 }
 
@@ -374,8 +364,8 @@ impl WaveformPane {
         buf.draw_line(layout.status_rect(), &[(text, Style::new().fg(color))]);
     }
 
-    fn draw_center_line(&self, layout: PlotLayout, buf: &mut RenderBuf) {
-        let style = Style::new().fg(Color::DARK_GRAY);
+    fn draw_center_line(&self, layout: PlotLayout, buf: &mut RenderBuf, p: &Palette) {
+        let style = Style::new().fg(p.muted);
         let center_char_row = layout.grid_y.saturating_add(layout.grid_height / 2);
         for x in 0..layout.grid_width {
             buf.set_cell(layout.grid_x + x, center_char_row, '\u{2500}', style);
@@ -387,6 +377,7 @@ impl WaveformPane {
         layout: PlotLayout,
         buf: &mut RenderBuf,
         recording_secs: u64,
+        p: &Palette,
     ) {
         if layout.grid_width == 0 || layout.grid_height == 0 {
             return;
@@ -399,10 +390,10 @@ impl WaveformPane {
         for i in 0..layout.grid_width {
             let x = layout.grid_x + i;
             if i < fill_width {
-                let color = meter_color(fill);
+                let color = meter_color(fill, p);
                 buf.set_cell(x, y, WAVEFORM_CHARS[7], Style::new().fg(color));
             } else {
-                buf.set_cell(x, y, WAVEFORM_CHARS[0], Style::new().fg(Color::DARK_GRAY));
+                buf.set_cell(x, y, WAVEFORM_CHARS[0], Style::new().fg(p.muted));
             }
         }
     }
@@ -427,12 +418,24 @@ impl WaveformPane {
         }
     }
 
-    fn draw_playback_playhead(&self, layout: PlotLayout, buf: &mut RenderBuf, progress: f32) {
-        self.draw_vertical_marker(layout, buf, progress, Color::new(235, 60, 60), '\u{2502}');
+    fn draw_playback_playhead(
+        &self,
+        layout: PlotLayout,
+        buf: &mut RenderBuf,
+        progress: f32,
+        p: &Palette,
+    ) {
+        self.draw_vertical_marker(layout, buf, progress, p.error, '\u{2502}');
     }
 
-    fn draw_editor_cursor(&self, layout: PlotLayout, buf: &mut RenderBuf, progress: f32) {
-        self.draw_vertical_marker(layout, buf, progress, Color::new(120, 220, 255), '\u{2502}');
+    fn draw_editor_cursor(
+        &self,
+        layout: PlotLayout,
+        buf: &mut RenderBuf,
+        progress: f32,
+        p: &Palette,
+    ) {
+        self.draw_vertical_marker(layout, buf, progress, p.accent, '\u{2502}');
     }
 
     fn draw_selection_overlay(
@@ -441,6 +444,7 @@ impl WaveformPane {
         buf: &mut RenderBuf,
         start_progress: f32,
         end_progress: f32,
+        p: &Palette,
     ) {
         if layout.grid_width == 0 || layout.grid_height == 0 {
             return;
@@ -454,7 +458,7 @@ impl WaveformPane {
         } else {
             (layout.grid_x + right, layout.grid_x + left)
         };
-        let style = Style::new().fg(Color::new(255, 210, 70)).bold();
+        let style = Style::new().fg(p.warning).bold();
         for y in 0..layout.grid_height {
             let yy = layout.grid_y + y;
             buf.set_cell(x1, yy, '\u{2502}', style);
@@ -688,7 +692,7 @@ impl WaveformPane {
         }
     }
 
-    fn render_waveform(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_waveform(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let is_recorded = state.recorded_waveform_peaks.is_some();
         let waveform: Vec<f32> = state
             .recorded_waveform_peaks
@@ -713,14 +717,14 @@ impl WaveformPane {
         };
 
         let border_color = if is_recorded && self.editing_name {
-            Color::LIME
+            p.success
         } else if is_recorded && self.select_mode {
-            Color::new(255, 210, 70)
+            p.warning
         } else {
-            Color::AUDIO_IN_COLOR
+            p.audio_in_color
         };
         self.render_border(rect, buf, &title, border_color);
-        self.render_header(rect, buf, state, WaveformMode::Waveform.name());
+        self.render_header(rect, buf, state, WaveformMode::Waveform.name(), p);
         if is_recorded && (self.select_mode || self.editing_name) {
             let badge = if self.editing_name {
                 " [RENAME MODE] "
@@ -735,11 +739,11 @@ impl WaveformPane {
                     &[(
                         badge,
                         Style::new()
-                            .fg(Color::new(20, 20, 20))
+                            .fg(p.bg)
                             .bg(if self.editing_name {
-                                Color::LIME
+                                p.success
                             } else {
-                                Color::new(255, 210, 70)
+                                p.warning
                             })
                             .bold(),
                     )],
@@ -751,17 +755,17 @@ impl WaveformPane {
             return;
         };
 
-        self.draw_center_line(layout, buf);
+        self.draw_center_line(layout, buf, p);
 
         if waveform.is_empty() {
             self.live_envelope_ema = None;
-            self.draw_status(layout, buf, "Samples: 0  [Tab: cycle mode]", Color::GRAY);
+            self.draw_status(layout, buf, "Samples: 0  [Tab: cycle mode]", p.dim);
             return;
         }
 
         let mut raster = DotRaster::new(layout.grid_width, layout.grid_height);
         if raster.dot_width() == 0 || raster.dot_height() == 0 {
-            self.draw_status(layout, buf, "Terminal too small", Color::GRAY);
+            self.draw_status(layout, buf, "Terminal too small", p.dim);
             return;
         }
 
@@ -818,7 +822,7 @@ impl WaveformPane {
             let center = rows as f32 / 2.0;
             let dist = (row as f32 + 0.5 - center).abs();
             let frac = if center <= 0.0 { 0.0 } else { dist / center };
-            waveform_gradient_color(frac)
+            waveform_gradient_color(frac, p)
         });
 
         if is_recorded {
@@ -827,13 +831,13 @@ impl WaveformPane {
                     self.progress_for_index(start, visible_start, visible_len),
                     self.progress_for_index(end, visible_start, visible_len),
                 ) {
-                    self.draw_selection_overlay(layout, buf, a, b);
+                    self.draw_selection_overlay(layout, buf, a, b, p);
                 }
             }
             if let Some(cursor_progress) =
                 self.progress_for_index(self.cursor_index, visible_start, visible_len)
             {
-                self.draw_editor_cursor(layout, buf, cursor_progress);
+                self.draw_editor_cursor(layout, buf, cursor_progress, p);
             }
         }
 
@@ -852,14 +856,14 @@ impl WaveformPane {
                     let local_progress = (elapsed / duration_secs).clamp(0.0, 1.0);
                     let progress = start_norm + local_progress * (1.0 - start_norm);
                     if state.recording.preview_node_id.is_some() || local_progress < 1.0 {
-                        self.draw_playback_playhead(layout, buf, progress);
+                        self.draw_playback_playhead(layout, buf, progress, p);
                     }
                 }
             }
         }
 
         if state.recording.recording {
-            self.draw_recording_progress(layout, buf, state.recording.recording_secs);
+            self.draw_recording_progress(layout, buf, state.recording.recording_secs, p);
         }
 
         let source = if is_recorded { "recorded" } else { "live" };
@@ -906,27 +910,26 @@ impl WaveformPane {
             )
         };
         if self.editing_name {
-            let p = Palette::from(&state.session.theme);
             let input_rect = layout.status_rect();
             self.edit_input.render_buf(
                 buf.raw_buf(),
                 input_rect.x,
                 input_rect.y,
                 input_rect.width,
-                &p,
+                p,
             );
             if let Some((cx, cy)) = self.edit_input.screen_cursor() {
                 buf.set_cursor_position(cx, cy);
             }
         } else {
-            self.draw_status(layout, buf, &status, Color::GRAY);
+            self.draw_status(layout, buf, &status, p.dim);
         }
     }
 
-    fn render_spectrum(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_spectrum(&self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let rect = center_rect(area, 97, 29);
-        self.render_border(rect, buf, " Spectrum Analyzer ", Color::METER_LOW);
-        self.render_header(rect, buf, state, WaveformMode::Spectrum.name());
+        self.render_border(rect, buf, " Spectrum Analyzer ", p.meter_low);
+        self.render_header(rect, buf, state, WaveformMode::Spectrum.name(), p);
 
         let Some(layout) = PlotLayout::from_rect(rect, 2, 3) else {
             return;
@@ -935,7 +938,7 @@ impl WaveformPane {
         let bands = &state.audio.visualization.spectrum_bands;
         let num_bands = bands.len();
         if num_bands == 0 {
-            self.draw_status(layout, buf, "No spectrum data", Color::DARK_GRAY);
+            self.draw_status(layout, buf, "No spectrum data", p.muted);
             return;
         }
 
@@ -957,7 +960,7 @@ impl WaveformPane {
             for dy in 0..bar_height.min(layout.grid_height) {
                 let y = layout.grid_y + layout.grid_height - 1 - dy;
                 let frac = (dy + 1) as f32 / layout.grid_height as f32;
-                let color = meter_color(frac);
+                let color = meter_color(frac, p);
                 let style = Style::new().fg(color);
 
                 for bx in 0..bar_width {
@@ -974,7 +977,7 @@ impl WaveformPane {
             let label_start = label_x.saturating_sub(label.len() as u16 / 2);
             buf.draw_line(
                 Rect::new(label_start, label_y, label.len() as u16 + 1, 1),
-                &[(label, Style::new().fg(Color::GRAY))],
+                &[(label, Style::new().fg(p.dim))],
             );
 
             let db = amp_to_db(amp);
@@ -988,7 +991,7 @@ impl WaveformPane {
             if db_y < rect.y + rect.height - 1 {
                 buf.draw_line(
                     Rect::new(db_start, db_y, db_str.len() as u16 + 1, 1),
-                    &[(&db_str, Style::new().fg(Color::DARK_GRAY))],
+                    &[(&db_str, Style::new().fg(p.muted))],
                 );
             }
 
@@ -1001,23 +1004,23 @@ impl WaveformPane {
         let status_y = rect.y + rect.height - 2;
         buf.draw_line(
             Rect::new(rect.x + 1, status_y, rect.width.saturating_sub(2), 1),
-            &[("[Tab: cycle mode]", Style::new().fg(Color::DARK_GRAY))],
+            &[("[Tab: cycle mode]", Style::new().fg(p.muted))],
         );
     }
 
-    fn render_oscilloscope(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_oscilloscope(&self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let rect = center_rect(area, 97, 29);
-        self.render_border(rect, buf, " Oscilloscope ", Color::MIDI_COLOR);
-        self.render_header(rect, buf, state, WaveformMode::Oscilloscope.name());
+        self.render_border(rect, buf, " Oscilloscope ", p.midi_color);
+        self.render_header(rect, buf, state, WaveformMode::Oscilloscope.name(), p);
 
         let Some(layout) = PlotLayout::from_rect(rect, 2, 2) else {
             return;
         };
 
-        self.draw_center_line(layout, buf);
+        self.draw_center_line(layout, buf, p);
 
         // +1/-1 labels
-        let marker_style = Style::new().fg(Color::DARK_GRAY);
+        let marker_style = Style::new().fg(p.muted);
         buf.draw_line(
             Rect::new(layout.grid_x, layout.grid_y, 2, 1),
             &[("+1", marker_style)],
@@ -1034,13 +1037,13 @@ impl WaveformPane {
 
         let scope = &state.audio.visualization.scope_buffer;
         if scope.is_empty() {
-            self.draw_status(layout, buf, "Samples: 0  [Tab: cycle mode]", Color::GRAY);
+            self.draw_status(layout, buf, "Samples: 0  [Tab: cycle mode]", p.dim);
             return;
         }
 
         let mut raster = DotRaster::new(layout.grid_width, layout.grid_height);
         if raster.dot_width() == 0 || raster.dot_height() == 0 {
-            self.draw_status(layout, buf, "Terminal too small", Color::GRAY);
+            self.draw_status(layout, buf, "Terminal too small", p.dim);
             return;
         }
 
@@ -1062,16 +1065,16 @@ impl WaveformPane {
             prev_dot_y = Some(dot_y);
         }
 
-        self.draw_braille_raster(layout, &raster, buf, |_, _| Color::new(80, 220, 120));
+        self.draw_braille_raster(layout, &raster, buf, |_, _| p.success);
 
         let status = format!("Samples: {}  [Tab: cycle mode]", scope.len());
-        self.draw_status(layout, buf, &status, Color::GRAY);
+        self.draw_status(layout, buf, &status, p.dim);
     }
 
-    fn render_lufs_meter(&self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+    fn render_lufs_meter(&self, area: Rect, buf: &mut RenderBuf, state: &AppState, p: &Palette) {
         let rect = center_rect(area, 97, 29);
-        self.render_border(rect, buf, " Level Meter ", Color::METER_LOW);
-        self.render_header(rect, buf, state, WaveformMode::LufsMeter.name());
+        self.render_border(rect, buf, " Level Meter ", p.meter_low);
+        self.render_header(rect, buf, state, WaveformMode::LufsMeter.name(), p);
 
         let Some(layout) = PlotLayout::from_rect(rect, 2, 2) else {
             return;
@@ -1079,7 +1082,7 @@ impl WaveformPane {
 
         let gap: u16 = 4;
         if layout.grid_width <= gap + 3 {
-            self.draw_status(layout, buf, "Terminal too small", Color::GRAY);
+            self.draw_status(layout, buf, "Terminal too small", p.dim);
             return;
         }
 
@@ -1098,6 +1101,7 @@ impl WaveformPane {
             viz.rms_l,
             "L",
             buf,
+            p,
         );
         self.render_single_meter(
             right_x,
@@ -1108,6 +1112,7 @@ impl WaveformPane {
             viz.rms_r,
             "R",
             buf,
+            p,
         );
 
         let peak_db_l = amp_to_db(viz.peak_l);
@@ -1118,7 +1123,7 @@ impl WaveformPane {
             "L: peak {:.1}dB rms {:.1}dB    R: peak {:.1}dB rms {:.1}dB    [Tab: cycle mode]",
             peak_db_l, rms_db_l, peak_db_r, rms_db_r,
         );
-        self.draw_status(layout, buf, &status, Color::GRAY);
+        self.draw_status(layout, buf, &status, p.dim);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1132,6 +1137,7 @@ impl WaveformPane {
         rms: f32,
         label: &str,
         buf: &mut RenderBuf,
+        p: &Palette,
     ) {
         if width == 0 || height == 0 {
             return;
@@ -1154,7 +1160,7 @@ impl WaveformPane {
         for dy in 0..rms_height.min(height) {
             let row = y + height - 1 - dy;
             let frac = (dy + 1) as f32 / height as f32;
-            let style = Style::new().fg(meter_color(frac));
+            let style = Style::new().fg(meter_color(frac, p));
             for bx in 0..rms_width {
                 buf.set_cell(x + bx, row, WAVEFORM_CHARS[7], style);
             }
@@ -1164,7 +1170,7 @@ impl WaveformPane {
         if has_peak_col && peak_height > 0 {
             let peak_y = y + height - peak_height.min(height);
             let peak_frac_color = peak_height as f32 / height as f32;
-            let peak_color = meter_color(peak_frac_color);
+            let peak_color = meter_color(peak_frac_color, p);
             buf.set_cell(
                 x + width - 1,
                 peak_y,
@@ -1178,7 +1184,7 @@ impl WaveformPane {
         let label_y = y + height;
         buf.draw_line(
             Rect::new(label_x, label_y, 2, 1),
-            &[(label, Style::new().fg(Color::WHITE))],
+            &[(label, Style::new().fg(p.fg))],
         );
 
         // dB markers at left side
@@ -1189,7 +1195,7 @@ impl WaveformPane {
             ("-24", 24.0),
             ("-48", 48.0),
         ];
-        let marker_style = Style::new().fg(Color::DARK_GRAY);
+        let marker_style = Style::new().fg(p.muted);
         for (text, db_offset) in markers {
             let frac = (db_range - db_offset) / db_range;
             let marker_y = y + ((1.0 - frac) * height as f32).round() as u16;
@@ -1208,13 +1214,20 @@ impl WaveformPane {
         buf.draw_block(rect, title, border_style, border_style);
     }
 
-    fn render_header(&self, rect: Rect, buf: &mut RenderBuf, state: &AppState, mode_name: &str) {
+    fn render_header(
+        &self,
+        rect: Rect,
+        buf: &mut RenderBuf,
+        state: &AppState,
+        mode_name: &str,
+        p: &Palette,
+    ) {
         let header_y = rect.y + 1;
         let play_icon = if state.audio.playing { "||" } else { "> " };
         let header_text = format!(" BPM:{:.0}  {}  {}", state.audio.bpm, play_icon, mode_name);
         buf.draw_line(
             Rect::new(rect.x + 1, header_y, rect.width.saturating_sub(2), 1),
-            &[(&header_text, Style::new().fg(Color::WHITE))],
+            &[(&header_text, Style::new().fg(p.fg))],
         );
     }
 }
@@ -1437,11 +1450,12 @@ impl Pane for WaveformPane {
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
+        let p = Palette::from(&state.session.theme);
         match self.mode {
-            WaveformMode::Waveform => self.render_waveform(area, buf, state),
-            WaveformMode::Spectrum => self.render_spectrum(area, buf, state),
-            WaveformMode::Oscilloscope => self.render_oscilloscope(area, buf, state),
-            WaveformMode::LufsMeter => self.render_lufs_meter(area, buf, state),
+            WaveformMode::Waveform => self.render_waveform(area, buf, state, &p),
+            WaveformMode::Spectrum => self.render_spectrum(area, buf, state, &p),
+            WaveformMode::Oscilloscope => self.render_oscilloscope(area, buf, state, &p),
+            WaveformMode::LufsMeter => self.render_lufs_meter(area, buf, state, &p),
         }
     }
 

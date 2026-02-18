@@ -308,8 +308,8 @@ impl Pane for TrackPane {
         };
 
         let sel_bg = Style::new().bg(p.selection_bg);
-        let bar_line_style = Style::new().fg(Color::new(50, 50, 50));
-        let separator_style = Style::new().fg(Color::new(40, 40, 40));
+        let bar_line_style = Style::new().fg(p.border);
+        let separator_style = Style::new().fg(p.muted);
 
         // Compute bar spacing in columns
         let (beats_per_bar, _) = state.session.time_signature;
@@ -435,7 +435,7 @@ impl Pane for TrackPane {
                     if is_bar {
                         buf.set_cell(x, y, '|', bar_line_style);
                     } else if is_beat && row == 0 {
-                        buf.set_cell(x, y, '.', Style::new().fg(Color::new(30, 30, 30)));
+                        buf.set_cell(x, y, '.', Style::new().fg(p.muted));
                     }
                 }
             }
