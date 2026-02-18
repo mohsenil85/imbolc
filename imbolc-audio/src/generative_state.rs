@@ -19,6 +19,8 @@ pub struct VoicePlayState {
     pub markov_current_pc: u8,
     /// L-System: cached expanded string
     pub lsystem_expanded: Option<String>,
+    /// L-System: cached char vector from expanded string
+    pub lsystem_chars: Option<Vec<char>>,
     /// L-System: cursor position in expanded string
     pub lsystem_cursor: usize,
     /// L-System: current pitch
@@ -38,6 +40,7 @@ impl Default for VoicePlayState {
             euclidean_pattern: None,
             markov_current_pc: 0,
             lsystem_expanded: None,
+            lsystem_chars: None,
             lsystem_cursor: 0,
             lsystem_current_pitch: 60,
             lsystem_pitch_stack: Vec::new(),
@@ -51,6 +54,7 @@ impl VoicePlayState {
     pub fn invalidate_caches(&mut self) {
         self.euclidean_pattern = None;
         self.lsystem_expanded = None;
+        self.lsystem_chars = None;
         self.lsystem_cursor = 0;
     }
 }

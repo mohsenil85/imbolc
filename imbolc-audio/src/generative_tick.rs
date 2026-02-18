@@ -391,15 +391,16 @@ fn generate_lsystem(
     state: &mut VoicePlayState,
     constraints: &GenerativeConstraints,
 ) -> Option<(u8, u8)> {
-    // Cache or regenerate expanded string
+    // Cache or regenerate expanded string and char vector
     let expanded = state.lsystem_expanded.get_or_insert_with(|| cfg.expand());
 
     if expanded.is_empty() {
         return None;
     }
 
-    // Walk the expanded string
-    let chars: Vec<char> = expanded.chars().collect();
+    let chars = state
+        .lsystem_chars
+        .get_or_insert_with(|| expanded.chars().collect());
     let mut note_event = None;
 
     // Process one symbol at a time

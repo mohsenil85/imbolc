@@ -127,10 +127,40 @@ pub fn tick_playback(
 
             let mut note_ons: Vec<(TrackId, u8, u8, u32, u32, f32, f64)> = Vec::new();
             let any_solo = instruments.any_track_solo();
+
+            // Pre-compute layer group membership with a single O(n) pass
+            // instead of calling layer_group_members() per instrument (O(n*m)).
+            let group_targets: HashMap<TrackId, Vec<TrackId>> = {
+                let mut by_group: HashMap<imbolc_types::GroupId, Vec<TrackId>> = HashMap::new();
+                for inst in &instruments.tracks {
+                    if let Some(g) = inst.layer.group {
+                        by_group.entry(g).or_default().push(inst.id);
+                    }
+                }
+                let mut map = HashMap::new();
+                for &instrument_id in &piano_roll.sequence_order {
+                    let group = instruments.track(instrument_id).and_then(|i| i.layer.group);
+                    match group {
+                        Some(g) => {
+                            map.insert(
+                                instrument_id,
+                                by_group.get(&g).cloned().unwrap_or_default(),
+                            );
+                        }
+                        None => {
+                            map.insert(instrument_id, vec![instrument_id]);
+                        }
+                    }
+                }
+                map
+            };
+
             for &instrument_id in &piano_roll.sequence_order {
                 if let Some(seq) = piano_roll.sequences.get(&instrument_id) {
-                    // Expand layer group: collect all target IDs for this instrument
-                    let targets = instruments.layer_group_members(instrument_id);
+                    let targets = group_targets
+                        .get(&instrument_id)
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]);
 
                     for &(range_start, range_end, base_ticks) in &scan_ranges {
                         if range_start >= range_end {
@@ -143,7 +173,7 @@ pub fn tick_playback(
 
                         for note in &seq.notes[start_idx..end_idx] {
                             let ticks_from_old = base_ticks + (note.tick - range_start) as f64;
-                            for &target_id in &targets {
+                            for &target_id in targets {
                                 // Skip muted/inactive siblings
                                 let skip = instruments.track(target_id).is_none_or(|inst| {
                                     !inst.channel_strip.active

@@ -294,7 +294,10 @@ fn round_trip_processing_chain_order() {
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(EffectId::new(0), crate::state::track::EqConfig::default()));
+            .push(ProcessingStage::Eq(
+                EffectId::new(0),
+                crate::state::track::EqConfig::default(),
+            ));
     }
 
     session.piano_roll.add_sequence(inst_id);
@@ -356,7 +359,10 @@ fn round_trip_processing_chain_interleaved() {
             ));
         inst.channel_strip
             .processing_chain
-            .push(ProcessingStage::Eq(EffectId::new(0), crate::state::track::EqConfig::default()));
+            .push(ProcessingStage::Eq(
+                EffectId::new(0),
+                crate::state::track::EqConfig::default(),
+            ));
         inst.channel_strip
             .processing_chain
             .push(ProcessingStage::Effect(

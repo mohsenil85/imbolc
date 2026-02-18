@@ -19,13 +19,14 @@ impl AppRuntime {
     pub(crate) fn process_events(
         &mut self,
         backend: &mut crate::ui::RatatuiBackend,
+        poll_timeout: Duration,
     ) -> std::io::Result<bool> {
         let mut should_quit = false;
         let mut events_processed = 0u8;
 
         'events: loop {
             let timeout = if events_processed == 0 {
-                Duration::from_millis(2)
+                poll_timeout
             } else {
                 Duration::ZERO
             };

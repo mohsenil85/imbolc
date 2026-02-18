@@ -9,6 +9,7 @@ use crate::global_actions::apply_dispatch_result;
 use crate::panes::ServerPane;
 use crate::state;
 use crate::ui::status_bar::StatusLevel;
+use imbolc_types::AudioFeedback;
 
 impl AppRuntime {
     /// Drain I/O feedback (save/load/import completions).
@@ -241,7 +242,15 @@ impl AppRuntime {
 
     /// Drain audio feedback (playhead, meters, status updates).
     pub(crate) fn drain_audio_feedback(&mut self) {
+        let mut had_playhead = false;
         for feedback in self.audio.drain_feedback() {
+            // PlayheadPosition is already tracked by AudioHandle::apply_feedback()
+            // and copied into AppState by render.rs via audio.read_state().
+            // Skip dispatching it — it's pure overhead at 2000 msgs/sec.
+            if matches!(feedback, AudioFeedback::PlayheadPosition(_)) {
+                had_playhead = true;
+                continue;
+            }
             self.render_needed = true;
             let mut r = self.dispatcher.dispatch_domain(
                 &action::DomainAction::AudioFeedback(feedback),
@@ -259,6 +268,9 @@ impl AppRuntime {
                 &mut self.app_frame,
                 &mut self.audio,
             );
+        }
+        if had_playhead {
+            self.render_needed = true;
         }
     }
 

@@ -201,7 +201,19 @@ impl AppRuntime {
             self.layer_stack.set_pane_layer(self.panes.active());
             self.dispatcher.set_active_pane(self.panes.active().id().0);
 
-            if self.process_events(backend)? {
+            // Adaptive poll timeout: short when a render is due soon, longer when idle.
+            // Input events still wake immediately regardless of timeout.
+            let frame_budget = Duration::from_millis(16);
+            let elapsed = self.last_render_time.elapsed();
+            let poll_timeout = if self.audio.is_running() || self.render_needed {
+                frame_budget
+                    .saturating_sub(elapsed)
+                    .max(Duration::from_millis(1))
+            } else {
+                Duration::from_millis(50)
+            };
+
+            if self.process_events(backend, poll_timeout)? {
                 break;
             }
 
