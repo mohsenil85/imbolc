@@ -32,8 +32,9 @@ fn source_color(source: SourceType) -> Color {
         | SourceType::Strings | SourceType::Acid
         | SourceType::Universe | SourceType::Dreamscape | SourceType::Soundtrack => Color::OSC_COLOR,
         SourceType::AudioIn => Color::AUDIO_IN_COLOR,
-        SourceType::PitchedSampler | SourceType::TimeStretch => Color::SAMPLE_COLOR,
-        SourceType::Kit => Color::KIT_COLOR,
+        SourceType::PitchedSampler | SourceType::TimeStretch | SourceType::Kit => {
+            Color::SAMPLE_COLOR
+        }
         SourceType::BusIn => Color::BUS_IN_COLOR,
         SourceType::Custom(_) => Color::CUSTOM_COLOR,
         SourceType::Vst(_) => Color::VST_COLOR,

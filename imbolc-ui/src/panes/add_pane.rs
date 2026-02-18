@@ -283,7 +283,9 @@ impl AddPane {
                     let color = match source {
                         SourceType::AudioIn => Color::AUDIO_IN_COLOR,
                         SourceType::BusIn => Color::BUS_IN_COLOR,
-                        SourceType::PitchedSampler => Color::SAMPLE_COLOR,
+                        SourceType::PitchedSampler
+                        | SourceType::TimeStretch
+                        | SourceType::Kit => Color::SAMPLE_COLOR,
                         SourceType::Custom(_) => Color::CUSTOM_COLOR,
                         SourceType::Vst(_) => Color::VST_COLOR,
                         _ => Color::OSC_COLOR,
