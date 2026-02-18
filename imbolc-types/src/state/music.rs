@@ -267,6 +267,52 @@ impl JIFlavor {
     }
 }
 
+/// For each pitch class 0–11, the semitone correction to snap to the nearest
+/// scale degree in the given key+scale. E.g. C Major, pitch class 1 (C#)
+/// → −1 (snap down to C) because C is closer than D.
+pub fn scale_quantization_table(key: Key, scale: Scale) -> [f32; 12] {
+    let root = key.semitone();
+    let mut in_scale = [false; 12];
+    for &interval in scale.intervals() {
+        in_scale[((root + interval) % 12) as usize] = true;
+    }
+
+    let mut table = [0.0f32; 12];
+    for pc in 0..12 {
+        if in_scale[pc] {
+            continue;
+        }
+        // Search outward for nearest in-scale pitch class.
+        // On ties, prefer downward correction for deterministic behavior.
+        for d in 1..=6 {
+            let down = (pc as i32 - d).rem_euclid(12);
+            if in_scale[down as usize] {
+                table[pc] = -(d as f32);
+                break;
+            }
+            let up = (pc as i32 + d) % 12;
+            if in_scale[up as usize] {
+                table[pc] = d as f32;
+                break;
+            }
+        }
+    }
+    table
+}
+
+/// Semitone offset to compensate for tuning_a4 ≠ 440.
+/// SC's `cpsmidi` assumes A4 = 440; this corrects detected MIDI values.
+pub fn tuning_ref_offset(tuning_a4: f32) -> f32 {
+    12.0 * (tuning_a4 / 440.0).log2()
+}
+
+/// Base key frequency in octave 4 for the current session key and tuning.
+/// Example: A => A4, C => C4.
+pub fn key_root_freq(key: Key, tuning_a4: f32) -> f32 {
+    let midi = 60.0 + key.semitone() as f32;
+    tuning_a4 * 2.0_f32.powf((midi - 69.0) / 12.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -361,5 +407,153 @@ mod tests {
     #[test]
     fn ji_flavor_default_is_five_limit() {
         assert_eq!(JIFlavor::default(), JIFlavor::FiveLimit);
+    }
+
+    // ── scale_quantization_table tests ───────────────────────────
+
+    #[test]
+    fn quant_c_major() {
+        // C Major: C D E F G A B  (pc 0,2,4,5,7,9,11)
+        let t = scale_quantization_table(Key::C, Scale::Major);
+        // In-scale notes: correction = 0
+        assert_eq!(t[0], 0.0); // C
+        assert_eq!(t[2], 0.0); // D
+        assert_eq!(t[4], 0.0); // E
+        assert_eq!(t[5], 0.0); // F
+        assert_eq!(t[7], 0.0); // G
+        assert_eq!(t[9], 0.0); // A
+        assert_eq!(t[11], 0.0); // B
+        // Out-of-scale: snap to nearest
+        assert_eq!(t[1], -1.0); // C# → C (down 1)
+        assert_eq!(t[3], -1.0); // D# → D (down 1, equidistant picks down)
+        assert_eq!(t[6], -1.0); // F# → F (down 1)
+        assert_eq!(t[8], -1.0); // G# → G (down 1)
+        assert_eq!(t[10], -1.0); // A# → A (down 1)
+    }
+
+    #[test]
+    fn quant_a_minor() {
+        // A Minor: A B C D E F G  (pc 9,11,0,2,4,5,7)
+        let t = scale_quantization_table(Key::A, Scale::Minor);
+        assert_eq!(t[9], 0.0); // A
+        assert_eq!(t[11], 0.0); // B
+        assert_eq!(t[0], 0.0); // C
+        assert_eq!(t[2], 0.0); // D
+        assert_eq!(t[4], 0.0); // E
+        assert_eq!(t[5], 0.0); // F
+        assert_eq!(t[7], 0.0); // G
+        // Out-of-scale
+        assert_eq!(t[1], -1.0); // C# → C
+        assert_eq!(t[3], -1.0); // D# → D
+        assert_eq!(t[6], -1.0); // F# → F
+        assert_eq!(t[8], -1.0); // G# → G
+        assert_eq!(t[10], -1.0); // A# → A
+    }
+
+    #[test]
+    fn quant_chromatic_all_zeros() {
+        let t = scale_quantization_table(Key::C, Scale::Chromatic);
+        assert_eq!(t, [0.0; 12]);
+    }
+
+    #[test]
+    fn quant_chromatic_any_key() {
+        // Chromatic in any key should be all zeros
+        for key in Key::ALL {
+            let t = scale_quantization_table(key, Scale::Chromatic);
+            assert_eq!(t, [0.0; 12], "Chromatic in {:?}", key);
+        }
+    }
+
+    #[test]
+    fn quant_fs_pentatonic() {
+        // F# Pentatonic: F# G# A# C# D#  (pc 6,8,10,1,3)
+        let t = scale_quantization_table(Key::Fs, Scale::Pentatonic);
+        assert_eq!(t[6], 0.0); // F#
+        assert_eq!(t[8], 0.0); // G#
+        assert_eq!(t[10], 0.0); // A#
+        assert_eq!(t[1], 0.0); // C#
+        assert_eq!(t[3], 0.0); // D#
+        // Gaps are wider in pentatonic, test some
+        assert_eq!(t[0], 1.0); // C → C# (up 1)
+        assert_eq!(t[2], -1.0); // D → C# (down 1)
+        assert_eq!(t[7], -1.0); // G → F# (down 1)
+    }
+
+    #[test]
+    fn quant_c_blues() {
+        // C Blues: C Eb F F# G Bb  (pc 0,3,5,6,7,10)
+        let t = scale_quantization_table(Key::C, Scale::Blues);
+        assert_eq!(t[0], 0.0); // C
+        assert_eq!(t[3], 0.0); // Eb
+        assert_eq!(t[5], 0.0); // F
+        assert_eq!(t[6], 0.0); // F#
+        assert_eq!(t[7], 0.0); // G
+        assert_eq!(t[10], 0.0); // Bb
+        // Out-of-scale
+        assert_eq!(t[1], -1.0); // C# → C
+        assert_eq!(t[2], 1.0); // D → Eb
+        assert_eq!(t[4], -1.0); // E → Eb (down 1, equidistant picks down)
+        assert_eq!(t[8], -1.0); // G# → G
+    }
+
+    #[test]
+    fn quant_all_corrections_within_range() {
+        for key in Key::ALL {
+            for scale in Scale::ALL {
+                let t = scale_quantization_table(key, scale);
+                for (pc, &corr) in t.iter().enumerate() {
+                    assert!(
+                        (-6.0..=6.0).contains(&corr),
+                        "key={:?} scale={:?} pc={} corr={}",
+                        key,
+                        scale,
+                        pc,
+                        corr
+                    );
+                }
+            }
+        }
+    }
+
+    // ── tuning_ref_offset tests ──────────────────────────────────
+
+    #[test]
+    fn tuning_ref_440_is_zero() {
+        let offset = tuning_ref_offset(440.0);
+        assert!((offset).abs() < 1e-6);
+    }
+
+    #[test]
+    fn tuning_ref_432() {
+        let offset = tuning_ref_offset(432.0);
+        // 432 Hz is about -31.77 cents = -0.3177 semitones below 440
+        assert!((offset - (-0.31766)).abs() < 0.001, "offset={}", offset);
+    }
+
+    #[test]
+    fn tuning_ref_880_is_twelve() {
+        let offset = tuning_ref_offset(880.0);
+        assert!((offset - 12.0).abs() < 1e-6);
+    }
+
+    // -- key_root_freq tests --------------------------------------
+
+    #[test]
+    fn key_root_freq_a_matches_tuning_a4() {
+        let f = key_root_freq(Key::A, 440.0);
+        assert!((f - 440.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn key_root_freq_c_at_440() {
+        let f = key_root_freq(Key::C, 440.0);
+        assert!((f - 261.62555).abs() < 0.001, "f={}", f);
+    }
+
+    #[test]
+    fn key_root_freq_scales_with_tuning_a4() {
+        let f = key_root_freq(Key::A, 432.0);
+        assert!((f - 432.0).abs() < 1e-6);
     }
 }

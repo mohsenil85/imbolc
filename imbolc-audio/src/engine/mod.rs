@@ -1841,6 +1841,74 @@ mod tests {
         }
 
         #[test]
+        fn autotune_effect_receives_musical_context_params() {
+            let (mut engine, backend) = engine_with_test_backend();
+            let mut state = AppState::new();
+            state.session.key = imbolc_types::Key::As;
+            state.session.scale = imbolc_types::Scale::Minor;
+            state.session.tuning_a4 = 432.0;
+
+            let inst_id = state.add_track(SourceType::Saw);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
+                inst.add_effect(EffectType::Autotune);
+            }
+
+            engine
+                .rebuild_instrument_routing(&state.tracks, &state.session)
+                .expect("rebuild routing");
+
+            let expected_table =
+                imbolc_types::scale_quantization_table(state.session.key, state.session.scale);
+            let expected_ref_offset = imbolc_types::tuning_ref_offset(state.session.tuning_a4);
+
+            let synths = backend.synths_created();
+            let autotune_params = synths
+                .iter()
+                .find_map(|op| {
+                    if let TestOp::CreateSynth {
+                        def_name, params, ..
+                    } = op
+                    {
+                        if def_name == "imbolc_autotune" {
+                            return Some(params);
+                        }
+                    }
+                    None
+                })
+                .expect("autotune synth params");
+
+            for (i, expected) in expected_table.iter().enumerate() {
+                let name = format!("q{}", i);
+                let actual = autotune_params
+                    .iter()
+                    .find(|(k, _)| k == &name)
+                    .map(|(_, v)| *v)
+                    .expect("missing quantization param");
+                assert!(
+                    (actual - expected).abs() < 1e-6,
+                    "expected {}={}, got {}",
+                    name,
+                    expected,
+                    actual
+                );
+            }
+
+            let actual_ref_offset = autotune_params
+                .iter()
+                .find(|(k, _)| k == "ref_offset")
+                .map(|(_, v)| *v)
+                .expect("missing ref_offset param");
+            assert!((actual_ref_offset - expected_ref_offset).abs() < 1e-6);
+
+            let snap = autotune_params
+                .iter()
+                .find(|(k, _)| k == "snap")
+                .map(|(_, v)| *v)
+                .expect("missing snap param");
+            assert_eq!(snap, 1.0);
+        }
+
+        #[test]
         fn layer_group_effect_creates_synth_in_bus_processing() {
             let (mut engine, backend) = engine_with_test_backend();
             let mut state = AppState::new();

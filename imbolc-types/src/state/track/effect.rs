@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{EffectId, Param, ParamValue, VstPluginId};
+use crate::state::music::{key_root_freq, scale_quantization_table, tuning_ref_offset};
+use crate::{EffectId, Param, ParamValue, SessionState, VstPluginId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EffectType {
@@ -55,6 +56,20 @@ pub enum EffectType {
     Autotune,
     WahPedal,
     Vst(VstPluginId),
+}
+
+const QUANT_PARAM_NAMES: [&str; 12] = [
+    "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
+];
+const ROOT_FREQ_PARAM: &str = "root_freq";
+
+fn push_quant_params(params: &mut Vec<(&'static str, f32)>, session: &SessionState) {
+    let table = scale_quantization_table(session.key, session.scale);
+    let ref_offset = tuning_ref_offset(session.tuning_a4);
+    for (i, &corr) in table.iter().enumerate() {
+        params.push((QUANT_PARAM_NAMES[i], corr));
+    }
+    params.push(("ref_offset", ref_offset));
 }
 
 impl EffectType {
@@ -322,6 +337,36 @@ impl EffectType {
             EffectType::Autotune,
             EffectType::WahPedal,
         ]
+    }
+
+    /// Hidden params derived from session musical context.
+    /// Injected at routing build time and not shown in the effect UI.
+    pub fn musical_context_params(&self, session: &SessionState) -> Vec<(&'static str, f32)> {
+        match self {
+            EffectType::Autotune => {
+                let mut params = Vec::with_capacity(QUANT_PARAM_NAMES.len() + 1);
+                push_quant_params(&mut params, session);
+                params
+            }
+            EffectType::Resonator
+            | EffectType::RingMod
+            | EffectType::WahPedal
+            | EffectType::ParaEq => {
+                let mut params = Vec::with_capacity(QUANT_PARAM_NAMES.len() + 1);
+                push_quant_params(&mut params, session);
+                params
+            }
+            EffectType::FreqShifter => {
+                let mut params = Vec::with_capacity(QUANT_PARAM_NAMES.len() + 2);
+                push_quant_params(&mut params, session);
+                params.push((ROOT_FREQ_PARAM, key_root_freq(session.key, session.tuning_a4)));
+                params
+            }
+            EffectType::Vocoder | EffectType::MultibandComp => {
+                vec![(ROOT_FREQ_PARAM, key_root_freq(session.key, session.tuning_a4))]
+            }
+            _ => Vec::new(),
+        }
     }
 }
 
@@ -686,6 +731,12 @@ impl EffectType {
                     max: 2000.0,
                 },
                 Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
                     name: "mix".to_string(),
                     value: ParamValue::Float(0.5),
                     min: 0.0,
@@ -876,6 +927,12 @@ impl EffectType {
                     max: 32.0,
                 },
                 Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
                     name: "mix".to_string(),
                     value: ParamValue::Float(0.5),
                     min: 0.0,
@@ -888,6 +945,12 @@ impl EffectType {
                     value: ParamValue::Float(440.0),
                     min: 20.0,
                     max: 5000.0,
+                },
+                Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
+                    min: 0.0,
+                    max: 1.0,
                 },
                 Param {
                     name: "depth".to_string(),
@@ -936,6 +999,12 @@ impl EffectType {
                     max: 5000.0,
                 },
                 Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
                     name: "decay".to_string(),
                     value: ParamValue::Float(1.0),
                     min: 0.01,
@@ -964,6 +1033,12 @@ impl EffectType {
                 Param {
                     name: "hi_thresh".to_string(),
                     value: ParamValue::Float(0.3),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
                     min: 0.0,
                     max: 1.0,
                 },
@@ -1010,6 +1085,12 @@ impl EffectType {
                     value: ParamValue::Float(0.0),
                     min: -12.0,
                     max: 12.0,
+                },
+                Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
+                    min: 0.0,
+                    max: 1.0,
                 },
             ],
             EffectType::SpectralFreeze => vec![
@@ -1192,6 +1273,12 @@ impl EffectType {
                     max: 12.0,
                 },
                 Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
                     name: "mix".to_string(),
                     value: ParamValue::Float(1.0),
                     min: 0.0,
@@ -1214,6 +1301,12 @@ impl EffectType {
                 Param {
                     name: "mode".to_string(),
                     value: ParamValue::Int(0),
+                    min: 0.0,
+                    max: 1.0,
+                },
+                Param {
+                    name: "snap".to_string(),
+                    value: ParamValue::Bool(true),
                     min: 0.0,
                     max: 1.0,
                 },
@@ -1346,6 +1439,61 @@ mod tests {
         assert!(EffectType::Vst(VstPluginId::new(0))
             .default_params()
             .is_empty());
+    }
+
+    #[test]
+    fn autotune_musical_context_params_include_quant_and_ref_offset() {
+        let session = SessionState::default();
+        let params = EffectType::Autotune.musical_context_params(&session);
+
+        assert_eq!(params.len(), 13);
+        for (i, name) in QUANT_PARAM_NAMES.iter().enumerate() {
+            assert_eq!(params[i].0, *name);
+        }
+        let (name, value) = params.last().expect("missing ref_offset");
+        assert_eq!(*name, "ref_offset");
+        assert!(value.abs() < 1e-6);
+    }
+
+    #[test]
+    fn freq_shifter_musical_context_params_include_quant_and_root() {
+        let session = SessionState::default();
+        let params = EffectType::FreqShifter.musical_context_params(&session);
+
+        assert_eq!(params.len(), 14);
+        assert_eq!(params[12].0, "ref_offset");
+        assert_eq!(params[13].0, ROOT_FREQ_PARAM);
+    }
+
+    #[test]
+    fn vocoder_musical_context_params_include_root_only() {
+        let session = SessionState::default();
+        let params = EffectType::Vocoder.musical_context_params(&session);
+
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].0, ROOT_FREQ_PARAM);
+    }
+
+    #[test]
+    fn requested_effects_have_snap_toggle() {
+        for effect in [
+            EffectType::Resonator,
+            EffectType::RingMod,
+            EffectType::Vocoder,
+            EffectType::FreqShifter,
+            EffectType::WahPedal,
+            EffectType::MultibandComp,
+            EffectType::ParaEq,
+        ] {
+            let has_snap = effect.default_params().iter().any(|p| p.name == "snap");
+            assert!(has_snap, "{:?} missing snap param", effect);
+        }
+    }
+
+    #[test]
+    fn non_autotune_musical_context_params_empty() {
+        let session = SessionState::default();
+        assert!(EffectType::Delay.musical_context_params(&session).is_empty());
     }
 
     #[test]

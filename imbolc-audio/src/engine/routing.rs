@@ -378,6 +378,9 @@ impl AudioEngine {
                 }
                 params.push((p.name.clone(), p.value.to_f32()));
             }
+            for (name, value) in effect.effect_type.musical_context_params(session) {
+                params.push((name.to_string(), value));
+            }
 
             // Inject LFO mod bus if targeting this effect type
             if instrument.modulation.lfo.enabled {
@@ -695,6 +698,9 @@ impl AudioEngine {
                 }
                 params.push((p.name.clone(), p.value.to_f32()));
             }
+            for (name, value) in effect.effect_type.musical_context_params(session) {
+                params.push((name.to_string(), value));
+            }
 
             let client = self.backend.as_ref().ok_or("Not connected")?;
             client
@@ -809,6 +815,9 @@ impl AudioEngine {
                     continue;
                 }
                 params.push((p.name.clone(), p.value.to_f32()));
+            }
+            for (name, value) in effect.effect_type.musical_context_params(session) {
+                params.push((name.to_string(), value));
             }
 
             let client = self.backend.as_ref().ok_or("Not connected")?;
