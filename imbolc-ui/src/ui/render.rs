@@ -14,6 +14,7 @@ use super::style::Style;
 pub struct RenderBuf<'a> {
     buf: &'a mut Buffer,
     cursor_position: Option<(u16, u16)>,
+    hint_anchor: Option<Rect>,
 }
 
 impl<'a> RenderBuf<'a> {
@@ -21,6 +22,7 @@ impl<'a> RenderBuf<'a> {
         Self {
             buf,
             cursor_position: None,
+            hint_anchor: None,
         }
     }
 
@@ -44,6 +46,9 @@ impl<'a> RenderBuf<'a> {
     }
 
     /// Draw a bordered block with a title. Returns the inner `Rect`.
+    ///
+    /// The first call per frame automatically registers the block rect as the
+    /// hint anchor (used by PaneManager to position the hint bar).
     pub fn draw_block(
         &mut self,
         area: Rect,
@@ -51,6 +56,9 @@ impl<'a> RenderBuf<'a> {
         border_style: Style,
         title_style: Style,
     ) -> Rect {
+        if self.hint_anchor.is_none() {
+            self.hint_anchor = Some(area);
+        }
         let block = Block::default()
             .borders(Borders::ALL)
             .title(title)
@@ -100,6 +108,16 @@ impl<'a> RenderBuf<'a> {
     /// Get the cursor position set during rendering, if any.
     pub fn cursor_position(&self) -> Option<(u16, u16)> {
         self.cursor_position
+    }
+
+    /// Get the hint anchor rect set during rendering, if any.
+    pub fn hint_anchor(&self) -> Option<Rect> {
+        self.hint_anchor
+    }
+
+    /// Clear the hint anchor (called before each pane render).
+    pub fn clear_hint_anchor(&mut self) {
+        self.hint_anchor = None;
     }
 
     /// Escape hatch: direct access to the underlying ratatui `Buffer`.

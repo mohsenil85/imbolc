@@ -212,14 +212,22 @@ impl PaneManager {
     pub fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let hints = self.panes[self.active_index].keymap().hint_bindings();
         if !hints.is_empty() && area.height > 2 {
-            let pane_area = Rect {
-                x: area.x,
-                y: area.y,
-                width: area.width,
-                height: area.height - 1,
-            };
-            self.panes[self.active_index].render(pane_area, buf, state);
-            Self::render_hint_line(&hints, pane_area, buf);
+            // Render pane with full area; draw_block auto-registers the hint anchor.
+            buf.clear_hint_anchor();
+            self.panes[self.active_index].render(area, buf, state);
+            if let Some(anchor) = buf.hint_anchor() {
+                // Anchored: hint hangs off the bottom of the dialog
+                let hint_area = Rect {
+                    x: anchor.x,
+                    y: anchor.y + anchor.height,
+                    width: anchor.width,
+                    height: 1,
+                };
+                Self::render_hint_line(&hints, hint_area, buf);
+            } else {
+                // No dialog drawn — fall back to bottom of area
+                Self::render_hint_line(&hints, area, buf);
+            }
         } else {
             self.panes[self.active_index].render(area, buf, state);
         }
