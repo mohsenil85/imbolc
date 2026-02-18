@@ -8,7 +8,7 @@ use crate::ui::{
     PaneIdStr, Rect, RenderBuf, Style, TrackAction,
 };
 use imbolc_types::FilterSlope;
-use imbolc_types::{BusId, EqualizerParamKind, MixerSelection};
+use imbolc_types::{BusId, EqualizerParamKind, GroupId, MixerSelection};
 
 use crate::state::track::EqBand;
 
@@ -25,7 +25,7 @@ pub enum EqMode {
 #[derive(Debug, Clone, Copy)]
 enum EqTarget {
     Track(TrackId),
-    Group(u32),
+    Group(GroupId),
     Bus(BusId),
     Master,
 }
@@ -62,8 +62,8 @@ fn resolve_target(mode: EqMode, state: &AppState) -> Option<(EqTarget, Option<&E
             Some((EqTarget::Master, eq, "Master".to_string()))
         }
         EqMode::Channel => match state.session.mixer.selection {
-            MixerSelection::Track(idx) => {
-                let track = state.tracks.tracks.get(idx)?;
+            MixerSelection::Track(id) => {
+                let track = state.tracks.track(id)?;
                 let eq = track.eq();
                 Some((EqTarget::Track(track.id), eq, track.name.clone()))
             }

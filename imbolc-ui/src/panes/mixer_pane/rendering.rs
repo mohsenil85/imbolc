@@ -6,7 +6,7 @@ use super::{
 use crate::state::{AppState, MixerSelection, OutputTarget, ParamValue};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{Color, Rect, RenderBuf, Style};
-use imbolc_types::BusId;
+use imbolc_types::{BusId, GroupId};
 
 impl MixerPane {
     fn level_to_db(level: f32) -> String {
@@ -89,7 +89,8 @@ impl MixerPane {
 
         // Calculate scroll offsets
         let instrument_scroll = match state.session.mixer.selection {
-            MixerSelection::Track(idx) => {
+            MixerSelection::Track(id) => {
+                let idx = state.tracks.track_index(id).unwrap_or(0);
                 Self::calc_scroll_offset(idx, state.tracks.tracks.len(), NUM_VISIBLE_CHANNELS)
             }
             _ => 0,
@@ -119,8 +120,7 @@ impl MixerPane {
             let idx = instrument_scroll + i;
             if idx < state.tracks.tracks.len() {
                 let instrument = &state.tracks.tracks[idx];
-                let is_selected =
-                    matches!(state.session.mixer.selection, MixerSelection::Track(s) if s == idx);
+                let is_selected = matches!(state.session.mixer.selection, MixerSelection::Track(id) if id == instrument.id);
 
                 let label = if instrument.layer.group.is_some() {
                     format!("I{}L", instrument.id)
@@ -271,7 +271,7 @@ impl MixerPane {
         let send_y = output_y + 1;
         if let Some(bus_id) = self.send_target {
             let send_info = match state.session.mixer.selection {
-                MixerSelection::Track(idx) => state.tracks.tracks.get(idx).and_then(|instrument| {
+                MixerSelection::Track(id) => state.tracks.track(id).and_then(|instrument| {
                     instrument.channel_strip.sends.get(&bus_id).map(|send| {
                         let status = if send.enabled { "ON" } else { "OFF" };
                         format!("Send→B{}: {:.0}% [{}]", bus_id, send.level * 100.0, status)
@@ -636,7 +636,7 @@ impl MixerPane {
         buf: &mut RenderBuf,
         area: Rect,
         state: &AppState,
-        group_id: u32,
+        group_id: GroupId,
     ) {
         let gm = match state.session.mixer.layer_group_mixer(group_id) {
             Some(gm) => gm,

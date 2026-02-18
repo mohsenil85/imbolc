@@ -1873,7 +1873,7 @@ mod tests {
             |d: &mut DirtyFlags| d.piano_roll_structural = true,
             |d: &mut DirtyFlags| d.arrangement = true,
             |d: &mut DirtyFlags| {
-                d.dirty_automation_lanes.insert(0);
+                d.dirty_automation_lanes.insert(AutomationLaneId::new(0));
             },
             |d: &mut DirtyFlags| d.automation_structural = true,
             |d: &mut DirtyFlags| {
@@ -1900,7 +1900,10 @@ mod tests {
             dirty_piano_roll_tracks: HashSet::from([TrackId::new(0), TrackId::new(1)]),
             piano_roll_structural: true,
             arrangement: true,
-            dirty_automation_lanes: HashSet::from([0, 1]),
+            dirty_automation_lanes: HashSet::from([
+                AutomationLaneId::new(0),
+                AutomationLaneId::new(1),
+            ]),
             automation_structural: true,
             dirty_mixer_buses: HashSet::from([BusId::new(1), BusId::new(2)]),
             mixer_structural: true,
@@ -1968,10 +1971,16 @@ mod tests {
         // AddPoint → per-lane
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Automation(AutomationAction::AddPoint(42, 100, 0.5)),
+            &NetworkAction::Automation(AutomationAction::AddPoint(
+                AutomationLaneId::new(42),
+                100,
+                0.5,
+            )),
             None,
         );
-        assert!(d.dirty_automation_lanes.contains(&42));
+        assert!(d
+            .dirty_automation_lanes
+            .contains(&AutomationLaneId::new(42)));
         assert!(!d.automation_structural);
 
         // AddLane → structural
@@ -1991,7 +2000,11 @@ mod tests {
     fn dirty_automation_copypoints_is_noop() {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
-            &NetworkAction::Automation(AutomationAction::CopyPoints(1, 0, 100)),
+            &NetworkAction::Automation(AutomationAction::CopyPoints(
+                AutomationLaneId::new(1),
+                0,
+                100,
+            )),
             None,
         );
         assert!(!d.any(), "CopyPoints should not dirty anything");
@@ -2026,7 +2039,7 @@ mod tests {
         let mut d = DirtyFlags::default();
         d.mark_from_action(
             &NetworkAction::Group(imbolc_types::GroupAction::AddEffect(
-                0,
+                imbolc_types::GroupId::new(0),
                 imbolc_types::EffectType::Delay,
             )),
             None,

@@ -7,7 +7,7 @@ use crate::panes::add_effect_pane::EffectTarget;
 use crate::state::{AppState, TrackId};
 use crate::ui::action_id::ActionId;
 use crate::ui::{Action, InputEvent, Keymap, MouseEvent, Pane, PaneIdStr, Rect, RenderBuf};
-use imbolc_types::BusId;
+use imbolc_types::{BusId, GroupId};
 
 const CHANNEL_WIDTH: u16 = 8;
 const METER_HEIGHT: u16 = 12;
@@ -22,8 +22,8 @@ const BLOCK_CHARS: [char; 8] = [
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DetailTarget {
-    Track(usize),
-    Group(u32),
+    Track(TrackId),
+    Group(GroupId),
     Bus(BusId),
     Master,
 }
@@ -158,13 +158,17 @@ impl MixerPane {
         self.send_target
     }
 
-    /// Get the instrument index and ID for the current detail mode target (instrument only)
+    /// Get the instrument for the current detail mode target (instrument only)
     fn detail_instrument<'a>(
         &self,
         state: &'a AppState,
     ) -> Option<(usize, &'a crate::state::Track)> {
         match self.detail_mode? {
-            DetailTarget::Track(idx) => state.tracks.tracks.get(idx).map(|inst| (idx, inst)),
+            DetailTarget::Track(id) => {
+                let idx = state.tracks.track_index(id)?;
+                let inst = state.tracks.tracks.get(idx)?;
+                Some((idx, inst))
+            }
             DetailTarget::Group(_) | DetailTarget::Bus(_) | DetailTarget::Master => None,
         }
     }
@@ -174,7 +178,7 @@ impl MixerPane {
     }
 
     /// Get the layer group ID if in group detail mode
-    fn detail_group_id(&self) -> Option<u32> {
+    fn detail_group_id(&self) -> Option<GroupId> {
         match self.detail_mode? {
             DetailTarget::Group(gid) => Some(gid),
             _ => None,
@@ -365,7 +369,7 @@ mod tests {
     use crate::ui::{
         BusAction, GroupAction, InputEvent, KeyCode, MixerAction, Modifiers, NavAction,
     };
-    use imbolc_types::BusId;
+    use imbolc_types::{BusId, GroupId};
 
     fn dummy_event() -> InputEvent {
         InputEvent::new(KeyCode::Char('x'), Modifiers::default())
@@ -455,8 +459,11 @@ mod tests {
     fn group_detail_entry_starts_on_effects() {
         let mut pane = MixerPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
-        state.session.mixer.selection = MixerSelection::Group(1);
+        state
+            .session
+            .mixer
+            .add_layer_group_mixer(GroupId::new(1), &[]);
+        state.session.mixer.selection = MixerSelection::Group(GroupId::new(1));
 
         let action = pane.handle_action(
             ActionId::Mixer(MixerActionId::EnterDetail),
@@ -464,7 +471,7 @@ mod tests {
             &state,
         );
         assert!(matches!(action, Action::None));
-        assert_eq!(pane.detail_mode, Some(DetailTarget::Group(1)));
+        assert_eq!(pane.detail_mode, Some(DetailTarget::Group(GroupId::new(1))));
         assert_eq!(pane.group_detail_section, GroupDetailSection::Effects);
     }
 
@@ -561,8 +568,11 @@ mod tests {
     fn group_detail_section_cycling() {
         let mut pane = MixerPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
-        state.session.mixer.selection = MixerSelection::Group(1);
+        state
+            .session
+            .mixer
+            .add_layer_group_mixer(GroupId::new(1), &[]);
+        state.session.mixer.selection = MixerSelection::Group(GroupId::new(1));
 
         pane.handle_action(
             ActionId::Mixer(MixerActionId::EnterDetail),
@@ -597,24 +607,27 @@ mod tests {
     fn group_detail_remove_effect() {
         let mut pane = MixerPane::new(Keymap::new());
         let mut state = AppState::new();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
         state
             .session
             .mixer
-            .layer_group_mixer_mut(1)
+            .add_layer_group_mixer(GroupId::new(1), &[]);
+        state
+            .session
+            .mixer
+            .layer_group_mixer_mut(GroupId::new(1))
             .unwrap()
             .channel_strip
             .add_effect(crate::state::EffectType::Delay);
         let effect_id = state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .channel_strip
             .effects_vec()[0]
             .id;
 
-        state.session.mixer.selection = MixerSelection::Group(1);
+        state.session.mixer.selection = MixerSelection::Group(GroupId::new(1));
         pane.handle_action(
             ActionId::Mixer(MixerActionId::EnterDetail),
             &dummy_event(),
@@ -627,7 +640,7 @@ mod tests {
             &state,
         );
         assert!(
-            matches!(action, Action::Group(GroupAction::RemoveEffect(1, id)) if id == effect_id)
+            matches!(action, Action::Group(GroupAction::RemoveEffect(gid, id)) if gid == GroupId::new(1) && id == effect_id)
         );
     }
 
@@ -639,7 +652,7 @@ mod tests {
         pane.detail_mode = Some(DetailTarget::Bus(BusId::new(2)));
         assert_eq!(pane.effect_target(), EffectTarget::Bus(BusId::new(2)));
 
-        pane.detail_mode = Some(DetailTarget::Group(5));
-        assert_eq!(pane.effect_target(), EffectTarget::Group(5));
+        pane.detail_mode = Some(DetailTarget::Group(GroupId::new(5)));
+        assert_eq!(pane.effect_target(), EffectTarget::Group(GroupId::new(5)));
     }
 }

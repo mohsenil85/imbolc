@@ -170,7 +170,8 @@ pub(super) fn load_layer_group_mixers(
         })?
         .collect::<SqlResult<_>>()?;
 
-    for (group_id, name, level, pan, mute, solo, output_target_str) in rows {
+    for (group_id_raw, name, level, pan, mute, solo, output_target_str) in rows {
+        let group_id = imbolc_types::GroupId::new(group_id_raw);
         let output_target = decode_output_target(&output_target_str);
 
         // Load sends
@@ -184,7 +185,7 @@ pub(super) fn load_layer_group_mixers(
         };
         let mut send_stmt = conn.prepare(group_send_query)?;
         let sends: std::collections::BTreeMap<BusId, MixerSend> = send_stmt
-            .query_map(params![group_id as i32], |row| {
+            .query_map(params![group_id_raw as i32], |row| {
                 let tap_point = if has_group_tap_point {
                     decode_tap_point(&row.get::<_, String>(3)?)
                 } else {
@@ -224,7 +225,7 @@ pub(super) fn load_layer_group_mixers(
                 "layer_group_effect_params",
                 "layer_group_effect_vst_params",
                 "group_id",
-                group_id,
+                group_id_raw,
             )?;
             for effect in effects {
                 gm.channel_strip
@@ -239,7 +240,7 @@ pub(super) fn load_layer_group_mixers(
             let eq_enabled: i32 = conn
                 .query_row(
                     "SELECT eq_enabled FROM layer_group_mixers WHERE group_id = ?1",
-                    [group_id],
+                    [group_id_raw],
                     |row| row.get(0),
                 )
                 .unwrap_or(0);
@@ -249,7 +250,7 @@ pub(super) fn load_layer_group_mixers(
                     "SELECT band_index, freq, gain, q, enabled FROM layer_group_eq_bands WHERE group_id = ?1 ORDER BY band_index"
                 )?;
                 let bands = band_stmt
-                    .query_map([group_id], |row| {
+                    .query_map([group_id_raw], |row| {
                         let band_index: usize = row.get::<_, i32>(0)? as usize;
                         let freq: f32 = row.get(1)?;
                         let gain: f32 = row.get(2)?;

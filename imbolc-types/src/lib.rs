@@ -70,6 +70,28 @@ impl std::fmt::Display for BusId {
     }
 }
 
+/// Unique identifier for a layer group.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+#[serde(transparent)]
+pub struct GroupId(u32);
+
+impl GroupId {
+    pub fn new(id: u32) -> Self {
+        Self(id)
+    }
+    pub fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl std::fmt::Display for GroupId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Unique identifier for an effect slot within an instrument.
 #[derive(
     Debug,
@@ -187,3 +209,41 @@ impl std::fmt::Display for ParamIndex {
         write!(f, "{}", self.0)
     }
 }
+
+macro_rules! define_id {
+    ($(#[$meta:meta])* $name:ident) => {
+        $(#[$meta])*
+        #[derive(
+            Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash,
+            serde::Serialize, serde::Deserialize,
+        )]
+        #[serde(transparent)]
+        pub struct $name(u32);
+
+        impl $name {
+            pub fn new(id: u32) -> Self { Self(id) }
+            pub fn get(self) -> u32 { self.0 }
+            /// Return a new ID with value incremented by 1.
+            pub fn next(self) -> Self { Self(self.0 + 1) }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+    };
+}
+
+define_id!(/// Unique identifier for an arrangement clip.
+    ClipId);
+define_id!(/// Unique identifier for a clip placement instance.
+    ClipInstanceId);
+define_id!(/// Unique identifier for an audio clip.
+    AudioClipId);
+define_id!(/// Unique identifier for an automation lane.
+    AutomationLaneId);
+define_id!(/// Unique identifier for a sample buffer.
+    BufferId);
+define_id!(/// Unique identifier for a sample slice.
+    SliceId);

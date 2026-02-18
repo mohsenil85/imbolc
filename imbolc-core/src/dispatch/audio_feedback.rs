@@ -65,7 +65,7 @@ pub fn dispatch_audio_feedback(
 
             // Convert instrument to PitchedSampler
             let buffer_id = state.tracks.next_sampler_buffer_id;
-            state.tracks.next_sampler_buffer_id += 1;
+            state.tracks.next_sampler_buffer_id = buffer_id.next();
             let path_str = path.to_string_lossy().to_string();
             let _ = audio.load_sample(buffer_id, &path_str);
 
@@ -75,7 +75,7 @@ pub fn dispatch_audio_feedback(
                 inst.source_params = SourceType::PitchedSampler.default_params();
                 // Override buffer param with our rendered WAV
                 if let Some(p) = inst.source_params.iter_mut().find(|p| p.name == "buffer") {
-                    p.value = ParamValue::Int(buffer_id as i32);
+                    p.value = ParamValue::Int(buffer_id.get() as i32);
                 }
             }
 
@@ -121,7 +121,7 @@ pub fn dispatch_audio_feedback(
                 }
                 if audio.is_running() {
                     let preview_buffer_id = state.tracks.next_sampler_buffer_id;
-                    state.tracks.next_sampler_buffer_id += 1;
+                    state.tracks.next_sampler_buffer_id = preview_buffer_id.next();
                     let path_str = final_path.to_string_lossy().to_string();
                     match audio.load_sample(preview_buffer_id, &path_str) {
                         Ok(_) => {

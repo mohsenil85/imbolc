@@ -107,7 +107,7 @@ pub fn dispatch_master(
 mod tests {
     use super::*;
     use crate::state::EffectType;
-    use imbolc_types::{EffectId, ParamIndex};
+    use imbolc_types::ParamIndex;
 
     fn setup() -> (AppState, AudioHandle) {
         (AppState::new(), AudioHandle::new())

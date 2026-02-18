@@ -1,7 +1,8 @@
 //! Drum sequencer types.
 
-use super::sampler::{BufferId, Slice, SliceId};
+use super::sampler::Slice;
 use crate::TrackId;
+use crate::{BufferId, SliceId};
 use serde::{Deserialize, Serialize};
 
 pub const NUM_PADS: usize = 12;
@@ -211,7 +212,7 @@ impl DrumSequencerState {
             current_pattern: 0,
             playing: false,
             current_step: 0,
-            next_buffer_id: 10000,
+            next_buffer_id: BufferId::new(10000),
             step_accumulator: 0.0,
             last_played_step: None,
             chopper: None,

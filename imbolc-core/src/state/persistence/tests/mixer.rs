@@ -5,7 +5,7 @@ use crate::state::param::ParamValue;
 use crate::state::session::SessionState;
 use crate::state::track::{EffectType, FilterType, SourceType};
 use crate::state::track_state::TrackState;
-use imbolc_types::BusId;
+use imbolc_types::{BusId, GroupId};
 
 #[test]
 fn round_trip_bus_effects() {
@@ -101,15 +101,20 @@ fn round_trip_layer_group_effects() {
 
     // Assign instrument to group 1
     if let Some(inst) = tracks.track_mut(inst_id) {
-        inst.layer.group = Some(1);
+        inst.layer.group = Some(GroupId::new(1));
     }
 
     // Add layer group mixer
     let bus_ids: Vec<BusId> = session.bus_ids().collect();
-    session.mixer.add_layer_group_mixer(1, &bus_ids);
+    session
+        .mixer
+        .add_layer_group_mixer(GroupId::new(1), &bus_ids);
 
     // Add effects to layer group mixer
-    let gm = session.mixer.layer_group_mixer_mut(1).unwrap();
+    let gm = session
+        .mixer
+        .layer_group_mixer_mut(GroupId::new(1))
+        .unwrap();
     let comp_id = gm.channel_strip.add_effect(EffectType::TapeComp);
     let lim_id = gm.channel_strip.add_effect(EffectType::Limiter);
 
@@ -130,7 +135,7 @@ fn round_trip_layer_group_effects() {
         .mixer
         .layer_group_mixers
         .iter()
-        .find(|g| g.group_id == 1)
+        .find(|g| g.group_id == GroupId::new(1))
         .unwrap();
     assert_eq!(loaded_gm.channel_strip.effects_vec().len(), 2);
     assert_eq!(
@@ -159,15 +164,20 @@ fn round_trip_layer_group_eq() {
 
     // Assign instrument to group 1
     if let Some(inst) = tracks.track_mut(inst_id) {
-        inst.layer.group = Some(1);
+        inst.layer.group = Some(GroupId::new(1));
     }
 
     // Add layer group mixer (comes with default EQ)
     let bus_ids: Vec<BusId> = session.bus_ids().collect();
-    session.mixer.add_layer_group_mixer(1, &bus_ids);
+    session
+        .mixer
+        .add_layer_group_mixer(GroupId::new(1), &bus_ids);
 
     // Verify EQ is present and modify some bands
-    let gm = session.mixer.layer_group_mixer_mut(1).unwrap();
+    let gm = session
+        .mixer
+        .layer_group_mixer_mut(GroupId::new(1))
+        .unwrap();
     assert!(gm.eq().is_some());
     if let Some(eq) = gm.eq_mut() {
         eq.bands[0].freq = 80.0;
@@ -189,7 +199,7 @@ fn round_trip_layer_group_eq() {
         .mixer
         .layer_group_mixers
         .iter()
-        .find(|g| g.group_id == 1)
+        .find(|g| g.group_id == GroupId::new(1))
         .unwrap();
     let loaded_eq = loaded_gm.eq().expect("EQ should be present after load");
     assert_eq!(loaded_eq.bands.len(), 6);
@@ -217,14 +227,19 @@ fn round_trip_layer_group_eq_disabled() {
     let inst_id = tracks.add_track(SourceType::Saw);
 
     if let Some(inst) = tracks.track_mut(inst_id) {
-        inst.layer.group = Some(1);
+        inst.layer.group = Some(GroupId::new(1));
     }
 
     let bus_ids: Vec<BusId> = session.bus_ids().collect();
-    session.mixer.add_layer_group_mixer(1, &bus_ids);
+    session
+        .mixer
+        .add_layer_group_mixer(GroupId::new(1), &bus_ids);
 
     // Toggle EQ off
-    let gm = session.mixer.layer_group_mixer_mut(1).unwrap();
+    let gm = session
+        .mixer
+        .layer_group_mixer_mut(GroupId::new(1))
+        .unwrap();
     gm.toggle_eq(); // was Some → now None
     assert!(gm.eq().is_none());
 
@@ -238,7 +253,7 @@ fn round_trip_layer_group_eq_disabled() {
         .mixer
         .layer_group_mixers
         .iter()
-        .find(|g| g.group_id == 1)
+        .find(|g| g.group_id == GroupId::new(1))
         .unwrap();
     assert!(
         loaded_gm.eq().is_none(),

@@ -5,9 +5,9 @@ use super::{
     VST_UGEN_INDEX,
 };
 use imbolc_types::{
-    BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, GroupMixer, MixerBus,
-    ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType, SourceTypeExt, Track,
-    TrackId, TrackState,
+    BufferId, BusId, CustomSynthDefRegistry, EffectId, EffectType, FilterType, GroupId, GroupMixer,
+    MixerBus, ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType, SourceTypeExt,
+    Track, TrackId, TrackState,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -365,7 +365,7 @@ impl AudioEngine {
                     };
                     let sc_bufnum = if buffer_id >= 0 {
                         self.buffer_map
-                            .get(&(buffer_id as u32))
+                            .get(&BufferId::new(buffer_id as u32))
                             .copied()
                             .unwrap_or(-1) as f32
                     } else {
@@ -688,7 +688,7 @@ impl AudioEngine {
                     };
                     let sc_bufnum = if buffer_id >= 0 {
                         self.buffer_map
-                            .get(&(buffer_id as u32))
+                            .get(&BufferId::new(buffer_id as u32))
                             .copied()
                             .unwrap_or(-1) as f32
                     } else {
@@ -787,7 +787,7 @@ impl AudioEngine {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
             let effect_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                TrackId::new(u32::MAX - 256 - gm.group_id),
+                TrackId::new(u32::MAX - 256 - gm.group_id.get()),
                 &format!("group_fx_{}_out", effect.id),
             );
 
@@ -809,7 +809,7 @@ impl AudioEngine {
                     };
                     let sc_bufnum = if buffer_id >= 0 {
                         self.buffer_map
-                            .get(&(buffer_id as u32))
+                            .get(&BufferId::new(buffer_id as u32))
                             .copied()
                             .unwrap_or(-1) as f32
                     } else {
@@ -858,9 +858,10 @@ impl AudioEngine {
         if let Some(eq) = gm.eq() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
-            let eq_out_bus = self
-                .bus_allocator
-                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - gm.group_id), "group_eq_out");
+            let eq_out_bus = self.bus_allocator.get_or_alloc_audio_bus(
+                TrackId::new(u32::MAX - 256 - gm.group_id.get()),
+                "group_eq_out",
+            );
 
             let mut params: Vec<(String, f32)> = vec![
                 ("in".to_string(), current_bus as f32),
@@ -981,9 +982,10 @@ impl AudioEngine {
 
         // Allocate audio buses for each active layer group
         for group_id in state.active_layer_groups() {
-            let group_bus = self
-                .bus_allocator
-                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - group_id), "layer_group_out");
+            let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
+                TrackId::new(u32::MAX - 256 - group_id.get()),
+                "layer_group_out",
+            );
             self.layer_group_audio_buses.insert(group_id, group_bus);
         }
 
@@ -1243,9 +1245,10 @@ impl AudioEngine {
         // Keep existing bus_audio_buses — they don't change for bus effect rebuilds
         self.layer_group_audio_buses.clear();
         for group_id in state.active_layer_groups() {
-            let group_bus = self
-                .bus_allocator
-                .get_or_alloc_audio_bus(TrackId::new(u32::MAX - 256 - group_id), "layer_group_out");
+            let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
+                TrackId::new(u32::MAX - 256 - group_id.get()),
+                "layer_group_out",
+            );
             self.layer_group_audio_buses.insert(group_id, group_bus);
         }
 
@@ -1505,7 +1508,7 @@ impl AudioEngine {
                 // Allocate audio buses for each active layer group
                 for group_id in state.active_layer_groups() {
                     let group_bus = self.bus_allocator.get_or_alloc_audio_bus(
-                        TrackId::new(u32::MAX - 256 - group_id),
+                        TrackId::new(u32::MAX - 256 - group_id.get()),
                         "layer_group_out",
                     );
                     self.layer_group_audio_buses.insert(group_id, group_bus);
@@ -1698,7 +1701,7 @@ impl AudioEngine {
     /// Set layer group output mixer params (level, mute, pan) in real-time
     pub fn set_layer_group_mixer_params(
         &self,
-        group_id: u32,
+        group_id: GroupId,
         level: f32,
         mute: bool,
         pan: f32,
@@ -1907,7 +1910,7 @@ impl AudioEngine {
     /// Set a layer group effect parameter in real-time (targeted /n_set, no rebuild).
     pub fn set_layer_group_effect_param(
         &self,
-        group_id: u32,
+        group_id: GroupId,
         effect_id: EffectId,
         param: &str,
         value: f32,
@@ -1928,7 +1931,7 @@ impl AudioEngine {
     /// Set a layer group EQ parameter in real-time (targeted /n_set, no rebuild).
     pub fn set_layer_group_eq_param(
         &self,
-        group_id: u32,
+        group_id: GroupId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {
@@ -2058,7 +2061,7 @@ impl AudioEngine {
                         };
                         let sc_bufnum = if buffer_id >= 0 {
                             self.buffer_map
-                                .get(&(buffer_id as u32))
+                                .get(&BufferId::new(buffer_id as u32))
                                 .copied()
                                 .unwrap_or(-1) as f32
                         } else {

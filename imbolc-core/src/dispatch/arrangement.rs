@@ -760,7 +760,7 @@ mod tests {
 
         // Should not panic
         dispatch_arrangement(
-            &ArrangementAction::RenameClip(9999, "Nope".to_string()),
+            &ArrangementAction::RenameClip(imbolc_types::ClipId::new(9999), "Nope".to_string()),
             &mut state,
             &mut audio,
         );
@@ -1112,7 +1112,7 @@ mod tests {
         let (mut state, mut audio) = setup();
 
         dispatch_arrangement(
-            &ArrangementAction::DuplicateClipInstance(9999),
+            &ArrangementAction::DuplicateClipInstance(imbolc_types::ClipInstanceId::new(9999)),
             &mut state,
             &mut audio,
         );

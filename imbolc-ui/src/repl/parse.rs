@@ -205,6 +205,16 @@ impl ReplParseable for BusId {
     }
 }
 
+impl ReplParseable for GroupId {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        let id: u32 = s.parse().map_err(|_| format!("invalid group id: {s}"))?;
+        Ok(GroupId::new(id))
+    }
+    fn type_hint() -> &'static str {
+        "<group_id>"
+    }
+}
+
 impl ReplParseable for ParamIndex {
     fn parse_repl(s: &str) -> Result<Self, String> {
         let idx: usize = s.parse().map_err(|_| format!("invalid param index: {s}"))?;
@@ -222,6 +232,38 @@ impl ReplParseable for GenVoiceId {
     }
     fn type_hint() -> &'static str {
         "<voice_id>"
+    }
+}
+
+impl ReplParseable for ClipId {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        let id: u32 = s.parse().map_err(|_| format!("invalid clip id: {s}"))?;
+        Ok(ClipId::new(id))
+    }
+    fn type_hint() -> &'static str {
+        "<clip_id>"
+    }
+}
+
+impl ReplParseable for ClipInstanceId {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        let id: u32 = s
+            .parse()
+            .map_err(|_| format!("invalid clip instance id: {s}"))?;
+        Ok(ClipInstanceId::new(id))
+    }
+    fn type_hint() -> &'static str {
+        "<placement_id>"
+    }
+}
+
+impl ReplParseable for AutomationLaneId {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        let id: u32 = s.parse().map_err(|_| format!("invalid lane id: {s}"))?;
+        Ok(AutomationLaneId::new(id))
+    }
+    fn type_hint() -> &'static str {
+        "<lane_id>"
     }
 }
 
@@ -321,10 +363,10 @@ impl ReplParseable for MixerSelection {
             return Ok(MixerSelection::Master);
         }
         if let Some(rest) = s.strip_prefix("track:") {
-            let idx: usize = rest
+            let id: u32 = rest
                 .parse()
-                .map_err(|_| format!("invalid track index: {rest}"))?;
-            return Ok(MixerSelection::Track(idx));
+                .map_err(|_| format!("invalid track id: {rest}"))?;
+            return Ok(MixerSelection::Track(TrackId::new(id)));
         }
         if let Some(rest) = s.strip_prefix("bus:") {
             let id: u8 = rest
@@ -336,10 +378,10 @@ impl ReplParseable for MixerSelection {
             let id: u32 = rest
                 .parse()
                 .map_err(|_| format!("invalid group id: {rest}"))?;
-            return Ok(MixerSelection::Group(id));
+            return Ok(MixerSelection::Group(GroupId::new(id)));
         }
         Err(format!(
-            "invalid mixer selection: {s} (try: master, track:0, bus:1, group:0)"
+            "invalid mixer selection: {s} (try: master, track:<id>, bus:1, group:0)"
         ))
     }
     fn type_hint() -> &'static str {
@@ -487,7 +529,7 @@ mod tests {
         );
         assert_eq!(
             MixerSelection::parse_repl("track:0").unwrap(),
-            MixerSelection::Track(0)
+            MixerSelection::Track(TrackId::new(0))
         );
         assert_eq!(
             MixerSelection::parse_repl("bus:1").unwrap(),

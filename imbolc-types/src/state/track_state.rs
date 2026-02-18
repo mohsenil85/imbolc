@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::drum_sequencer::DrumSequencerState;
 use super::track::{SourceType, Track};
-use crate::TrackId;
+use crate::{BufferId, GroupId, TrackId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrackState {
@@ -14,12 +14,12 @@ pub struct TrackState {
     pub selected: Option<usize>,
     pub next_id: TrackId,
     #[serde(default = "default_sampler_buffer_id")]
-    pub next_sampler_buffer_id: u32,
+    pub next_sampler_buffer_id: BufferId,
     /// Set by dispatch when editing a track; read by TrackEditPane on_enter
     #[serde(skip)]
     pub editing_track_id: Option<TrackId>,
     /// Counter for allocating layer group IDs
-    pub next_layer_group_id: u32,
+    pub next_layer_group_id: GroupId,
     /// Index from TrackId → Vec position for O(1) lookups.
     #[serde(skip)]
     id_index: HashMap<TrackId, usize>,
@@ -31,9 +31,9 @@ impl TrackState {
             tracks: Vec::new(),
             selected: None,
             next_id: TrackId::new(0),
-            next_sampler_buffer_id: 20000,
+            next_sampler_buffer_id: BufferId::new(20000),
             editing_track_id: None,
-            next_layer_group_id: 0,
+            next_layer_group_id: GroupId::new(0),
             id_index: HashMap::new(),
         }
     }
@@ -95,6 +95,21 @@ impl TrackState {
                 }
             }
         }
+    }
+
+    /// Returns the Vec index of a track by its ID.
+    pub fn track_index(&self, id: TrackId) -> Option<usize> {
+        if let Some(&idx) = self.id_index.get(&id) {
+            if self.tracks.get(idx).map(|t| t.id) == Some(id) {
+                return Some(idx);
+            }
+        }
+        self.tracks.iter().position(|t| t.id == id)
+    }
+
+    /// Returns the TrackId at a given Vec position.
+    pub fn track_id_at(&self, index: usize) -> Option<TrackId> {
+        self.tracks.get(index).map(|t| t.id)
     }
 
     pub fn track(&self, id: TrackId) -> Option<&Track> {
@@ -170,15 +185,15 @@ impl TrackState {
     }
 
     /// Allocate a new unique layer group ID
-    pub fn next_layer_group(&mut self) -> u32 {
+    pub fn next_layer_group(&mut self) -> GroupId {
         let id = self.next_layer_group_id;
-        self.next_layer_group_id += 1;
+        self.next_layer_group_id = GroupId::new(id.get() + 1);
         id
     }
 
     /// Returns sorted unique group IDs from tracks that have a layer_group set.
-    pub fn active_layer_groups(&self) -> Vec<u32> {
-        let mut groups: Vec<u32> = self.tracks.iter().filter_map(|i| i.layer.group).collect();
+    pub fn active_layer_groups(&self) -> Vec<GroupId> {
+        let mut groups: Vec<GroupId> = self.tracks.iter().filter_map(|i| i.layer.group).collect();
         groups.sort_unstable();
         groups.dedup();
         groups
@@ -206,8 +221,8 @@ impl Default for TrackState {
     }
 }
 
-fn default_sampler_buffer_id() -> u32 {
-    20000
+fn default_sampler_buffer_id() -> BufferId {
+    BufferId::new(20000)
 }
 
 #[cfg(test)]

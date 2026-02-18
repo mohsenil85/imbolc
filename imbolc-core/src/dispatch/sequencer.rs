@@ -5,6 +5,7 @@ use crate::state::drum_sequencer::{euclidean_rhythm, DrumPattern, DrumStep};
 use crate::state::sampler::Slice;
 use crate::state::{AppState, ClipboardContents};
 use imbolc_audio::AudioHandle;
+use imbolc_types::SliceId;
 
 use super::helpers::compute_waveform_peaks;
 
@@ -188,7 +189,7 @@ pub(super) fn dispatch_sequencer(
 
             // Allocate from global counter to avoid ID collisions after instrument deletion
             let buffer_id = state.tracks.next_sampler_buffer_id;
-            state.tracks.next_sampler_buffer_id += 1;
+            state.tracks.next_sampler_buffer_id = buffer_id.next();
 
             if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if audio.is_running() {
@@ -436,21 +437,21 @@ pub(super) fn dispatch_sample_slicer(
 
             // Allocate from global counter to avoid ID collisions after instrument deletion
             let buffer_id = state.tracks.next_sampler_buffer_id;
-            state.tracks.next_sampler_buffer_id += 1;
+            state.tracks.next_sampler_buffer_id = buffer_id.next();
 
             if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if audio.is_running() {
                     let _ = audio.load_sample(buffer_id, &path_str);
                 }
 
-                let initial_slice = Slice::full(0);
+                let initial_slice = Slice::full(SliceId::new(0));
                 seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                     buffer_id: Some(buffer_id),
                     path: Some(path_str),
                     name,
                     slices: vec![initial_slice],
                     selected_slice: 0,
-                    next_slice_id: 1,
+                    next_slice_id: SliceId::new(1),
                     waveform_peaks: peaks,
                     duration_secs,
                 });
@@ -475,7 +476,7 @@ pub(super) fn dispatch_sample_slicer(
                         chopper.slices[idx].end = cursor_pos;
 
                         let new_id = chopper.next_slice_id;
-                        chopper.next_slice_id += 1;
+                        chopper.next_slice_id = new_id.next();
                         let new_slice = Slice::new(new_id, cursor_pos, old_end);
                         chopper.slices.insert(idx + 1, new_slice);
                         chopper.selected_slice = idx + 1;
@@ -541,7 +542,7 @@ pub(super) fn dispatch_sample_slicer(
                         let start = i as f32 / n as f32;
                         let end = (i + 1) as f32 / n as f32;
                         let id = chopper.next_slice_id;
-                        chopper.next_slice_id += 1;
+                        chopper.next_slice_id = id.next();
                         chopper.slices.push(Slice::new(id, start, end));
                     }
                     chopper.selected_slice = 0;

@@ -209,7 +209,7 @@ mod tests {
     use super::*;
     use crate::state::automation::AutomationTarget;
     use crate::state::SourceType;
-    use imbolc_types::{BusId, OutputTarget, ParamIndex};
+    use imbolc_types::{BusId, GroupId, OutputTarget, ParamIndex};
 
     fn setup() -> (AppState, AudioHandle) {
         (AppState::new(), AudioHandle::new())
@@ -501,14 +501,18 @@ mod tests {
         state
             .session
             .mixer
-            .add_layer_group_mixer(1, &[BusId::new(1), BusId::new(2)]);
+            .add_layer_group_mixer(GroupId::new(1), &[BusId::new(1), BusId::new(2)]);
 
         let result = dispatch_group(
-            &GroupAction::AddEffect(1, EffectType::TapeComp),
+            &GroupAction::AddEffect(GroupId::new(1), EffectType::TapeComp),
             &mut state,
             &mut audio,
         );
-        let gm = state.session.mixer.layer_group_mixer(1).unwrap();
+        let gm = state
+            .session
+            .mixer
+            .layer_group_mixer(GroupId::new(1))
+            .unwrap();
         assert_eq!(gm.channel_strip.effects_vec().len(), 1);
         assert_eq!(
             gm.channel_strip.effects_vec()[0].effect_type,
@@ -523,32 +527,35 @@ mod tests {
     fn layer_group_remove_effect_dispatch() {
         use crate::state::EffectType;
         let (mut state, mut audio) = setup();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
         state
             .session
             .mixer
-            .layer_group_mixer_mut(1)
+            .add_layer_group_mixer(GroupId::new(1), &[]);
+        state
+            .session
+            .mixer
+            .layer_group_mixer_mut(GroupId::new(1))
             .unwrap()
             .channel_strip
             .add_effect(EffectType::Limiter);
         let effect_id = state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .channel_strip
             .effects_vec()[0]
             .id;
 
         dispatch_group(
-            &GroupAction::RemoveEffect(1, effect_id),
+            &GroupAction::RemoveEffect(GroupId::new(1), effect_id),
             &mut state,
             &mut audio,
         );
         assert!(state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .channel_strip
             .effects_vec()
@@ -559,25 +566,28 @@ mod tests {
     fn layer_group_toggle_bypass_dispatch() {
         use crate::state::EffectType;
         let (mut state, mut audio) = setup();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
         state
             .session
             .mixer
-            .layer_group_mixer_mut(1)
+            .add_layer_group_mixer(GroupId::new(1), &[]);
+        state
+            .session
+            .mixer
+            .layer_group_mixer_mut(GroupId::new(1))
             .unwrap()
             .channel_strip
             .add_effect(EffectType::Reverb);
         let effect_id = state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .channel_strip
             .effects_vec()[0]
             .id;
 
         dispatch_group(
-            &GroupAction::ToggleEffectBypass(1, effect_id),
+            &GroupAction::ToggleEffectBypass(GroupId::new(1), effect_id),
             &mut state,
             &mut audio,
         );
@@ -585,7 +595,7 @@ mod tests {
             !state
                 .session
                 .mixer
-                .layer_group_mixer(1)
+                .layer_group_mixer(GroupId::new(1))
                 .unwrap()
                 .channel_strip
                 .effects_vec()[0]
@@ -596,20 +606,27 @@ mod tests {
     #[test]
     fn layer_group_toggle_eq_dispatch() {
         let (mut state, mut audio) = setup();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
+        state
+            .session
+            .mixer
+            .add_layer_group_mixer(GroupId::new(1), &[]);
         assert!(state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .eq()
             .is_some());
 
-        let result = dispatch_group(&GroupAction::ToggleEqualizer(1), &mut state, &mut audio);
+        let result = dispatch_group(
+            &GroupAction::ToggleEqualizer(GroupId::new(1)),
+            &mut state,
+            &mut audio,
+        );
         assert!(state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .eq()
             .is_none());
@@ -618,11 +635,15 @@ mod tests {
             .contains(&AudioEffect::RebuildBusProcessing));
         assert!(result.audio_effects.contains(&AudioEffect::RebuildSession));
 
-        dispatch_group(&GroupAction::ToggleEqualizer(1), &mut state, &mut audio);
+        dispatch_group(
+            &GroupAction::ToggleEqualizer(GroupId::new(1)),
+            &mut state,
+            &mut audio,
+        );
         assert!(state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .eq()
             .is_some());
@@ -631,17 +652,20 @@ mod tests {
     #[test]
     fn layer_group_set_eq_param_dispatch() {
         let (mut state, mut audio) = setup();
-        state.session.mixer.add_layer_group_mixer(1, &[]);
+        state
+            .session
+            .mixer
+            .add_layer_group_mixer(GroupId::new(1), &[]);
 
         let result = dispatch_group(
-            &GroupAction::SetEqualizerParam(1, 0, EqualizerParamKind::Gain, 6.0),
+            &GroupAction::SetEqualizerParam(GroupId::new(1), 0, EqualizerParamKind::Gain, 6.0),
             &mut state,
             &mut audio,
         );
         let eq = state
             .session
             .mixer
-            .layer_group_mixer(1)
+            .layer_group_mixer(GroupId::new(1))
             .unwrap()
             .eq()
             .unwrap();

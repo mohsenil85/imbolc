@@ -358,7 +358,7 @@ fn mixer_scope(
     recording: bool,
 ) -> UndoScope {
     match session.mixer.selection {
-        super::session::MixerSelection::Track(idx) => match instruments.tracks.get(idx) {
+        super::session::MixerSelection::Track(id) => match instruments.track(id) {
             Some(inst) => {
                 if recording {
                     UndoScope::Full
@@ -414,7 +414,7 @@ pub fn coalesce_key(
         DomainAction::Mixer(
             MixerAction::AdjustLevel(_) | MixerAction::AdjustPan(_) | MixerAction::AdjustSend(_, _),
         ) => match session.mixer.selection {
-            super::session::MixerSelection::Track(idx) => match instruments.tracks.get(idx) {
+            super::session::MixerSelection::Track(id) => match instruments.track(id) {
                 Some(inst) => CoalesceKey::TrackParam(inst.id),
                 None => CoalesceKey::None,
             },

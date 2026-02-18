@@ -15,7 +15,7 @@ use super::piano_roll::PianoRollState;
 use super::theme::Theme;
 use super::track::MixerBus;
 use super::vst::VstPluginRegistry;
-use crate::BusId;
+use crate::{BusId, GroupId, TrackId};
 
 /// Click track (metronome) state.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -40,15 +40,15 @@ impl Default for ClickTrackState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MixerSelection {
-    Track(usize), // index into instruments vec
-    Group(u32),   // layer group ID
+    Track(TrackId),
+    Group(GroupId),
     Bus(BusId),
     Master,
 }
 
 impl Default for MixerSelection {
     fn default() -> Self {
-        Self::Track(0)
+        Self::Track(TrackId::new(0))
     }
 }
 
@@ -344,13 +344,17 @@ mod tests {
     #[test]
     fn mixer_cycle_section_full_cycle() {
         let mut session = SessionState::new();
-        assert!(matches!(session.mixer.selection, MixerSelection::Track(0)));
+        assert!(
+            matches!(session.mixer.selection, MixerSelection::Track(id) if id == TrackId::new(0))
+        );
         session.mixer_cycle_section();
         assert!(matches!(session.mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1)));
         session.mixer_cycle_section();
         assert!(matches!(session.mixer.selection, MixerSelection::Master));
         session.mixer_cycle_section();
-        assert!(matches!(session.mixer.selection, MixerSelection::Track(0)));
+        assert!(
+            matches!(session.mixer.selection, MixerSelection::Track(id) if id == TrackId::new(0))
+        );
     }
 
     #[test]

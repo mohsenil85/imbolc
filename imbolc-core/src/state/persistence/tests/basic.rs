@@ -11,7 +11,7 @@ use crate::state::track::{
 };
 use crate::state::track_state::TrackState;
 use crate::state::AutomationTarget;
-use imbolc_types::{BusId, CustomSynthDefId, EffectId, MixerSend, ParamIndex};
+use imbolc_types::{BufferId, BusId, CustomSynthDefId, EffectId, MixerSend, ParamIndex, SliceId};
 
 #[test]
 fn save_and_load_round_trip_basic() {
@@ -182,7 +182,7 @@ fn save_and_load_round_trip_complex() {
     // Sampler instrument: config and slices
     if let Some(inst) = tracks.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
-            config.buffer_id = Some(77);
+            config.buffer_id = Some(BufferId::new(77));
             config.sample_name = Some("kick.wav".to_string());
             config.loop_mode = true;
             config.pitch_tracking = false;
@@ -192,14 +192,14 @@ fn save_and_load_round_trip_complex() {
                 slice.root_note = 64;
             }
             config.selected_slice = 1;
-            config.set_next_slice_id(10);
+            config.set_next_slice_id(SliceId::new(10));
         }
     }
 
     // Kit instrument: pads, steps, and chopper state
     if let Some(inst) = tracks.track_mut(kit_id) {
         if let Some(seq) = inst.drum_sequencer_mut() {
-            seq.pads[0].buffer_id = Some(123);
+            seq.pads[0].buffer_id = Some(BufferId::new(123));
             seq.pads[0].path = Some("/tmp/kick.wav".to_string());
             seq.pads[0].name = "Kick".to_string();
             seq.pads[0].level = 0.9;
@@ -208,12 +208,15 @@ fn save_and_load_round_trip_complex() {
             seq.pattern_mut().steps[0][0].velocity = 110;
 
             seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
-                buffer_id: Some(55),
+                buffer_id: Some(BufferId::new(55)),
                 path: Some("/tmp/chop.wav".to_string()),
                 name: "Chop".to_string(),
-                slices: vec![Slice::new(0, 0.0, 0.5), Slice::new(1, 0.5, 1.0)],
+                slices: vec![
+                    Slice::new(SliceId::new(0), 0.0, 0.5),
+                    Slice::new(SliceId::new(1), 0.5, 1.0),
+                ],
                 selected_slice: 1,
-                next_slice_id: 2,
+                next_slice_id: SliceId::new(2),
                 waveform_peaks: vec![0.1, 0.2],
                 duration_secs: 1.23,
             });
@@ -324,7 +327,7 @@ fn save_and_load_round_trip_complex() {
         .unwrap();
     assert!(matches!(loaded_sampler.source, SourceType::PitchedSampler));
     let config = loaded_sampler.sampler_config().unwrap();
-    assert_eq!(config.buffer_id, Some(77));
+    assert_eq!(config.buffer_id, Some(BufferId::new(77)));
     assert_eq!(config.sample_name.as_deref(), Some("kick.wav"));
     assert!(config.loop_mode);
     assert!(!config.pitch_tracking);
@@ -332,7 +335,7 @@ fn save_and_load_round_trip_complex() {
     assert_eq!(config.slices.len(), 2);
     assert_eq!(config.slices[1].name, "Half");
     assert_eq!(config.slices[1].root_note, 64);
-    assert_eq!(config.next_slice_id(), 10);
+    assert_eq!(config.next_slice_id(), SliceId::new(10));
 
     let loaded_kit = loaded_instruments
         .tracks
@@ -340,13 +343,13 @@ fn save_and_load_round_trip_complex() {
         .find(|i| i.id == kit_id)
         .unwrap();
     let seq = loaded_kit.drum_sequencer().unwrap();
-    assert_eq!(seq.pads[0].buffer_id, Some(123));
+    assert_eq!(seq.pads[0].buffer_id, Some(BufferId::new(123)));
     assert_eq!(seq.pads[0].name, "Kick");
     assert!((seq.pads[0].level - 0.9).abs() < 0.001);
     assert!(seq.patterns[0].steps[0][0].active);
     assert_eq!(seq.patterns[0].steps[0][0].velocity, 110);
     let chopper = seq.chopper.as_ref().unwrap();
-    assert_eq!(chopper.buffer_id, Some(55));
+    assert_eq!(chopper.buffer_id, Some(BufferId::new(55)));
     assert_eq!(chopper.name, "Chop");
     assert_eq!(chopper.slices.len(), 2);
     assert_eq!(chopper.slices[0].name, "A");

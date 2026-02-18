@@ -9,7 +9,7 @@ use crate::ui::{
     Action, BusAction, GroupAction, InputEvent, MasterAction, MixerAction, MouseButton, MouseEvent,
     MouseEventKind, NavAction, PaneId, Rect, TrackAction,
 };
-use imbolc_types::{BusId, EffectId};
+use imbolc_types::{BusId, EffectId, GroupId};
 
 impl MixerPane {
     pub(super) fn handle_action_impl(
@@ -109,9 +109,9 @@ impl MixerPane {
             }
             ActionId::Mixer(MixerActionId::EnterDetail) => {
                 match state.session.mixer.selection {
-                    MixerSelection::Track(idx) => {
-                        if idx < state.tracks.tracks.len() {
-                            self.detail_mode = Some(DetailTarget::Track(idx));
+                    MixerSelection::Track(id) => {
+                        if state.tracks.track(id).is_some() {
+                            self.detail_mode = Some(DetailTarget::Track(id));
                             self.detail_section = MixerSection::Effects;
                             self.detail_cursor = 0;
                             self.effect_scroll = 0;
@@ -180,7 +180,8 @@ impl MixerPane {
 
         // Calculate scroll offsets (same as render)
         let instrument_scroll = match state.session.mixer.selection {
-            MixerSelection::Track(idx) => {
+            MixerSelection::Track(id) => {
+                let idx = state.tracks.track_index(id).unwrap_or(0);
                 Self::calc_scroll_offset(idx, state.tracks.tracks.len(), NUM_VISIBLE_CHANNELS)
             }
             _ => 0,
@@ -201,9 +202,11 @@ impl MixerPane {
                 if col >= base_x && col < inst_end_x {
                     let channel = ((col - base_x) / CHANNEL_WIDTH) as usize;
                     let idx = instrument_scroll + channel;
-                    if idx < state.tracks.tracks.len() {
+                    if let Some(track_id) = state.tracks.track_id_at(idx) {
                         self.send_target = None;
-                        return Action::Mixer(MixerAction::SelectAt(MixerSelection::Track(idx)));
+                        return Action::Mixer(MixerAction::SelectAt(MixerSelection::Track(
+                            track_id,
+                        )));
                     }
                 }
 
@@ -841,7 +844,7 @@ impl MixerPane {
         }
     }
 
-    fn adjust_group_detail_param(&self, state: &AppState, gid: u32, delta: f32) -> Action {
+    fn adjust_group_detail_param(&self, state: &AppState, gid: GroupId, delta: f32) -> Action {
         match self.group_detail_section {
             GroupDetailSection::Effects => {
                 if let Some((ei, Some(pi))) = self.decode_group_effect_cursor(state) {

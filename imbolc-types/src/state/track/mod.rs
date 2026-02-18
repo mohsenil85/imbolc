@@ -20,7 +20,7 @@ use super::channel_strip::ChannelStrip;
 use super::drum_sequencer::DrumSequencerState;
 use super::groove::GrooveConfig;
 use super::sampler::SamplerConfig;
-use crate::{BusId, EffectId, Param, ParamIndex, TrackId};
+use crate::{BusId, EffectId, GroupId, Param, ParamIndex, TrackId};
 
 /// Source-type-specific configuration, enforcing mutual exclusivity at compile time.
 /// Replaces the old `sampler_config`, `drum_sequencer`, `vst_param_values`, `vst_state_path` fields.
@@ -53,7 +53,7 @@ pub struct NoteInputConfig {
 /// Layer group membership and octave offset for an instrument.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub struct LayerConfig {
-    pub group: Option<u32>,
+    pub group: Option<GroupId>,
     pub octave_offset: i8,
 }
 
@@ -176,13 +176,13 @@ impl MixerBus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupMixer {
-    pub group_id: u32,
+    pub group_id: GroupId,
     pub name: String,
     pub channel_strip: ChannelStrip,
 }
 
 impl GroupMixer {
-    pub fn new(group_id: u32, _bus_ids: &[BusId]) -> Self {
+    pub fn new(group_id: GroupId, _bus_ids: &[BusId]) -> Self {
         Self {
             group_id,
             name: format!("Group {}", group_id),
@@ -917,7 +917,7 @@ mod tests {
 
     #[test]
     fn layer_group_mixer_new_has_eq() {
-        let gm = GroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
+        let gm = GroupMixer::new(GroupId::new(1), &[BusId::new(1), BusId::new(2)]);
         assert!(gm.eq().is_some());
         let eq = gm.eq().unwrap();
         assert!(eq.enabled);
@@ -929,7 +929,7 @@ mod tests {
 
     #[test]
     fn layer_group_mixer_toggle_eq() {
-        let mut gm = GroupMixer::new(1, &[]);
+        let mut gm = GroupMixer::new(GroupId::new(1), &[]);
         assert!(gm.eq().is_some());
         gm.toggle_eq();
         assert!(gm.eq().is_none());
@@ -939,7 +939,7 @@ mod tests {
 
     #[test]
     fn layer_group_mixer_eq_mut() {
-        let mut gm = GroupMixer::new(1, &[]);
+        let mut gm = GroupMixer::new(GroupId::new(1), &[]);
         if let Some(eq) = gm.eq_mut() {
             eq.bands[0].gain = 3.0;
         }

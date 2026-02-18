@@ -86,13 +86,15 @@ pub(crate) fn sync_piano_roll_to_selection(
             let active = panes.active().id().0;
             if active == "mixer" {
                 if let MixerSelection::Track(_) = dispatcher.state().session.mixer.selection {
-                    dispatch_side_effect_free(
-                        dispatcher,
-                        &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Track(
-                            selected_idx,
-                        ))),
-                        audio,
-                    );
+                    if let Some(track_id) = dispatcher.state().tracks.track_id_at(selected_idx) {
+                        dispatch_side_effect_free(
+                            dispatcher,
+                            &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Track(
+                                track_id,
+                            ))),
+                            audio,
+                        );
+                    }
                 }
             }
 
@@ -334,13 +336,15 @@ pub(crate) fn handle_global_action(
         // Sync mixer highlight to global instrument selection on entry
         if target == NavPaneId::Mixer {
             if let Some(selected_idx) = dispatcher.state().tracks.selected {
-                dispatch_side_effect_free(
-                    dispatcher,
-                    &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Track(
-                        selected_idx,
-                    ))),
-                    audio,
-                );
+                if let Some(track_id) = dispatcher.state().tracks.track_id_at(selected_idx) {
+                    dispatch_side_effect_free(
+                        dispatcher,
+                        &DomainAction::Mixer(MixerAction::SelectAt(MixerSelection::Track(
+                            track_id,
+                        ))),
+                        audio,
+                    );
+                }
             }
         }
         let new_view = capture_view(panes, dispatcher.state());
@@ -889,7 +893,7 @@ pub(crate) fn handle_global_action(
                                 let id = {
                                     let state = dispatcher.state_mut();
                                     let id = state.tracks.next_sampler_buffer_id;
-                                    state.tracks.next_sampler_buffer_id += 1;
+                                    state.tracks.next_sampler_buffer_id = id.next();
                                     state.recording.preview_buffer_id = Some(id);
                                     id
                                 };

@@ -10,7 +10,7 @@ use std::sync::mpsc::Sender;
 
 use imbolc_types::AutomationTarget;
 use imbolc_types::VstTarget;
-use imbolc_types::{BufferId, BusId, EffectId, TrackId};
+use imbolc_types::{BufferId, BusId, EffectId, GroupId, TrackId};
 
 /// Commands sent from the main thread to the audio engine.
 ///
@@ -76,7 +76,7 @@ pub enum AudioCmd {
         pan: f32,
     },
     SetGroupMixerParams {
-        group_id: u32,
+        group_id: GroupId,
         level: f32,
         mute: bool,
         pan: f32,
@@ -119,7 +119,7 @@ pub enum AudioCmd {
     },
     /// Targeted /n_set to layer group effect node (no routing rebuild).
     SetGroupEffectParam {
-        group_id: u32,
+        group_id: GroupId,
         effect_id: EffectId,
         param: String,
         value: f32,
@@ -132,7 +132,7 @@ pub enum AudioCmd {
     },
     /// Targeted /n_set to layer group EQ node (no routing rebuild).
     SetLayerGroupEqParam {
-        group_id: u32,
+        group_id: GroupId,
         param: String,
         value: f32,
     },

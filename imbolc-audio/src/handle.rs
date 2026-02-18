@@ -25,7 +25,7 @@ use imbolc_types::AudioEffect;
 use imbolc_types::Note;
 use imbolc_types::{ArrangementState, PlayMode};
 use imbolc_types::{AutomationLane, AutomationTarget};
-use imbolc_types::{BufferId, BusId, EffectId, TrackId};
+use imbolc_types::{BufferId, BusId, EffectId, GroupId, TrackId};
 
 /// Audio-owned read state: values that the audio thread is the authority on.
 /// UI reads these for display; audio feedback updates them.
@@ -868,7 +868,7 @@ impl AudioHandle {
 
     pub fn set_layer_group_mixer_params(
         &self,
-        group_id: u32,
+        group_id: GroupId,
         level: f32,
         mute: bool,
         pan: f32,
@@ -965,7 +965,7 @@ impl AudioHandle {
 
     pub fn set_layer_group_effect_param(
         &self,
-        group_id: u32,
+        group_id: GroupId,
         effect_id: EffectId,
         param: &str,
         value: f32,
@@ -988,7 +988,7 @@ impl AudioHandle {
 
     pub fn set_layer_group_eq_param(
         &self,
-        group_id: u32,
+        group_id: GroupId,
         param: &str,
         value: f32,
     ) -> Result<(), String> {

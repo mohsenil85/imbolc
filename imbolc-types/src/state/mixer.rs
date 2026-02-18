@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::channel_strip::ChannelStrip;
 use super::session::MixerSelection;
 use super::track::{EqConfig, GroupMixer, MixerBus};
-use crate::BusId;
+use crate::{BusId, GroupId, TrackId};
 
 /// Maximum number of buses allowed
 pub const MAX_BUSES: u8 = 32;
@@ -124,7 +124,7 @@ impl MixerState {
                 }
             }
             MixerSelection::Bus(_) => MixerSelection::Master,
-            MixerSelection::Master => MixerSelection::Track(0),
+            MixerSelection::Master => MixerSelection::Track(TrackId::new(0)),
         };
     }
 
@@ -140,21 +140,21 @@ impl MixerState {
     }
 
     /// Get a layer group mixer by group ID
-    pub fn layer_group_mixer(&self, group_id: u32) -> Option<&GroupMixer> {
+    pub fn layer_group_mixer(&self, group_id: GroupId) -> Option<&GroupMixer> {
         self.layer_group_mixers
             .iter()
             .find(|g| g.group_id == group_id)
     }
 
     /// Get a mutable layer group mixer by group ID
-    pub fn layer_group_mixer_mut(&mut self, group_id: u32) -> Option<&mut GroupMixer> {
+    pub fn layer_group_mixer_mut(&mut self, group_id: GroupId) -> Option<&mut GroupMixer> {
         self.layer_group_mixers
             .iter_mut()
             .find(|g| g.group_id == group_id)
     }
 
     /// Add a layer group mixer. Returns false if it already exists.
-    pub fn add_layer_group_mixer(&mut self, group_id: u32, bus_ids: &[BusId]) -> bool {
+    pub fn add_layer_group_mixer(&mut self, group_id: GroupId, bus_ids: &[BusId]) -> bool {
         if self.layer_group_mixer(group_id).is_some() {
             return false;
         }
@@ -164,7 +164,7 @@ impl MixerState {
     }
 
     /// Remove a layer group mixer by group ID. Returns true if found and removed.
-    pub fn remove_layer_group_mixer(&mut self, group_id: u32) -> bool {
+    pub fn remove_layer_group_mixer(&mut self, group_id: GroupId) -> bool {
         if let Some(idx) = self
             .layer_group_mixers
             .iter()
@@ -298,13 +298,13 @@ mod tests {
     #[test]
     fn cycle_section_full_cycle() {
         let mut mixer = MixerState::new();
-        assert!(matches!(mixer.selection, MixerSelection::Track(0)));
+        assert!(matches!(mixer.selection, MixerSelection::Track(id) if id == TrackId::new(0)));
         mixer.cycle_section();
         assert!(matches!(mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1)));
         mixer.cycle_section();
         assert!(matches!(mixer.selection, MixerSelection::Master));
         mixer.cycle_section();
-        assert!(matches!(mixer.selection, MixerSelection::Track(0)));
+        assert!(matches!(mixer.selection, MixerSelection::Track(id) if id == TrackId::new(0)));
     }
 
     #[test]
@@ -404,7 +404,7 @@ mod tests {
     fn layer_group_add_effect() {
         use crate::state::track::{EffectType, GroupMixer};
         use crate::EffectId;
-        let mut gm = GroupMixer::new(1, &[BusId::new(1), BusId::new(2)]);
+        let mut gm = GroupMixer::new(GroupId::new(1), &[BusId::new(1), BusId::new(2)]);
         let id = gm.channel_strip.add_effect(EffectType::TapeComp);
         assert_eq!(id, EffectId::new(0));
         let effects = gm.channel_strip.effects_vec();
@@ -415,7 +415,7 @@ mod tests {
     #[test]
     fn layer_group_remove_effect() {
         use crate::state::track::{EffectType, GroupMixer};
-        let mut gm = GroupMixer::new(1, &[]);
+        let mut gm = GroupMixer::new(GroupId::new(1), &[]);
         let id = gm.channel_strip.add_effect(EffectType::Limiter);
         assert!(gm.channel_strip.remove_effect(id));
         assert!(gm.channel_strip.effects_vec().is_empty());
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn layer_group_move_effect() {
         use crate::state::track::{EffectType, GroupMixer};
-        let mut gm = GroupMixer::new(1, &[]);
+        let mut gm = GroupMixer::new(GroupId::new(1), &[]);
         let id0 = gm.channel_strip.add_effect(EffectType::Reverb);
         let id1 = gm.channel_strip.add_effect(EffectType::Delay);
         assert!(gm.channel_strip.move_effect(id0, 1));

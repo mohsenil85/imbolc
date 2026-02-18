@@ -12,7 +12,7 @@ pub(super) fn handle_load_sample_result(
     let sample_name = path.file_stem().map(|s| s.to_string_lossy().to_string());
 
     let buffer_id = state.tracks.next_sampler_buffer_id;
-    state.tracks.next_sampler_buffer_id += 1;
+    state.tracks.next_sampler_buffer_id = buffer_id.next();
 
     if audio.is_running() {
         let _ = audio.load_sample(buffer_id, &path_str);

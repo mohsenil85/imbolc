@@ -5,8 +5,7 @@ use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, Para
 use crate::state::session::SessionState;
 use crate::state::track::{SourceExtra, SourceType};
 use crate::state::track_state::TrackState;
-use imbolc_types::CustomSynthDefId;
-use imbolc_types::VstPluginId;
+use imbolc_types::{BufferId, CustomSynthDefId, VstPluginId};
 
 #[test]
 fn round_trip_drum_sequencer() {
@@ -59,7 +58,7 @@ fn round_trip_sampler_config() {
 
     if let Some(inst) = tracks.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
-            config.buffer_id = Some(42);
+            config.buffer_id = Some(BufferId::new(42));
             config.sample_name = Some("test.wav".to_string());
             config.loop_mode = true;
             config.pitch_tracking = false;
@@ -83,7 +82,7 @@ fn round_trip_sampler_config() {
         .find(|i| i.id == sampler_id)
         .unwrap();
     let config = loaded.sampler_config().unwrap();
-    assert_eq!(config.buffer_id, Some(42));
+    assert_eq!(config.buffer_id, Some(BufferId::new(42)));
     assert_eq!(config.sample_name.as_deref(), Some("test.wav"));
     assert!(config.loop_mode);
     assert!(!config.pitch_tracking);

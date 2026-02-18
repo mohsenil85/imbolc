@@ -63,7 +63,7 @@ pub(super) fn load_automation(conn: &Connection, session: &mut SessionState) -> 
             target_bus_id,
             target_extra.as_deref(),
         );
-        let mut lane = AutomationLane::new(id, target);
+        let mut lane = AutomationLane::new(imbolc_types::AutomationLaneId::new(id), target);
         lane.enabled = enabled != 0;
         lane.record_armed = record_armed != 0;
         lane.min_value = min_value;
@@ -356,7 +356,7 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
 
     for (id, name, inst_id, length) in clips {
         let mut clip = Clip {
-            id,
+            id: imbolc_types::ClipId::new(id),
             name,
             instrument_id: imbolc_types::TrackId::new(inst_id),
             length_ticks: length,
@@ -436,7 +436,8 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
                 target_bus_id,
                 target_extra.as_deref(),
             );
-            let mut lane = AutomationLane::new(lane_id, target);
+            let mut lane =
+                AutomationLane::new(imbolc_types::AutomationLaneId::new(lane_id), target);
             lane.enabled = enabled != 0;
             lane.record_armed = armed != 0;
             lane.min_value = min_val;
@@ -469,8 +470,8 @@ pub(super) fn load_arrangement(conn: &Connection, session: &mut SessionState) ->
     session.arrangement.placements = place_stmt
         .query_map([], |row| {
             Ok(ClipInstance {
-                id: row.get(0)?,
-                clip_id: row.get(1)?,
+                id: imbolc_types::ClipInstanceId::new(row.get::<_, u32>(0)?),
+                clip_id: imbolc_types::ClipId::new(row.get::<_, u32>(1)?),
                 instrument_id: imbolc_types::TrackId::new(row.get::<_, u32>(2)?),
                 start_tick: row.get::<_, i64>(3)? as u32,
                 length_override: row.get::<_, Option<i64>>(4)?.map(|v| v as u32),

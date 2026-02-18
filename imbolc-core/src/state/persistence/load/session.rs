@@ -47,9 +47,9 @@ pub(super) fn load_session(
     session.tuning_a4 = row.5;
     session.snap = row.6 != 0;
     tracks.next_id = imbolc_types::TrackId::new(row.7);
-    tracks.next_sampler_buffer_id = row.8;
+    tracks.next_sampler_buffer_id = imbolc_types::BufferId::new(row.8);
     tracks.selected = row.9.map(|v| v as usize);
-    tracks.next_layer_group_id = row.10;
+    tracks.next_layer_group_id = imbolc_types::GroupId::new(row.10);
     session.humanize.velocity = row.11;
     session.humanize.timing = row.12;
     session.click_track.enabled = row.13 != 0;

@@ -219,7 +219,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         inst.channel_strip.output_target = decode_output_target(&r.output_target);
         inst.channel_strip.channel_config = decode_channel_config(&r.channel_config);
         inst.convolution_ir_path = r.convolution_ir_path;
-        inst.layer.group = r.layer_group;
+        inst.layer.group = r.layer_group.map(imbolc_types::GroupId::new);
         inst.channel_strip.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
         inst.note_input.arpeggiator = arpeggiator;
         inst.note_input.chord_shape = chord_shape;
@@ -574,11 +574,11 @@ fn load_sampler_config(
     };
 
     let mut config = SamplerConfig::new();
-    config.buffer_id = buffer_id.map(|id| id as u32);
+    config.buffer_id = buffer_id.map(|id| imbolc_types::BufferId::new(id as u32));
     config.sample_name = sample_name;
     config.loop_mode = loop_mode != 0;
     config.pitch_tracking = pitch_tracking != 0;
-    config.set_next_slice_id(next_slice_id);
+    config.set_next_slice_id(imbolc_types::SliceId::new(next_slice_id));
     config.selected_slice = selected_slice as usize;
 
     // Slices
@@ -587,7 +587,11 @@ fn load_sampler_config(
     )?;
     config.slices = stmt
         .query_map(params![track_id], |row| {
-            let mut s = Slice::new(row.get::<_, u32>(0)?, row.get(1)?, row.get(2)?);
+            let mut s = Slice::new(
+                imbolc_types::SliceId::new(row.get::<_, u32>(0)?),
+                row.get(1)?,
+                row.get(2)?,
+            );
             s.name = row.get(3)?;
             s.root_note = row.get::<_, i32>(4)? as u8;
             Ok(s)
@@ -628,7 +632,7 @@ fn load_drum_sequencer(
 
     let mut seq = DrumSequencerState::new();
     seq.current_pattern = current_pattern as usize;
-    seq.next_buffer_id = next_buffer_id;
+    seq.next_buffer_id = imbolc_types::BufferId::new(next_buffer_id);
     seq.swing_amount = swing_amount;
     seq.chain_enabled = chain_enabled != 0;
     seq.step_resolution = decode_step_resolution(&step_resolution_str);
@@ -692,7 +696,7 @@ fn load_drum_sequencer(
     ) in pads
     {
         if idx < seq.pads.len() {
-            seq.pads[idx].buffer_id = buffer_id.map(|id| id as u32);
+            seq.pads[idx].buffer_id = buffer_id.map(|id| imbolc_types::BufferId::new(id as u32));
             seq.pads[idx].path = path;
             seq.pads[idx].name = name;
             seq.pads[idx].level = level;
@@ -811,7 +815,11 @@ fn load_chopper(
     )?;
     let slices: Vec<Slice> = slices_stmt
         .query_map(params![track_id], |row| {
-            let mut s = Slice::new(row.get::<_, u32>(0)?, row.get(1)?, row.get(2)?);
+            let mut s = Slice::new(
+                imbolc_types::SliceId::new(row.get::<_, u32>(0)?),
+                row.get(1)?,
+                row.get(2)?,
+            );
             s.name = row.get(3)?;
             s.root_note = row.get::<_, i32>(4)? as u8;
             Ok(s)
@@ -819,12 +827,12 @@ fn load_chopper(
         .collect::<SqlResult<_>>()?;
 
     Ok(Some(SampleSlicerState {
-        buffer_id: buffer_id.map(|id| id as u32),
+        buffer_id: buffer_id.map(|id| imbolc_types::BufferId::new(id as u32)),
         path,
         name,
         slices,
         selected_slice: selected_slice as usize,
-        next_slice_id,
+        next_slice_id: imbolc_types::SliceId::new(next_slice_id),
         waveform_peaks,
         duration_secs,
     }))

@@ -16,7 +16,7 @@ use std::time::Instant;
 
 use super::bus_allocator::BusAllocator;
 use backend::AudioBackend;
-use imbolc_types::{BufferId, BusId, EffectId, TrackId};
+use imbolc_types::{BufferId, BusId, EffectId, GroupId, TrackId};
 use node_registry::NodeRegistry;
 use voice_allocator::VoiceAllocator;
 
@@ -138,19 +138,19 @@ pub struct AudioEngine {
     /// Bus output synth nodes: bus_id -> node_id
     bus_node_map: HashMap<BusId, i32>,
     /// Layer group audio buses: group_id -> SC audio bus index
-    layer_group_audio_buses: HashMap<u32, i32>,
+    layer_group_audio_buses: HashMap<GroupId, i32>,
     /// Layer group output synth nodes: group_id -> node_id
-    layer_group_node_map: HashMap<u32, i32>,
+    layer_group_node_map: HashMap<GroupId, i32>,
     /// Layer group send synth nodes: (group_id, bus_id) -> node_id
-    layer_group_send_node_map: HashMap<(u32, BusId), i32>,
+    layer_group_send_node_map: HashMap<(GroupId, BusId), i32>,
     /// Bus effect synth nodes: (bus_id, effect_id) -> node_id
     bus_effect_node_map: HashMap<(BusId, EffectId), i32>,
     /// Bus EQ synth nodes: bus_id -> node_id
     bus_eq_node_map: HashMap<BusId, i32>,
     /// Layer group effect synth nodes: (group_id, effect_id) -> node_id
-    layer_group_effect_node_map: HashMap<(u32, EffectId), i32>,
+    layer_group_effect_node_map: HashMap<(GroupId, EffectId), i32>,
     /// Layer group EQ synth nodes: group_id -> node_id
-    layer_group_eq_node_map: HashMap<u32, i32>,
+    layer_group_eq_node_map: HashMap<GroupId, i32>,
     /// Master EQ synth node ID (in GROUP_MASTER)
     master_eq_node_id: Option<i32>,
     /// Master effect synth nodes: effect_id -> node_id (in GROUP_MASTER)
@@ -2024,14 +2024,18 @@ mod tests {
             let inst_id = state.add_track(SourceType::Saw);
             // Assign instrument to layer group 1 so the group bus gets allocated
             if let Some(inst) = state.tracks.track_mut(inst_id) {
-                inst.layer.group = Some(1);
+                inst.layer.group = Some(GroupId::new(1));
             }
             // Create a layer group mixer and add a reverb effect
             state
                 .session
                 .mixer
-                .add_layer_group_mixer(1, &[BusId::new(1)]);
-            let gm = state.session.mixer.layer_group_mixer_mut(1).unwrap();
+                .add_layer_group_mixer(GroupId::new(1), &[BusId::new(1)]);
+            let gm = state
+                .session
+                .mixer
+                .layer_group_mixer_mut(GroupId::new(1))
+                .unwrap();
             let effect_id = gm.channel_strip.add_effect(EffectType::Reverb);
             engine
                 .rebuild_instrument_routing(&state.tracks, &state.session)
@@ -2045,7 +2049,7 @@ mod tests {
             assert!(
                 engine
                     .layer_group_effect_node_map
-                    .contains_key(&(1, effect_id)),
+                    .contains_key(&(GroupId::new(1), effect_id)),
                 "tracked in layer_group_effect_node_map"
             );
         }
@@ -2077,20 +2081,24 @@ mod tests {
             let mut state = AppState::new();
             let inst_id = state.add_track(SourceType::Saw);
             if let Some(inst) = state.tracks.track_mut(inst_id) {
-                inst.layer.group = Some(1);
+                inst.layer.group = Some(GroupId::new(1));
             }
             state
                 .session
                 .mixer
-                .add_layer_group_mixer(1, &[BusId::new(1)]);
-            let gm = state.session.mixer.layer_group_mixer_mut(1).unwrap();
+                .add_layer_group_mixer(GroupId::new(1), &[BusId::new(1)]);
+            let gm = state
+                .session
+                .mixer
+                .layer_group_mixer_mut(GroupId::new(1))
+                .unwrap();
             let effect_id = gm.channel_strip.add_effect(EffectType::Delay);
             engine
                 .rebuild_instrument_routing(&state.tracks, &state.session)
                 .expect("rebuild");
             backend.clear();
             engine
-                .set_layer_group_effect_param(1, effect_id, "time", 0.4)
+                .set_layer_group_effect_param(GroupId::new(1), effect_id, "time", 0.4)
                 .expect("set param");
             let set_op = backend.find(|op| matches!(op, TestOp::SetParam { param, value, .. } if param == "time" && (*value - 0.4).abs() < 0.001));
             assert!(

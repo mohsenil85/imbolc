@@ -10,7 +10,7 @@ use crate::ui::{
     MouseEventKind, NavAction, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SessionAction, Style,
     ToggleResult, TrackAction,
 };
-use imbolc_types::{GroupAction, TrackId};
+use imbolc_types::{GroupAction, GroupId, TrackId};
 
 fn source_color(source: SourceType) -> Color {
     match source {
@@ -53,7 +53,7 @@ pub struct TrackListPane {
     /// Text input for renaming layer groups
     edit_input: TextInput,
     /// Layer group being renamed (None = not editing)
-    editing_group: Option<u32>,
+    editing_group: Option<GroupId>,
 }
 
 impl TrackListPane {

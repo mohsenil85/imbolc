@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     AutomationLaneId, AutomationTarget, BusId, ClipId, ClipInstanceId, ClipboardNote, CurveType,
     DrumStep, EffectId, EffectType, EnvConfig, FilterType, GenVoiceId, GenerativeAlgorithm,
-    LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, ProcessingStage, ServerStatus,
-    SourceType, TrackId, VstPluginKind,
+    GroupId, LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, ProcessingStage,
+    ServerStatus, SourceType, TrackId, VstPluginKind,
 };
 
 // ============================================================================
@@ -291,21 +291,21 @@ pub enum BusAction {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GroupAction {
     /// Add an effect to a group
-    AddEffect(u32, EffectType),
+    AddEffect(GroupId, EffectType),
     /// Remove an effect from a group
-    RemoveEffect(u32, EffectId),
+    RemoveEffect(GroupId, EffectId),
     /// Move an effect up/down on a group
-    MoveEffect(u32, EffectId, i8),
+    MoveEffect(GroupId, EffectId, i8),
     /// Toggle bypass on a group effect
-    ToggleEffectBypass(u32, EffectId),
+    ToggleEffectBypass(GroupId, EffectId),
     /// Adjust a parameter on a group effect
-    AdjustEffectParam(u32, EffectId, ParamIndex, f32),
+    AdjustEffectParam(GroupId, EffectId, ParamIndex, f32),
     /// Toggle EQ on/off for a group
-    ToggleEqualizer(u32),
+    ToggleEqualizer(GroupId),
     /// Set an EQ band parameter on a group (group_id, band_index, param, value)
-    SetEqualizerParam(u32, usize, EqualizerParamKind, f32),
+    SetEqualizerParam(GroupId, usize, EqualizerParamKind, f32),
     /// Rename a group
-    Rename(u32, String),
+    Rename(GroupId, String),
 }
 
 /// Master bus actions (effect chain + EQ on the master output).
@@ -417,7 +417,7 @@ pub enum AudioEffect {
     SetEffectParam(TrackId, EffectId, ParamIndex, f32),
     SetLfoParam(TrackId, LfoParamKind, f32),
     SetBusEffectParam(BusId, EffectId, ParamIndex, f32),
-    SetGroupEffectParam(u32, EffectId, ParamIndex, f32),
+    SetGroupEffectParam(GroupId, EffectId, ParamIndex, f32),
     /// Set a master EQ band parameter (SC param name, value)
     SetMasterEqParam(String, f32),
     /// Set a master bus effect parameter (effect_id, param_index, value)

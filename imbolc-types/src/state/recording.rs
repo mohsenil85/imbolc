@@ -1,4 +1,4 @@
-use crate::TrackId;
+use crate::{BufferId, TrackId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -34,7 +34,7 @@ pub struct RecordingState {
     pub append_target_path: Option<PathBuf>,
     /// Temporary preview buffer for playback inside the waveform pane.
     #[serde(skip)]
-    pub preview_buffer_id: Option<u32>,
+    pub preview_buffer_id: Option<BufferId>,
     /// Active preview node ID (if waveform playback is currently running).
     #[serde(skip)]
     pub preview_node_id: Option<i32>,

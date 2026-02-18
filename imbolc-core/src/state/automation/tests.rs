@@ -1,5 +1,5 @@
 use crate::state::automation::*;
-use imbolc_types::{BusId, TrackId};
+use imbolc_types::{AutomationLaneId, BusId, TrackId};
 
 #[test]
 fn test_automation_point() {
@@ -10,7 +10,10 @@ fn test_automation_point() {
 
 #[test]
 fn test_automation_lane_interpolation() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.add_point(0, 0.0);
     lane.add_point(100, 1.0);
 
@@ -25,7 +28,10 @@ fn test_automation_lane_interpolation() {
 
 #[test]
 fn test_automation_lane_step_curve() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.points
         .push(AutomationPoint::with_curve(0, 0.0, CurveType::Step));
     lane.points
@@ -54,7 +60,10 @@ fn test_automation_state() {
 
 #[test]
 fn test_value_range_mapping() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::filter_cutoff(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::filter_cutoff(TrackId::new(0)),
+    );
     // Default range for filter cutoff is 20-20000
 
     lane.add_point(0, 0.0); // Maps to 20 Hz
@@ -138,7 +147,10 @@ fn point_new_clamps_value() {
 
 #[test]
 fn add_point_replaces_at_same_tick() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.add_point(100, 0.5);
     lane.add_point(100, 0.8);
     assert_eq!(lane.points.len(), 1);
@@ -147,7 +159,10 @@ fn add_point_replaces_at_same_tick() {
 
 #[test]
 fn add_point_keeps_sorted_order() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.add_point(100, 0.5);
     lane.add_point(50, 0.3);
     lane.add_point(200, 0.9);
@@ -157,7 +172,10 @@ fn add_point_keeps_sorted_order() {
 
 #[test]
 fn value_at_disabled_lane() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.add_point(0, 0.5);
     lane.enabled = false;
     assert!(lane.value_at(0).is_none());
@@ -165,13 +183,19 @@ fn value_at_disabled_lane() {
 
 #[test]
 fn value_at_empty_lane() {
-    let lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     assert!(lane.value_at(0).is_none());
 }
 
 #[test]
 fn value_at_exponential_curve() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.points
         .push(AutomationPoint::with_curve(0, 0.0, CurveType::Exponential));
     lane.points
@@ -184,7 +208,10 @@ fn value_at_exponential_curve() {
 
 #[test]
 fn value_at_s_curve() {
-    let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(0)));
+    let mut lane = AutomationLane::new(
+        AutomationLaneId::new(0),
+        AutomationTarget::level(TrackId::new(0)),
+    );
     lane.points
         .push(AutomationPoint::with_curve(0, 0.0, CurveType::SCurve));
     lane.points
@@ -244,9 +271,9 @@ fn recalculate_next_lane_id() {
     let id3 = state.add_lane(AutomationTarget::filter_cutoff(TrackId::new(0)));
 
     // Manually set next_lane_id to 0 to simulate loading
-    state.next_lane_id = 0;
+    state.next_lane_id = AutomationLaneId::new(0);
     state.recalculate_next_lane_id();
-    assert_eq!(state.next_lane_id, id3 + 1);
+    assert_eq!(state.next_lane_id, id3.next());
 }
 
 #[test]

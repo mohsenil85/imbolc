@@ -124,15 +124,15 @@ repl_actions! {
     }
 
     group "automation" => DomainAction::Automation, AutomationAction {
-        "remove-lane"           => RemoveLane(id: u32);                                    "Remove automation lane"
-        "toggle-lane-enabled"   => ToggleLaneEnabled(id: u32);                             "Toggle lane enabled"
-        "add-point"             => AddPoint(lane: u32, tick: u32, val: f32);                "Add automation point"
-        "remove-point"          => RemovePoint(lane: u32, tick: u32);                       "Remove automation point"
-        "set-curve-type"        => SetCurveType(lane: u32, tick: u32, curve: CurveType);    "Set point curve type"
+        "remove-lane"           => RemoveLane(id: AutomationLaneId);                        "Remove automation lane"
+        "toggle-lane-enabled"   => ToggleLaneEnabled(id: AutomationLaneId);                 "Toggle lane enabled"
+        "add-point"             => AddPoint(lane: AutomationLaneId, tick: u32, val: f32);   "Add automation point"
+        "remove-point"          => RemovePoint(lane: AutomationLaneId, tick: u32);          "Remove automation point"
+        "set-curve-type"        => SetCurveType(lane: AutomationLaneId, tick: u32, curve: CurveType); "Set point curve type"
         "select-lane"           => SelectLane(d: i8);                                       "Select next/prev lane"
-        "clear-lane"            => ClearLane(id: u32);                                      "Clear all points on lane"
+        "clear-lane"            => ClearLane(id: AutomationLaneId);                         "Clear all points on lane"
         "toggle-recording"      => ToggleRecording;                                         "Toggle automation recording"
-        "toggle-lane-arm"       => ToggleLaneArm(id: u32);                                 "Toggle lane arm for recording"
+        "toggle-lane-arm"       => ToggleLaneArm(id: AutomationLaneId);                    "Toggle lane arm for recording"
         "arm-all"               => ArmAllLanes;                                             "Arm all lanes for recording"
         "disarm-all"            => DisarmAllLanes;                                           "Disarm all lanes"
     }
@@ -175,14 +175,14 @@ repl_actions! {
     }
 
     group "layer-group" => DomainAction::Group, GroupAction {
-        "add-effect"            => AddEffect(gid: u32, fx: EffectType);                            "Add effect to layer group"
-        "remove-effect"         => RemoveEffect(gid: u32, fx_id: EffectId);                        "Remove effect from layer group"
-        "move-effect"           => MoveEffect(gid: u32, fx_id: EffectId, d: i8);                   "Move layer group effect"
-        "toggle-effect-bypass"  => ToggleEffectBypass(gid: u32, fx_id: EffectId);                  "Toggle layer group effect bypass"
-        "adjust-effect-param"   => AdjustEffectParam(gid: u32, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust layer group effect param"
-        "toggle-eq"             => ToggleEqualizer(gid: u32);                                             "Toggle layer group EQ"
-        "set-eq-param"          => SetEqualizerParam(gid: u32, band: usize, kind: EqualizerParamKind, v: f32);   "Set layer group EQ band param"
-        "rename"                => Rename(gid: u32, name: String);                                  "Rename layer group"
+        "add-effect"            => AddEffect(gid: GroupId, fx: EffectType);                            "Add effect to layer group"
+        "remove-effect"         => RemoveEffect(gid: GroupId, fx_id: EffectId);                        "Remove effect from layer group"
+        "move-effect"           => MoveEffect(gid: GroupId, fx_id: EffectId, d: i8);                   "Move layer group effect"
+        "toggle-effect-bypass"  => ToggleEffectBypass(gid: GroupId, fx_id: EffectId);                  "Toggle layer group effect bypass"
+        "adjust-effect-param"   => AdjustEffectParam(gid: GroupId, fx_id: EffectId, pi: ParamIndex, d: f32); "Adjust layer group effect param"
+        "toggle-eq"             => ToggleEqualizer(gid: GroupId);                                             "Toggle layer group EQ"
+        "set-eq-param"          => SetEqualizerParam(gid: GroupId, band: usize, kind: EqualizerParamKind, v: f32);   "Set layer group EQ band param"
+        "rename"                => Rename(gid: GroupId, name: String);                                  "Rename layer group"
     }
 
     group "generative" => DomainAction::Generative, GenerativeAction {
@@ -283,8 +283,7 @@ impl super::parse::ReplParseable for i64 {
     }
 }
 
-// ClipId and ClipInstanceId are u32 type aliases, already covered
-// AutomationLaneId is u32, already covered
+// ClipId, ClipInstanceId, AutomationLaneId are newtypes with ReplParseable impls in parse.rs
 
 #[cfg(test)]
 mod tests {

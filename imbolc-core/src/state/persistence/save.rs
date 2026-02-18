@@ -51,9 +51,9 @@ fn save_session(conn: &Connection, session: &SessionState, tracks: &TrackState) 
             session.tuning_a4,
             session.snap as i32,
             tracks.next_id.get(),
-            tracks.next_sampler_buffer_id,
+            tracks.next_sampler_buffer_id.get(),
             tracks.selected.map(|s| s as i64),
-            tracks.next_layer_group_id,
+            tracks.next_layer_group_id.get(),
             session.humanize.velocity,
             session.humanize.timing,
             session.click_track.enabled as i32,
@@ -295,7 +295,7 @@ fn save_instruments(conn: &Connection, tracks: &TrackState) -> SqlResult<()> {
             output_target,
             channel_config,
             inst.convolution_ir_path.as_deref(),
-            inst.layer.group,
+            inst.layer.group.map(|g| g.get()),
             inst.channel_strip.next_effect_id.get(),
             eq_enabled,
             inst.note_input.arpeggiator.enabled as i32,
@@ -594,11 +594,11 @@ fn save_sampler_config(
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             track_id,
-            config.buffer_id.map(|id| id as i64),
+            config.buffer_id.map(|id| id.get() as i64),
             config.sample_name.as_deref(),
             config.loop_mode as i32,
             config.pitch_tracking as i32,
-            config.next_slice_id(),
+            config.next_slice_id().get(),
             config.selected_slice as i32,
         ],
     )?;
@@ -608,7 +608,7 @@ fn save_sampler_config(
             "INSERT INTO sampler_slices (track_id, slice_id, position, start_pos, end_pos, name, root_note)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
-                track_id, slice.id, pos as i32,
+                track_id, slice.id.get(), pos as i32,
                 slice.start, slice.end, slice.name, slice.root_note as i32,
             ],
         )?;
@@ -627,7 +627,7 @@ fn save_drum_sequencer(
         params![
             track_id,
             seq.current_pattern as i32,
-            seq.next_buffer_id,
+            seq.next_buffer_id.get(),
             seq.swing_amount,
             seq.chain_enabled as i32,
             format!("{:?}", seq.step_resolution),
@@ -650,7 +650,7 @@ fn save_drum_sequencer(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 track_id, pad_idx as i32,
-                pad.buffer_id.map(|id| id as i64),
+                pad.buffer_id.map(|id| id.get() as i64),
                 pad.path.as_deref(),
                 pad.name,
                 pad.level,
@@ -707,11 +707,11 @@ fn save_drum_sequencer(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 track_id,
-                chopper.buffer_id.map(|id| id as i64),
+                chopper.buffer_id.map(|id| id.get() as i64),
                 chopper.path.as_deref(),
                 chopper.name,
                 chopper.selected_slice as i32,
-                chopper.next_slice_id,
+                chopper.next_slice_id.get(),
                 chopper.duration_secs,
                 peaks_blob,
             ],
@@ -722,7 +722,7 @@ fn save_drum_sequencer(
                 "INSERT INTO chopper_slices (track_id, slice_id, position, start_pos, end_pos, name, root_note)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
-                    track_id, slice.id, pos as i32,
+                    track_id, slice.id.get(), pos as i32,
                     slice.start, slice.end, slice.name, slice.root_note as i32,
                 ],
             )?;
@@ -819,7 +819,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
             "INSERT INTO layer_group_mixers (group_id, name, level, pan, mute, solo, output_target, eq_enabled)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                gm.group_id as i32, gm.name, gm.channel_strip.level, gm.channel_strip.pan,
+                gm.group_id.get() as i32, gm.name, gm.channel_strip.level, gm.channel_strip.pan,
                 gm.channel_strip.mute as i32, gm.channel_strip.solo as i32, output_target, eq_enabled,
             ],
         )?;
@@ -829,7 +829,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
                 "INSERT INTO layer_group_sends (group_id, bus_id, level, enabled, tap_point)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![
-                    gm.group_id as i32,
+                    gm.group_id.get() as i32,
                     send.bus_id.get() as i32,
                     send.level,
                     send.enabled as i32,
@@ -845,7 +845,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
                     "INSERT INTO layer_group_eq_bands (group_id, band_index, freq, gain, q, enabled)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                     params![
-                        gm.group_id as i32, i as i32,
+                        gm.group_id.get() as i32, i as i32,
                         band.freq, band.gain, band.q, band.enabled as i32,
                     ],
                 )?;
@@ -859,7 +859,7 @@ fn save_layer_group_mixers(conn: &Connection, session: &SessionState) -> SqlResu
             "layer_group_effect_params",
             "layer_group_effect_vst_params",
             "group_id",
-            gm.group_id,
+            gm.group_id.get(),
             &gm_effects,
         )?;
     }
@@ -938,7 +938,7 @@ fn save_automation(conn: &Connection, session: &SessionState) -> SqlResult<()> {
             "INSERT INTO automation_lanes (id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
-                lane.id, target_type, target_inst_id, target_bus_id,
+                lane.id.get(), target_type, target_inst_id, target_bus_id,
                 target_effect_id, target_param_idx, target_extra,
                 lane.enabled as i32, lane.record_armed as i32,
                 lane.min_value, lane.max_value,
@@ -950,7 +950,7 @@ fn save_automation(conn: &Connection, session: &SessionState) -> SqlResult<()> {
                 "INSERT INTO automation_points (lane_id, tick, value, curve_type)
                  VALUES (?1, ?2, ?3, ?4)",
                 params![
-                    lane.id,
+                    lane.id.get(),
                     point.tick as i64,
                     point.value,
                     format!("{:?}", point.curve)
@@ -1137,9 +1137,9 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
             arr.view_start_tick as i64,
             arr.ticks_per_col as i64,
             arr.cursor_tick as i64,
-            arr.next_clip_id(),
-            arr.next_placement_id(),
-            arr.next_clip_automation_lane_id(),
+            arr.next_clip_id().get(),
+            arr.next_placement_id().get(),
+            arr.next_clip_automation_lane_id().get(),
         ],
     )?;
 
@@ -1149,7 +1149,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
             "INSERT INTO arrangement_clips (id, name, track_id, length_ticks)
              VALUES (?1, ?2, ?3, ?4)",
             params![
-                clip.id,
+                clip.id.get(),
                 clip.name,
                 clip.instrument_id.get(),
                 clip.length_ticks as i64
@@ -1162,7 +1162,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
                 "INSERT INTO arrangement_clip_notes (clip_id, position, tick, duration, pitch, velocity, probability)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
-                    clip.id, pos as i32,
+                    clip.id.get(), pos as i32,
                     note.tick as i64, note.duration as i64,
                     note.pitch as i32, note.velocity as i32,
                     note.probability,
@@ -1184,7 +1184,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
                 "INSERT INTO arrangement_clip_automation_lanes (id, clip_id, target_type, target_track_id, target_bus_id, target_effect_id, target_param_idx, target_extra, enabled, record_armed, min_value, max_value)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
-                    lane.id, clip.id, target_type, target_inst_id, target_bus_id,
+                    lane.id.get(), clip.id.get(), target_type, target_inst_id, target_bus_id,
                     target_effect_id, target_param_idx, target_extra,
                     lane.enabled as i32, lane.record_armed as i32,
                     lane.min_value, lane.max_value,
@@ -1195,7 +1195,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
                 conn.execute(
                     "INSERT INTO arrangement_clip_automation_points (lane_id, tick, value, curve_type)
                      VALUES (?1, ?2, ?3, ?4)",
-                    params![lane.id, point.tick as i64, point.value, format!("{:?}", point.curve)],
+                    params![lane.id.get(), point.tick as i64, point.value, format!("{:?}", point.curve)],
                 )?;
             }
         }
@@ -1207,7 +1207,7 @@ fn save_arrangement(conn: &Connection, session: &SessionState) -> SqlResult<()> 
             "INSERT INTO arrangement_placements (id, clip_id, track_id, start_tick, length_override)
              VALUES (?1, ?2, ?3, ?4, ?5)",
             params![
-                placement.id, placement.clip_id, placement.instrument_id.get(),
+                placement.id.get(), placement.clip_id.get(), placement.instrument_id.get(),
                 placement.start_tick as i64,
                 placement.length_override.map(|l| l as i64),
             ],

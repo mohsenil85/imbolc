@@ -8,14 +8,14 @@ use crate::ui::{
     Action, Color, FileSelectAction, InputEvent, Keymap, MasterAction, MouseButton, MouseEvent,
     MouseEventKind, NavAction, Pane, PaneIdStr, Rect, RenderBuf, SessionAction, Style, TrackAction,
 };
-use imbolc_types::{BusId, VstPluginId};
+use imbolc_types::{BusId, GroupId, VstPluginId};
 
 /// Target for the add-effect modal: which entity receives the new effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectTarget {
     Track,
     Bus(BusId),
-    Group(u32),
+    Group(GroupId),
     Master,
 }
 

@@ -2,10 +2,8 @@
 
 #![allow(dead_code)]
 
+use crate::{BufferId, SliceId};
 use serde::{Deserialize, Serialize};
-
-pub type BufferId = u32;
-pub type SliceId = u32;
 
 /// A loaded sample buffer
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,7 +101,7 @@ impl SamplerConfig {
             selected_slice: 0,
             loop_mode: false,
             pitch_tracking: true,
-            next_slice_id: 0,
+            next_slice_id: SliceId::new(0),
         };
         // Add initial full-buffer slice
         config.add_slice(0.0, 1.0);
@@ -112,7 +110,7 @@ impl SamplerConfig {
 
     pub fn add_slice(&mut self, start: f32, end: f32) -> SliceId {
         let id = self.next_slice_id;
-        self.next_slice_id += 1;
+        self.next_slice_id = id.next();
         self.slices.push(Slice::new(id, start, end));
         id
     }
@@ -192,13 +190,13 @@ impl SampleRegistry {
     pub fn new() -> Self {
         Self {
             buffers: Vec::new(),
-            next_buffer_id: 0,
+            next_buffer_id: BufferId::new(0),
         }
     }
 
     pub fn add_buffer(&mut self, path: String, name: String) -> BufferId {
         let id = self.next_buffer_id;
-        self.next_buffer_id += 1;
+        self.next_buffer_id = id.next();
         self.buffers.push(SampleBuffer::new(id, path, name));
         id
     }
@@ -226,7 +224,11 @@ mod tests {
 
     #[test]
     fn test_sample_buffer() {
-        let mut buf = SampleBuffer::new(0, "/path/to/sample.wav".to_string(), "sample".to_string());
+        let mut buf = SampleBuffer::new(
+            BufferId::new(0),
+            "/path/to/sample.wav".to_string(),
+            "sample".to_string(),
+        );
         assert_eq!(buf.duration_secs, 0.0);
 
         buf.set_info(44100, 44100, 2);
@@ -235,7 +237,7 @@ mod tests {
 
     #[test]
     fn test_slice() {
-        let slice = Slice::new(0, 0.25, 0.75);
+        let slice = Slice::new(SliceId::new(0), 0.25, 0.75);
         assert!((slice.duration() - 0.5).abs() < 0.01);
     }
 

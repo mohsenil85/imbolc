@@ -3,19 +3,10 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use super::automation::{AutomationLane, AutomationLaneId, AutomationPoint, AutomationTarget};
+use super::automation::{AutomationLane, AutomationPoint, AutomationTarget};
 use super::piano_roll::Note;
-use crate::TrackId;
+use crate::{AudioClipId, AutomationLaneId, ClipId, ClipInstanceId, TrackId};
 use serde::{Deserialize, Serialize};
-
-/// Unique identifier for a clip in the arrangement.
-pub type ClipId = u32;
-
-/// Unique identifier for a clip placement on the timeline.
-pub type ClipInstanceId = u32;
-
-/// Unique identifier for an audio clip (recorded audio)
-pub type AudioClipId = u32;
 
 /// An audio clip represents recorded audio from an input.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -133,15 +124,15 @@ impl ArrangementState {
             view_start_tick: 0,
             ticks_per_col: 120,
             cursor_tick: 0,
-            next_clip_id: 1,
-            next_placement_id: 1,
-            next_clip_automation_lane_id: 0,
+            next_clip_id: ClipId::new(1),
+            next_placement_id: ClipInstanceId::new(1),
+            next_clip_automation_lane_id: AutomationLaneId::new(0),
         }
     }
 
     pub fn add_clip(&mut self, name: String, instrument_id: TrackId, length_ticks: u32) -> ClipId {
         let id = self.next_clip_id;
-        self.next_clip_id += 1;
+        self.next_clip_id = id.next();
         self.clips.push(Clip {
             id,
             name,
@@ -185,7 +176,7 @@ impl ArrangementState {
         start_tick: u32,
     ) -> ClipInstanceId {
         let id = self.next_placement_id;
-        self.next_placement_id += 1;
+        self.next_placement_id = id.next();
         self.placements.push(ClipInstance {
             id,
             clip_id,
@@ -330,7 +321,7 @@ impl ArrangementState {
                 .copied()
                 .unwrap_or_else(|| target.default_range());
             result.push(AutomationLane {
-                id: 0, // IDs don't matter for flattened playback snapshot
+                id: AutomationLaneId::new(0), // IDs don't matter for flattened playback snapshot
                 target,
                 points,
                 enabled: true,
@@ -376,20 +367,30 @@ impl ArrangementState {
     }
 
     pub fn recalculate_next_ids(&mut self) {
-        self.next_clip_id = self.clips.iter().map(|c| c.id).max().unwrap_or(0) + 1;
-        self.next_placement_id = self.placements.iter().map(|p| p.id).max().unwrap_or(0) + 1;
+        self.next_clip_id = self
+            .clips
+            .iter()
+            .map(|c| c.id)
+            .max()
+            .map_or(ClipId::new(0), |m| m.next());
+        self.next_placement_id = self
+            .placements
+            .iter()
+            .map(|p| p.id)
+            .max()
+            .map_or(ClipInstanceId::new(0), |m| m.next());
         self.next_clip_automation_lane_id = self
             .clips
             .iter()
             .flat_map(|c| c.automation_lanes.iter().map(|l| l.id))
             .max()
-            .map_or(0, |m| m + 1);
+            .map_or(AutomationLaneId::new(0), |m| m.next());
     }
 
     /// Allocate a fresh automation lane ID for use in clips
     pub fn next_clip_lane_id(&mut self) -> AutomationLaneId {
         let id = self.next_clip_automation_lane_id;
-        self.next_clip_automation_lane_id += 1;
+        self.next_clip_automation_lane_id = id.next();
         id
     }
 }
@@ -555,7 +556,10 @@ mod tests {
         let cid = arr.add_clip("Test".to_string(), TrackId::new(1), 384);
 
         if let Some(clip) = arr.clip_mut(cid) {
-            let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(1)));
+            let mut lane = AutomationLane::new(
+                AutomationLaneId::new(0),
+                AutomationTarget::level(TrackId::new(1)),
+            );
             lane.points.push(AutomationPoint::new(0, 0.0));
             lane.points.push(AutomationPoint::new(192, 1.0));
             clip.automation_lanes.push(lane);
@@ -577,7 +581,10 @@ mod tests {
         let cid = arr.add_clip("Test".to_string(), TrackId::new(1), 200);
 
         if let Some(clip) = arr.clip_mut(cid) {
-            let mut lane = AutomationLane::new(0, AutomationTarget::filter_cutoff(TrackId::new(1)));
+            let mut lane = AutomationLane::new(
+                AutomationLaneId::new(0),
+                AutomationTarget::filter_cutoff(TrackId::new(1)),
+            );
             lane.points.push(AutomationPoint::new(0, 0.5));
             lane.points.push(AutomationPoint::new(100, 1.0));
             clip.automation_lanes.push(lane);
@@ -614,12 +621,18 @@ mod tests {
         let cid2 = arr.add_clip("B".to_string(), TrackId::new(1), 100);
 
         if let Some(clip) = arr.clip_mut(cid1) {
-            let mut lane = AutomationLane::new(0, AutomationTarget::level(TrackId::new(1)));
+            let mut lane = AutomationLane::new(
+                AutomationLaneId::new(0),
+                AutomationTarget::level(TrackId::new(1)),
+            );
             lane.points.push(AutomationPoint::new(50, 0.2));
             clip.automation_lanes.push(lane);
         }
         if let Some(clip) = arr.clip_mut(cid2) {
-            let mut lane = AutomationLane::new(1, AutomationTarget::level(TrackId::new(1)));
+            let mut lane = AutomationLane::new(
+                AutomationLaneId::new(1),
+                AutomationTarget::level(TrackId::new(1)),
+            );
             lane.points.push(AutomationPoint::new(0, 0.8));
             clip.automation_lanes.push(lane);
         }
@@ -644,7 +657,10 @@ mod tests {
         let cid = arr.add_clip("Test".to_string(), TrackId::new(1), 200);
 
         if let Some(clip) = arr.clip_mut(cid) {
-            let mut lane = AutomationLane::new(0, AutomationTarget::pan(TrackId::new(1)));
+            let mut lane = AutomationLane::new(
+                AutomationLaneId::new(0),
+                AutomationTarget::pan(TrackId::new(1)),
+            );
             lane.points.push(AutomationPoint::new(0, 0.0));
             lane.points.push(AutomationPoint::new(50, 0.5));
             lane.points.push(AutomationPoint::new(150, 1.0)); // Past trim point

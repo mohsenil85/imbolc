@@ -1,5 +1,5 @@
 use crate::{
-    BusId, MixerAction, MixerSelection, MixerSend, OutputTarget, SessionState, TrackState,
+    BusId, GroupId, MixerAction, MixerSelection, MixerSend, OutputTarget, SessionState, TrackState,
 };
 
 pub(super) fn reduce(
@@ -10,14 +10,18 @@ pub(super) fn reduce(
     match action {
         MixerAction::Move(delta) => {
             session.mixer.selection = match session.mixer.selection {
-                MixerSelection::Track(idx) => {
+                MixerSelection::Track(id) => {
+                    let idx = instruments.track_index(id).unwrap_or(0);
                     let new_idx = (idx as i32 + *delta as i32)
                         .clamp(0, instruments.tracks.len().saturating_sub(1) as i32)
                         as usize;
-                    MixerSelection::Track(new_idx)
+                    instruments
+                        .track_id_at(new_idx)
+                        .map(MixerSelection::Track)
+                        .unwrap_or(session.mixer.selection)
                 }
                 MixerSelection::Group(current_id) => {
-                    let group_ids: Vec<u32> = session
+                    let group_ids: Vec<GroupId> = session
                         .mixer
                         .layer_group_mixers
                         .iter()
@@ -48,22 +52,26 @@ pub(super) fn reduce(
                 }
                 MixerSelection::Master => MixerSelection::Master,
             };
-            if let MixerSelection::Track(idx) = session.mixer.selection {
-                instruments.selected = Some(idx);
+            if let MixerSelection::Track(id) = session.mixer.selection {
+                instruments.selected = instruments.track_index(id);
             }
             true
         }
         MixerAction::Jump(direction) => {
             session.mixer.selection = match session.mixer.selection {
                 MixerSelection::Track(_) => {
-                    if *direction > 0 {
-                        MixerSelection::Track(0)
+                    let target_idx = if *direction > 0 {
+                        0
                     } else {
-                        MixerSelection::Track(instruments.tracks.len().saturating_sub(1))
-                    }
+                        instruments.tracks.len().saturating_sub(1)
+                    };
+                    instruments
+                        .track_id_at(target_idx)
+                        .map(MixerSelection::Track)
+                        .unwrap_or(session.mixer.selection)
                 }
                 MixerSelection::Group(_) => {
-                    let group_ids: Vec<u32> = session
+                    let group_ids: Vec<GroupId> = session
                         .mixer
                         .layer_group_mixers
                         .iter()
@@ -91,22 +99,22 @@ pub(super) fn reduce(
                 }
                 MixerSelection::Master => MixerSelection::Master,
             };
-            if let MixerSelection::Track(idx) = session.mixer.selection {
-                instruments.selected = Some(idx);
+            if let MixerSelection::Track(id) = session.mixer.selection {
+                instruments.selected = instruments.track_index(id);
             }
             true
         }
         MixerAction::SelectAt(selection) => {
             session.mixer.selection = *selection;
-            if let MixerSelection::Track(idx) = *selection {
-                instruments.selected = Some(idx);
+            if let MixerSelection::Track(id) = *selection {
+                instruments.selected = instruments.track_index(id);
             }
             true
         }
         MixerAction::AdjustLevel(delta) => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         instrument.channel_strip.level =
                             (instrument.channel_strip.level + delta).clamp(0.0, 1.0);
                     }
@@ -130,8 +138,8 @@ pub(super) fn reduce(
         }
         MixerAction::ToggleMute => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         instrument.channel_strip.mute = !instrument.channel_strip.mute;
                     }
                 }
@@ -153,8 +161,8 @@ pub(super) fn reduce(
         }
         MixerAction::ToggleSolo => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         instrument.channel_strip.solo = !instrument.channel_strip.solo;
                     }
                 }
@@ -176,7 +184,9 @@ pub(super) fn reduce(
             session.mixer.cycle_section();
             if let MixerSelection::Track(_) = session.mixer.selection {
                 if let Some(idx) = instruments.selected {
-                    session.mixer.selection = MixerSelection::Track(idx);
+                    if let Some(id) = instruments.track_id_at(idx) {
+                        session.mixer.selection = MixerSelection::Track(id);
+                    }
                 }
             }
             true
@@ -184,8 +194,8 @@ pub(super) fn reduce(
         MixerAction::NextOutput => {
             let bus_ids: Vec<BusId> = session.bus_ids().collect();
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(inst) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(inst) = instruments.track_mut(id) {
                         inst.channel_strip.output_target = match inst.channel_strip.output_target {
                             OutputTarget::Master => bus_ids
                                 .first()
@@ -229,8 +239,8 @@ pub(super) fn reduce(
         MixerAction::PrevOutput => {
             let bus_ids: Vec<BusId> = session.bus_ids().collect();
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(inst) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(inst) = instruments.track_mut(id) {
                         inst.channel_strip.output_target = match inst.channel_strip.output_target {
                             OutputTarget::Master => bus_ids
                                 .last()
@@ -269,8 +279,8 @@ pub(super) fn reduce(
         }
         MixerAction::AdjustSend(bus_id, delta) => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         if let Some(send) = instrument.channel_strip.sends.get_mut(bus_id) {
                             send.level = (send.level + delta).clamp(0.0, 1.0);
                         }
@@ -289,8 +299,8 @@ pub(super) fn reduce(
         }
         MixerAction::ToggleSend(bus_id) => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         let send = instrument
                             .channel_strip
                             .sends
@@ -321,8 +331,8 @@ pub(super) fn reduce(
         }
         MixerAction::NextSendTapPoint(bus_id) => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         if let Some(send) = instrument.channel_strip.sends.get_mut(bus_id) {
                             send.tap_point = send.tap_point.cycle();
                         }
@@ -341,8 +351,8 @@ pub(super) fn reduce(
         }
         MixerAction::AdjustPan(delta) => {
             match session.mixer.selection {
-                MixerSelection::Track(idx) => {
-                    if let Some(instrument) = instruments.tracks.get_mut(idx) {
+                MixerSelection::Track(id) => {
+                    if let Some(instrument) = instruments.track_mut(id) {
                         instrument.channel_strip.pan =
                             (instrument.channel_strip.pan + delta).clamp(-1.0, 1.0);
                     }

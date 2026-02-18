@@ -30,8 +30,7 @@ pub enum DiscreteValueKind {
     TimeSignature,
 }
 
-/// Unique identifier for an automation lane.
-pub type AutomationLaneId = u32;
+use crate::AutomationLaneId;
 
 /// Interpolation curve type between automation points.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -675,13 +674,18 @@ impl AutomationState {
         Self {
             lanes: Vec::new(),
             selected_lane: None,
-            next_lane_id: 0,
+            next_lane_id: AutomationLaneId::new(0),
         }
     }
 
     /// Recalculate next_lane_id from existing lanes (used after loading from DB)
     pub fn recalculate_next_lane_id(&mut self) {
-        self.next_lane_id = self.lanes.iter().map(|l| l.id).max().map_or(0, |m| m + 1);
+        self.next_lane_id = self
+            .lanes
+            .iter()
+            .map(|l| l.id)
+            .max()
+            .map_or(AutomationLaneId::new(0), |m| m.next());
     }
 
     /// Add a new automation lane for a target
@@ -692,7 +696,7 @@ impl AutomationState {
         }
 
         let id = self.next_lane_id;
-        self.next_lane_id += 1;
+        self.next_lane_id = id.next();
         let lane = AutomationLane::new(id, target);
         self.lanes.push(lane);
 

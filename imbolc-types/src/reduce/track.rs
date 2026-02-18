@@ -156,7 +156,7 @@ pub(super) fn reduce(
         }
         TrackAction::LoadSampleResult(instrument_id, path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
-            instruments.next_sampler_buffer_id += 1;
+            instruments.next_sampler_buffer_id = buffer_id.next();
             let sample_name = path.file_stem().map(|s| s.to_string_lossy().to_string());
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(config) = instrument.sampler_config_mut() {
@@ -239,11 +239,11 @@ pub(super) fn reduce(
         }
         TrackAction::LoadIRResult(instrument_id, effect_id, path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
-            instruments.next_sampler_buffer_id += 1;
+            instruments.next_sampler_buffer_id = buffer_id.next();
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(effect) = instrument.effects_mut().find(|e| e.id == *effect_id) {
                     if let Some(param) = effect.params.iter_mut().find(|p| p.name == "ir_buffer") {
-                        param.value = crate::ParamValue::Int(buffer_id as i32);
+                        param.value = crate::ParamValue::Int(buffer_id.get() as i32);
                     }
                 }
                 instrument.convolution_ir_path = Some(path.to_string_lossy().to_string());

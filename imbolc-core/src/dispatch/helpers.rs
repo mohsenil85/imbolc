@@ -35,7 +35,7 @@ pub fn apply_bus_update(
 /// Set layer group mixer params directly if audio is running.
 pub fn apply_layer_group_update(
     audio: &mut imbolc_audio::AudioHandle,
-    update: Option<(u32, f32, bool, f32)>,
+    update: Option<(imbolc_types::GroupId, f32, bool, f32)>,
 ) {
     if let Some((group_id, level, mute, pan)) = update {
         if audio.is_running() {

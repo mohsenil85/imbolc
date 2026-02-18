@@ -28,7 +28,7 @@ mod tests {
         SourceType,
     };
     use crate::state::AutomationTarget;
-    use imbolc_types::{BusId, CustomSynthDefId, EffectId, ParamIndex};
+    use imbolc_types::{BufferId, BusId, CustomSynthDefId, EffectId, ParamIndex, SliceId};
     use std::path::PathBuf;
 
     #[test]
@@ -110,7 +110,7 @@ mod tests {
         // Sampler instrument: config and slices
         if let Some(inst) = tracks.track_mut(sampler_id) {
             if let Some(config) = inst.sampler_config_mut() {
-                config.buffer_id = Some(77);
+                config.buffer_id = Some(BufferId::new(77));
                 config.sample_name = Some("kick.wav".to_string());
                 config.loop_mode = true;
                 config.pitch_tracking = false;
@@ -120,14 +120,14 @@ mod tests {
                     slice.root_note = 64;
                 }
                 config.selected_slice = 1;
-                config.set_next_slice_id(10);
+                config.set_next_slice_id(SliceId::new(10));
             }
         }
 
         // Kit instrument: pads, steps, and chopper state
         if let Some(inst) = tracks.track_mut(kit_id) {
             if let Some(seq) = inst.drum_sequencer_mut() {
-                seq.pads[0].buffer_id = Some(123);
+                seq.pads[0].buffer_id = Some(BufferId::new(123));
                 seq.pads[0].path = Some("/tmp/kick.wav".to_string());
                 seq.pads[0].name = "Kick".to_string();
                 seq.pads[0].level = 0.9;
@@ -136,12 +136,15 @@ mod tests {
                 seq.pattern_mut().steps[0][0].velocity = 110;
 
                 seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
-                    buffer_id: Some(55),
+                    buffer_id: Some(BufferId::new(55)),
                     path: Some("/tmp/chop.wav".to_string()),
                     name: "Chop".to_string(),
-                    slices: vec![Slice::new(0, 0.0, 0.5), Slice::new(1, 0.5, 1.0)],
+                    slices: vec![
+                        Slice::new(SliceId::new(0), 0.0, 0.5),
+                        Slice::new(SliceId::new(1), 0.5, 1.0),
+                    ],
                     selected_slice: 1,
-                    next_slice_id: 2,
+                    next_slice_id: SliceId::new(2),
                     waveform_peaks: vec![0.1, 0.2],
                     duration_secs: 1.23,
                 });
@@ -263,13 +266,16 @@ mod tests {
         // Skipped fields should be default
         assert_eq!(
             loaded_session.mixer.selection,
-            crate::state::session::MixerSelection::Track(0)
+            crate::state::session::MixerSelection::Track(imbolc_types::TrackId::new(0))
         );
 
         // --- Assert tracks ---
         assert_eq!(loaded_instruments.tracks.len(), 4);
         assert_eq!(loaded_instruments.editing_track_id, None); // skipped
-        assert_eq!(loaded_instruments.next_sampler_buffer_id, 20000);
+        assert_eq!(
+            loaded_instruments.next_sampler_buffer_id,
+            BufferId::new(20000)
+        );
 
         let loaded_saw = loaded_instruments
             .tracks
@@ -313,13 +319,13 @@ mod tests {
             .find(|i| i.id == sampler_id)
             .unwrap();
         let config = loaded_sampler.sampler_config().unwrap();
-        assert_eq!(config.buffer_id, Some(77));
+        assert_eq!(config.buffer_id, Some(BufferId::new(77)));
         assert_eq!(config.sample_name.as_deref(), Some("kick.wav"));
         assert!(config.loop_mode);
         assert!(!config.pitch_tracking);
         assert_eq!(config.slices.len(), 2);
         assert_eq!(config.slices[1].name, "Half");
-        assert_eq!(config.next_slice_id(), 10);
+        assert_eq!(config.next_slice_id(), SliceId::new(10));
 
         let loaded_kit = loaded_instruments
             .tracks
@@ -327,11 +333,11 @@ mod tests {
             .find(|i| i.id == kit_id)
             .unwrap();
         let seq = loaded_kit.drum_sequencer().unwrap();
-        assert_eq!(seq.pads[0].buffer_id, Some(123));
+        assert_eq!(seq.pads[0].buffer_id, Some(BufferId::new(123)));
         assert_eq!(seq.pads[0].name, "Kick");
         assert!(seq.patterns[0].steps[0][0].active);
         let chopper = seq.chopper.as_ref().unwrap();
-        assert_eq!(chopper.buffer_id, Some(55));
+        assert_eq!(chopper.buffer_id, Some(BufferId::new(55)));
         assert_eq!(chopper.slices.len(), 2);
         assert_eq!(chopper.slices[0].name, "A");
         // Transient fields should be default

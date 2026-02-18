@@ -32,10 +32,10 @@ pub(super) fn dispatch_mixer(
         | MixerAction::NextSection => {}
 
         MixerAction::AdjustLevel(_delta) => match selection {
-            MixerSelection::Track(idx) => {
+            MixerSelection::Track(id) => {
                 result.audio_effects.push(AudioEffect::RebuildInstruments);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
-                if let Some(instrument) = state.tracks.tracks.get(idx) {
+                if let Some(instrument) = state.tracks.track(id) {
                     if state.recording.automation_recording && state.audio.playing {
                         maybe_record_automation(
                             state,
@@ -154,8 +154,8 @@ pub(super) fn dispatch_mixer(
         }
 
         MixerAction::NextOutput | MixerAction::PrevOutput => match selection {
-            MixerSelection::Track(idx) => {
-                if let Some(inst) = state.tracks.tracks.get(idx) {
+            MixerSelection::Track(id) => {
+                if let Some(inst) = state.tracks.track(id) {
                     result
                         .audio_effects
                         .push(AudioEffect::RebuildRoutingForInstrument(inst.id));
@@ -170,9 +170,9 @@ pub(super) fn dispatch_mixer(
         MixerAction::AdjustSend(bus_id, _delta) => {
             let bus_id = *bus_id;
             match selection {
-                MixerSelection::Track(idx) => {
+                MixerSelection::Track(id) => {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
-                    if let Some(instrument) = state.tracks.tracks.get(idx) {
+                    if let Some(instrument) = state.tracks.track(id) {
                         if let Some(send) = instrument.channel_strip.sends.get(&bus_id) {
                             if state.recording.automation_recording && state.audio.playing {
                                 maybe_record_automation(
@@ -194,8 +194,8 @@ pub(super) fn dispatch_mixer(
         }
 
         MixerAction::ToggleSend(_bus_id) => match selection {
-            MixerSelection::Track(idx) => {
-                if let Some(instrument) = state.tracks.tracks.get(idx) {
+            MixerSelection::Track(id) => {
+                if let Some(instrument) = state.tracks.track(id) {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     result
                         .audio_effects
@@ -210,8 +210,8 @@ pub(super) fn dispatch_mixer(
         },
 
         MixerAction::NextSendTapPoint(_bus_id) => match selection {
-            MixerSelection::Track(idx) => {
-                if let Some(instrument) = state.tracks.tracks.get(idx) {
+            MixerSelection::Track(id) => {
+                if let Some(instrument) = state.tracks.track(id) {
                     result.audio_effects.push(AudioEffect::RebuildInstruments);
                     result
                         .audio_effects
@@ -226,10 +226,10 @@ pub(super) fn dispatch_mixer(
         },
 
         MixerAction::AdjustPan(_delta) => match selection {
-            MixerSelection::Track(idx) => {
+            MixerSelection::Track(id) => {
                 result.audio_effects.push(AudioEffect::RebuildInstruments);
                 result.audio_effects.push(AudioEffect::UpdateMixerParams);
-                if let Some(instrument) = state.tracks.tracks.get(idx) {
+                if let Some(instrument) = state.tracks.track(id) {
                     if state.recording.automation_recording && state.audio.playing {
                         let target = AutomationTarget::pan(instrument.id);
                         let normalized = target.normalize_value(instrument.channel_strip.pan);
@@ -271,7 +271,7 @@ pub(super) fn dispatch_mixer(
 mod tests {
     use super::*;
     use imbolc_audio::AudioHandle;
-    use imbolc_types::BusId;
+    use imbolc_types::{BusId, TrackId};
 
     fn setup() -> (AppState, AudioHandle) {
         let mut state = AppState::new();
@@ -284,7 +284,7 @@ mod tests {
     fn adjust_level_instrument_clamps() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         dispatch_mixer(&MixerAction::AdjustLevel(2.0), &mut state, &mut audio);
         assert!((state.tracks.tracks[0].channel_strip.level - 1.0).abs() < f32::EPSILON);
 
@@ -325,7 +325,7 @@ mod tests {
     fn toggle_mute_instrument() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         assert!(!state.tracks.tracks[0].channel_strip.mute);
         let result = dispatch_mixer(&MixerAction::ToggleMute, &mut state, &mut audio);
         assert!(state.tracks.tracks[0].channel_strip.mute);
@@ -358,7 +358,7 @@ mod tests {
     fn toggle_solo_instrument() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         let result = dispatch_mixer(&MixerAction::ToggleSolo, &mut state, &mut audio);
         assert!(state.tracks.tracks[0].channel_strip.solo);
         assert!(result
@@ -379,7 +379,7 @@ mod tests {
     fn adjust_pan_clamps() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         dispatch_mixer(&MixerAction::AdjustPan(5.0), &mut state, &mut audio);
         assert!((state.tracks.tracks[0].channel_strip.pan - 1.0).abs() < f32::EPSILON);
         dispatch_mixer(&MixerAction::AdjustPan(-5.0), &mut state, &mut audio);
@@ -397,7 +397,7 @@ mod tests {
     fn cycle_section() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         dispatch_mixer(&MixerAction::NextSection, &mut state, &mut audio);
         assert!(
             matches!(state.session.mixer.selection, MixerSelection::Bus(id) if id == BusId::new(1))
@@ -418,7 +418,7 @@ mod tests {
     fn toggle_send_auto_sets_level() {
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         // Sends start empty (lazily created)
         assert!(state.tracks.tracks[0].channel_strip.sends.is_empty());
 
@@ -455,7 +455,7 @@ mod tests {
         use imbolc_types::MixerSend;
         let (mut state, mut audio) = setup();
 
-        state.session.mixer.selection = MixerSelection::Track(0);
+        state.session.mixer.selection = MixerSelection::Track(TrackId::new(0));
         state.tracks.tracks[0].channel_strip.sends.insert(
             BusId::new(1),
             MixerSend {

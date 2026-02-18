@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult, IoFeedback, NavIntent, PaneId, 
 use crate::scd_parser;
 use crate::state::{AppState, CustomSynthDef, ParamSpec, Slice, SourceType, TrackId};
 use imbolc_audio::AudioHandle;
-use imbolc_types::DomainAction;
+use imbolc_types::{DomainAction, SliceId};
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 
@@ -103,7 +103,7 @@ fn add_sampler_track_from_file(
         .map(|s| s.to_string_lossy().to_string());
 
     let buffer_id = state.tracks.next_sampler_buffer_id;
-    state.tracks.next_sampler_buffer_id += 1;
+    state.tracks.next_sampler_buffer_id = buffer_id.next();
 
     if audio.is_running() {
         let _ = audio.load_sample(buffer_id, &path_str);
@@ -136,7 +136,7 @@ fn add_chopper_track_from_file(
 
     let track_id = state.add_track(SourceType::Kit);
     let buffer_id = state.tracks.next_sampler_buffer_id;
-    state.tracks.next_sampler_buffer_id += 1;
+    state.tracks.next_sampler_buffer_id = buffer_id.next();
 
     if audio.is_running() {
         let _ = audio.load_sample(buffer_id, &path_str);
@@ -149,9 +149,9 @@ fn add_chopper_track_from_file(
                 buffer_id: Some(buffer_id),
                 path: Some(path_str),
                 name,
-                slices: vec![Slice::full(0)],
+                slices: vec![Slice::full(SliceId::new(0))],
                 selected_slice: 0,
-                next_slice_id: 1,
+                next_slice_id: SliceId::new(1),
                 waveform_peaks: peaks,
                 duration_secs,
             });
@@ -265,7 +265,7 @@ pub(super) fn dispatch_session(
             }
             if audio.is_running() {
                 let preview_buffer_id = state.tracks.next_sampler_buffer_id;
-                state.tracks.next_sampler_buffer_id += 1;
+                state.tracks.next_sampler_buffer_id = preview_buffer_id.next();
                 match audio.load_sample(preview_buffer_id, &path_str) {
                     Ok(_) => {
                         state.recording.preview_buffer_id = Some(preview_buffer_id);
@@ -320,7 +320,7 @@ pub(super) fn dispatch_session(
                     }
                     if audio.is_running() {
                         let preview_buffer_id = state.tracks.next_sampler_buffer_id;
-                        state.tracks.next_sampler_buffer_id += 1;
+                        state.tracks.next_sampler_buffer_id = preview_buffer_id.next();
                         if audio.load_sample(preview_buffer_id, &path_str).is_ok() {
                             state.recording.preview_buffer_id = Some(preview_buffer_id);
                         }
@@ -366,7 +366,7 @@ pub(super) fn dispatch_session(
                     }
                     if audio.is_running() {
                         let preview_buffer_id = state.tracks.next_sampler_buffer_id;
-                        state.tracks.next_sampler_buffer_id += 1;
+                        state.tracks.next_sampler_buffer_id = preview_buffer_id.next();
                         if audio.load_sample(preview_buffer_id, &path_str).is_ok() {
                             state.recording.preview_buffer_id = Some(preview_buffer_id);
                         }
