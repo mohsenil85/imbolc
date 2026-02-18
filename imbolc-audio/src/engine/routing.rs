@@ -9,6 +9,7 @@ use imbolc_types::{
     ParamValue, ParameterTarget, SendTapPoint, SessionState, SourceType, SourceTypeExt, Track,
     TrackId, TrackState,
 };
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 /// State machine for amortized routing rebuild across multiple ticks.
@@ -61,6 +62,75 @@ impl AudioEngine {
             et.synth_def_name_mono()
         } else {
             et.synth_def_name()
+        }
+    }
+
+    /// Map a logical bus selector value (1..N) to a real SC audio bus index.
+    /// `0` means "disabled/not connected".
+    fn map_bus_selector_value(&self, value: f32) -> f32 {
+        let bus_raw = value.round().clamp(0.0, u8::MAX as f32) as u8;
+        if bus_raw == 0 {
+            0.0
+        } else {
+            self.bus_audio_buses
+                .get(&BusId::new(bus_raw))
+                .copied()
+                .unwrap_or(0) as f32
+        }
+    }
+
+    fn map_bus_selector_param_value(&self, value: &ParamValue) -> f32 {
+        let raw = match value {
+            ParamValue::Int(v) => *v as f32,
+            ParamValue::Float(v) => *v,
+            ParamValue::Bool(v) => {
+                if *v {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+        };
+        self.map_bus_selector_value(raw)
+    }
+
+    /// Remap effect params that reference logical mixer bus IDs.
+    ///
+    /// Some effect params are user-facing bus selectors (e.g. `sc_bus`, `bus_b`),
+    /// but SynthDefs consume raw SC bus indices.
+    fn remap_effect_bus_param_from_state(
+        &self,
+        effect_type: EffectType,
+        param_name: &str,
+        param_value: &ParamValue,
+    ) -> Option<(&'static str, f32)> {
+        match (effect_type, param_name) {
+            (EffectType::SidechainComp, "sc_bus") => Some((
+                "sidechain_in",
+                self.map_bus_selector_param_value(param_value),
+            )),
+            (EffectType::Crossfader, "bus_b") => {
+                Some(("bus_b", self.map_bus_selector_param_value(param_value)))
+            }
+            _ => None,
+        }
+    }
+
+    /// Runtime remap for targeted /n_set updates of effect bus selector params.
+    fn remap_effect_bus_param_runtime<'a>(
+        &self,
+        param_name: &'a str,
+        value: f32,
+    ) -> (Cow<'a, str>, f32) {
+        match param_name {
+            // Sidechain selector: UI/state uses `sc_bus`, SynthDef expects `sidechain_in`.
+            "sc_bus" | "sidechain_in" => (
+                Cow::Borrowed("sidechain_in"),
+                self.map_bus_selector_value(value),
+            ),
+            // Crossfader selector: same name in UI and SynthDef, but still map ID->SC bus.
+            "bus_b" => (Cow::Borrowed("bus_b"), self.map_bus_selector_value(value)),
+            _ => (Cow::Borrowed(param_name), value),
         }
     }
 
@@ -282,20 +352,12 @@ impl AudioEngine {
                 ("out".to_string(), effect_out_bus as f32),
             ];
             for p in &effect.params {
-                if effect.effect_type == EffectType::SidechainComp && p.name == "sc_bus" {
-                    let sc_bus_raw = match p.value {
-                        ParamValue::Int(v) => v as u8,
-                        _ => 0,
-                    };
-                    let sidechain_in = if sc_bus_raw == 0 {
-                        0.0
-                    } else {
-                        self.bus_audio_buses
-                            .get(&BusId::new(sc_bus_raw))
-                            .copied()
-                            .unwrap_or(0) as f32
-                    };
-                    params.push(("sidechain_in".to_string(), sidechain_in));
+                if let Some((mapped_name, mapped_value)) = self.remap_effect_bus_param_from_state(
+                    effect.effect_type,
+                    &p.name,
+                    &p.value,
+                ) {
+                    params.push((mapped_name.to_string(), mapped_value));
                     continue;
                 }
                 if effect.effect_type == EffectType::ConvolutionReverb && p.name == "ir_buffer" {
@@ -607,20 +669,12 @@ impl AudioEngine {
                 ("out".to_string(), effect_out_bus as f32),
             ];
             for p in &effect.params {
-                if effect.effect_type == EffectType::SidechainComp && p.name == "sc_bus" {
-                    let sc_bus_raw = match p.value {
-                        ParamValue::Int(v) => v as u8,
-                        _ => 0,
-                    };
-                    let sidechain_in = if sc_bus_raw == 0 {
-                        0.0
-                    } else {
-                        self.bus_audio_buses
-                            .get(&BusId::new(sc_bus_raw))
-                            .copied()
-                            .unwrap_or(0) as f32
-                    };
-                    params.push(("sidechain_in".to_string(), sidechain_in));
+                if let Some((mapped_name, mapped_value)) = self.remap_effect_bus_param_from_state(
+                    effect.effect_type,
+                    &p.name,
+                    &p.value,
+                ) {
+                    params.push((mapped_name.to_string(), mapped_value));
                     continue;
                 }
                 if effect.effect_type == EffectType::ConvolutionReverb && p.name == "ir_buffer" {
@@ -730,20 +784,12 @@ impl AudioEngine {
                 ("out".to_string(), effect_out_bus as f32),
             ];
             for p in &effect.params {
-                if effect.effect_type == EffectType::SidechainComp && p.name == "sc_bus" {
-                    let sc_bus_raw = match p.value {
-                        ParamValue::Int(v) => v as u8,
-                        _ => 0,
-                    };
-                    let sidechain_in = if sc_bus_raw == 0 {
-                        0.0
-                    } else {
-                        self.bus_audio_buses
-                            .get(&BusId::new(sc_bus_raw))
-                            .copied()
-                            .unwrap_or(0) as f32
-                    };
-                    params.push(("sidechain_in".to_string(), sidechain_in));
+                if let Some((mapped_name, mapped_value)) = self.remap_effect_bus_param_from_state(
+                    effect.effect_type,
+                    &p.name,
+                    &p.value,
+                ) {
+                    params.push((mapped_name.to_string(), mapped_value));
                     continue;
                 }
                 if effect.effect_type == EffectType::ConvolutionReverb && p.name == "ir_buffer" {
@@ -1801,10 +1847,11 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
+        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
 
         if let Some(nodes) = self.node_map.get(&instrument_id) {
             if let Some(&effect_node) = nodes.effects.get(&effect_id) {
-                let _ = client.set_param(effect_node, param, value);
+                let _ = client.set_param(effect_node, mapped_param.as_ref(), mapped_value);
             }
         }
 
@@ -1844,9 +1891,10 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
+        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
 
         if let Some(&node_id) = self.bus_effect_node_map.get(&(bus_id, effect_id)) {
-            let _ = client.set_param(node_id, param, value);
+            let _ = client.set_param(node_id, mapped_param.as_ref(), mapped_value);
         }
 
         Ok(())
@@ -1864,9 +1912,10 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
+        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
 
         if let Some(&node_id) = self.layer_group_effect_node_map.get(&(group_id, effect_id)) {
-            let _ = client.set_param(node_id, param, value);
+            let _ = client.set_param(node_id, mapped_param.as_ref(), mapped_value);
         }
 
         Ok(())

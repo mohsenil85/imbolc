@@ -401,10 +401,11 @@ impl Default for AudioEngine {
 mod tests {
     use super::voice_allocator::MAX_VOICES_PER_INSTRUMENT;
     use super::*;
-    use crate::engine::backend::NullBackend;
+    use crate::engine::backend::{NullBackend, SharedTestBackend, TestBackend, TestOp};
     use imbolc_types::state::mixer::DEFAULT_BUS_COUNT;
     use imbolc_types::{AutomationTarget, BusId, ParamIndex, ParamValue};
     use imbolc_types::{EffectType, FilterType, SourceType};
+    use std::sync::Arc;
 
     /// Test-only stand-in for AppState (which lives in imbolc-core).
     struct AppState {
@@ -436,6 +437,15 @@ mod tests {
         engine.is_running = true;
         engine.server_status = ServerStatus::Connected;
         engine
+    }
+
+    fn connect_engine_with_test_backend() -> (AudioEngine, Arc<TestBackend>) {
+        let mut engine = AudioEngine::new();
+        let backend = Arc::new(TestBackend::new());
+        engine.backend = Some(Box::new(SharedTestBackend(Arc::clone(&backend))));
+        engine.is_running = true;
+        engine.server_status = ServerStatus::Connected;
+        (engine, backend)
     }
 
     #[test]
@@ -494,6 +504,130 @@ mod tests {
         let nodes = engine.node_map.get(&inst_id).expect("nodes");
         assert!(nodes.source.is_some());
         assert_eq!(nodes.effects.len(), 1);
+    }
+
+    #[test]
+    fn rebuild_routing_maps_crossfader_bus_b_to_audio_bus_index() {
+        let (mut engine, backend) = connect_engine_with_test_backend();
+        let mut state = AppState::new();
+
+        let inst_id = state.add_track(SourceType::BusIn);
+        if let Some(inst) = state.tracks.track_mut(inst_id) {
+            let effect_id = inst.add_effect(EffectType::Crossfader);
+            if let Some(effect) = inst.effect_by_id_mut(effect_id) {
+                if let Some(param) = effect.params.iter_mut().find(|p| p.name == "bus_b") {
+                    param.value = ParamValue::Int(1);
+                }
+            }
+        }
+
+        engine
+            .rebuild_instrument_routing(&state.tracks, &state.session)
+            .expect("rebuild routing");
+
+        let mapped_bus = engine
+            .bus_audio_buses
+            .get(&BusId::new(1))
+            .copied()
+            .expect("bus 1 should have an audio bus");
+
+        let crossfader_params = backend
+            .operations()
+            .into_iter()
+            .find_map(|op| match op {
+                TestOp::CreateSynth {
+                    def_name, params, ..
+                } if def_name == "imbolc_crossfader" => Some(params),
+                _ => None,
+            })
+            .expect("crossfader synth should be created");
+
+        let bus_b = crossfader_params
+            .iter()
+            .find_map(|(name, value)| {
+                if name == "bus_b" {
+                    Some(*value)
+                } else {
+                    None
+                }
+            })
+            .expect("crossfader should receive bus_b param");
+
+        assert_eq!(bus_b, mapped_bus as f32);
+    }
+
+    #[test]
+    fn set_effect_param_maps_crossfader_bus_b_to_audio_bus_index() {
+        let (mut engine, backend) = connect_engine_with_test_backend();
+        let mut state = AppState::new();
+
+        let inst_id = state.add_track(SourceType::BusIn);
+        let effect_id = {
+            let inst = state.tracks.track_mut(inst_id).expect("track should exist");
+            inst.add_effect(EffectType::Crossfader)
+        };
+
+        engine
+            .rebuild_instrument_routing(&state.tracks, &state.session)
+            .expect("rebuild routing");
+
+        backend.clear();
+        engine
+            .set_effect_param(inst_id, effect_id, "bus_b", 1.0)
+            .expect("set_effect_param");
+
+        let mapped_bus = engine
+            .bus_audio_buses
+            .get(&BusId::new(1))
+            .copied()
+            .expect("bus 1 should have an audio bus");
+
+        let op = backend
+            .find(|op| matches!(op, TestOp::SetParam { param, .. } if param == "bus_b"))
+            .expect("bus_b param should be sent");
+
+        let TestOp::SetParam { value, .. } = op else {
+            panic!("expected SetParam operation");
+        };
+
+        assert_eq!(value, mapped_bus as f32);
+    }
+
+    #[test]
+    fn set_effect_param_maps_sc_bus_to_sidechain_in_audio_bus_index() {
+        let (mut engine, backend) = connect_engine_with_test_backend();
+        let mut state = AppState::new();
+
+        let inst_id = state.add_track(SourceType::BusIn);
+        let effect_id = {
+            let inst = state.tracks.track_mut(inst_id).expect("track should exist");
+            inst.add_effect(EffectType::SidechainComp)
+        };
+
+        engine
+            .rebuild_instrument_routing(&state.tracks, &state.session)
+            .expect("rebuild routing");
+
+        backend.clear();
+        engine
+            .set_effect_param(inst_id, effect_id, "sc_bus", 1.0)
+            .expect("set_effect_param");
+
+        let mapped_bus = engine
+            .bus_audio_buses
+            .get(&BusId::new(1))
+            .copied()
+            .expect("bus 1 should have an audio bus");
+
+        let op = backend
+            .find(|op| matches!(op, TestOp::SetParam { param, .. } if param == "sidechain_in"))
+            .expect("sidechain_in param should be sent");
+
+        let TestOp::SetParam { value, .. } = op else {
+            panic!("expected SetParam operation");
+        };
+
+        assert_eq!(value, mapped_bus as f32);
     }
 
     #[test]
