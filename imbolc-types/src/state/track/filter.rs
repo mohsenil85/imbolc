@@ -162,17 +162,133 @@ impl FilterConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EqBandType {
+    HighPass,
     LowShelf,
-    Peaking,
+    Bell,
     HighShelf,
+    LowPass,
 }
 
 impl EqBandType {
     pub fn name(&self) -> &'static str {
         match self {
+            EqBandType::HighPass => "HP",
             EqBandType::LowShelf => "LS",
-            EqBandType::Peaking => "PK",
+            EqBandType::Bell => "BL",
             EqBandType::HighShelf => "HS",
+            EqBandType::LowPass => "LP",
+        }
+    }
+
+    /// Whether this band type has a gain parameter.
+    pub fn has_gain(&self) -> bool {
+        matches!(
+            self,
+            EqBandType::LowShelf | EqBandType::Bell | EqBandType::HighShelf
+        )
+    }
+
+    /// Whether this band type has a Q parameter.
+    pub fn has_q(&self) -> bool {
+        matches!(
+            self,
+            EqBandType::LowShelf | EqBandType::Bell | EqBandType::HighShelf
+        )
+    }
+
+    /// Whether this band type has a slope parameter (HPF/LPF only).
+    pub fn has_slope(&self) -> bool {
+        matches!(self, EqBandType::HighPass | EqBandType::LowPass)
+    }
+
+    /// Returns the allowed band types for a given band index.
+    /// Bands 0 and 5 are fixed (HPF/LPF), bands 1-4 can switch.
+    pub fn allowed_types(band_idx: usize) -> &'static [EqBandType] {
+        match band_idx {
+            0 => &[EqBandType::HighPass],
+            5 => &[EqBandType::LowPass],
+            _ => &[
+                EqBandType::Bell,
+                EqBandType::LowShelf,
+                EqBandType::HighShelf,
+            ],
+        }
+    }
+
+    /// SuperCollider type index: HP=0, LS=1, Bell=2, HS=3, LP=4
+    pub fn sc_type_index(&self) -> i32 {
+        match self {
+            EqBandType::HighPass => 0,
+            EqBandType::LowShelf => 1,
+            EqBandType::Bell => 2,
+            EqBandType::HighShelf => 3,
+            EqBandType::LowPass => 4,
+        }
+    }
+}
+
+/// Filter slope for HPF/LPF bands (number of cascaded biquad stages).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum FilterSlope {
+    #[default]
+    Db12,
+    Db24,
+    Db48,
+}
+
+impl FilterSlope {
+    pub fn name(&self) -> &'static str {
+        match self {
+            FilterSlope::Db12 => "12",
+            FilterSlope::Db24 => "24",
+            FilterSlope::Db48 => "48",
+        }
+    }
+
+    /// SuperCollider slope value: Db12=1, Db24=2, Db48=3
+    pub fn sc_slope_value(&self) -> i32 {
+        match self {
+            FilterSlope::Db12 => 1,
+            FilterSlope::Db24 => 2,
+            FilterSlope::Db48 => 3,
+        }
+    }
+
+    /// Cycle to the next slope value.
+    pub fn next(&self) -> FilterSlope {
+        match self {
+            FilterSlope::Db12 => FilterSlope::Db24,
+            FilterSlope::Db24 => FilterSlope::Db48,
+            FilterSlope::Db48 => FilterSlope::Db12,
+        }
+    }
+
+    /// Cycle to the previous slope value.
+    pub fn prev(&self) -> FilterSlope {
+        match self {
+            FilterSlope::Db12 => FilterSlope::Db48,
+            FilterSlope::Db24 => FilterSlope::Db12,
+            FilterSlope::Db48 => FilterSlope::Db24,
+        }
+    }
+
+    /// Convert from normalized 0.0-1.0: Db12=0.0, Db24=0.5, Db48=1.0
+    pub fn from_normalized(v: f32) -> FilterSlope {
+        if v < 0.33 {
+            FilterSlope::Db12
+        } else if v < 0.67 {
+            FilterSlope::Db24
+        } else {
+            FilterSlope::Db48
+        }
+    }
+
+    /// Convert to normalized 0.0-1.0
+    pub fn to_normalized(&self) -> f32 {
+        match self {
+            FilterSlope::Db12 => 0.0,
+            FilterSlope::Db24 => 0.5,
+            FilterSlope::Db48 => 1.0,
         }
     }
 }
@@ -184,103 +300,80 @@ pub struct EqBand {
     pub gain: f32,
     pub q: f32,
     pub enabled: bool,
+    #[serde(default)]
+    pub slope: FilterSlope,
 }
 
-pub const EQ_BAND_COUNT: usize = 12;
+pub const EQ_BAND_COUNT: usize = 6;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EqConfig {
-    pub bands: [EqBand; EQ_BAND_COUNT],
+    pub bands: Vec<EqBand>,
     pub enabled: bool,
+}
+
+impl EqConfig {
+    /// Validate and fix band count on deserialization.
+    /// If Vec has wrong size, replace with default.
+    pub fn validated(mut self) -> Self {
+        if self.bands.len() != EQ_BAND_COUNT {
+            self.bands = Self::default().bands;
+        }
+        self
+    }
 }
 
 impl Default for EqConfig {
     fn default() -> Self {
         Self {
-            bands: [
+            bands: vec![
                 EqBand {
-                    band_type: EqBandType::LowShelf,
-                    freq: 40.0,
+                    band_type: EqBandType::HighPass,
+                    freq: 20.0,
                     gain: 0.0,
                     q: 0.7,
                     enabled: true,
+                    slope: FilterSlope::Db12,
                 },
                 EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 80.0,
+                    band_type: EqBandType::LowShelf,
+                    freq: 100.0,
+                    gain: 0.0,
+                    q: 0.7,
+                    enabled: true,
+                    slope: FilterSlope::Db12,
+                },
+                EqBand {
+                    band_type: EqBandType::Bell,
+                    freq: 500.0,
                     gain: 0.0,
                     q: 1.0,
                     enabled: true,
+                    slope: FilterSlope::Db12,
                 },
                 EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 160.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 320.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 640.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 1200.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
+                    band_type: EqBandType::Bell,
                     freq: 2500.0,
                     gain: 0.0,
                     q: 1.0,
                     enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 5000.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 8000.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 12000.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
-                },
-                EqBand {
-                    band_type: EqBandType::Peaking,
-                    freq: 16000.0,
-                    gain: 0.0,
-                    q: 1.0,
-                    enabled: true,
+                    slope: FilterSlope::Db12,
                 },
                 EqBand {
                     band_type: EqBandType::HighShelf,
-                    freq: 18000.0,
+                    freq: 8000.0,
                     gain: 0.0,
                     q: 0.7,
                     enabled: true,
+                    slope: FilterSlope::Db12,
+                },
+                EqBand {
+                    band_type: EqBandType::LowPass,
+                    freq: 20000.0,
+                    gain: 0.0,
+                    q: 0.7,
+                    enabled: true,
+                    slope: FilterSlope::Db12,
                 },
             ],
             enabled: true,
@@ -382,15 +475,44 @@ mod tests {
     fn eq_config_default() {
         let eq = EqConfig::default();
         assert_eq!(eq.bands.len(), EQ_BAND_COUNT);
-        assert_eq!(eq.bands[0].band_type, EqBandType::LowShelf);
-        assert_eq!(eq.bands[11].band_type, EqBandType::HighShelf);
+        assert_eq!(eq.bands[0].band_type, EqBandType::HighPass);
+        assert_eq!(eq.bands[1].band_type, EqBandType::LowShelf);
+        assert_eq!(eq.bands[2].band_type, EqBandType::Bell);
+        assert_eq!(eq.bands[3].band_type, EqBandType::Bell);
+        assert_eq!(eq.bands[4].band_type, EqBandType::HighShelf);
+        assert_eq!(eq.bands[5].band_type, EqBandType::LowPass);
         assert!(eq.enabled);
     }
 
     #[test]
     fn eq_band_type_name() {
+        assert_eq!(EqBandType::HighPass.name(), "HP");
         assert_eq!(EqBandType::LowShelf.name(), "LS");
-        assert_eq!(EqBandType::Peaking.name(), "PK");
+        assert_eq!(EqBandType::Bell.name(), "BL");
         assert_eq!(EqBandType::HighShelf.name(), "HS");
+        assert_eq!(EqBandType::LowPass.name(), "LP");
+    }
+
+    #[test]
+    fn eq_band_type_helpers() {
+        assert!(!EqBandType::HighPass.has_gain());
+        assert!(EqBandType::Bell.has_gain());
+        assert!(EqBandType::HighPass.has_slope());
+        assert!(!EqBandType::Bell.has_slope());
+    }
+
+    #[test]
+    fn filter_slope_cycle() {
+        assert_eq!(FilterSlope::Db12.next(), FilterSlope::Db24);
+        assert_eq!(FilterSlope::Db24.next(), FilterSlope::Db48);
+        assert_eq!(FilterSlope::Db48.next(), FilterSlope::Db12);
+    }
+
+    #[test]
+    fn eq_config_validated_wrong_size() {
+        let mut eq = EqConfig::default();
+        eq.bands.pop(); // 5 bands - wrong
+        let eq = eq.validated();
+        assert_eq!(eq.bands.len(), EQ_BAND_COUNT);
     }
 }

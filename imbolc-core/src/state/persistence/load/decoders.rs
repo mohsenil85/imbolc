@@ -243,15 +243,17 @@ pub(crate) fn decode_filter_type(s: &str) -> crate::state::track::FilterType {
 pub(crate) fn decode_eq_band_type(s: &str) -> crate::state::track::EqBandType {
     use crate::state::track::EqBandType;
     match s {
-        "Peaking" => EqBandType::Peaking,
+        "HighPass" => EqBandType::HighPass,
         "LowShelf" => EqBandType::LowShelf,
+        "Bell" | "Peaking" => EqBandType::Bell,
         "HighShelf" => EqBandType::HighShelf,
+        "LowPass" => EqBandType::LowPass,
         other => {
             eprintln!(
-                "[imbolc] persistence: unknown EqBandType '{}', using Peaking",
+                "[imbolc] persistence: unknown EqBandType '{}', using Bell",
                 other
             );
-            EqBandType::Peaking
+            EqBandType::Bell
         }
     }
 }
@@ -317,6 +319,11 @@ pub(crate) fn decode_parameter_target(s: &str) -> crate::state::track::Parameter
     if let Some(rest) = s.strip_prefix("EqBandQ:") {
         if let Ok(idx) = rest.parse::<usize>() {
             return ParameterTarget::EqBandQ(idx);
+        }
+    }
+    if let Some(rest) = s.strip_prefix("EqBandSlope:") {
+        if let Ok(idx) = rest.parse::<usize>() {
+            return ParameterTarget::EqBandSlope(idx);
         }
     }
     if let Some(rest) = s.strip_prefix("VstParam:") {

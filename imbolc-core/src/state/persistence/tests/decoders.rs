@@ -212,10 +212,10 @@ fn roundtrip_filter_type() {
 #[test]
 fn roundtrip_eq_band_type() {
     use crate::state::track::EqBandType::*;
-    let all = [LowShelf, Peaking, HighShelf];
+    let all = [HighPass, LowShelf, Bell, HighShelf, LowPass];
     for &b in &all {
         match b {
-            LowShelf | Peaking | HighShelf => {}
+            HighPass | LowShelf | Bell | HighShelf | LowPass => {}
         }
         let encoded = format!("{:?}", b);
         let decoded = decoders::decode_eq_band_type(&encoded);
@@ -290,6 +290,7 @@ fn roundtrip_parameter_target() {
         EqBandFreq(0),
         EqBandGain(1),
         EqBandQ(2),
+        EqBandSlope(0),
         VstParam(7),
         SourceParam(ParamIndex::new(0)),
         SourceParam(ParamIndex::new(3)),
@@ -342,6 +343,7 @@ fn roundtrip_parameter_target() {
             | EqBandFreq(_)
             | EqBandGain(_)
             | EqBandQ(_)
+            | EqBandSlope(_)
             | VstParam(_)
             | SourceParam(_) => {}
         }
@@ -354,6 +356,7 @@ fn roundtrip_parameter_target() {
             EqBandFreq(idx) => format!("EqBandFreq:{}", idx),
             EqBandGain(idx) => format!("EqBandGain:{}", idx),
             EqBandQ(idx) => format!("EqBandQ:{}", idx),
+            EqBandSlope(idx) => format!("EqBandSlope:{}", idx),
             VstParam(idx) => format!("VstParam:{}", idx),
             SourceParam(idx) => format!("SourceParam:{}", idx),
             _ => format!("{:?}", pt),

@@ -302,6 +302,11 @@ impl AutomationTarget {
     }
 
     #[inline]
+    pub fn eq_band_slope(id: TrackId, band: usize) -> Self {
+        Self::instrument(id, ParameterTarget::EqBandSlope(band))
+    }
+
+    #[inline]
     pub fn swing(id: TrackId) -> Self {
         Self::instrument(id, ParameterTarget::Swing)
     }

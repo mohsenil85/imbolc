@@ -28,10 +28,17 @@ pub(super) fn handle_set_eq_param(
     // Send real-time param update to audio engine
     if audio.is_running() {
         let sc_param = format!("b{}_{}", band_idx, param.as_str());
-        let sc_value = if param == EqualizerParamKind::Q {
-            1.0 / value
-        } else {
-            value
+        let sc_value = match param {
+            EqualizerParamKind::Q => 1.0 / value,
+            EqualizerParamKind::Slope => {
+                imbolc_types::FilterSlope::from_normalized(value).sc_slope_value() as f32
+            }
+            EqualizerParamKind::BandType => {
+                let allowed = imbolc_types::EqBandType::allowed_types(band_idx);
+                let idx = (value as usize).min(allowed.len().saturating_sub(1));
+                allowed[idx].sc_type_index() as f32
+            }
+            _ => value,
         };
         let _ = audio.set_eq_param(instrument_id, &sc_param, sc_value);
     }
@@ -49,7 +56,10 @@ pub(super) fn handle_set_eq_param(
                 Some(AutomationTarget::eq_band_gain(instrument_id, band_idx))
             }
             EqualizerParamKind::Q => Some(AutomationTarget::eq_band_q(instrument_id, band_idx)),
-            EqualizerParamKind::Enabled => None,
+            EqualizerParamKind::Slope => {
+                Some(AutomationTarget::eq_band_slope(instrument_id, band_idx))
+            }
+            EqualizerParamKind::Enabled | EqualizerParamKind::BandType => None,
         };
         if let Some(t) = target {
             let normalized = t.normalize_value(value);

@@ -281,6 +281,17 @@ impl AudioEngine {
                     }
                 }
             }
+            ParameterTarget::EqBandSlope(band) => {
+                if let Some(nodes) = self.node_map.get(&instrument_id) {
+                    if let Some(eq_node) = nodes.eq {
+                        let param_name = format!("b{}_slope", band);
+                        let slope = imbolc_types::FilterSlope::from_normalized(value);
+                        backend
+                            .set_param(eq_node, &param_name, slope.sc_slope_value() as f32)
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+            }
             // Track groove settings: state-only, no OSC messages needed
             ParameterTarget::Swing => {
                 if let Some(inst) = state.track_mut(instrument_id) {
@@ -586,6 +597,19 @@ impl AudioEngine {
                         let param_name = format!("b{}_q", band);
                         let sc_value = 1.0 / value;
                         msgs.push(build_n_set_message(eq_node, &param_name, sc_value));
+                    }
+                }
+            }
+            ParameterTarget::EqBandSlope(band) => {
+                if let Some(nodes) = self.node_map.get(&instrument_id) {
+                    if let Some(eq_node) = nodes.eq {
+                        let param_name = format!("b{}_slope", band);
+                        let slope = imbolc_types::FilterSlope::from_normalized(value);
+                        msgs.push(build_n_set_message(
+                            eq_node,
+                            &param_name,
+                            slope.sc_slope_value() as f32,
+                        ));
                     }
                 }
             }

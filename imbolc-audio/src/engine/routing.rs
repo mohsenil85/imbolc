@@ -352,11 +352,9 @@ impl AudioEngine {
                 ("out".to_string(), effect_out_bus as f32),
             ];
             for p in &effect.params {
-                if let Some((mapped_name, mapped_value)) = self.remap_effect_bus_param_from_state(
-                    effect.effect_type,
-                    &p.name,
-                    &p.value,
-                ) {
+                if let Some((mapped_name, mapped_value)) =
+                    self.remap_effect_bus_param_from_state(effect.effect_type, &p.name, &p.value)
+                {
                     params.push((mapped_name.to_string(), mapped_value));
                     continue;
                 }
@@ -433,7 +431,7 @@ impl AudioEngine {
             current_bus = effect_out_bus;
         }
 
-        // EQ (12-band parametric, if present)
+        // EQ (6-band parametric, if present)
         // Note: EQ doesn't have mono variants yet, stays stereo
         if let Some(eq) = instrument.eq() {
             let node_id = self.next_node_id;
@@ -451,11 +449,16 @@ impl AudioEngine {
                 params.push((format!("b{}_gain", i), band.gain));
                 params.push((format!("b{}_q", i), 1.0 / band.q)); // SC expects reciprocal Q
                 params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
+                params.push((
+                    format!("b{}_type", i),
+                    band.band_type.sc_type_index() as f32,
+                ));
+                params.push((format!("b{}_slope", i), band.slope.sc_slope_value() as f32));
             }
 
             let client = self.backend.as_ref().ok_or("Not connected")?;
             client
-                .create_synth("imbolc_eq12", node_id, GROUP_PROCESSING, &params)
+                .create_synth("imbolc_eq6", node_id, GROUP_PROCESSING, &params)
                 .map_err(|e| e.to_string())?;
 
             eq_node = Some(node_id);
@@ -672,11 +675,9 @@ impl AudioEngine {
                 ("out".to_string(), effect_out_bus as f32),
             ];
             for p in &effect.params {
-                if let Some((mapped_name, mapped_value)) = self.remap_effect_bus_param_from_state(
-                    effect.effect_type,
-                    &p.name,
-                    &p.value,
-                ) {
+                if let Some((mapped_name, mapped_value)) =
+                    self.remap_effect_bus_param_from_state(effect.effect_type, &p.name, &p.value)
+                {
                     params.push((mapped_name.to_string(), mapped_value));
                     continue;
                 }
@@ -732,7 +733,7 @@ impl AudioEngine {
             current_bus = effect_out_bus;
         }
 
-        // EQ (12-band parametric, if present) — inserted after effects
+        // EQ (6-band parametric, if present) — inserted after effects
         if let Some(eq) = bus.channel_strip.eq() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
@@ -749,11 +750,16 @@ impl AudioEngine {
                 params.push((format!("b{}_gain", i), band.gain));
                 params.push((format!("b{}_q", i), 1.0 / band.q));
                 params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
+                params.push((
+                    format!("b{}_type", i),
+                    band.band_type.sc_type_index() as f32,
+                ));
+                params.push((format!("b{}_slope", i), band.slope.sc_slope_value() as f32));
             }
 
             let client = self.backend.as_ref().ok_or("Not connected")?;
             client
-                .create_synth("imbolc_eq12", node_id, GROUP_BUS_PROCESSING, &params)
+                .create_synth("imbolc_eq6", node_id, GROUP_BUS_PROCESSING, &params)
                 .map_err(|e| e.to_string())?;
 
             self.node_registry.register(node_id);
@@ -790,11 +796,9 @@ impl AudioEngine {
                 ("out".to_string(), effect_out_bus as f32),
             ];
             for p in &effect.params {
-                if let Some((mapped_name, mapped_value)) = self.remap_effect_bus_param_from_state(
-                    effect.effect_type,
-                    &p.name,
-                    &p.value,
-                ) {
+                if let Some((mapped_name, mapped_value)) =
+                    self.remap_effect_bus_param_from_state(effect.effect_type, &p.name, &p.value)
+                {
                     params.push((mapped_name.to_string(), mapped_value));
                     continue;
                 }
@@ -850,7 +854,7 @@ impl AudioEngine {
             current_bus = effect_out_bus;
         }
 
-        // EQ (12-band parametric, if present) — inserted after effects
+        // EQ (6-band parametric, if present) — inserted after effects
         if let Some(eq) = gm.eq() {
             let node_id = self.next_node_id;
             self.next_node_id += 1;
@@ -867,11 +871,16 @@ impl AudioEngine {
                 params.push((format!("b{}_gain", i), band.gain));
                 params.push((format!("b{}_q", i), 1.0 / band.q));
                 params.push((format!("b{}_on", i), if band.enabled { 1.0 } else { 0.0 }));
+                params.push((
+                    format!("b{}_type", i),
+                    band.band_type.sc_type_index() as f32,
+                ));
+                params.push((format!("b{}_slope", i), band.slope.sc_slope_value() as f32));
             }
 
             let client = self.backend.as_ref().ok_or("Not connected")?;
             client
-                .create_synth("imbolc_eq12", node_id, GROUP_BUS_PROCESSING, &params)
+                .create_synth("imbolc_eq6", node_id, GROUP_BUS_PROCESSING, &params)
                 .map_err(|e| e.to_string())?;
 
             self.node_registry.register(node_id);
@@ -1336,10 +1345,15 @@ impl AudioEngine {
                 params.push((format!("{prefix}gain"), band.gain));
                 params.push((format!("{prefix}q"), 1.0 / band.q));
                 params.push((format!("{prefix}on"), if band.enabled { 1.0 } else { 0.0 }));
+                params.push((
+                    format!("{prefix}type"),
+                    band.band_type.sc_type_index() as f32,
+                ));
+                params.push((format!("{prefix}slope"), band.slope.sc_slope_value() as f32));
             }
             let client = self.backend.as_ref().ok_or("Not connected")?;
             client
-                .create_synth("imbolc_eq12_replace", node_id, GROUP_MASTER, &params)
+                .create_synth("imbolc_eq6_replace", node_id, GROUP_MASTER, &params)
                 .map_err(|e| e.to_string())?;
             self.node_registry.register(node_id);
             self.master_eq_node_id = Some(node_id);

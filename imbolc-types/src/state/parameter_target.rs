@@ -108,6 +108,8 @@ pub enum ParameterTarget {
     EqBandGain(usize),
     /// EQ band Q (band_index)
     EqBandQ(usize),
+    /// EQ band slope for HPF/LPF (band_index)
+    EqBandSlope(usize),
 
     // === LFO (meta-modulation) ===
     /// LFO rate (0.1-32.0 Hz)
@@ -181,6 +183,7 @@ impl ParameterTarget {
             Self::EqBandFreq(_) => "EqFrq",
             Self::EqBandGain(_) => "EqGn",
             Self::EqBandQ(_) => "EqQ",
+            Self::EqBandSlope(_) => "EqSlp",
             Self::LfoRate => "LfoRt",
             Self::LfoDepth => "LfoDp",
             Self::Swing => "Swing",
@@ -237,6 +240,7 @@ impl ParameterTarget {
             Self::EqBandFreq(band) => format!("EQ B{} Freq", band + 1),
             Self::EqBandGain(band) => format!("EQ B{} Gain", band + 1),
             Self::EqBandQ(band) => format!("EQ B{} Q", band + 1),
+            Self::EqBandSlope(band) => format!("EQ B{} Slope", band + 1),
             Self::LfoRate => "LFO Rate".to_string(),
             Self::LfoDepth => "LFO Depth".to_string(),
             Self::Swing => "Swing".to_string(),
@@ -284,6 +288,7 @@ impl ParameterTarget {
 
             Self::EqBandGain(_) => (-24.0, 24.0),
             Self::EqBandQ(_) => (0.1, 10.0),
+            Self::EqBandSlope(_) => (0.0, 1.0),
 
             // Discrete/toggle parameters use 0-1 normalized
             Self::FilterBypass

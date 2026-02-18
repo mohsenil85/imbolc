@@ -423,7 +423,7 @@ mod tests {
         assert_eq!(t[7], 0.0); // G
         assert_eq!(t[9], 0.0); // A
         assert_eq!(t[11], 0.0); // B
-        // Out-of-scale: snap to nearest
+                                // Out-of-scale: snap to nearest
         assert_eq!(t[1], -1.0); // C# → C (down 1)
         assert_eq!(t[3], -1.0); // D# → D (down 1, equidistant picks down)
         assert_eq!(t[6], -1.0); // F# → F (down 1)
@@ -442,7 +442,7 @@ mod tests {
         assert_eq!(t[4], 0.0); // E
         assert_eq!(t[5], 0.0); // F
         assert_eq!(t[7], 0.0); // G
-        // Out-of-scale
+                               // Out-of-scale
         assert_eq!(t[1], -1.0); // C# → C
         assert_eq!(t[3], -1.0); // D# → D
         assert_eq!(t[6], -1.0); // F# → F
@@ -474,7 +474,7 @@ mod tests {
         assert_eq!(t[10], 0.0); // A#
         assert_eq!(t[1], 0.0); // C#
         assert_eq!(t[3], 0.0); // D#
-        // Gaps are wider in pentatonic, test some
+                               // Gaps are wider in pentatonic, test some
         assert_eq!(t[0], 1.0); // C → C# (up 1)
         assert_eq!(t[2], -1.0); // D → C# (down 1)
         assert_eq!(t[7], -1.0); // G → F# (down 1)
@@ -490,7 +490,7 @@ mod tests {
         assert_eq!(t[6], 0.0); // F#
         assert_eq!(t[7], 0.0); // G
         assert_eq!(t[10], 0.0); // Bb
-        // Out-of-scale
+                                // Out-of-scale
         assert_eq!(t[1], -1.0); // C# → C
         assert_eq!(t[2], 1.0); // D → Eb
         assert_eq!(t[4], -1.0); // E → Eb (down 1, equidistant picks down)

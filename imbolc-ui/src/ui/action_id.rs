@@ -615,6 +615,8 @@ define_action_enum! {
         DecreaseTiny => "decrease_tiny",
         ToggleEq => "toggle_eq",
         ToggleBand => "toggle_band",
+        CycleType => "cycle_type",
+        CycleSlope => "cycle_slope",
     }
 }
 

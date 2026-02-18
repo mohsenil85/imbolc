@@ -359,11 +359,17 @@ impl EffectType {
             EffectType::FreqShifter => {
                 let mut params = Vec::with_capacity(QUANT_PARAM_NAMES.len() + 2);
                 push_quant_params(&mut params, session);
-                params.push((ROOT_FREQ_PARAM, key_root_freq(session.key, session.tuning_a4)));
+                params.push((
+                    ROOT_FREQ_PARAM,
+                    key_root_freq(session.key, session.tuning_a4),
+                ));
                 params
             }
             EffectType::Vocoder | EffectType::MultibandComp => {
-                vec![(ROOT_FREQ_PARAM, key_root_freq(session.key, session.tuning_a4))]
+                vec![(
+                    ROOT_FREQ_PARAM,
+                    key_root_freq(session.key, session.tuning_a4),
+                )]
             }
             _ => Vec::new(),
         }
@@ -1493,7 +1499,9 @@ mod tests {
     #[test]
     fn non_autotune_musical_context_params_empty() {
         let session = SessionState::default();
-        assert!(EffectType::Delay.musical_context_params(&session).is_empty());
+        assert!(EffectType::Delay
+            .musical_context_params(&session)
+            .is_empty());
     }
 
     #[test]

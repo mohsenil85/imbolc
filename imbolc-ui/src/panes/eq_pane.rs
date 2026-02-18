@@ -7,6 +7,7 @@ use crate::ui::{
     Action, BusAction, Color, GroupAction, InputEvent, Keymap, LayerName, MixerAction, Pane,
     PaneIdStr, Rect, RenderBuf, Style, TrackAction,
 };
+use imbolc_types::FilterSlope;
 use imbolc_types::{BusId, EqualizerParamKind, MixerSelection};
 
 use crate::state::track::EqBand;
@@ -32,8 +33,8 @@ enum EqTarget {
 pub struct EqPane {
     mode: EqMode,
     keymap: Keymap,
-    selected_band: usize,  // 0-11
-    selected_param: usize, // 0=freq, 1=gain, 2=q, 3=enabled
+    selected_band: usize,  // 0-5
+    selected_param: usize, // context-dependent (see param_count_for_band)
 }
 
 impl EqPane {
@@ -42,7 +43,7 @@ impl EqPane {
             mode,
             keymap,
             selected_band: 0,
-            selected_param: 1, // default to gain
+            selected_param: 0, // default to freq
         }
     }
 }
@@ -112,6 +113,41 @@ fn make_set_action(
     }
 }
 
+/// How many navigable params does this band type have?
+/// HPF/LPF: freq, slope, enabled (3)
+/// Bell/Shelf: freq, gain, Q, type, enabled (5)
+fn param_count_for_band(band: &EqBand) -> usize {
+    if band.band_type.has_slope() {
+        3 // freq, slope, enabled
+    } else {
+        5 // freq, gain, Q, type, enabled
+    }
+}
+
+/// Map (band_type, param_idx) to the logical parameter.
+/// Returns (EqualizerParamKind, is_toggle).
+fn param_for_index(band: &EqBand, param_idx: usize) -> Option<(EqualizerParamKind, bool)> {
+    if band.band_type.has_slope() {
+        // HPF/LPF: 0=freq, 1=slope, 2=enabled
+        match param_idx {
+            0 => Some((EqualizerParamKind::Freq, false)),
+            1 => Some((EqualizerParamKind::Slope, false)),
+            2 => Some((EqualizerParamKind::Enabled, true)),
+            _ => None,
+        }
+    } else {
+        // Bell/Shelf: 0=freq, 1=gain, 2=Q, 3=type, 4=enabled
+        match param_idx {
+            0 => Some((EqualizerParamKind::Freq, false)),
+            1 => Some((EqualizerParamKind::Gain, false)),
+            2 => Some((EqualizerParamKind::Q, false)),
+            3 => Some((EqualizerParamKind::BandType, false)),
+            4 => Some((EqualizerParamKind::Enabled, true)),
+            _ => None,
+        }
+    }
+}
+
 impl Pane for EqPane {
     fn id(&self) -> PaneIdStr {
         match self.mode {
@@ -133,10 +169,21 @@ impl Pane for EqPane {
         match action {
             ActionId::Eq(EqActionId::PrevBand) => {
                 self.selected_band = self.selected_band.saturating_sub(1);
+                // Clamp param index to new band's param count
+                if let Some(eq) = eq {
+                    let max_param =
+                        param_count_for_band(&eq.bands[self.selected_band]).saturating_sub(1);
+                    self.selected_param = self.selected_param.min(max_param);
+                }
                 Action::None
             }
             ActionId::Eq(EqActionId::NextBand) => {
-                self.selected_band = (self.selected_band + 1).min(11);
+                self.selected_band = (self.selected_band + 1).min(5);
+                if let Some(eq) = eq {
+                    let max_param =
+                        param_count_for_band(&eq.bands[self.selected_band]).saturating_sub(1);
+                    self.selected_param = self.selected_param.min(max_param);
+                }
                 Action::None
             }
             ActionId::Eq(EqActionId::PrevParam) => {
@@ -144,7 +191,10 @@ impl Pane for EqPane {
                 Action::None
             }
             ActionId::Eq(EqActionId::NextParam) => {
-                self.selected_param = (self.selected_param + 1).min(3);
+                if let Some(eq) = eq {
+                    let max = param_count_for_band(&eq.bands[self.selected_band]).saturating_sub(1);
+                    self.selected_param = (self.selected_param + 1).min(max);
+                }
                 Action::None
             }
             ActionId::Eq(EqActionId::Increase)
@@ -178,6 +228,47 @@ impl Pane for EqPane {
                         EqualizerParamKind::Enabled,
                         new_val,
                     )
+                } else {
+                    Action::None
+                }
+            }
+            ActionId::Eq(EqActionId::CycleType) => {
+                if let Some(eq) = eq {
+                    let band = &eq.bands[self.selected_band];
+                    let allowed = EqBandType::allowed_types(self.selected_band);
+                    if allowed.len() > 1 {
+                        let cur_idx = allowed
+                            .iter()
+                            .position(|t| *t == band.band_type)
+                            .unwrap_or(0);
+                        let next_idx = (cur_idx + 1) % allowed.len();
+                        make_set_action(
+                            target,
+                            self.selected_band,
+                            EqualizerParamKind::BandType,
+                            next_idx as f32,
+                        )
+                    } else {
+                        Action::None
+                    }
+                } else {
+                    Action::None
+                }
+            }
+            ActionId::Eq(EqActionId::CycleSlope) => {
+                if let Some(eq) = eq {
+                    let band = &eq.bands[self.selected_band];
+                    if band.band_type.has_slope() {
+                        let next = band.slope.next();
+                        make_set_action(
+                            target,
+                            self.selected_band,
+                            EqualizerParamKind::Slope,
+                            next.to_normalized(),
+                        )
+                    } else {
+                        Action::None
+                    }
                 } else {
                     Action::None
                 }
@@ -265,7 +356,7 @@ impl Pane for EqPane {
             }
         }
 
-        // -- Band info (two rows of 6 bands each) --
+        // -- Band info (single row of 6 bands) --
         let info_y = freq_axis_y + 2;
         render_band_info(
             inner.x,
@@ -310,53 +401,108 @@ fn adjust_param(
     };
     let band = &eq.bands[band_idx];
 
-    let (param, current, min, max) = match param_idx {
-        0 => (EqualizerParamKind::Freq, band.freq, 20.0, 20000.0),
-        1 => (EqualizerParamKind::Gain, band.gain, -24.0, 24.0),
-        2 => (EqualizerParamKind::Q, band.q, 0.1, 10.0),
-        3 => return Action::None, // toggle handled by toggle_band
-        _ => return Action::None,
+    let (param_kind, is_toggle) = match param_for_index(band, param_idx) {
+        Some(p) => p,
+        None => return Action::None,
     };
 
-    let delta = match (param_idx, action) {
-        // Freq: log-ish steps
-        (0, ActionId::Eq(EqActionId::IncreaseBig)) | (0, ActionId::Eq(EqActionId::DecreaseBig)) => {
-            current * 0.2
-        }
-        (0, ActionId::Eq(EqActionId::IncreaseTiny))
-        | (0, ActionId::Eq(EqActionId::DecreaseTiny)) => current * 0.01,
-        (0, ActionId::Eq(EqActionId::Increase)) | (0, ActionId::Eq(EqActionId::Decrease)) => {
-            current * 0.05
-        }
-        // Gain: dB steps
-        (1, ActionId::Eq(EqActionId::IncreaseBig)) | (1, ActionId::Eq(EqActionId::DecreaseBig)) => {
-            3.0
-        }
-        (1, ActionId::Eq(EqActionId::IncreaseTiny))
-        | (1, ActionId::Eq(EqActionId::DecreaseTiny)) => 0.1,
-        (1, ActionId::Eq(EqActionId::Increase)) | (1, ActionId::Eq(EqActionId::Decrease)) => 0.5,
-        // Q
-        (2, ActionId::Eq(EqActionId::IncreaseBig)) | (2, ActionId::Eq(EqActionId::DecreaseBig)) => {
-            1.0
-        }
-        (2, ActionId::Eq(EqActionId::IncreaseTiny))
-        | (2, ActionId::Eq(EqActionId::DecreaseTiny)) => 0.05,
-        (2, ActionId::Eq(EqActionId::Increase)) | (2, ActionId::Eq(EqActionId::Decrease)) => 0.1,
-        _ => 0.0,
-    };
+    // Toggle params (enabled) handled via ToggleBand, not adjust
+    if is_toggle {
+        return Action::None;
+    }
 
-    let new_val = if increase {
-        (current + delta).min(max)
-    } else {
-        (current - delta).max(min)
-    };
-
-    make_set_action(target, band_idx, param, new_val)
+    match param_kind {
+        EqualizerParamKind::Freq => {
+            let delta =
+                match action {
+                    ActionId::Eq(EqActionId::IncreaseBig)
+                    | ActionId::Eq(EqActionId::DecreaseBig) => band.freq * 0.2,
+                    ActionId::Eq(EqActionId::IncreaseTiny)
+                    | ActionId::Eq(EqActionId::DecreaseTiny) => band.freq * 0.01,
+                    _ => band.freq * 0.05,
+                };
+            let new_val = if increase {
+                (band.freq + delta).min(20000.0)
+            } else {
+                (band.freq - delta).max(20.0)
+            };
+            make_set_action(target, band_idx, EqualizerParamKind::Freq, new_val)
+        }
+        EqualizerParamKind::Gain => {
+            let delta =
+                match action {
+                    ActionId::Eq(EqActionId::IncreaseBig)
+                    | ActionId::Eq(EqActionId::DecreaseBig) => 3.0,
+                    ActionId::Eq(EqActionId::IncreaseTiny)
+                    | ActionId::Eq(EqActionId::DecreaseTiny) => 0.1,
+                    _ => 0.5,
+                };
+            let new_val = if increase {
+                (band.gain + delta).min(24.0)
+            } else {
+                (band.gain - delta).max(-24.0)
+            };
+            make_set_action(target, band_idx, EqualizerParamKind::Gain, new_val)
+        }
+        EqualizerParamKind::Q => {
+            let delta =
+                match action {
+                    ActionId::Eq(EqActionId::IncreaseBig)
+                    | ActionId::Eq(EqActionId::DecreaseBig) => 1.0,
+                    ActionId::Eq(EqActionId::IncreaseTiny)
+                    | ActionId::Eq(EqActionId::DecreaseTiny) => 0.05,
+                    _ => 0.1,
+                };
+            let new_val = if increase {
+                (band.q + delta).min(10.0)
+            } else {
+                (band.q - delta).max(0.1)
+            };
+            make_set_action(target, band_idx, EqualizerParamKind::Q, new_val)
+        }
+        EqualizerParamKind::Slope => {
+            // Cycle slope: increase goes next, decrease goes prev
+            let new_slope = if increase {
+                band.slope.next()
+            } else {
+                band.slope.prev()
+            };
+            make_set_action(
+                target,
+                band_idx,
+                EqualizerParamKind::Slope,
+                new_slope.to_normalized(),
+            )
+        }
+        EqualizerParamKind::BandType => {
+            // Cycle band type
+            let allowed = EqBandType::allowed_types(band_idx);
+            if allowed.len() <= 1 {
+                return Action::None;
+            }
+            let cur_idx = allowed
+                .iter()
+                .position(|t| *t == band.band_type)
+                .unwrap_or(0);
+            let next_idx = if increase {
+                (cur_idx + 1) % allowed.len()
+            } else {
+                (cur_idx + allowed.len() - 1) % allowed.len()
+            };
+            make_set_action(
+                target,
+                band_idx,
+                EqualizerParamKind::BandType,
+                next_idx as f32,
+            )
+        }
+        EqualizerParamKind::Enabled => Action::None,
+    }
 }
 
 /// Compute biquad magnitude response at a given frequency for one EQ band.
 fn band_response_db(band: &EqBand, freq: f32) -> f32 {
-    if !band.enabled || band.gain.abs() < 0.001 {
+    if !band.enabled {
         return 0.0;
     }
 
@@ -364,7 +510,42 @@ fn band_response_db(band: &EqBand, freq: f32) -> f32 {
     let q = band.q.max(0.1);
 
     match band.band_type {
-        EqBandType::Peaking => {
+        EqBandType::HighPass => {
+            // High-pass: attenuates below cutoff
+            let w2 = w * w;
+            let order = match band.slope {
+                FilterSlope::Db12 => 1,
+                FilterSlope::Db24 => 2,
+                FilterSlope::Db48 => 4,
+            };
+            // Each biquad stage: H(w) = w^2 / sqrt((1-w^2)^2 + (w/Q)^2)
+            let mag2_single = if w2 < 0.0001 {
+                0.0001 // avoid log(0)
+            } else {
+                let num = w2 * w2;
+                let den = (1.0 - w2).powi(2) + (w / q).powi(2);
+                (num / den).max(0.0001)
+            };
+            10.0 * mag2_single.log10() * order as f32
+        }
+        EqBandType::LowPass => {
+            // Low-pass: attenuates above cutoff
+            let w2 = w * w;
+            let order = match band.slope {
+                FilterSlope::Db12 => 1,
+                FilterSlope::Db24 => 2,
+                FilterSlope::Db48 => 4,
+            };
+            let mag2_single = {
+                let den = (1.0 - w2).powi(2) + (w / q).powi(2);
+                (1.0 / den).max(0.0001)
+            };
+            10.0 * mag2_single.log10() * order as f32
+        }
+        EqBandType::Bell => {
+            if band.gain.abs() < 0.001 {
+                return 0.0;
+            }
             let a = 10.0_f32.powf(band.gain / 40.0);
             let w2 = w * w;
             let num = (w2 - 1.0).powi(2) + (w * a / q).powi(2);
@@ -372,6 +553,9 @@ fn band_response_db(band: &EqBand, freq: f32) -> f32 {
             10.0 * (num / den).log10()
         }
         EqBandType::LowShelf => {
+            if band.gain.abs() < 0.001 {
+                return 0.0;
+            }
             let a = 10.0_f32.powf(band.gain / 20.0);
             let w2 = w * w;
             let blend = 1.0 / (1.0 + w2);
@@ -379,6 +563,9 @@ fn band_response_db(band: &EqBand, freq: f32) -> f32 {
             20.0 * lin.log10()
         }
         EqBandType::HighShelf => {
+            if band.gain.abs() < 0.001 {
+                return 0.0;
+            }
             let a = 10.0_f32.powf(band.gain / 20.0);
             let w2 = w * w;
             let blend = w2 / (1.0 + w2);
@@ -464,7 +651,7 @@ fn render_frequency_curve(
     }
 }
 
-/// Render band info in two rows of 6 bands each.
+/// Render band info in a single row of 6 bands.
 fn render_band_info(
     x: u16,
     y: u16,
@@ -474,15 +661,10 @@ fn render_band_info(
     selected_param: usize,
     buf: &mut RenderBuf,
 ) {
-    let bands_per_row = 6;
-    let band_width = (width / bands_per_row as u16).max(10);
-    let row_height = 4; // type+freq, gain, Q, on/off
+    let band_width = (width / 6).max(10);
 
     for (i, band) in eq.bands.iter().enumerate() {
-        let row = i / bands_per_row;
-        let col_in_row = i % bands_per_row;
-        let bx = x + (col_in_row as u16) * band_width;
-        let by = y + (row as u16) * (row_height + 1);
+        let bx = x + (i as u16) * band_width;
         let is_selected = i == selected_band;
 
         let type_color = if is_selected {
@@ -491,43 +673,74 @@ fn render_band_info(
             Color::WHITE
         };
 
-        // Row 0: type + freq
-        let label = format!("{} {}", band.band_type.name(), format_freq(band.freq),);
+        // Row 0: type + freq (param 0 = freq)
+        let label = format!("{} {}", band.band_type.name(), format_freq(band.freq));
         let label_style = Style::new().fg(if is_selected && selected_param == 0 {
             Color::new(255, 200, 50)
         } else {
             type_color
         });
-        render_text_at(bx, by, &label, label_style, width, buf);
+        render_text_at(bx, y, &label, label_style, width, buf);
 
-        // Row 1: gain
-        let gain_str = format!("{:+.1}dB", band.gain);
-        let gain_style = Style::new().fg(if is_selected && selected_param == 1 {
-            Color::new(255, 200, 50)
-        } else {
-            Color::WHITE
-        });
-        render_text_at(bx, by + 1, &gain_str, gain_style, width, buf);
+        if band.band_type.has_slope() {
+            // HPF/LPF layout: row 1 = slope, row 2 = enabled
+            let slope_str = format!("{}dB/oct", band.slope.name());
+            let slope_style = Style::new().fg(if is_selected && selected_param == 1 {
+                Color::new(255, 200, 50)
+            } else {
+                Color::WHITE
+            });
+            render_text_at(bx, y + 1, &slope_str, slope_style, width, buf);
 
-        // Row 2: Q
-        let q_str = format!("Q:{:.2}", band.q);
-        let q_style = Style::new().fg(if is_selected && selected_param == 2 {
-            Color::new(255, 200, 50)
+            let on_str = if band.enabled { "[ON]" } else { "[OFF]" };
+            let on_color = if !band.enabled {
+                Color::DARK_GRAY
+            } else if is_selected && selected_param == 2 {
+                Color::new(255, 200, 50)
+            } else {
+                Color::new(80, 200, 80)
+            };
+            render_text_at(bx, y + 2, on_str, Style::new().fg(on_color), width, buf);
         } else {
-            Color::WHITE
-        });
-        render_text_at(bx, by + 2, &q_str, q_style, width, buf);
+            // Bell/Shelf layout: row 1 = gain, row 2 = Q, row 3 = type, row 4 = enabled
+            let gain_str = format!("{:+.1}dB", band.gain);
+            let gain_style = Style::new().fg(if is_selected && selected_param == 1 {
+                Color::new(255, 200, 50)
+            } else {
+                Color::WHITE
+            });
+            render_text_at(bx, y + 1, &gain_str, gain_style, width, buf);
 
-        // Row 3: enabled
-        let on_str = if band.enabled { "[ON]" } else { "[OFF]" };
-        let on_color = if !band.enabled {
-            Color::DARK_GRAY
-        } else if is_selected && selected_param == 3 {
-            Color::new(255, 200, 50)
-        } else {
-            Color::new(80, 200, 80)
-        };
-        render_text_at(bx, by + 3, on_str, Style::new().fg(on_color), width, buf);
+            let q_str = format!("Q:{:.2}", band.q);
+            let q_style = Style::new().fg(if is_selected && selected_param == 2 {
+                Color::new(255, 200, 50)
+            } else {
+                Color::WHITE
+            });
+            render_text_at(bx, y + 2, &q_str, q_style, width, buf);
+
+            // Type (only meaningful for bands 1-4 which can switch)
+            let allowed = EqBandType::allowed_types(i);
+            if allowed.len() > 1 {
+                let type_str = format!("[{}]", band.band_type.name());
+                let type_style = Style::new().fg(if is_selected && selected_param == 3 {
+                    Color::new(255, 200, 50)
+                } else {
+                    Color::new(120, 160, 200)
+                });
+                render_text_at(bx, y + 3, &type_str, type_style, width, buf);
+            }
+
+            let on_str = if band.enabled { "[ON]" } else { "[OFF]" };
+            let on_color = if !band.enabled {
+                Color::DARK_GRAY
+            } else if is_selected && selected_param == 4 {
+                Color::new(255, 200, 50)
+            } else {
+                Color::new(80, 200, 80)
+            };
+            render_text_at(bx, y + 4, on_str, Style::new().fg(on_color), width, buf);
+        }
     }
 }
 

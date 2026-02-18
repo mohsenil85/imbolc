@@ -352,6 +352,20 @@ pub(super) fn reduce(
                         EqualizerParamKind::Gain => band.gain = value.clamp(-24.0, 24.0),
                         EqualizerParamKind::Q => band.q = value.clamp(0.1, 10.0),
                         EqualizerParamKind::Enabled => band.enabled = *value > 0.5,
+                        EqualizerParamKind::Slope => {
+                            band.slope = crate::FilterSlope::from_normalized(*value)
+                        }
+                        EqualizerParamKind::BandType => {
+                            let allowed = crate::EqBandType::allowed_types(*band_idx);
+                            let idx = (*value as usize).min(allowed.len().saturating_sub(1));
+                            let new_type = allowed[idx];
+                            if new_type != band.band_type {
+                                band.band_type = new_type;
+                                if !new_type.has_gain() {
+                                    band.gain = 0.0;
+                                }
+                            }
+                        }
                     }
                 }
             }

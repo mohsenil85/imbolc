@@ -387,6 +387,8 @@ bindings = [
   { key = "Ctrl+Down", action = "decrease_tiny", description = "Fine decrease" },
   { key = "e", action = "toggle_eq", description = "Toggle EQ on/off", hint = "EQ on/off" },
   { key = "b", action = "toggle_band", description = "Toggle band on/off", hint = "band on/off" },
+  { key = "t", action = "cycle_type", description = "Cycle band type", hint = "type" },
+  { key = "s", action = "cycle_slope", description = "Cycle slope (HPF/LPF)", hint = "slope" },
 ]
 
 [layers.tuner]

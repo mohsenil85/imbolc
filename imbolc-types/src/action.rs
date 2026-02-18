@@ -207,6 +207,8 @@ pub enum EqualizerParamKind {
     Gain,
     Q,
     Enabled,
+    Slope,
+    BandType,
 }
 
 impl EqualizerParamKind {
@@ -216,6 +218,8 @@ impl EqualizerParamKind {
             EqualizerParamKind::Gain => "gain",
             EqualizerParamKind::Q => "q",
             EqualizerParamKind::Enabled => "on",
+            EqualizerParamKind::Slope => "slope",
+            EqualizerParamKind::BandType => "type",
         }
     }
 }

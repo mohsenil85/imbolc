@@ -544,13 +544,15 @@ mod tests {
 
         let bus_b = crossfader_params
             .iter()
-            .find_map(|(name, value)| {
-                if name == "bus_b" {
-                    Some(*value)
-                } else {
-                    None
-                }
-            })
+            .find_map(
+                |(name, value)| {
+                    if name == "bus_b" {
+                        Some(*value)
+                    } else {
+                        None
+                    }
+                },
+            )
             .expect("crossfader should receive bus_b param");
 
         assert_eq!(bus_b, mapped_bus as f32);
@@ -1934,7 +1936,8 @@ mod tests {
             let expected_table =
                 imbolc_types::scale_quantization_table(state.session.key, state.session.scale);
             let expected_ref_offset = imbolc_types::tuning_ref_offset(state.session.tuning_a4);
-            let expected_root = imbolc_types::key_root_freq(state.session.key, state.session.tuning_a4);
+            let expected_root =
+                imbolc_types::key_root_freq(state.session.key, state.session.tuning_a4);
 
             let synths = backend.synths_created();
             let find_params = |def_name: &str| {
@@ -1982,7 +1985,11 @@ mod tests {
                     .find(|(k, _)| k == "ref_offset")
                     .map(|(_, v)| *v)
                     .expect("missing ref_offset");
-                assert!((ref_offset - expected_ref_offset).abs() < 1e-6, "{}", def_name);
+                assert!(
+                    (ref_offset - expected_ref_offset).abs() < 1e-6,
+                    "{}",
+                    def_name
+                );
 
                 let snap = params
                     .iter()

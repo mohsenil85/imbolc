@@ -233,10 +233,17 @@ pub(super) fn dispatch_mixer(
         MixerAction::SetMasterEqParam(_band_idx, param, value) => {
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", _band_idx, param.as_str());
-                let sc_value = if *param == EqualizerParamKind::Q {
-                    1.0 / value
-                } else {
-                    *value
+                let sc_value = match param {
+                    EqualizerParamKind::Q => 1.0 / value,
+                    EqualizerParamKind::Slope => {
+                        imbolc_types::FilterSlope::from_normalized(*value).sc_slope_value() as f32
+                    }
+                    EqualizerParamKind::BandType => {
+                        let allowed = imbolc_types::EqBandType::allowed_types(*_band_idx);
+                        let idx = (*value as usize).min(allowed.len().saturating_sub(1));
+                        allowed[idx].sc_type_index() as f32
+                    }
+                    _ => *value,
                 };
                 let _ = audio.set_master_eq_param(&sc_param, sc_value);
             }

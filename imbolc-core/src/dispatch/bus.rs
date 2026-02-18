@@ -91,10 +91,17 @@ pub fn dispatch_bus(
         BusAction::SetEqualizerParam(bus_id, band_idx, param, value) => {
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", band_idx, param.as_str());
-                let sc_value = if *param == EqualizerParamKind::Q {
-                    1.0 / value
-                } else {
-                    *value
+                let sc_value = match param {
+                    EqualizerParamKind::Q => 1.0 / value,
+                    EqualizerParamKind::Slope => {
+                        imbolc_types::FilterSlope::from_normalized(*value).sc_slope_value() as f32
+                    }
+                    EqualizerParamKind::BandType => {
+                        let allowed = imbolc_types::EqBandType::allowed_types(*band_idx);
+                        let idx = (*value as usize).min(allowed.len().saturating_sub(1));
+                        allowed[idx].sc_type_index() as f32
+                    }
+                    _ => *value,
                 };
                 let _ = audio.set_bus_eq_param(*bus_id, &sc_param, sc_value);
             }
@@ -173,10 +180,17 @@ pub fn dispatch_group(
             // Send real-time param update to audio engine
             if audio.is_running() {
                 let sc_param = format!("b{}_{}", band_idx, param.as_str());
-                let sc_value = if *param == EqualizerParamKind::Q {
-                    1.0 / value
-                } else {
-                    *value
+                let sc_value = match param {
+                    EqualizerParamKind::Q => 1.0 / value,
+                    EqualizerParamKind::Slope => {
+                        imbolc_types::FilterSlope::from_normalized(*value).sc_slope_value() as f32
+                    }
+                    EqualizerParamKind::BandType => {
+                        let allowed = imbolc_types::EqBandType::allowed_types(*band_idx);
+                        let idx = (*value as usize).min(allowed.len().saturating_sub(1));
+                        allowed[idx].sc_type_index() as f32
+                    }
+                    _ => *value,
                 };
                 let _ = audio.set_layer_group_eq_param(*group_id, &sc_param, sc_value);
             }
