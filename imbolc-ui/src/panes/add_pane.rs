@@ -409,7 +409,7 @@ impl Pane for AddPane {
                 if state.tracks.tracks.is_empty() {
                     Action::Nav(NavAction::SwitchPane(PaneId::Server))
                 } else {
-                    Action::Nav(NavAction::SwitchPane(PaneId::TrackList))
+                    Action::Nav(NavAction::SwitchPane(PaneId::Track))
                 }
             }
             ActionId::Add(AddActionId::Next) => {

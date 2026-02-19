@@ -351,7 +351,9 @@ pub(super) fn dispatch_arrangement(
         }
         ArrangementAction::SelectLane(lane) => {
             let max_lane = state.tracks.tracks.len().saturating_sub(1);
-            state.session.arrangement.selected_lane = (*lane).min(max_lane);
+            let clamped = (*lane).min(max_lane);
+            state.session.arrangement.selected_lane = clamped;
+            state.tracks.selected = Some(clamped);
             DispatchResult::none()
         }
         ArrangementAction::MoveCursor(delta_cols) => {
@@ -381,7 +383,7 @@ pub(super) fn dispatch_arrangement(
         ArrangementAction::EnterClipEdit(clip_id) => enter_clip_edit_impl(state, *clip_id, true),
         ArrangementAction::ExitClipEdit => {
             let (mut result, _ctx) = exit_clip_edit_impl(state);
-            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
+            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::Track));
             result
         }
         ArrangementAction::AutoEnterClipEdit(instrument_id) => {

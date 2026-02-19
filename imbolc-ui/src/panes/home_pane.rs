@@ -26,8 +26,8 @@ impl HomePane {
         let items = vec![
             MenuItem {
                 label: "Tracks",
-                description: "Track list - add and edit synths",
-                pane_id: PaneId::TrackList,
+                description: "Track view - arrangement timeline and track details",
+                pane_id: PaneId::Track,
             },
             MenuItem {
                 label: "Mixer",

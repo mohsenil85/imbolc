@@ -6,8 +6,8 @@ use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
 use crate::panes::{
     CommandPalettePane, ConfirmPane, FileBrowserPane, FrameEditPane, HelpPane, PaneSwitcherPane,
-    PendingAction, PianoRollPane, SaveAsPane, SequencerPane, ServerPane, TrackEditPane,
-    TrackListPane, VstParamPane, WaveformPane,
+    PendingAction, PianoRollPane, SaveAsPane, SequencerPane, ServerPane, TrackEditPane, TrackPane,
+    VstParamPane, WaveformPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -200,8 +200,8 @@ pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &
             "server" => panes
                 .get_pane_mut::<ServerPane>("server")
                 .is_some_and(|p| p.is_editing_scsynth_args()),
-            "instrument" => panes
-                .get_pane_mut::<TrackListPane>("instrument")
+            "track" => panes
+                .get_pane_mut::<TrackPane>("track")
                 .is_some_and(|p| p.is_editing()),
             "waveform" => panes
                 .get_pane_mut::<WaveformPane>("waveform")
@@ -511,16 +511,6 @@ pub(crate) fn handle_global_action(
                     NavPaneId::InstrumentEdit
                 };
                 switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
-            }
-            GlobalActionId::SwitchPane(NavPaneId::TrackList) => {
-                switch_to_pane(
-                    NavPaneId::TrackList,
-                    panes,
-                    dispatcher,
-                    audio,
-                    app_frame,
-                    layer_stack,
-                );
             }
             GlobalActionId::SwitchPianoRollOrSequencer => {
                 let target = if let Some(inst) = dispatcher.state().tracks.selected_track() {

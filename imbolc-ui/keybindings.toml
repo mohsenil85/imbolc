@@ -41,7 +41,6 @@ bindings = [
   { key = "/", action = "toggle_piano_mode", description = "Toggle piano keyboard" },
   { key = "Ctrl+r", action = "record_master", description = "Toggle master recording" },
   { key = "Escape", action = "escape", description = "Escape" },
-  { key = "Ctrl+g", action = "switch:track_list", description = "Track list" },
   { key = "Ctrl+d", action = "delete_instrument", description = "Delete instrument" },
   { key = "Ctrl+c", action = "copy", description = "Copy" },
   { key = "Ctrl+x", action = "cut", description = "Cut" },
@@ -57,25 +56,6 @@ bindings = [
   { key = "Ctrl+p", action = "command_line", description = "Command line" },
   { key = "Ctrl+P", action = "request_privilege", description = "Request network privilege" },
   { key = "Ctrl+k", action = "open_checkpoint_list", description = "Checkpoint list" },
-]
-
-[layers.track_list]
-bindings = [
-  { key = "q", action = "quit", description = "Quit the application" },
-  { key = "Down", action = "next", description = "Next instrument", hint = "navigate" },
-  { key = "Up", action = "prev", description = "Previous instrument", hint = "navigate" },
-  { key = "Home", action = "goto_top", description = "Go to top" },
-  { key = "End", action = "goto_bottom", description = "Go to bottom" },
-  { key = "a", action = "add", description = "Add instrument", hint = "add" },
-  { key = "d", action = "delete", description = "Delete instrument", hint = "delete" },
-  { key = "Enter", action = "edit", description = "Edit instrument", hint = "edit" },
-  { key = "w", action = "save", description = "Save", hint = "save" },
-  { key = "o", action = "load", description = "Load", hint = "load" },
-  { key = "l", action = "link_layer", description = "Link layer (select target)", hint = "link" },
-  { key = "L", action = "unlink_layer", description = "Unlink from layer group", hint = "unlink" },
-  { key = "+", action = "layer_octave_up", description = "Layer octave offset +1" },
-  { key = "-", action = "layer_octave_down", description = "Layer octave offset -1" },
-  { key = "r", action = "rename_layer_group", description = "Rename layer group" },
 ]
 
 [layers.mixer]
@@ -439,6 +419,11 @@ bindings = [
   { key = "Shift+Tab", action = "select_prev_placement", description = "Previous placement" },
   { key = "[", action = "select_prev_clip", description = "Previous clip", hint = "clip" },
   { key = "]", action = "select_next_clip", description = "Next clip", hint = "clip" },
+  { key = "l", action = "link_layer", description = "Link layer (select target)", hint = "link" },
+  { key = "L", action = "unlink_layer", description = "Unlink from layer group", hint = "unlink" },
+  { key = "+", action = "layer_octave_up", description = "Layer octave offset +1" },
+  { key = "-", action = "layer_octave_down", description = "Layer octave offset -1" },
+  { key = "r", action = "rename_layer_group", description = "Rename layer group" },
 ]
 
 [layers.vst_params]

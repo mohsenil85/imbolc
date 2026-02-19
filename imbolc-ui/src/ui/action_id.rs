@@ -111,7 +111,6 @@ impl GlobalActionId {
             GlobalActionId::OpenCheckpointList => "open_checkpoint_list",
             GlobalActionId::SwitchPane(pane) => match pane {
                 PaneId::InstrumentEdit => "switch:instrument",
-                PaneId::TrackList => "switch:track_list",
                 PaneId::Track => "switch:track",
                 PaneId::Mixer => "switch:mixer",
                 PaneId::Server => "switch:server",
@@ -179,7 +178,6 @@ impl GlobalActionId {
             "request_privilege" => Some(GlobalActionId::RequestPrivilege),
             "open_checkpoint_list" => Some(GlobalActionId::OpenCheckpointList),
             "switch:instrument" => Some(GlobalActionId::SwitchPane(PaneId::InstrumentEdit)),
-            "switch:track_list" => Some(GlobalActionId::SwitchPane(PaneId::TrackList)),
             "switch:piano_roll_or_sequencer" => Some(GlobalActionId::SwitchPianoRollOrSequencer),
             "switch:track" => Some(GlobalActionId::SwitchPane(PaneId::Track)),
             "switch:mixer" => Some(GlobalActionId::SwitchPane(PaneId::Mixer)),
@@ -206,27 +204,6 @@ impl GlobalActionId {
             "select:10" => Some(GlobalActionId::SelectInstrument(10)),
             _ => None,
         }
-    }
-}
-
-define_action_enum! {
-    /// Track list layer actions
-    pub enum TrackListActionId {
-        Quit => "quit",
-        Next => "next",
-        Prev => "prev",
-        GotoTop => "goto_top",
-        GotoBottom => "goto_bottom",
-        Add => "add",
-        Delete => "delete",
-        Edit => "edit",
-        Save => "save",
-        Load => "load",
-        LinkLayer => "link_layer",
-        UnlinkLayer => "unlink_layer",
-        LayerOctaveUp => "layer_octave_up",
-        LayerOctaveDown => "layer_octave_down",
-        RenameLayerGroup => "rename_layer_group",
     }
 }
 
@@ -672,6 +649,11 @@ define_action_enum! {
         SelectPrevClipInstance => "select_prev_placement",
         SelectPrevClip => "select_prev_clip",
         SelectNextClip => "select_next_clip",
+        LinkLayer => "link_layer",
+        UnlinkLayer => "unlink_layer",
+        LayerOctaveUp => "layer_octave_up",
+        LayerOctaveDown => "layer_octave_down",
+        RenameLayerGroup => "rename_layer_group",
     }
 }
 
@@ -813,7 +795,6 @@ define_action_enum! {
 pub enum ActionId {
     Global(GlobalActionId),
     Mode(ModeActionId),
-    TrackList(TrackListActionId),
     TrackEdit(TrackEditActionId),
     Mixer(MixerActionId),
     PianoRoll(PianoRollActionId),
@@ -845,7 +826,6 @@ impl ActionId {
         match self {
             ActionId::Global(a) => a.as_str(),
             ActionId::Mode(a) => a.as_str(),
-            ActionId::TrackList(a) => a.as_str(),
             ActionId::TrackEdit(a) => a.as_str(),
             ActionId::Mixer(a) => a.as_str(),
             ActionId::PianoRoll(a) => a.as_str(),
@@ -878,7 +858,6 @@ impl ActionId {
 pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
     match layer {
         "global" => GlobalActionId::from_str(action).map(ActionId::Global),
-        "instrument" => TrackListActionId::from_str(action).map(ActionId::TrackList),
         "instrument_edit" => TrackEditActionId::from_str(action).map(ActionId::TrackEdit),
         "mixer" => MixerActionId::from_str(action).map(ActionId::Mixer),
         "piano_roll" => PianoRollActionId::from_str(action).map(ActionId::PianoRoll),
@@ -895,7 +874,9 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "generative" => GenerativeActionId::from_str(action).map(ActionId::Generative),
         "groove" => GrooveActionId::from_str(action).map(ActionId::Groove),
         "tuner" => TunerActionId::from_str(action).map(ActionId::Tuner),
-        "track" => TrackActionId::from_str(action).map(ActionId::Track),
+        "track" | "track_list" | "instrument" => {
+            TrackActionId::from_str(action).map(ActionId::Track)
+        }
         "vst_params" => VstParamsActionId::from_str(action).map(ActionId::VstParams),
         "waveform" => WaveformActionId::from_str(action).map(ActionId::Waveform),
         "midi_settings" => MidiSettingsActionId::from_str(action).map(ActionId::MidiSettings),
@@ -947,7 +928,6 @@ mod tests {
             GlobalActionId::SelectNextInstrument,
             GlobalActionId::SelectTwoDigit,
             GlobalActionId::SwitchPane(PaneId::InstrumentEdit),
-            GlobalActionId::SwitchPane(PaneId::TrackList),
             GlobalActionId::SwitchPianoRollOrSequencer,
             GlobalActionId::SwitchPane(PaneId::Track),
             GlobalActionId::SwitchPane(PaneId::Mixer),
@@ -973,33 +953,6 @@ mod tests {
         for action in actions {
             let s = action.as_str();
             let parsed = GlobalActionId::from_str(s);
-            assert_eq!(Some(action), parsed, "Failed round-trip for {}", s);
-        }
-    }
-
-    #[test]
-    fn test_instrument_list_round_trip() {
-        let actions = vec![
-            TrackListActionId::Quit,
-            TrackListActionId::Next,
-            TrackListActionId::Prev,
-            TrackListActionId::GotoTop,
-            TrackListActionId::GotoBottom,
-            TrackListActionId::Add,
-            TrackListActionId::Delete,
-            TrackListActionId::Edit,
-            TrackListActionId::Save,
-            TrackListActionId::Load,
-            TrackListActionId::LinkLayer,
-            TrackListActionId::UnlinkLayer,
-            TrackListActionId::LayerOctaveUp,
-            TrackListActionId::LayerOctaveDown,
-            TrackListActionId::RenameLayerGroup,
-        ];
-
-        for action in actions {
-            let s = action.as_str();
-            let parsed = TrackListActionId::from_str(s);
             assert_eq!(Some(action), parsed, "Failed round-trip for {}", s);
         }
     }
@@ -1138,11 +1091,6 @@ mod tests {
         assert_eq!(
             parse_action_id("global", "undo"),
             Some(ActionId::Global(GlobalActionId::Undo))
-        );
-
-        assert_eq!(
-            parse_action_id("instrument", "next"),
-            Some(ActionId::TrackList(TrackListActionId::Next))
         );
 
         assert_eq!(

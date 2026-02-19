@@ -24,8 +24,8 @@ use panes::{
     CommandPalettePane, ConfirmPane, EqMode, EqPane, FileBrowserPane, FrameEditPane,
     GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PaneSwitcherPane,
     PianoRollPane, ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane,
-    ServerPane, TagPickerPane, TagViewPane, TrackEditPane, TrackListPane, TrackPane,
-    TrackPickerPane, TunerPane, VstParamPane, WaveformPane,
+    ServerPane, TagPickerPane, TagViewPane, TrackEditPane, TrackPane, TrackPickerPane, TunerPane,
+    VstParamPane, WaveformPane,
 };
 use ui::{Keymap, PaneManager, RatatuiBackend};
 
@@ -158,10 +158,6 @@ pub(crate) fn register_all_panes(
     ))));
     panes.add_pane(Box::new(HomePane::new(pane_keymap(keymaps, "home"))));
     panes.add_pane(Box::new(AddPane::new(pane_keymap(keymaps, "add"))));
-    panes.add_pane(Box::new(TrackListPane::new(pane_keymap(
-        keymaps,
-        "instrument",
-    ))));
     panes.add_pane(Box::new(ServerPane::new(pane_keymap(keymaps, "server"))));
     panes.add_pane(Box::new(MixerPane::new(pane_keymap(keymaps, "mixer"))));
     panes.add_pane(Box::new(HelpPane::new(pane_keymap(keymaps, "help"))));

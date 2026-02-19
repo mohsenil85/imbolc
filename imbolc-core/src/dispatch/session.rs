@@ -228,7 +228,7 @@ pub(super) fn dispatch_session(
                 &mut state.tracks,
                 &mut state.session,
             );
-            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
+            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::Track));
             result.audio_effects.push(AudioEffect::RebuildSession);
             result.audio_effects.push(AudioEffect::UpdatePianoRoll);
         }

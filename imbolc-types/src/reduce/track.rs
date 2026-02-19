@@ -131,26 +131,36 @@ pub(super) fn reduce(
         TrackAction::Select(idx) => {
             if *idx < instruments.tracks.len() {
                 instruments.selected = Some(*idx);
+                session.arrangement.selected_lane = *idx;
             }
             true
         }
         TrackAction::SelectNext => {
             instruments.select_next();
+            if let Some(idx) = instruments.selected {
+                session.arrangement.selected_lane = idx;
+            }
             true
         }
         TrackAction::SelectPrev => {
             instruments.select_prev();
+            if let Some(idx) = instruments.selected {
+                session.arrangement.selected_lane = idx;
+            }
             true
         }
         TrackAction::SelectFirst => {
             if !instruments.tracks.is_empty() {
                 instruments.selected = Some(0);
+                session.arrangement.selected_lane = 0;
             }
             true
         }
         TrackAction::SelectLast => {
             if !instruments.tracks.is_empty() {
-                instruments.selected = Some(instruments.tracks.len() - 1);
+                let last = instruments.tracks.len() - 1;
+                instruments.selected = Some(last);
+                session.arrangement.selected_lane = last;
             }
             true
         }
