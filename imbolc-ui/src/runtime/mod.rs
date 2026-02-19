@@ -21,7 +21,6 @@ use crate::config;
 use crate::dispatch::LocalDispatcher;
 use crate::global_actions::{apply_status_events, TrackSelectMode};
 use crate::midi;
-use crate::panes::{ConfirmPane, PendingAction};
 use crate::setup;
 use crate::state::{self, AppState};
 use crate::ui::{keybindings, Frame, LayerStack, PaneId, PaneManager, RatatuiBackend};
@@ -154,20 +153,14 @@ impl AppRuntime {
 
         // Show project switcher on startup unless a project was explicitly requested
         if !explicit_project_requested {
-            panes.push_to(PaneId::ProjectBrowser, dispatcher.state());
-            layer_stack.set_pane_layer(panes.active());
-        }
-
-        // Offer crash-recovery load when an autosave snapshot exists and no explicit
-        // project path was requested on the CLI.
-        if autosave_enabled && !explicit_project_requested && autosave_path.exists() {
-            if let Some(confirm) = panes.get_pane_mut::<ConfirmPane>("confirm") {
-                confirm.set_confirm(
-                    "Recover autosave from previous session?",
-                    PendingAction::LoadFrom(autosave_path.clone()),
-                );
+            if autosave_enabled {
+                if let Some(browser) =
+                    panes.get_pane_mut::<crate::panes::ProjectBrowserPane>("project_browser")
+                {
+                    browser.set_autosave_path(autosave_path.clone());
+                }
             }
-            panes.push_to(PaneId::Confirm, dispatcher.state());
+            panes.push_to(PaneId::ProjectBrowser, dispatcher.state());
             layer_stack.set_pane_layer(panes.active());
         }
 
