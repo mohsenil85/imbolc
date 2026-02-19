@@ -68,6 +68,7 @@ impl KeyPattern {
             KeyPattern::Ctrl(ch) => format!("Ctrl+{}", ch),
             KeyPattern::Alt(ch) => format!("Alt+{}", ch),
             KeyPattern::AltKey(code) => format!("Alt+{:?}", code),
+            KeyPattern::CtrlKey(KeyCode::Char(' ')) => "Ctrl+Space".to_string(),
             KeyPattern::CtrlKey(code) => format!("Ctrl+{:?}", code),
             KeyPattern::ShiftKey(code) => format!("Shift+{:?}", code),
         }
@@ -91,6 +92,8 @@ impl KeyPattern {
             KeyPattern::Key(KeyCode::End) => "End".to_string(),
             KeyPattern::Key(KeyCode::PageUp) => "PgUp".to_string(),
             KeyPattern::Key(KeyCode::PageDown) => "PgDn".to_string(),
+            KeyPattern::Ctrl(' ') => "C-Space".to_string(),
+            KeyPattern::CtrlKey(KeyCode::Char(' ')) => "C-Space".to_string(),
             _ => self.display(),
         }
     }
