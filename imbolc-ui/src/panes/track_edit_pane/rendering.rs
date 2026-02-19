@@ -358,6 +358,53 @@ impl TrackEditPane {
                             global_row += 1;
                         }
                     }
+                    ProcessingStage::NoteEffect(ne) => {
+                        // Header row: note effect name + enabled badge
+                        if is_visible(global_row) && visual_y < max_y {
+                            let is_sel = self.selected_row == global_row;
+                            if is_sel {
+                                buf.set_cell(
+                                    content_x,
+                                    visual_y,
+                                    '>',
+                                    Style::new().fg(p.fg).bg(p.selection_bg).bold(),
+                                );
+                            }
+
+                            let enabled_str = if ne.enabled { "ON " } else { "OFF" };
+                            let ne_text = format!("{:10} [{}]", ne.effect_type.name(), enabled_str);
+                            let ne_style = if is_sel {
+                                Style::new().fg(p.accent).bg(p.selection_bg)
+                            } else {
+                                Style::new().fg(p.accent)
+                            };
+                            buf.draw_line(
+                                Rect::new(content_x + 2, visual_y, 18, 1),
+                                &[(&ne_text, ne_style)],
+                            );
+                            visual_y += 1;
+                        }
+                        global_row += 1;
+
+                        // Per-param rows with sliders
+                        for param in &ne.params {
+                            if is_visible(global_row) && visual_y < max_y {
+                                let is_sel = self.selected_row == global_row;
+                                render_param_row_buf(
+                                    buf,
+                                    content_x,
+                                    visual_y,
+                                    param,
+                                    is_sel,
+                                    self.editing && is_sel,
+                                    &mut self.edit_input,
+                                    &p,
+                                );
+                                visual_y += 1;
+                            }
+                            global_row += 1;
+                        }
+                    }
                 }
             }
         }

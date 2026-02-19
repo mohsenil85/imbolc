@@ -304,8 +304,8 @@ fn save_instruments(conn: &Connection, tracks: &TrackState) -> SqlResult<()> {
             format!("{:?}", inst.note_input.arpeggiator.rate),
             inst.note_input.arpeggiator.octaves,
             inst.note_input.arpeggiator.gate,
-            inst.note_input.legato.enabled as i32,
-            format!("{:?}", inst.note_input.legato.glide_rate),
+            0_i32,       // legato_enabled (legacy, now in processing chain)
+            "Sixteenth", // glide_rate (legacy, now in processing chain)
             chord_shape,
             vst_state,
             groove.swing_amount,
@@ -330,6 +330,10 @@ fn save_instruments(conn: &Connection, tracks: &TrackState) -> SqlResult<()> {
         // Effects
         let effects: Vec<_> = inst.effects().cloned().collect();
         save_effects(conn, inst.id.get(), &effects)?;
+
+        // Note effects
+        let note_effects: Vec<_> = inst.note_effects().cloned().collect();
+        save_note_effects(conn, inst.id.get(), &note_effects)?;
 
         // Sends
         for send in inst.channel_strip.sends.values() {
@@ -512,6 +516,36 @@ fn save_effects_to(
     Ok(())
 }
 
+fn save_note_effects(
+    conn: &Connection,
+    track_id: u32,
+    note_effects: &[imbolc_types::NoteEffectSlot],
+) -> SqlResult<()> {
+    for (pos, ne) in note_effects.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO track_note_effects (track_id, effect_id, position, effect_type, enabled)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                track_id,
+                ne.id.get(),
+                pos as i32,
+                format!("{:?}", ne.effect_type),
+                ne.enabled as i32,
+            ],
+        )?;
+
+        // Note effect params
+        save_params(
+            conn,
+            "track_note_effect_params",
+            "effect_id",
+            ne.id.get(),
+            &ne.params,
+        )?;
+    }
+    Ok(())
+}
+
 fn save_processing_chain(
     conn: &Connection,
     track_id: u32,
@@ -527,6 +561,7 @@ fn save_processing_chain(
             imbolc_types::ProcessingStage::Filter(_) => ("filter", None),
             imbolc_types::ProcessingStage::Eq(id, _) => ("eq", Some(id.get())),
             imbolc_types::ProcessingStage::Effect(e) => ("effect", Some(e.id.get())),
+            imbolc_types::ProcessingStage::NoteEffect(ne) => ("note_effect", Some(ne.id.get())),
         };
         stmt.execute(params![track_id, pos as i32, stage_type, effect_id])?;
     }

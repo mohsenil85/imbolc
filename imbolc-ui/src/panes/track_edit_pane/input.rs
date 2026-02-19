@@ -120,6 +120,14 @@ impl TrackEditPane {
                                         }
                                     }
                                 }
+                                Some(ProcessingStage::NoteEffect(ne)) => {
+                                    if local_idx > 0 {
+                                        let param_idx = local_idx - 1;
+                                        if let Some(param) = ne.params.get_mut(param_idx) {
+                                            param.parse_and_set(&text);
+                                        }
+                                    }
+                                }
                                 None => {}
                             }
                         }
@@ -187,6 +195,14 @@ impl TrackEditPane {
                                     if local_idx > 0 {
                                         let param_idx = local_idx - 1;
                                         if let Some(param) = e.params.get_mut(param_idx) {
+                                            param.parse_and_set(backup);
+                                        }
+                                    }
+                                }
+                                Some(ProcessingStage::NoteEffect(ne)) => {
+                                    if local_idx > 0 {
+                                        let param_idx = local_idx - 1;
+                                        if let Some(param) = ne.params.get_mut(param_idx) {
                                             param.parse_and_set(backup);
                                         }
                                     }
@@ -289,6 +305,9 @@ impl TrackEditPane {
                 if let TrackSection::Processing(i) = section {
                     match self.processing_chain.get(i) {
                         Some(ProcessingStage::Effect(_)) if local_idx == 0 => return Action::None,
+                        Some(ProcessingStage::NoteEffect(_)) if local_idx == 0 => {
+                            return Action::None
+                        }
                         Some(ProcessingStage::Eq(..)) => return Action::None,
                         Some(ProcessingStage::Filter(_)) if local_idx == 0 => return Action::None, // filter type row
                         None => return Action::None,
@@ -363,7 +382,11 @@ impl TrackEditPane {
             }
             TrackEditActionId::RemoveEffect => {
                 if let TrackSection::Processing(i) = self.current_section() {
-                    if self.processing_chain.get(i).is_some_and(|s| s.is_effect()) {
+                    if self
+                        .processing_chain
+                        .get(i)
+                        .is_some_and(|s| s.is_effect() || s.is_note_effect())
+                    {
                         self.processing_chain.remove(i);
                         let max = self.total_rows().saturating_sub(1);
                         self.selected_row = self.selected_row.min(max);
@@ -577,9 +600,16 @@ impl TrackEditPane {
             }
             TrackEditActionId::ToggleEffectBypass => {
                 if let TrackSection::Processing(i) = self.current_section() {
-                    if let Some(ProcessingStage::Effect(e)) = self.processing_chain.get_mut(i) {
-                        e.enabled = !e.enabled;
-                        return self.emit_update();
+                    match self.processing_chain.get_mut(i) {
+                        Some(ProcessingStage::Effect(e)) => {
+                            e.enabled = !e.enabled;
+                            return self.emit_update();
+                        }
+                        Some(ProcessingStage::NoteEffect(ne)) => {
+                            ne.enabled = !ne.enabled;
+                            return self.emit_update();
+                        }
+                        _ => {}
                     }
                 }
                 Action::None

@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     AutomationLaneId, AutomationTarget, BusId, ClipId, ClipInstanceId, ClipboardNote, CurveType,
     DrumStep, EffectId, EffectType, EnvConfig, FilterType, GenVoiceId, GenerativeAlgorithm,
-    GroupId, LfoConfig, MixerSelection, MusicalSettings, Param, ParamIndex, ProcessingStage,
-    ServerStatus, SourceType, TrackId, VstPluginKind,
+    GroupId, LfoConfig, MixerSelection, MusicalSettings, NoteEffectType, Param, ParamIndex,
+    ProcessingStage, ServerStatus, SourceType, TrackId, VstPluginKind,
 };
 
 // ============================================================================
@@ -939,9 +939,10 @@ pub enum TrackAction {
     NextChordShape(TrackId),
     PrevChordShape(TrackId),
     ClearChordShape(TrackId),
-    ToggleLegato(TrackId),
-    NextGlideRate(TrackId),
-    PrevGlideRate(TrackId),
+    AddNoteEffect(TrackId, NoteEffectType),
+    RemoveNoteEffect(TrackId, EffectId),
+    ToggleNoteEffectBypass(TrackId, EffectId),
+    AdjustNoteEffectParam(TrackId, EffectId, ParamIndex, f32),
     LoadIRResult(TrackId, EffectId, PathBuf), // instrument_id, effect_id, path
     ShowVstEffectParams(TrackId, EffectId),   // instrument_id, effect_id
     SetEqualizerParam(TrackId, EffectId, usize, EqualizerParamKind, f32), // instrument_id, effect_id, band_index, param, value
@@ -1020,9 +1021,10 @@ impl TrackAction {
             | Self::NextChordShape(id)
             | Self::PrevChordShape(id)
             | Self::ClearChordShape(id)
-            | Self::ToggleLegato(id)
-            | Self::NextGlideRate(id)
-            | Self::PrevGlideRate(id)
+            | Self::AddNoteEffect(id, _)
+            | Self::RemoveNoteEffect(id, _)
+            | Self::ToggleNoteEffectBypass(id, _)
+            | Self::AdjustNoteEffectParam(id, _, _, _)
             | Self::LoadIRResult(id, _, _)
             | Self::ShowVstEffectParams(id, _)
             | Self::SetEqualizerParam(id, _, _, _, _)

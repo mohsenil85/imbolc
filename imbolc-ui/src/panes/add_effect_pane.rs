@@ -24,6 +24,7 @@ pub enum EffectTarget {
 #[derive(Debug, Clone)]
 enum AddEffectOption {
     Effect(EffectType),
+    NoteEffect(imbolc_types::NoteEffectType),
     Separator(&'static str),
     ImportVst,
 }
@@ -72,6 +73,9 @@ impl AddEffectPane {
 
     fn build_effect_list(vst_effects: &[(VstPluginId, EffectType)]) -> Vec<AddEffectOption> {
         let mut options = vec![
+            AddEffectOption::Separator("── Articulation ──"),
+            AddEffectOption::NoteEffect(imbolc_types::NoteEffectType::Legato),
+            AddEffectOption::NoteEffect(imbolc_types::NoteEffectType::Staccato),
             AddEffectOption::Separator("── Dynamics ──"),
             AddEffectOption::Effect(EffectType::TapeComp),
             AddEffectOption::Effect(EffectType::SidechainComp),
@@ -193,6 +197,14 @@ impl AddEffectPane {
                     }
                 }
             },
+            AddEffectOption::NoteEffect(ne_type) => {
+                // Note effects only apply to tracks
+                if let Some(inst) = state.tracks.selected_track() {
+                    Action::Track(TrackAction::AddNoteEffect(inst.id, *ne_type))
+                } else {
+                    Action::None
+                }
+            }
             AddEffectOption::ImportVst => Action::Session(SessionAction::RequestFileBrowser(
                 FileSelectAction::ImportVstEffect,
             )),
@@ -355,6 +367,36 @@ impl Pane for AddEffectPane {
                     buf.draw_line(
                         Rect::new(content_x + 2, y, inner.width.saturating_sub(4), 1),
                         &[(&name, name_style)],
+                    );
+
+                    if is_selected {
+                        let fill_start = content_x + 2 + name.len() as u16;
+                        let fill_end = inner.x + inner.width;
+                        for x in fill_start..fill_end {
+                            buf.set_cell(x, y, ' ', sel_bg);
+                        }
+                    }
+                }
+                AddEffectOption::NoteEffect(ne_type) => {
+                    if is_selected {
+                        buf.set_cell(
+                            content_x,
+                            y,
+                            '>',
+                            Style::new().fg(p.fg).bg(p.selection_bg).bold(),
+                        );
+                    }
+
+                    let name = ne_type.name();
+                    let name_style = if is_selected {
+                        Style::new().fg(p.accent).bg(p.selection_bg)
+                    } else {
+                        Style::new().fg(p.accent)
+                    };
+
+                    buf.draw_line(
+                        Rect::new(content_x + 2, y, inner.width.saturating_sub(4), 1),
+                        &[(name, name_style)],
                     );
 
                     if is_selected {

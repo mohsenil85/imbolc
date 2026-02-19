@@ -74,10 +74,19 @@ pub(super) fn dispatch_instrument(
         | TrackAction::AdjustArpeggiatorGate(_, _)
         | TrackAction::NextChordShape(_)
         | TrackAction::PrevChordShape(_)
-        | TrackAction::ClearChordShape(_)
-        | TrackAction::ToggleLegato(_)
-        | TrackAction::NextGlideRate(_)
-        | TrackAction::PrevGlideRate(_) => arpeggiator::dispatch(state, action),
+        | TrackAction::ClearChordShape(_) => arpeggiator::dispatch(state, action),
+        TrackAction::AddNoteEffect(id, effect_type) => {
+            effects::handle_add_note_effect(state, *id, *effect_type)
+        }
+        TrackAction::RemoveNoteEffect(id, effect_id) => {
+            effects::handle_remove_note_effect(state, *id, *effect_id)
+        }
+        TrackAction::ToggleNoteEffectBypass(id, effect_id) => {
+            effects::handle_toggle_note_effect_bypass(state, *id, *effect_id)
+        }
+        TrackAction::AdjustNoteEffectParam(id, effect_id, param_idx, delta) => {
+            effects::handle_adjust_note_effect_param(state, *id, *effect_id, *param_idx, *delta)
+        }
         TrackAction::LoadIRResult(instrument_id, effect_id, ref path) => {
             effects::handle_load_ir_result(state, audio, *instrument_id, *effect_id, path)
         }

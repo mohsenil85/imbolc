@@ -236,6 +236,28 @@ CREATE TABLE IF NOT EXISTS track_processing_chain (
     PRIMARY KEY (track_id, position)
 );
 
+CREATE TABLE IF NOT EXISTS track_note_effects (
+    track_id INTEGER NOT NULL,
+    effect_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    effect_type TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (track_id, effect_id)
+);
+
+CREATE TABLE IF NOT EXISTS track_note_effect_params (
+    effect_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    param_name TEXT NOT NULL,
+    param_value_type TEXT NOT NULL,
+    param_value_float REAL,
+    param_value_int INTEGER,
+    param_value_bool INTEGER,
+    param_min REAL NOT NULL,
+    param_max REAL NOT NULL,
+    PRIMARY KEY (effect_id, position)
+);
+
 CREATE TABLE IF NOT EXISTS track_vst_params (
     track_id INTEGER NOT NULL,
     param_index INTEGER NOT NULL,
@@ -750,6 +772,8 @@ DELETE FROM track_modulations;
 DELETE FROM track_filter_extra_params;
 DELETE FROM track_eq_bands;
 DELETE FROM track_processing_chain;
+DELETE FROM track_note_effects;
+DELETE FROM track_note_effect_params;
 DELETE FROM track_vst_params;
 DELETE FROM effect_vst_params;
 DELETE FROM mixer_buses;
@@ -807,6 +831,8 @@ DROP TABLE IF EXISTS track_modulations;
 DROP TABLE IF EXISTS track_filter_extra_params;
 DROP TABLE IF EXISTS track_eq_bands;
 DROP TABLE IF EXISTS track_processing_chain;
+DROP TABLE IF EXISTS track_note_effects;
+DROP TABLE IF EXISTS track_note_effect_params;
 DROP TABLE IF EXISTS track_vst_params;
 DROP TABLE IF EXISTS effect_vst_params;
 DROP TABLE IF EXISTS mixer_buses;

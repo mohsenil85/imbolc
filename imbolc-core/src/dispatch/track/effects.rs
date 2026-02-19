@@ -130,6 +130,57 @@ pub(super) fn handle_open_vst_effect_params(
     ))
 }
 
+// --- Note effect handlers ---
+
+pub(super) fn handle_add_note_effect(
+    state: &mut AppState,
+    id: crate::state::TrackId,
+    effect_type: imbolc_types::NoteEffectType,
+) -> DispatchResult {
+    reduce(state, &TrackAction::AddNoteEffect(id, effect_type));
+    let mut result = DispatchResult::with_nav(NavIntent::Pop);
+    result.audio_effects.push(AudioEffect::RebuildInstruments);
+    result
+}
+
+pub(super) fn handle_remove_note_effect(
+    state: &mut AppState,
+    id: crate::state::TrackId,
+    effect_id: crate::state::EffectId,
+) -> DispatchResult {
+    reduce(state, &TrackAction::RemoveNoteEffect(id, effect_id));
+    let mut result = DispatchResult::none();
+    result.audio_effects.push(AudioEffect::RebuildInstruments);
+    result
+}
+
+pub(super) fn handle_toggle_note_effect_bypass(
+    state: &mut AppState,
+    id: crate::state::TrackId,
+    effect_id: crate::state::EffectId,
+) -> DispatchResult {
+    reduce(state, &TrackAction::ToggleNoteEffectBypass(id, effect_id));
+    let mut result = DispatchResult::none();
+    result.audio_effects.push(AudioEffect::RebuildInstruments);
+    result
+}
+
+pub(super) fn handle_adjust_note_effect_param(
+    state: &mut AppState,
+    id: crate::state::TrackId,
+    effect_id: crate::state::EffectId,
+    param_idx: imbolc_types::ParamIndex,
+    delta: f32,
+) -> DispatchResult {
+    reduce(
+        state,
+        &TrackAction::AdjustNoteEffectParam(id, effect_id, param_idx, delta),
+    );
+    let mut result = DispatchResult::none();
+    result.audio_effects.push(AudioEffect::RebuildInstruments);
+    result
+}
+
 #[cfg(test)]
 #[allow(unused_must_use)]
 mod tests {

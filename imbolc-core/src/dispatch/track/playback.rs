@@ -25,12 +25,13 @@ pub(super) fn handle_play_note(
                     };
                     for p in &pitches {
                         let p = inst.offset_pitch(*p);
-                        if inst.note_input.legato.enabled {
-                            let glide_secs = inst
-                                .note_input
-                                .legato
-                                .glide_rate
-                                .to_secs(state.session.bpm as f32);
+                        let legato_glide = inst
+                            .note_effects()
+                            .find(|ne| {
+                                ne.enabled && ne.glide_secs(state.session.bpm as f32).is_some()
+                            })
+                            .and_then(|ne| ne.glide_secs(state.session.bpm as f32));
+                        if let Some(glide_secs) = legato_glide {
                             let _ = audio.glide_or_spawn(target_id, p, vel_f, glide_secs, 0.0);
                         } else {
                             let _ = audio.spawn_voice(target_id, p, vel_f, 0.0);
@@ -73,12 +74,13 @@ pub(super) fn handle_play_notes(
                         };
                         for p in &expanded {
                             let p = inst.offset_pitch(*p);
-                            if inst.note_input.legato.enabled {
-                                let glide_secs = inst
-                                    .note_input
-                                    .legato
-                                    .glide_rate
-                                    .to_secs(state.session.bpm as f32);
+                            let legato_glide = inst
+                                .note_effects()
+                                .find(|ne| {
+                                    ne.enabled && ne.glide_secs(state.session.bpm as f32).is_some()
+                                })
+                                .and_then(|ne| ne.glide_secs(state.session.bpm as f32));
+                            if let Some(glide_secs) = legato_glide {
                                 let _ = audio.glide_or_spawn(target_id, p, vel_f, glide_secs, 0.0);
                             } else {
                                 let _ = audio.spawn_voice(target_id, p, vel_f, 0.0);

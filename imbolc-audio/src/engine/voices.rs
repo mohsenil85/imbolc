@@ -102,15 +102,11 @@ impl AudioEngine {
                 RawArg::Int(1), // addToTail
                 RawArg::Int(group_id),
             ];
-            let glide_secs = if instrument.note_input.legato.enabled {
-                instrument
-                    .note_input
-                    .legato
-                    .glide_rate
-                    .to_secs(session.bpm as f32)
-            } else {
-                0.0
-            };
+            let glide_secs = instrument
+                .note_effects()
+                .find(|ne| ne.enabled && ne.glide_secs(session.bpm as f32).is_some())
+                .and_then(|ne| ne.glide_secs(session.bpm as f32))
+                .unwrap_or(0.0);
             let params: Vec<(String, f32)> = vec![
                 ("note".to_string(), pitch as f32),
                 ("freq".to_string(), freq as f32),

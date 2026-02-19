@@ -226,10 +226,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         inst.channel_strip.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
         inst.note_input.arpeggiator = arpeggiator;
         inst.note_input.chord_shape = chord_shape;
-        inst.note_input.legato.enabled = r.legato_enabled.is_some_and(|v| v != 0);
-        if let Some(ref gr) = r.glide_rate {
-            inst.note_input.legato.glide_rate = decode_glide_rate(gr);
-        }
+        // Legacy legato fields are ignored — legato is now a NoteEffect in the processing chain
         if let SourceExtra::Vst {
             ref mut state_path, ..
         } = inst.source_extra
@@ -253,8 +250,9 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         // Source params
         inst.source_params = load_params(conn, "track_source_params", "track_id", r.id)?;
 
-        // Load effects for chain assembly
+        // Load effects and note effects for chain assembly
         let mut effects = load_effects(conn, r.id)?;
+        let mut note_effects = load_note_effects(conn, r.id)?;
         let mut filter = filter;
         let mut eq = eq;
 
@@ -313,6 +311,18 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                                 }
                             }
                         }
+                        "note_effect" => {
+                            if let Some(eid) = eff_id {
+                                if let Some(idx) = note_effects
+                                    .iter()
+                                    .position(|ne| ne.id == imbolc_types::EffectId::new(*eid))
+                                {
+                                    inst.channel_strip.processing_chain.push(
+                                        ProcessingStage::NoteEffect(note_effects.remove(idx)),
+                                    );
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -335,6 +345,11 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
             inst.channel_strip
                 .processing_chain
                 .push(ProcessingStage::Effect(effect));
+        }
+        for ne in note_effects {
+            inst.channel_strip
+                .processing_chain
+                .push(ProcessingStage::NoteEffect(ne));
         }
 
         // Sends
@@ -407,7 +422,9 @@ struct TrackRow {
     arp_rate: Option<String>,
     arp_octaves: Option<i32>,
     arp_gate: Option<f32>,
+    #[allow(dead_code)]
     legato_enabled: Option<i32>,
+    #[allow(dead_code)]
     glide_rate: Option<String>,
     chord_shape: Option<String>,
     vst_state_path: Option<String>,
@@ -432,6 +449,51 @@ fn load_effects(
         "track_id",
         track_id,
     )
+}
+
+fn load_note_effects(
+    conn: &Connection,
+    track_id: u32,
+) -> SqlResult<Vec<imbolc_types::NoteEffectSlot>> {
+    if !table_exists(conn, "track_note_effects")? {
+        return Ok(Vec::new());
+    }
+    let mut stmt = conn.prepare(
+        "SELECT effect_id, effect_type, enabled FROM track_note_effects \
+         WHERE track_id = ?1 ORDER BY position",
+    )?;
+    let rows: Vec<(u32, String, i32)> = stmt
+        .query_map(params![track_id], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i32>(2)?,
+            ))
+        })?
+        .collect::<SqlResult<_>>()?;
+
+    let mut result = Vec::new();
+    for (eid, ne_type_str, enabled) in rows {
+        let ne_type = match ne_type_str.as_str() {
+            "Legato" => imbolc_types::NoteEffectType::Legato,
+            "Staccato" => imbolc_types::NoteEffectType::Staccato,
+            _ => continue,
+        };
+        let id = imbolc_types::EffectId::new(eid);
+        let mut ne = imbolc_types::NoteEffectSlot::new(id, ne_type);
+        ne.enabled = enabled != 0;
+
+        // Load params
+        if table_exists(conn, "track_note_effect_params")? {
+            let params = load_params(conn, "track_note_effect_params", "effect_id", eid)?;
+            if !params.is_empty() {
+                ne.params = params;
+            }
+        }
+
+        result.push(ne);
+    }
+    Ok(result)
 }
 
 fn load_sends(

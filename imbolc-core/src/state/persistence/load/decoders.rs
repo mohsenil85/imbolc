@@ -495,6 +495,7 @@ pub(crate) fn decode_arp_rate(s: &str) -> crate::state::arpeggiator::ArpRate {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn decode_glide_rate(s: &str) -> crate::state::arpeggiator::GlideRate {
     use crate::state::arpeggiator::GlideRate;
     match s {

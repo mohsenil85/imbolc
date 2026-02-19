@@ -234,7 +234,7 @@ pub fn tick_playback(
                 instrument_id,
                 pitch,
                 velocity,
-                duration,
+                mut duration,
                 note_tick,
                 probability,
                 ticks_from_old,
@@ -329,27 +329,42 @@ pub fn tick_playback(
                     .track(instrument_id)
                     .map_or(pitch, |inst| inst.offset_pitch(pitch));
 
-                // Legato: glide to new pitch if an active voice exists
-                let is_legato = instruments
+                // Note effects: check for legato/staccato in the processing chain
+                let (is_legato, legato_glide_secs, staccato_amount) = instruments
                     .track(instrument_id)
-                    .map(|inst| inst.note_input.legato.enabled)
-                    .unwrap_or(false);
+                    .map(|inst| {
+                        let mut legato = false;
+                        let mut glide = 0.1_f32;
+                        let mut staccato = None;
+                        for ne in inst.note_effects().filter(|ne| ne.enabled) {
+                            if let Some(secs) = ne.glide_secs(piano_roll.bpm) {
+                                legato = true;
+                                glide = secs;
+                            }
+                            if let Some(amt) = ne.staccato_amount() {
+                                staccato = Some(amt);
+                            }
+                        }
+                        (legato, glide, staccato)
+                    })
+                    .unwrap_or((false, 0.1, None));
+
+                // Apply staccato: shorten the effective duration
+                if let Some(amount) = staccato_amount {
+                    duration = ((duration as f32 * amount) as u32).max(1);
+                }
 
                 if is_legato {
                     if let Some((_, old_pitch)) =
                         engine.voice_allocator().last_active_voice(instrument_id)
                     {
                         if old_pitch != pitch {
-                            let glide_secs = instruments
-                                .track(instrument_id)
-                                .map(|i| i.note_input.legato.glide_rate.to_secs(piano_roll.bpm))
-                                .unwrap_or(0.1);
                             let _ = engine.glide_voice(
                                 instrument_id,
                                 old_pitch,
                                 pitch,
                                 vel_f,
-                                glide_secs,
+                                legato_glide_secs,
                                 offset,
                                 session,
                             );

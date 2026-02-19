@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use super::track::{
     decode_effect_cursor_from_slice, deserialize_sends, effects_max_cursor, ChannelConfig,
-    EffectSlot, EffectType, EqConfig, FilterConfig, FilterType, MixerSend, OutputTarget,
-    ProcessingStage,
+    EffectSlot, EffectType, EqConfig, FilterConfig, FilterType, MixerSend, NoteEffectSlot,
+    NoteEffectType, OutputTarget, ProcessingStage,
 };
 use crate::{BusId, EffectId, ParamIndex};
 
@@ -355,11 +355,74 @@ impl ChannelStrip {
         effects_max_cursor(&effects)
     }
 
-    /// Recalculate next_effect_id from existing effects and EQs in the chain (used after loading).
+    // --- Note effect accessors ---
+
+    /// Get all note effects in the processing chain.
+    pub fn note_effects(&self) -> impl Iterator<Item = &NoteEffectSlot> {
+        self.processing_chain.iter().filter_map(|s| match s {
+            ProcessingStage::NoteEffect(ne) => Some(ne),
+            _ => None,
+        })
+    }
+
+    /// Get all note effects mutably.
+    pub fn note_effects_mut(&mut self) -> impl Iterator<Item = &mut NoteEffectSlot> {
+        self.processing_chain.iter_mut().filter_map(|s| match s {
+            ProcessingStage::NoteEffect(ne) => Some(ne),
+            _ => None,
+        })
+    }
+
+    /// Find a note effect by its EffectId.
+    pub fn note_effect_by_id(&self, id: EffectId) -> Option<&NoteEffectSlot> {
+        self.note_effects().find(|ne| ne.id == id)
+    }
+
+    /// Find a mutable note effect by its EffectId.
+    pub fn note_effect_by_id_mut(&mut self, id: EffectId) -> Option<&mut NoteEffectSlot> {
+        self.note_effects_mut().find(|ne| ne.id == id)
+    }
+
+    /// Chain index of a note effect by its EffectId.
+    pub fn note_effect_chain_index(&self, id: EffectId) -> Option<usize> {
+        self.processing_chain
+            .iter()
+            .position(|s| matches!(s, ProcessingStage::NoteEffect(ne) if ne.id == id))
+    }
+
+    /// Add a note effect to the start of the chain (before audio effects).
+    /// Returns its stable EffectId.
+    pub fn add_note_effect(&mut self, effect_type: NoteEffectType) -> EffectId {
+        let id = self.next_effect_id;
+        self.next_effect_id = EffectId::new(self.next_effect_id.get() + 1);
+        // Insert at position 0 (note effects go before audio processing)
+        self.processing_chain.insert(
+            0,
+            ProcessingStage::NoteEffect(NoteEffectSlot::new(id, effect_type)),
+        );
+        id
+    }
+
+    /// Remove a note effect by its EffectId. Returns true if removed.
+    pub fn remove_note_effect(&mut self, id: EffectId) -> bool {
+        if let Some(idx) = self.note_effect_chain_index(id) {
+            self.processing_chain.remove(idx);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Recalculate next_effect_id from existing effects, EQs, and note effects in the chain (used after loading).
     pub fn recalculate_next_effect_id(&mut self) {
         let max_effect = self.effects().map(|e| e.id.get()).max();
         let max_eq = self.eqs().map(|(id, _)| id.get()).max();
-        let max_id = max_effect.into_iter().chain(max_eq).max();
+        let max_note_effect = self.note_effects().map(|ne| ne.id.get()).max();
+        let max_id = max_effect
+            .into_iter()
+            .chain(max_eq)
+            .chain(max_note_effect)
+            .max();
         self.next_effect_id = max_id.map_or(EffectId::new(0), |m| EffectId::new(m + 1));
     }
 }

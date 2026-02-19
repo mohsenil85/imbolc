@@ -127,6 +127,19 @@ impl TrackEditPane {
                             }
                         }
                     }
+                    Some(ProcessingStage::NoteEffect(ne)) => {
+                        if local_idx == 0 {
+                            return;
+                        } // header row — not adjustable
+                        let param_idx = local_idx - 1;
+                        if let Some(param) = ne.params.get_mut(param_idx) {
+                            if mode == AdjustMode::Musical {
+                                param.adjust_musical(increase, tuning_a4);
+                            } else {
+                                param.adjust(increase, fraction);
+                            }
+                        }
+                    }
                     None => {}
                 }
             }
@@ -247,6 +260,15 @@ impl TrackEditPane {
                             param.zero();
                         }
                     }
+                    Some(ProcessingStage::NoteEffect(ne)) => {
+                        if local_idx == 0 {
+                            return;
+                        } // header row
+                        let param_idx = local_idx - 1;
+                        if let Some(param) = ne.params.get_mut(param_idx) {
+                            param.zero();
+                        }
+                    }
                     None => {}
                 }
             }
@@ -321,6 +343,18 @@ impl TrackEditPane {
                             }
                         }
                     }
+                    Some(ProcessingStage::NoteEffect(ne)) => {
+                        if local_idx == 0 {
+                            return;
+                        } // header row
+                        let param_idx = local_idx - 1;
+                        let defaults = ne.effect_type.default_params();
+                        if let Some(param) = ne.params.get_mut(param_idx) {
+                            if let Some(default) = defaults.get(param_idx) {
+                                param.value = default.value.clone();
+                            }
+                        }
+                    }
                     None => {}
                 }
             }
@@ -370,6 +404,11 @@ impl TrackEditPane {
                     Some(ProcessingStage::Eq(..)) => {} // EQ — no zero
                     Some(ProcessingStage::Effect(e)) => {
                         for param in &mut e.params {
+                            param.zero();
+                        }
+                    }
+                    Some(ProcessingStage::NoteEffect(ne)) => {
+                        for param in &mut ne.params {
                             param.zero();
                         }
                     }
@@ -427,6 +466,16 @@ impl TrackEditPane {
                     }
                     let param_idx = local_idx - 1;
                     e.params
+                        .get(param_idx)
+                        .map(|p| p.value_string())
+                        .unwrap_or_default()
+                }
+                Some(ProcessingStage::NoteEffect(ne)) => {
+                    if local_idx == 0 {
+                        return String::new();
+                    }
+                    let param_idx = local_idx - 1;
+                    ne.params
                         .get(param_idx)
                         .map(|p| p.value_string())
                         .unwrap_or_default()

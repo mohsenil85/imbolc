@@ -108,22 +108,6 @@ impl ArpRate {
     }
 }
 
-/// Legato/glide configuration, stored per-instrument.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct LegatoConfig {
-    pub enabled: bool,
-    pub glide_rate: GlideRate,
-}
-
-impl Default for LegatoConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            glide_rate: GlideRate::Sixteenth,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GlideRate {
     Quarter,
@@ -168,6 +152,26 @@ impl GlideRate {
             GlideRate::Eighth => GlideRate::Quarter,
             GlideRate::Sixteenth => GlideRate::Eighth,
             GlideRate::ThirtySecond => GlideRate::Sixteenth,
+        }
+    }
+
+    /// Convert a 0-3 index to a GlideRate.
+    pub fn from_index(idx: i32) -> GlideRate {
+        match idx {
+            0 => GlideRate::Quarter,
+            1 => GlideRate::Eighth,
+            2 => GlideRate::Sixteenth,
+            _ => GlideRate::ThirtySecond,
+        }
+    }
+
+    /// Convert to a 0-3 index.
+    pub fn to_index(&self) -> i32 {
+        match self {
+            GlideRate::Quarter => 0,
+            GlideRate::Eighth => 1,
+            GlideRate::Sixteenth => 2,
+            GlideRate::ThirtySecond => 3,
         }
     }
 }
@@ -328,13 +332,6 @@ mod tests {
         // Root 127 — intervals would push past 127
         let pitches = ChordShape::Major.expand(127);
         assert_eq!(pitches, vec![127]); // 131 and 134 filtered out
-    }
-
-    #[test]
-    fn legato_config_default() {
-        let config = LegatoConfig::default();
-        assert!(!config.enabled);
-        assert_eq!(config.glide_rate, GlideRate::Sixteenth);
     }
 
     #[test]

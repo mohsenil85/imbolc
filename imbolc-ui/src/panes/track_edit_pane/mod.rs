@@ -273,6 +273,9 @@ impl TrackEditPane {
                             return None;
                         }
                     }
+                    ProcessingStage::NoteEffect(_) => {
+                        return None; // note effects don't support automation yet
+                    }
                 }
             }
             TrackSection::Lfo => match local_idx {

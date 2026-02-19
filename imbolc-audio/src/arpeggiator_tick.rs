@@ -70,10 +70,11 @@ pub fn tick_arpeggiator(
         while arp.accumulator >= 1.0 {
             arp.accumulator -= 1.0;
 
-            // Check if this instrument has legato enabled
-            let is_legato = instruments
-                .track(instrument_id)
-                .is_some_and(|inst| inst.note_input.legato.enabled);
+            // Check if this instrument has legato enabled (via note effects in processing chain)
+            let is_legato = instruments.track(instrument_id).is_some_and(|inst| {
+                inst.note_effects()
+                    .any(|ne| ne.enabled && ne.glide_secs(bpm).is_some())
+            });
 
             // Release previous note (skip if legato — we'll glide instead)
             if !is_legato {
@@ -160,9 +161,14 @@ pub fn tick_arpeggiator(
                     let target_pitch = inst.map_or(pitch, |i| i.offset_pitch(pitch));
 
                     if is_legato && arp.current_pitch.is_some() {
-                        // Glide from previous note
-                        let glide_secs =
-                            inst.map_or(0.1, |i| i.note_input.legato.glide_rate.to_secs(bpm));
+                        // Glide from previous note — read glide time from note effects
+                        let glide_secs = inst
+                            .and_then(|i| {
+                                i.note_effects()
+                                    .find(|ne| ne.enabled && ne.glide_secs(bpm).is_some())
+                            })
+                            .and_then(|ne| ne.glide_secs(bpm))
+                            .unwrap_or(0.1);
                         let _ = engine.glide_voice(
                             target_id,
                             0, // old_pitch unused

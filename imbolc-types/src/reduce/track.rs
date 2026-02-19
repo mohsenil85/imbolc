@@ -237,21 +237,33 @@ pub(super) fn reduce(
             }
             true
         }
-        TrackAction::ToggleLegato(id) => {
+        TrackAction::AddNoteEffect(id, effect_type) => {
             if let Some(inst) = instruments.track_mut(*id) {
-                inst.note_input.legato.enabled = !inst.note_input.legato.enabled;
+                inst.add_note_effect(*effect_type);
             }
             true
         }
-        TrackAction::NextGlideRate(id) => {
+        TrackAction::RemoveNoteEffect(id, effect_id) => {
             if let Some(inst) = instruments.track_mut(*id) {
-                inst.note_input.legato.glide_rate = inst.note_input.legato.glide_rate.next();
+                inst.remove_note_effect(*effect_id);
             }
             true
         }
-        TrackAction::PrevGlideRate(id) => {
+        TrackAction::ToggleNoteEffectBypass(id, effect_id) => {
             if let Some(inst) = instruments.track_mut(*id) {
-                inst.note_input.legato.glide_rate = inst.note_input.legato.glide_rate.prev();
+                if let Some(ne) = inst.note_effect_by_id_mut(*effect_id) {
+                    ne.enabled = !ne.enabled;
+                }
+            }
+            true
+        }
+        TrackAction::AdjustNoteEffectParam(id, effect_id, param_idx, delta) => {
+            if let Some(inst) = instruments.track_mut(*id) {
+                if let Some(ne) = inst.note_effect_by_id_mut(*effect_id) {
+                    if let Some(param) = ne.params.get_mut(param_idx.get()) {
+                        param.adjust_delta(*delta);
+                    }
+                }
             }
             true
         }

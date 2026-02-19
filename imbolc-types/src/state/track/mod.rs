@@ -2,12 +2,14 @@ mod effect;
 mod envelope;
 mod filter;
 mod lfo;
+mod note_effect;
 mod source_type;
 
 pub use effect::*;
 pub use envelope::*;
 pub use filter::*;
 pub use lfo::*;
+pub use note_effect::*;
 pub use source_type::*;
 
 use std::collections::BTreeMap;
@@ -15,7 +17,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use super::arpeggiator::{ArpeggiatorConfig, ChordShape, LegatoConfig};
+use super::arpeggiator::{ArpeggiatorConfig, ChordShape};
 use super::channel_strip::ChannelStrip;
 use super::drum_sequencer::DrumSequencerState;
 use super::groove::GrooveConfig;
@@ -43,12 +45,11 @@ pub struct ModulationConfig {
     pub amp_envelope: EnvConfig,
 }
 
-/// Arpeggiator, chord-shape, and legato configuration for an instrument.
+/// Arpeggiator and chord-shape configuration for an instrument.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct NoteInputConfig {
     pub arpeggiator: ArpeggiatorConfig,
     pub chord_shape: Option<ChordShape>,
-    pub legato: LegatoConfig,
 }
 
 /// Layer group membership and octave offset for an instrument.
@@ -255,6 +256,7 @@ pub enum ProcessingStage {
     Filter(FilterConfig),
     Eq(EffectId, EqConfig),
     Effect(EffectSlot),
+    NoteEffect(NoteEffectSlot),
 }
 
 impl ProcessingStage {
@@ -278,12 +280,17 @@ impl ProcessingStage {
         matches!(self, ProcessingStage::Effect(_))
     }
 
+    pub fn is_note_effect(&self) -> bool {
+        matches!(self, ProcessingStage::NoteEffect(_))
+    }
+
     /// Number of editable rows this stage occupies in the instrument editor.
     pub fn row_count(&self) -> usize {
         match self {
             ProcessingStage::Filter(f) => 3 + f.extra_params.len(),
             ProcessingStage::Eq(..) => 1,
             ProcessingStage::Effect(e) => 1 + e.params.len(),
+            ProcessingStage::NoteEffect(ne) => 1 + ne.params.len(),
         }
     }
 }
@@ -569,6 +576,21 @@ impl Track {
         }
     }
 
+    pub fn note_effects(&self) -> impl Iterator<Item = &NoteEffectSlot> {
+        self.channel_strip.note_effects()
+    }
+    pub fn note_effect_by_id(&self, id: EffectId) -> Option<&NoteEffectSlot> {
+        self.channel_strip.note_effect_by_id(id)
+    }
+    pub fn note_effect_by_id_mut(&mut self, id: EffectId) -> Option<&mut NoteEffectSlot> {
+        self.channel_strip.note_effect_by_id_mut(id)
+    }
+    pub fn add_note_effect(&mut self, effect_type: NoteEffectType) -> EffectId {
+        self.channel_strip.add_note_effect(effect_type)
+    }
+    pub fn remove_note_effect(&mut self, id: EffectId) -> bool {
+        self.channel_strip.remove_note_effect(id)
+    }
     pub fn move_stage(&mut self, idx: usize, direction: i8) -> bool {
         self.channel_strip.move_stage(idx, direction)
     }
