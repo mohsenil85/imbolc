@@ -817,21 +817,16 @@ impl Pane for TrackPane {
             }
         }
 
-        // --- Cursor ---
+        // --- Cursor --- (full-height bar, uses raw_buf read-back to preserve clip visibility)
         if arr.cursor_tick >= arr.view_start_tick {
             let cursor_col = (arr.cursor_tick - arr.view_start_tick) / ticks_per_col;
             if (cursor_col as u16) < timeline_width {
                 let x = timeline_x + cursor_col as u16;
-                let lane_y = lanes_area_y
-                    + ((selected_lane - scroll.min(selected_lane)) as u16) * lane_height;
                 let cursor_style = Style::new().fg(p.accent);
-                for row in 0..lane_height {
-                    let y = lane_y + row;
-                    if y < lanes_area_y + lanes_area_height {
-                        if let Some(cell) = buf.raw_buf().cell_mut((x, y)) {
-                            if cell.symbol() == " " {
-                                cell.set_char('|').set_style(cursor_style);
-                            }
+                for y in lanes_area_y..(lanes_area_y + lanes_area_height) {
+                    if let Some(cell) = buf.raw_buf().cell_mut((x, y)) {
+                        if cell.symbol() == " " {
+                            cell.set_char('|').set_style(cursor_style);
                         }
                     }
                 }
