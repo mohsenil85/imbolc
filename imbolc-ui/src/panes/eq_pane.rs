@@ -246,13 +246,20 @@ impl Pane for EqPane {
                 Action::None
             }
             ActionId::Eq(EqActionId::PrevParam) => {
-                self.selected_param = self.selected_param.saturating_sub(1);
+                if let Some(eq) = eq {
+                    let count = param_count_for_band(&eq.bands[self.selected_band]);
+                    self.selected_param = if self.selected_param == 0 {
+                        count.saturating_sub(1)
+                    } else {
+                        self.selected_param - 1
+                    };
+                }
                 Action::None
             }
             ActionId::Eq(EqActionId::NextParam) => {
                 if let Some(eq) = eq {
-                    let max = param_count_for_band(&eq.bands[self.selected_band]).saturating_sub(1);
-                    self.selected_param = (self.selected_param + 1).min(max);
+                    let count = param_count_for_band(&eq.bands[self.selected_band]);
+                    self.selected_param = (self.selected_param + 1) % count;
                 }
                 Action::None
             }
