@@ -102,6 +102,15 @@ impl AudioEngine {
                 RawArg::Int(1), // addToTail
                 RawArg::Int(group_id),
             ];
+            let glide_secs = if instrument.note_input.legato.enabled {
+                instrument
+                    .note_input
+                    .legato
+                    .glide_rate
+                    .to_secs(session.bpm as f32)
+            } else {
+                0.0
+            };
             let params: Vec<(String, f32)> = vec![
                 ("note".to_string(), pitch as f32),
                 ("freq".to_string(), freq as f32),
@@ -110,6 +119,7 @@ impl AudioEngine {
                 ("freq_out".to_string(), voice_freq_bus as f32),
                 ("gate_out".to_string(), voice_gate_bus as f32),
                 ("vel_out".to_string(), voice_vel_bus as f32),
+                ("glide".to_string(), glide_secs),
             ];
             for (name, value) in &params {
                 args.push(RawArg::Str(name.clone()));
@@ -585,6 +595,58 @@ impl AudioEngine {
         });
 
         Ok(())
+    }
+
+    /// Glide an active voice to a new pitch (for legato mode).
+    /// Sends /n_set to the MIDI control node with new freq + glide time.
+    #[allow(clippy::too_many_arguments)]
+    pub fn glide_voice(
+        &mut self,
+        instrument_id: TrackId,
+        _old_pitch: u8,
+        new_pitch: u8,
+        _velocity: f32,
+        glide_secs: f32,
+        offset_secs: f64,
+        session: &SessionState,
+    ) -> Result<(), String> {
+        let (pos, _) = self
+            .voice_allocator
+            .last_active_voice(instrument_id)
+            .ok_or("No active voice to glide")?;
+
+        let ctx = tuning::TuningContext::new(session.key, session.ji_flavor);
+        let freq = tuning::pitch_to_freq(new_pitch, session.tuning_a4 as f64, session.tuning, &ctx);
+
+        // Track tuning drift for UI display
+        let et_freq = tuning::et_freq(new_pitch, session.tuning_a4 as f64);
+        self.last_drift_cents = tuning::adaptive::drift_cents(freq, et_freq);
+
+        let voice = &self.voice_allocator.chains()[pos];
+        let midi_node_id = voice.midi_node_id;
+
+        let msg = BackendMessage {
+            addr: "/n_set".to_string(),
+            args: vec![
+                RawArg::Int(midi_node_id),
+                RawArg::Str("freq".to_string()),
+                RawArg::Float(freq as f32),
+                RawArg::Str("note".to_string()),
+                RawArg::Float(new_pitch as f32),
+                RawArg::Str("glide".to_string()),
+                RawArg::Float(glide_secs),
+            ],
+        };
+        self.queue_timed_bundle(vec![msg], offset_secs)?;
+
+        self.voice_allocator.update_pitch(pos, new_pitch);
+
+        Ok(())
+    }
+
+    /// Access the voice allocator (read-only).
+    pub fn voice_allocator(&self) -> &super::voice_allocator::VoiceAllocator {
+        &self.voice_allocator
     }
 
     /// Release a specific voice by instrument and pitch (note-off).

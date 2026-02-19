@@ -15,7 +15,9 @@ const PARAM_RATE: usize = 2;
 const PARAM_OCTAVES: usize = 3;
 const PARAM_GATE: usize = 4;
 const PARAM_CHORD: usize = 5;
-const PARAM_COUNT: usize = 6;
+const PARAM_LEGATO: usize = 6;
+const PARAM_GLIDE: usize = 7;
+const PARAM_COUNT: usize = 8;
 
 pub struct ArpeggiatorPane {
     keymap: Keymap,
@@ -76,7 +78,7 @@ impl Pane for ArpeggiatorPane {
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let p = Palette::from(&state.session.theme);
-        let rect = center_rect(area, 44, 12);
+        let rect = center_rect(area, 44, 14);
 
         let instrument = state.tracks.selected_track();
         let title = match instrument {
@@ -204,6 +206,43 @@ impl Pane for ArpeggiatorPane {
             selected_style,
             normal_style,
         );
+
+        // Legato
+        let legato = &instrument.note_input.legato;
+        let legato_str = if legato.enabled { "ON" } else { "OFF" };
+        let legato_val_style = if self.selected_param == PARAM_LEGATO {
+            selected_style
+        } else if legato.enabled {
+            on_style
+        } else {
+            off_style
+        };
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 7,
+            "Legato:",
+            legato_str,
+            self.selected_param == PARAM_LEGATO,
+            normal_style,
+            selected_style,
+            legato_val_style,
+        );
+
+        // Glide rate
+        render_param_row(
+            buf,
+            label_x,
+            value_x,
+            y + 8,
+            "Glide:",
+            legato.glide_rate.name(),
+            self.selected_param == PARAM_GLIDE,
+            normal_style,
+            selected_style,
+            normal_style,
+        );
     }
 
     fn keymap(&self) -> &Keymap {
@@ -286,6 +325,14 @@ fn adjust_param(id: TrackId, param_idx: usize, increase: bool) -> Action {
                 Action::Track(TrackAction::NextChordShape(id))
             } else {
                 Action::Track(TrackAction::PrevChordShape(id))
+            }
+        }
+        PARAM_LEGATO => Action::Track(TrackAction::ToggleLegato(id)),
+        PARAM_GLIDE => {
+            if increase {
+                Action::Track(TrackAction::NextGlideRate(id))
+            } else {
+                Action::Track(TrackAction::PrevGlideRate(id))
             }
         }
         _ => Action::None,

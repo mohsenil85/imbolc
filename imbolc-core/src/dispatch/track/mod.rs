@@ -74,7 +74,10 @@ pub(super) fn dispatch_instrument(
         | TrackAction::AdjustArpeggiatorGate(_, _)
         | TrackAction::NextChordShape(_)
         | TrackAction::PrevChordShape(_)
-        | TrackAction::ClearChordShape(_) => arpeggiator::dispatch(state, action),
+        | TrackAction::ClearChordShape(_)
+        | TrackAction::ToggleLegato(_)
+        | TrackAction::NextGlideRate(_)
+        | TrackAction::PrevGlideRate(_) => arpeggiator::dispatch(state, action),
         TrackAction::LoadIRResult(instrument_id, effect_id, ref path) => {
             effects::handle_load_ir_result(state, audio, *instrument_id, *effect_id, path)
         }

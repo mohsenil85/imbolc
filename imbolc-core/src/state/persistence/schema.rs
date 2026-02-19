@@ -122,6 +122,9 @@ CREATE TABLE IF NOT EXISTS tracks (
     arp_rate TEXT NOT NULL DEFAULT 'Eighth',
     arp_octaves INTEGER NOT NULL DEFAULT 1,
     arp_gate REAL NOT NULL DEFAULT 0.5,
+    -- Legato
+    legato_enabled INTEGER NOT NULL DEFAULT 0,
+    glide_rate TEXT NOT NULL DEFAULT 'Sixteenth',
     -- Chord
     chord_shape TEXT,
     -- VST

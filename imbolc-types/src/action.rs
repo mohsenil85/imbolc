@@ -939,6 +939,9 @@ pub enum TrackAction {
     NextChordShape(TrackId),
     PrevChordShape(TrackId),
     ClearChordShape(TrackId),
+    ToggleLegato(TrackId),
+    NextGlideRate(TrackId),
+    PrevGlideRate(TrackId),
     LoadIRResult(TrackId, EffectId, PathBuf), // instrument_id, effect_id, path
     ShowVstEffectParams(TrackId, EffectId),   // instrument_id, effect_id
     SetEqualizerParam(TrackId, EffectId, usize, EqualizerParamKind, f32), // instrument_id, effect_id, band_index, param, value
@@ -1017,6 +1020,9 @@ impl TrackAction {
             | Self::NextChordShape(id)
             | Self::PrevChordShape(id)
             | Self::ClearChordShape(id)
+            | Self::ToggleLegato(id)
+            | Self::NextGlideRate(id)
+            | Self::PrevGlideRate(id)
             | Self::LoadIRResult(id, _, _)
             | Self::ShowVstEffectParams(id, _)
             | Self::SetEqualizerParam(id, _, _, _, _)

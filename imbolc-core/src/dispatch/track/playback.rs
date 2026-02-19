@@ -25,7 +25,16 @@ pub(super) fn handle_play_note(
                     };
                     for p in &pitches {
                         let p = inst.offset_pitch(*p);
-                        let _ = audio.spawn_voice(target_id, p, vel_f, 0.0);
+                        if inst.note_input.legato.enabled {
+                            let glide_secs = inst
+                                .note_input
+                                .legato
+                                .glide_rate
+                                .to_secs(state.session.bpm as f32);
+                            let _ = audio.glide_or_spawn(target_id, p, vel_f, glide_secs, 0.0);
+                        } else {
+                            let _ = audio.spawn_voice(target_id, p, vel_f, 0.0);
+                        }
                         audio.push_active_note(target_id, p, 240);
                     }
                 }
@@ -64,7 +73,16 @@ pub(super) fn handle_play_notes(
                         };
                         for p in &expanded {
                             let p = inst.offset_pitch(*p);
-                            let _ = audio.spawn_voice(target_id, p, vel_f, 0.0);
+                            if inst.note_input.legato.enabled {
+                                let glide_secs = inst
+                                    .note_input
+                                    .legato
+                                    .glide_rate
+                                    .to_secs(state.session.bpm as f32);
+                                let _ = audio.glide_or_spawn(target_id, p, vel_f, glide_secs, 0.0);
+                            } else {
+                                let _ = audio.spawn_voice(target_id, p, vel_f, 0.0);
+                            }
                             audio.push_active_note(target_id, p, 240);
                         }
                     }

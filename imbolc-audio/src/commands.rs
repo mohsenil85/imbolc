@@ -175,6 +175,13 @@ pub enum AudioCmd {
         pitch: u8,
         offset_secs: f64,
     },
+    GlideOrSpawn {
+        instrument_id: TrackId,
+        pitch: u8,
+        velocity: f32,
+        glide_secs: f32,
+        offset_secs: f64,
+    },
     RegisterActiveNote {
         instrument_id: TrackId,
         pitch: u8,
@@ -316,6 +323,7 @@ impl AudioCmd {
             // Voice management (most time-critical)
             AudioCmd::SpawnVoice { .. }
                 | AudioCmd::ReleaseVoice { .. }
+                | AudioCmd::GlideOrSpawn { .. }
                 | AudioCmd::PlayDrumHit { .. }
                 | AudioCmd::PlayDrumHitWithReply { .. }
                 | AudioCmd::PlaySamplePreviewWithReply { .. }

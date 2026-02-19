@@ -108,6 +108,70 @@ impl ArpRate {
     }
 }
 
+/// Legato/glide configuration, stored per-instrument.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LegatoConfig {
+    pub enabled: bool,
+    pub glide_rate: GlideRate,
+}
+
+impl Default for LegatoConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            glide_rate: GlideRate::Sixteenth,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GlideRate {
+    Quarter,
+    Eighth,
+    Sixteenth,
+    ThirtySecond,
+}
+
+impl GlideRate {
+    pub fn name(&self) -> &'static str {
+        match self {
+            GlideRate::Quarter => "1/4",
+            GlideRate::Eighth => "1/8",
+            GlideRate::Sixteenth => "1/16",
+            GlideRate::ThirtySecond => "1/32",
+        }
+    }
+
+    /// Convert glide rate to seconds based on BPM.
+    pub fn to_secs(&self, bpm: f32) -> f32 {
+        let beats = match self {
+            GlideRate::Quarter => 1.0,
+            GlideRate::Eighth => 0.5,
+            GlideRate::Sixteenth => 0.25,
+            GlideRate::ThirtySecond => 0.125,
+        };
+        beats * 60.0 / bpm
+    }
+
+    pub fn next(&self) -> GlideRate {
+        match self {
+            GlideRate::Quarter => GlideRate::Eighth,
+            GlideRate::Eighth => GlideRate::Sixteenth,
+            GlideRate::Sixteenth => GlideRate::ThirtySecond,
+            GlideRate::ThirtySecond => GlideRate::Quarter,
+        }
+    }
+
+    pub fn prev(&self) -> GlideRate {
+        match self {
+            GlideRate::Quarter => GlideRate::ThirtySecond,
+            GlideRate::Eighth => GlideRate::Quarter,
+            GlideRate::Sixteenth => GlideRate::Eighth,
+            GlideRate::ThirtySecond => GlideRate::Sixteenth,
+        }
+    }
+}
+
 /// Chord shape definitions — interval offsets from root in semitones.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChordShape {
@@ -264,6 +328,44 @@ mod tests {
         // Root 127 — intervals would push past 127
         let pitches = ChordShape::Major.expand(127);
         assert_eq!(pitches, vec![127]); // 131 and 134 filtered out
+    }
+
+    #[test]
+    fn legato_config_default() {
+        let config = LegatoConfig::default();
+        assert!(!config.enabled);
+        assert_eq!(config.glide_rate, GlideRate::Sixteenth);
+    }
+
+    #[test]
+    fn glide_rate_next_prev_cycle() {
+        let mut rate = GlideRate::Quarter;
+        for _ in 0..4 {
+            rate = rate.next();
+        }
+        assert_eq!(rate, GlideRate::Quarter);
+
+        for _ in 0..4 {
+            rate = rate.prev();
+        }
+        assert_eq!(rate, GlideRate::Quarter);
+    }
+
+    #[test]
+    fn glide_rate_to_secs() {
+        let bpm = 120.0;
+        assert!((GlideRate::Quarter.to_secs(bpm) - 0.5).abs() < 0.001);
+        assert!((GlideRate::Eighth.to_secs(bpm) - 0.25).abs() < 0.001);
+        assert!((GlideRate::Sixteenth.to_secs(bpm) - 0.125).abs() < 0.001);
+        assert!((GlideRate::ThirtySecond.to_secs(bpm) - 0.0625).abs() < 0.001);
+    }
+
+    #[test]
+    fn glide_rate_names() {
+        assert_eq!(GlideRate::Quarter.name(), "1/4");
+        assert_eq!(GlideRate::Eighth.name(), "1/8");
+        assert_eq!(GlideRate::Sixteenth.name(), "1/16");
+        assert_eq!(GlideRate::ThirtySecond.name(), "1/32");
     }
 
     #[test]

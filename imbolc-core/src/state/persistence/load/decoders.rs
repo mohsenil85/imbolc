@@ -495,6 +495,23 @@ pub(crate) fn decode_arp_rate(s: &str) -> crate::state::arpeggiator::ArpRate {
     }
 }
 
+pub(crate) fn decode_glide_rate(s: &str) -> crate::state::arpeggiator::GlideRate {
+    use crate::state::arpeggiator::GlideRate;
+    match s {
+        "Quarter" => GlideRate::Quarter,
+        "Eighth" => GlideRate::Eighth,
+        "Sixteenth" => GlideRate::Sixteenth,
+        "ThirtySecond" => GlideRate::ThirtySecond,
+        other => {
+            eprintln!(
+                "[imbolc] persistence: unknown GlideRate '{}', using Sixteenth",
+                other
+            );
+            GlideRate::Sixteenth
+        }
+    }
+}
+
 pub(crate) fn decode_chord_shape(s: &str) -> crate::state::arpeggiator::ChordShape {
     use crate::state::arpeggiator::ChordShape;
     match s {

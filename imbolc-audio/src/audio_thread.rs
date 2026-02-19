@@ -352,6 +352,7 @@ impl AudioThread {
             // Voice management
             SpawnVoice { .. }
             | ReleaseVoice { .. }
+            | GlideOrSpawn { .. }
             | RegisterActiveNote { .. }
             | ClearActiveNotes
             | ReleaseAllVoices
@@ -878,6 +879,40 @@ impl AudioThread {
                 let _ = self
                     .engine
                     .release_voice(instrument_id, pitch, offset_secs, &self.tracks);
+            }
+            AudioCmd::GlideOrSpawn {
+                instrument_id,
+                pitch,
+                velocity,
+                glide_secs,
+                offset_secs,
+            } => {
+                // If there's an active voice, glide; otherwise spawn
+                if self
+                    .engine
+                    .voice_allocator()
+                    .last_active_voice(instrument_id)
+                    .is_some()
+                {
+                    let _ = self.engine.glide_voice(
+                        instrument_id,
+                        0, // old_pitch unused
+                        pitch,
+                        velocity,
+                        glide_secs,
+                        offset_secs,
+                        &self.session,
+                    );
+                } else {
+                    let _ = self.engine.spawn_voice(
+                        instrument_id,
+                        pitch,
+                        velocity,
+                        offset_secs,
+                        &self.tracks,
+                        &self.session,
+                    );
+                }
             }
             AudioCmd::RegisterActiveNote {
                 instrument_id,

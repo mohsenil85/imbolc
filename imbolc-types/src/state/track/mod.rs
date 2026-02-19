@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use super::arpeggiator::{ArpeggiatorConfig, ChordShape};
+use super::arpeggiator::{ArpeggiatorConfig, ChordShape, LegatoConfig};
 use super::channel_strip::ChannelStrip;
 use super::drum_sequencer::DrumSequencerState;
 use super::groove::GrooveConfig;
@@ -43,11 +43,12 @@ pub struct ModulationConfig {
     pub amp_envelope: EnvConfig,
 }
 
-/// Arpeggiator and chord-shape configuration for an instrument.
+/// Arpeggiator, chord-shape, and legato configuration for an instrument.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct NoteInputConfig {
     pub arpeggiator: ArpeggiatorConfig,
     pub chord_shape: Option<ChordShape>,
+    pub legato: LegatoConfig,
 }
 
 /// Layer group membership and octave offset for an instrument.

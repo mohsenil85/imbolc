@@ -3,7 +3,9 @@
 //! Serializable config types are re-exported from imbolc-types.
 //! Runtime state (ArpPlayState) lives in imbolc-audio since it's audio-thread only.
 
-pub use imbolc_types::{ArpDirection, ArpRate, ArpeggiatorConfig, ChordShape};
+pub use imbolc_types::{
+    ArpDirection, ArpRate, ArpeggiatorConfig, ChordShape, GlideRate, LegatoConfig,
+};
 
 #[cfg(test)]
 mod tests {

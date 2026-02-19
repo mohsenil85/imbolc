@@ -30,6 +30,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
             output_target, channel_config, convolution_ir_path, layer_group,
             next_effect_id, eq_enabled,
             arp_enabled, arp_direction, arp_rate, arp_octaves, arp_gate,
+            legato_enabled, glide_rate,
             chord_shape, vst_state_path,
             groove_swing_amount, groove_swing_grid,
             groove_humanize_velocity, groove_humanize_timing,
@@ -77,15 +78,17 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                 arp_rate: row.get(34)?,
                 arp_octaves: row.get(35)?,
                 arp_gate: row.get(36)?,
-                chord_shape: row.get(37)?,
-                vst_state_path: row.get(38)?,
-                groove_swing_amount: row.get(39)?,
-                groove_swing_grid: row.get(40)?,
-                groove_humanize_velocity: row.get(41)?,
-                groove_humanize_timing: row.get(42)?,
-                groove_timing_offset_ms: row.get(43)?,
-                groove_time_sig_num: row.get(44)?,
-                groove_time_sig_denom: row.get(45)?,
+                legato_enabled: row.get(37)?,
+                glide_rate: row.get(38)?,
+                chord_shape: row.get(39)?,
+                vst_state_path: row.get(40)?,
+                groove_swing_amount: row.get(41)?,
+                groove_swing_grid: row.get(42)?,
+                groove_humanize_velocity: row.get(43)?,
+                groove_humanize_timing: row.get(44)?,
+                groove_timing_offset_ms: row.get(45)?,
+                groove_time_sig_num: row.get(46)?,
+                groove_time_sig_denom: row.get(47)?,
             })
         })?
         .collect::<SqlResult<_>>()?;
@@ -223,6 +226,10 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         inst.channel_strip.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
         inst.note_input.arpeggiator = arpeggiator;
         inst.note_input.chord_shape = chord_shape;
+        inst.note_input.legato.enabled = r.legato_enabled.is_some_and(|v| v != 0);
+        if let Some(ref gr) = r.glide_rate {
+            inst.note_input.legato.glide_rate = decode_glide_rate(gr);
+        }
         if let SourceExtra::Vst {
             ref mut state_path, ..
         } = inst.source_extra
@@ -400,6 +407,8 @@ struct TrackRow {
     arp_rate: Option<String>,
     arp_octaves: Option<i32>,
     arp_gate: Option<f32>,
+    legato_enabled: Option<i32>,
+    glide_rate: Option<String>,
     chord_shape: Option<String>,
     vst_state_path: Option<String>,
     groove_swing_amount: Option<f32>,

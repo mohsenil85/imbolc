@@ -236,6 +236,24 @@ impl VoiceAllocator {
         self.control_bus_pool.len()
     }
 
+    /// Update the pitch of a voice at the given index (for legato glide).
+    pub fn update_pitch(&mut self, pos: usize, new_pitch: u8) {
+        if pos < self.chains.len() {
+            self.chains[pos].pitch = new_pitch;
+        }
+    }
+
+    /// Find the most recently spawned active (non-released) voice for an instrument.
+    /// Returns (index, current_pitch) if found.
+    pub fn last_active_voice(&self, instrument_id: TrackId) -> Option<(usize, u8)> {
+        self.chains
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| v.instrument_id == instrument_id && v.release_state.is_none())
+            .max_by_key(|(_, v)| v.spawn_time)
+            .map(|(i, v)| (i, v.pitch))
+    }
+
     /// Sync bus watermarks from the bus allocator after a routing rebuild.
     pub fn sync_bus_watermarks(&mut self, audio_bus: i32, control_bus: i32) {
         self.next_audio_bus = audio_bus;

@@ -70,20 +70,27 @@ pub fn tick_arpeggiator(
         while arp.accumulator >= 1.0 {
             arp.accumulator -= 1.0;
 
-            // Release previous note
-            if let Some(pitch) = arp.current_pitch.take() {
-                if engine.is_running() {
-                    let targets = instruments.layer_group_members(instrument_id);
-                    for &target_id in &targets {
-                        let release_pitch = instruments
-                            .track(target_id)
-                            .map_or(pitch, |i| i.offset_pitch(pitch));
-                        let _ = engine.release_voice(
-                            target_id,
-                            release_pitch,
-                            step_offset,
-                            instruments,
-                        );
+            // Check if this instrument has legato enabled
+            let is_legato = instruments
+                .track(instrument_id)
+                .is_some_and(|inst| inst.note_input.legato.enabled);
+
+            // Release previous note (skip if legato — we'll glide instead)
+            if !is_legato {
+                if let Some(pitch) = arp.current_pitch.take() {
+                    if engine.is_running() {
+                        let targets = instruments.layer_group_members(instrument_id);
+                        for &target_id in &targets {
+                            let release_pitch = instruments
+                                .track(target_id)
+                                .map_or(pitch, |i| i.offset_pitch(pitch));
+                            let _ = engine.release_voice(
+                                target_id,
+                                release_pitch,
+                                step_offset,
+                                instruments,
+                            );
+                        }
                     }
                 }
             }
@@ -132,7 +139,7 @@ pub fn tick_arpeggiator(
                 }
             };
 
-            // Spawn the new note (fan-out to layer group siblings)
+            // Spawn or glide to the new note (fan-out to layer group siblings)
             if engine.is_running() {
                 let vel_f = 0.8; // Default velocity for arp notes
                 let any_solo = instruments.any_track_solo();
@@ -151,14 +158,30 @@ pub fn tick_arpeggiator(
                         continue;
                     }
                     let target_pitch = inst.map_or(pitch, |i| i.offset_pitch(pitch));
-                    let _ = engine.spawn_voice(
-                        target_id,
-                        target_pitch,
-                        vel_f,
-                        step_offset,
-                        instruments,
-                        session,
-                    );
+
+                    if is_legato && arp.current_pitch.is_some() {
+                        // Glide from previous note
+                        let glide_secs =
+                            inst.map_or(0.1, |i| i.note_input.legato.glide_rate.to_secs(bpm));
+                        let _ = engine.glide_voice(
+                            target_id,
+                            0, // old_pitch unused
+                            target_pitch,
+                            vel_f,
+                            glide_secs,
+                            step_offset,
+                            session,
+                        );
+                    } else {
+                        let _ = engine.spawn_voice(
+                            target_id,
+                            target_pitch,
+                            vel_f,
+                            step_offset,
+                            instruments,
+                            session,
+                        );
+                    }
                 }
             }
             arp.current_pitch = Some(pitch);

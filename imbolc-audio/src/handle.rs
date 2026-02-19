@@ -1053,6 +1053,23 @@ impl AudioHandle {
         })
     }
 
+    pub fn glide_or_spawn(
+        &mut self,
+        instrument_id: TrackId,
+        pitch: u8,
+        velocity: f32,
+        glide_secs: f32,
+        offset_secs: f64,
+    ) -> Result<(), String> {
+        self.send_cmd(AudioCmd::GlideOrSpawn {
+            instrument_id,
+            pitch,
+            velocity,
+            glide_secs,
+            offset_secs,
+        })
+    }
+
     pub fn release_voice(
         &mut self,
         instrument_id: TrackId,

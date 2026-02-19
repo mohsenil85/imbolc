@@ -237,6 +237,24 @@ pub(super) fn reduce(
             }
             true
         }
+        TrackAction::ToggleLegato(id) => {
+            if let Some(inst) = instruments.track_mut(*id) {
+                inst.note_input.legato.enabled = !inst.note_input.legato.enabled;
+            }
+            true
+        }
+        TrackAction::NextGlideRate(id) => {
+            if let Some(inst) = instruments.track_mut(*id) {
+                inst.note_input.legato.glide_rate = inst.note_input.legato.glide_rate.next();
+            }
+            true
+        }
+        TrackAction::PrevGlideRate(id) => {
+            if let Some(inst) = instruments.track_mut(*id) {
+                inst.note_input.legato.glide_rate = inst.note_input.legato.glide_rate.prev();
+            }
+            true
+        }
         TrackAction::LoadIRResult(instrument_id, effect_id, path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
             instruments.next_sampler_buffer_id = buffer_id.next();

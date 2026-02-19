@@ -328,6 +328,39 @@ pub fn tick_playback(
                 let pitch = instruments
                     .track(instrument_id)
                     .map_or(pitch, |inst| inst.offset_pitch(pitch));
+
+                // Legato: glide to new pitch if an active voice exists
+                let is_legato = instruments
+                    .track(instrument_id)
+                    .map(|inst| inst.note_input.legato.enabled)
+                    .unwrap_or(false);
+
+                if is_legato {
+                    if let Some((_, old_pitch)) =
+                        engine.voice_allocator().last_active_voice(instrument_id)
+                    {
+                        if old_pitch != pitch {
+                            let glide_secs = instruments
+                                .track(instrument_id)
+                                .map(|i| i.note_input.legato.glide_rate.to_secs(piano_roll.bpm))
+                                .unwrap_or(0.1);
+                            let _ = engine.glide_voice(
+                                instrument_id,
+                                old_pitch,
+                                pitch,
+                                vel_f,
+                                glide_secs,
+                                offset,
+                                session,
+                            );
+                        }
+                        active_notes.retain(|n| !(n.0 == instrument_id && n.1 == old_pitch));
+                        active_notes.push((instrument_id, pitch, duration));
+                        continue;
+                    }
+                    // No active voice → fall through to normal spawn (first note)
+                }
+
                 // Evict stale entry for same instrument+pitch (voice was already stolen by spawn_voice)
                 active_notes.retain(|n| !(n.0 == instrument_id && n.1 == pitch));
                 let _ =
