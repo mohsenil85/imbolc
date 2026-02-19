@@ -152,6 +152,12 @@ impl AppRuntime {
             }
         }
 
+        // Show project switcher on startup unless a project was explicitly requested
+        if !explicit_project_requested {
+            panes.push_to(PaneId::ProjectBrowser, dispatcher.state());
+            layer_stack.set_pane_layer(panes.active());
+        }
+
         // Offer crash-recovery load when an autosave snapshot exists and no explicit
         // project path was requested on the CLI.
         if autosave_enabled && !explicit_project_requested && autosave_path.exists() {
