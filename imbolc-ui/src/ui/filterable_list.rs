@@ -16,7 +16,7 @@ pub trait FilterableItem {
 }
 
 /// Shared filtering, tab-completion, scrolling, and selection logic
-/// used by CommandPalette and PaneSwitcher.
+/// used by CommandPalette.
 pub struct FilterableList<T> {
     items: Vec<T>,
     pub text_input: TextInput,

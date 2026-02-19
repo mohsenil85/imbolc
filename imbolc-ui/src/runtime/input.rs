@@ -352,13 +352,6 @@ impl AppRuntime {
                 }
             }
 
-            // Auto-pop pane_switcher layer and switch to selected pane
-            process_pane_switcher_auto_pop(
-                &mut self.panes,
-                &mut self.layer_stack,
-                self.dispatcher.state(),
-            );
-
             // Intercept MIDI port actions that need MidiInputManager
             if let RoutedAction::Domain(action::DomainAction::Midi(
                 action::MidiAction::ConnectPort(port_idx),

@@ -13,8 +13,7 @@ use crate::audio::AudioHandle;
 use crate::config;
 use crate::dispatch::LocalDispatcher;
 use crate::global_actions::{
-    process_layer_actions, process_nav_and_sync, process_pane_switcher_auto_pop,
-    process_text_edit_auto_pop, render_frame,
+    process_layer_actions, process_nav_and_sync, process_text_edit_auto_pop, render_frame,
 };
 use crate::register_all_panes;
 use crate::setup;
@@ -424,9 +423,6 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
 
             // Navigation and pane layer sync
             process_nav_and_sync(&routed_action, &mut panes, &mut layer_stack, &local_state);
-
-            // Auto-pop pane_switcher layer and switch to selected pane
-            process_pane_switcher_auto_pop(&mut panes, &mut layer_stack, &local_state);
 
             // Convert to NetworkAction and send to server
             if let Some(net_action) = routed_to_network_action(&routed_action) {

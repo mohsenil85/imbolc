@@ -40,7 +40,6 @@ pub enum PaneId {
     InstrumentPicker,
     MidiSettings,
     Mixer,
-    PaneSwitcher,
     PianoRoll,
     ProjectBrowser,
     QuitPrompt,
@@ -79,7 +78,6 @@ impl PaneId {
             PaneId::InstrumentPicker => "instrument_picker",
             PaneId::MidiSettings => "midi_settings",
             PaneId::Mixer => "mixer",
-            PaneId::PaneSwitcher => "pane_switcher",
             PaneId::PianoRoll => "piano_roll",
             PaneId::ProjectBrowser => "project_browser",
             PaneId::QuitPrompt => "quit_prompt",
@@ -95,6 +93,75 @@ impl PaneId {
             PaneId::Waveform => "waveform",
             PaneId::MasterEq => "master_eq",
         }
+    }
+
+    /// Whether this pane can be switched to via the command palette.
+    /// Exhaustive match — no wildcard — so adding a new PaneId variant
+    /// forces a decision here.
+    pub const fn is_switchable(self) -> bool {
+        match self {
+            PaneId::Home
+            | PaneId::InstrumentEdit
+            | PaneId::PianoRoll
+            | PaneId::Sequencer
+            | PaneId::Waveform
+            | PaneId::Track
+            | PaneId::Mixer
+            | PaneId::Server
+            | PaneId::Automation
+            | PaneId::Eq
+            | PaneId::MasterEq
+            | PaneId::SampleSlicer
+            | PaneId::FrameEdit
+            | PaneId::MidiSettings
+            | PaneId::Generative
+            | PaneId::Arpeggiator
+            | PaneId::VstParams
+            | PaneId::FileBrowser
+            | PaneId::Groove
+            | PaneId::Tuner
+            | PaneId::TagView => true,
+
+            PaneId::Add
+            | PaneId::AddEffect
+            | PaneId::CheckpointList
+            | PaneId::CommandLine
+            | PaneId::CommandPalette
+            | PaneId::Confirm
+            | PaneId::Help
+            | PaneId::InstrumentPicker
+            | PaneId::ProjectBrowser
+            | PaneId::QuitPrompt
+            | PaneId::SaveAs
+            | PaneId::TagPicker => false,
+        }
+    }
+
+    /// All switchable panes with their display names, for the command palette.
+    pub fn switchable_panes() -> &'static [(PaneId, &'static str)] {
+        &[
+            (PaneId::Home, "Home"),
+            (PaneId::InstrumentEdit, "Track Editor"),
+            (PaneId::PianoRoll, "Piano Roll"),
+            (PaneId::Sequencer, "Drum Sequencer"),
+            (PaneId::Waveform, "Waveform"),
+            (PaneId::Track, "Track View"),
+            (PaneId::Mixer, "Mixer"),
+            (PaneId::Server, "Audio Server"),
+            (PaneId::Automation, "Automation"),
+            (PaneId::Eq, "Channel EQ"),
+            (PaneId::MasterEq, "Master EQ"),
+            (PaneId::SampleSlicer, "Sample Slicer"),
+            (PaneId::FrameEdit, "Frame Settings"),
+            (PaneId::MidiSettings, "MIDI Settings"),
+            (PaneId::Generative, "Generative Engine"),
+            (PaneId::Arpeggiator, "Arpeggiator"),
+            (PaneId::VstParams, "VST Parameters"),
+            (PaneId::FileBrowser, "File Browser"),
+            (PaneId::Groove, "Groove"),
+            (PaneId::Tuner, "Tuner"),
+            (PaneId::TagView, "Tag View"),
+        ]
     }
 
     #[allow(clippy::should_implement_trait)]
@@ -120,7 +187,6 @@ impl PaneId {
             "instrument_picker" => Some(PaneId::InstrumentPicker),
             "midi_settings" => Some(PaneId::MidiSettings),
             "mixer" => Some(PaneId::Mixer),
-            "pane_switcher" => Some(PaneId::PaneSwitcher),
             "piano_roll" => Some(PaneId::PianoRoll),
             "project_browser" => Some(PaneId::ProjectBrowser),
             "quit_prompt" => Some(PaneId::QuitPrompt),
@@ -1374,7 +1440,6 @@ mod tests {
             PaneId::InstrumentPicker,
             PaneId::MidiSettings,
             PaneId::Mixer,
-            PaneId::PaneSwitcher,
             PaneId::PianoRoll,
             PaneId::ProjectBrowser,
             PaneId::QuitPrompt,
@@ -1505,6 +1570,63 @@ mod tests {
     fn lfo_param_kind_as_str() {
         assert_eq!(LfoParamKind::Rate.as_str(), "rate");
         assert_eq!(LfoParamKind::Depth.as_str(), "depth");
+    }
+
+    #[test]
+    fn switchable_panes_matches_is_switchable() {
+        let switchable = PaneId::switchable_panes();
+        // Every entry in switchable_panes() must be switchable
+        for &(id, _) in switchable {
+            assert!(
+                id.is_switchable(),
+                "{:?} is in switchable_panes() but is_switchable() returns false",
+                id
+            );
+        }
+        // Count: switchable_panes() should contain all switchable IDs
+        let all = [
+            PaneId::Add,
+            PaneId::AddEffect,
+            PaneId::Arpeggiator,
+            PaneId::Automation,
+            PaneId::CheckpointList,
+            PaneId::CommandLine,
+            PaneId::CommandPalette,
+            PaneId::Confirm,
+            PaneId::Eq,
+            PaneId::FileBrowser,
+            PaneId::FrameEdit,
+            PaneId::Groove,
+            PaneId::Generative,
+            PaneId::Help,
+            PaneId::Home,
+            PaneId::InstrumentEdit,
+            PaneId::InstrumentPicker,
+            PaneId::MidiSettings,
+            PaneId::Mixer,
+            PaneId::PianoRoll,
+            PaneId::ProjectBrowser,
+            PaneId::QuitPrompt,
+            PaneId::SampleSlicer,
+            PaneId::SaveAs,
+            PaneId::Sequencer,
+            PaneId::Server,
+            PaneId::TagPicker,
+            PaneId::TagView,
+            PaneId::Track,
+            PaneId::Tuner,
+            PaneId::VstParams,
+            PaneId::Waveform,
+            PaneId::MasterEq,
+        ];
+        let switchable_count = all.iter().filter(|id| id.is_switchable()).count();
+        assert_eq!(
+            switchable.len(),
+            switchable_count,
+            "switchable_panes() has {} entries but {} PaneIds are switchable",
+            switchable.len(),
+            switchable_count
+        );
     }
 
     #[test]

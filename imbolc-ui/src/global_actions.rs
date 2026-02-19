@@ -5,9 +5,9 @@ use crate::action::{
 use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
 use crate::panes::{
-    CommandPalettePane, ConfirmPane, FileBrowserPane, FrameEditPane, HelpPane, PaneSwitcherPane,
-    PendingAction, PianoRollPane, SaveAsPane, SequencerPane, ServerPane, TrackEditPane, TrackPane,
-    VstParamPane, WaveformPane,
+    CommandPalettePane, ConfirmPane, FileBrowserPane, FrameEditPane, HelpPane, PendingAction,
+    PianoRollPane, SaveAsPane, SequencerPane, ServerPane, TrackEditPane, TrackPane, VstParamPane,
+    WaveformPane,
 };
 use crate::state::{AppState, ClipboardContents, MixerSelection};
 use crate::ui::action_id::{ActionId, GlobalActionId};
@@ -224,23 +224,6 @@ pub(crate) fn process_nav_and_sync(
     panes.process_nav(action, state);
     if matches!(action, RoutedAction::Ui(UiAction::Nav(_))) {
         sync_pane_layer(panes, layer_stack);
-    }
-}
-
-/// Auto-pop pane_switcher layer and switch to selected pane.
-pub(crate) fn process_pane_switcher_auto_pop(
-    panes: &mut PaneManager,
-    layer_stack: &mut LayerStack,
-    state: &AppState,
-) {
-    if layer_stack.has_layer("pane_switcher") && panes.active().id().0 != "pane_switcher" {
-        layer_stack.pop("pane_switcher");
-        if let Some(switcher) = panes.get_pane_mut::<PaneSwitcherPane>("pane_switcher") {
-            if let Some(pane_id) = switcher.take_pane() {
-                panes.switch_to(pane_id, state);
-                sync_pane_layer(panes, layer_stack);
-            }
-        }
     }
 }
 
@@ -813,19 +796,19 @@ pub(crate) fn handle_global_action(
                 sync_pane_layer(panes, layer_stack);
             }
             GlobalActionId::CommandPalette => {
-                let commands = layer_stack.collect_commands();
+                let mut commands = layer_stack.collect_commands();
+                // Inject switch commands for all switchable panes
+                for &(pane_id, display_name) in NavPaneId::switchable_panes() {
+                    let action = ActionId::Global(GlobalActionId::SwitchPane(pane_id));
+                    if !commands.iter().any(|(a, _, _)| *a == action) {
+                        commands.push((action, display_name, String::new()));
+                    }
+                }
                 if let Some(palette) = panes.get_pane_mut::<CommandPalettePane>("command_palette") {
                     palette.open(commands);
                 }
                 panes.push_to(NavPaneId::CommandPalette, dispatcher.state());
                 layer_stack.push("command_palette");
-            }
-            GlobalActionId::PaneSwitcher => {
-                if let Some(switcher) = panes.get_pane_mut::<PaneSwitcherPane>("pane_switcher") {
-                    switcher.open();
-                }
-                panes.push_to(NavPaneId::PaneSwitcher, dispatcher.state());
-                layer_stack.push("pane_switcher");
             }
             GlobalActionId::TogglePlayback => {
                 if panes.active().id().0 == "waveform" {
