@@ -70,13 +70,17 @@ pub(super) fn dispatch_server(
                     state.recording.pending_recording_path = Some(path);
                 }
 
-                // Auto-deactivate AudioIn instrument on stop
-                if let Some(inst) = state.tracks.selected_track_mut() {
-                    if inst.source.is_audio_input() && inst.channel_strip.active {
-                        inst.channel_strip.active = false;
-                        result.audio_effects.push(AudioEffect::RebuildInstruments);
-                        result.audio_effects.push(AudioEffect::RebuildRouting);
+                // Auto-deactivate all AudioIn instruments on stop
+                let mut deactivated_any = false;
+                for track in &mut state.tracks.tracks {
+                    if track.source.is_audio_input() && track.channel_strip.active {
+                        track.channel_strip.active = false;
+                        deactivated_any = true;
                     }
+                }
+                if deactivated_any {
+                    result.audio_effects.push(AudioEffect::RebuildInstruments);
+                    result.audio_effects.push(AudioEffect::RebuildRouting);
                 }
                 result.push_status(audio.status(), "Stopping recording...");
             } else if audio.is_running() {
@@ -85,13 +89,21 @@ pub(super) fn dispatch_server(
                     return result;
                 }
                 state.recorded_waveform_peaks = None;
-                // Auto-activate AudioIn instrument on start
-                if let Some(inst) = state.tracks.selected_track_mut() {
-                    if inst.source.is_audio_input() && !inst.channel_strip.active {
-                        inst.channel_strip.active = true;
-                        result.audio_effects.push(AudioEffect::RebuildInstruments);
-                        result.audio_effects.push(AudioEffect::RebuildRouting);
+                // Ensure only the selected AudioIn track is active on record start
+                let selected_idx = state.tracks.selected;
+                let mut audio_in_changed = false;
+                for (i, track) in state.tracks.tracks.iter_mut().enumerate() {
+                    if track.source.is_audio_input() {
+                        let should_be_active = Some(i) == selected_idx;
+                        if track.channel_strip.active != should_be_active {
+                            track.channel_strip.active = should_be_active;
+                            audio_in_changed = true;
+                        }
                     }
+                }
+                if audio_in_changed {
+                    result.audio_effects.push(AudioEffect::RebuildInstruments);
+                    result.audio_effects.push(AudioEffect::RebuildRouting);
                 }
 
                 // Free any previous preview buffer so it doesn't leak.
@@ -159,13 +171,17 @@ pub(super) fn dispatch_server(
                     state.recording.pending_recording_path = Some(path);
                 }
 
-                // Auto-deactivate AudioIn instrument on stop
-                if let Some(inst) = state.tracks.selected_track_mut() {
-                    if inst.source.is_audio_input() && inst.channel_strip.active {
-                        inst.channel_strip.active = false;
-                        result.audio_effects.push(AudioEffect::RebuildInstruments);
-                        result.audio_effects.push(AudioEffect::RebuildRouting);
+                // Auto-deactivate all AudioIn instruments on stop
+                let mut deactivated_any = false;
+                for track in &mut state.tracks.tracks {
+                    if track.source.is_audio_input() && track.channel_strip.active {
+                        track.channel_strip.active = false;
+                        deactivated_any = true;
                     }
+                }
+                if deactivated_any {
+                    result.audio_effects.push(AudioEffect::RebuildInstruments);
+                    result.audio_effects.push(AudioEffect::RebuildRouting);
                 }
                 result.push_status(audio.status(), "Stopping recording...");
             } else if audio.is_running() {
@@ -175,16 +191,24 @@ pub(super) fn dispatch_server(
                     return result;
                 }
                 state.recording.append_target_path = None;
+                // Ensure only the selected AudioIn track is active on record start
+                let selected_idx = state.tracks.selected;
+                let mut audio_in_changed = false;
+                for (i, track) in state.tracks.tracks.iter_mut().enumerate() {
+                    if track.source.is_audio_input() {
+                        let should_be_active = Some(i) == selected_idx;
+                        if track.channel_strip.active != should_be_active {
+                            track.channel_strip.active = should_be_active;
+                            audio_in_changed = true;
+                        }
+                    }
+                }
+                if audio_in_changed {
+                    result.audio_effects.push(AudioEffect::RebuildInstruments);
+                    result.audio_effects.push(AudioEffect::RebuildRouting);
+                }
                 if let Some(inst) = state.tracks.selected_track() {
                     let inst_id = inst.id;
-                    // Auto-activate AudioIn instrument on start
-                    if inst.source.is_audio_input() && !inst.channel_strip.active {
-                        if let Some(inst_mut) = state.tracks.track_mut(inst_id) {
-                            inst_mut.channel_strip.active = true;
-                        }
-                        result.audio_effects.push(AudioEffect::RebuildInstruments);
-                        result.audio_effects.push(AudioEffect::RebuildRouting);
-                    }
                     let path = super::recording_path(&format!("input_{}", inst_id));
                     // Bus 0 is hardware out; for instrument recording we use bus 0
                     // since instruments route through output to bus 0
