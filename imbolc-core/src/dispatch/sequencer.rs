@@ -181,8 +181,26 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::LoadSampleResult(pad_idx, path) => {
-            let path_str = path.to_string_lossy().to_string();
-            let name = path
+            // Copy to project assets if project is saved
+            let asset_path = if let Some(ref project_path) = state.project.path {
+                match super::helpers::copy_to_project_assets(path, project_path) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return DispatchResult::with_status(
+                            audio.status(),
+                            format!("Asset copy failed: {}", e),
+                        );
+                    }
+                }
+            } else {
+                return DispatchResult::with_status(
+                    audio.status(),
+                    "Save project before importing samples",
+                );
+            };
+
+            let path_str = asset_path.to_string_lossy().to_string();
+            let name = asset_path
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
@@ -500,8 +518,26 @@ pub(super) fn dispatch_sample_slicer(
             crate::action::FileSelectAction::LoadSlicerSample,
         )),
         SampleSlicerAction::LoadSampleResult(path) => {
-            let path_str = path.to_string_lossy().to_string();
-            let name = path
+            // Copy to project assets if project is saved
+            let asset_path = if let Some(ref project_path) = state.project.path {
+                match super::helpers::copy_to_project_assets(path, project_path) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return DispatchResult::with_status(
+                            audio.status(),
+                            format!("Asset copy failed: {}", e),
+                        );
+                    }
+                }
+            } else {
+                return DispatchResult::with_status(
+                    audio.status(),
+                    "Save project before importing samples",
+                );
+            };
+
+            let path_str = asset_path.to_string_lossy().to_string();
+            let name = asset_path
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();

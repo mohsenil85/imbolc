@@ -4,8 +4,8 @@ use crate::state::{AppState, SwingGrid, TrackId};
 use crate::ui::action_id::{ActionId, GrooveActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, SequencerAction,
-    Style, TrackAction,
+    Action, Color, InputEvent, KeyCode, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
+    RenderBuf, SequencerAction, Style, TrackAction,
 };
 
 /// Parameter indices for the groove pane
@@ -50,6 +50,13 @@ impl Pane for GroovePane {
             .tracks
             .selected_drum_sequencer()
             .and_then(|seq| seq.groove_editing_pad);
+    }
+
+    fn handle_raw_input(&mut self, event: &InputEvent, _state: &AppState) -> Action {
+        match event.key {
+            KeyCode::Escape => Action::Nav(NavAction::PopPane),
+            _ => Action::None,
+        }
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

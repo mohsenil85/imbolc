@@ -592,9 +592,20 @@ fn load_sampler_config(
         return Ok(None);
     };
 
+    // sample_path column may not exist in older DBs
+    let sample_path: Option<String> = conn
+        .query_row(
+            "SELECT sample_path FROM sampler_configs WHERE track_id = ?1",
+            params![track_id],
+            |row| row.get(0),
+        )
+        .ok()
+        .flatten();
+
     let mut config = SamplerConfig::new();
     config.buffer_id = buffer_id.map(|id| imbolc_types::BufferId::new(id as u32));
     config.sample_name = sample_name;
+    config.sample_path = sample_path;
     config.loop_mode = loop_mode != 0;
     config.pitch_tracking = pitch_tracking != 0;
     config.set_next_slice_id(imbolc_types::SliceId::new(next_slice_id));

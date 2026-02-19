@@ -615,6 +615,8 @@ impl AudioThread {
                 self.piano_roll.playhead = playhead;
                 self.piano_roll.playing = playing;
                 self.automation_lanes = automation_lanes.clone();
+                // Reload all sample buffers so they're available after project load
+                self.load_all_samples();
                 if *rebuild_routing {
                     self.routing_rebuild =
                         Some(super::engine::routing::RoutingRebuildPhase::TearDown);
@@ -1320,7 +1322,7 @@ impl AudioThread {
         // Initialize wavetable buffers for VOsc before any voices can play
         let _ = self.engine.initialize_wavetables();
 
-        self.load_drum_samples();
+        self.load_all_samples();
 
         match (builtin_result, custom_result) {
             (Ok(()), Ok(())) => Ok(()),
@@ -1328,12 +1330,51 @@ impl AudioThread {
         }
     }
 
-    fn load_drum_samples(&mut self) {
+    /// Load all sample buffers referenced by the current state.
+    /// Called after Checkpoint (project reload) and at boot.
+    fn load_all_samples(&mut self) {
+        use imbolc_types::{BufferId, EffectType, ParamValue};
+
         for instrument in &self.tracks.tracks {
+            // PitchedSampler / TimeStretch: sampler_config.buffer_id + sample_path
+            if let Some(config) = instrument.sampler_config() {
+                if let (Some(buffer_id), Some(path)) =
+                    (config.buffer_id, config.sample_path.as_ref())
+                {
+                    let _ = self.engine.load_sample(buffer_id, path);
+                }
+            }
+
+            // Drum Kit pads: pad.buffer_id + pad.path
             if let Some(seq) = instrument.drum_sequencer() {
                 for pad in &seq.pads {
                     if let (Some(buffer_id), Some(path)) = (pad.buffer_id, pad.path.as_ref()) {
                         let _ = self.engine.load_sample(buffer_id, path);
+                    }
+                }
+
+                // Chopper/Slicer: chopper.buffer_id + chopper.path
+                if let Some(chopper) = &seq.chopper {
+                    if let (Some(buffer_id), Some(path)) =
+                        (chopper.buffer_id, chopper.path.as_ref())
+                    {
+                        let _ = self.engine.load_sample(buffer_id, path);
+                    }
+                }
+            }
+
+            // ConvolutionReverb IR: ir_buffer param + convolution_ir_path
+            if let Some(ref ir_path) = instrument.convolution_ir_path {
+                for effect in instrument.effects() {
+                    if effect.effect_type == EffectType::ConvolutionReverb {
+                        if let Some(param) = effect.params.iter().find(|p| p.name == "ir_buffer") {
+                            if let ParamValue::Int(v) = param.value {
+                                if v >= 0 {
+                                    let buffer_id = BufferId::new(v as u32);
+                                    let _ = self.engine.load_sample(buffer_id, ir_path);
+                                }
+                            }
+                        }
                     }
                 }
             }

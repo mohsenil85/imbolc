@@ -101,15 +101,33 @@ pub(super) fn handle_load_ir_result(
     effect_id: crate::state::EffectId,
     path: &std::path::Path,
 ) -> DispatchResult {
+    // Copy to project assets if project is saved
+    let asset_path = if let Some(ref project_path) = state.project.path {
+        match super::super::helpers::copy_to_project_assets(path, project_path) {
+            Ok(p) => p,
+            Err(e) => {
+                return DispatchResult::with_status(
+                    audio.status(),
+                    format!("Asset copy failed: {}", e),
+                );
+            }
+        }
+    } else {
+        return DispatchResult::with_status(
+            audio.status(),
+            "Save project before importing samples",
+        );
+    };
+
     // Load sample into audio engine before reducer increments the buffer_id
     let buffer_id = state.tracks.next_sampler_buffer_id;
     if audio.is_running() {
-        let _ = audio.load_sample(buffer_id, &path.to_string_lossy());
+        let _ = audio.load_sample(buffer_id, &asset_path.to_string_lossy());
     }
 
     reduce(
         state,
-        &TrackAction::LoadIRResult(instrument_id, effect_id, path.to_path_buf()),
+        &TrackAction::LoadIRResult(instrument_id, effect_id, asset_path),
     );
 
     let mut result = DispatchResult::with_nav(NavIntent::Pop);

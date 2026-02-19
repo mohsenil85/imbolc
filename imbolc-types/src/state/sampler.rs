@@ -82,6 +82,8 @@ impl Slice {
 pub struct SamplerConfig {
     pub buffer_id: Option<BufferId>,
     pub sample_name: Option<String>,
+    /// Full path to the sample file (for reloading after project load)
+    pub sample_path: Option<String>,
     pub slices: Vec<Slice>,
     pub selected_slice: usize,
     pub loop_mode: bool,
@@ -97,6 +99,7 @@ impl SamplerConfig {
         let mut config = Self {
             buffer_id: None,
             sample_name: None,
+            sample_path: None,
             slices: Vec::new(),
             selected_slice: 0,
             loop_mode: false,

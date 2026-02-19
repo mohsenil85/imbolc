@@ -446,6 +446,7 @@ CREATE TABLE IF NOT EXISTS sampler_configs (
     track_id INTEGER PRIMARY KEY,
     buffer_id INTEGER,
     sample_name TEXT,
+    sample_path TEXT,
     loop_mode INTEGER NOT NULL,
     pitch_tracking INTEGER NOT NULL,
     next_slice_id INTEGER NOT NULL,

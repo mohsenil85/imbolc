@@ -96,9 +96,16 @@ fn add_sampler_track_from_file(
     source_type: SourceType,
     sample_path: &std::path::Path,
 ) -> Result<TrackId, String> {
+    // Copy to project assets if project is saved
+    let asset_path = if let Some(ref project_path) = state.project.path {
+        super::helpers::copy_to_project_assets(sample_path, project_path)?
+    } else {
+        return Err("Save project before importing samples".to_string());
+    };
+
     let track_id = state.add_track(source_type);
-    let path_str = sample_path.to_string_lossy().to_string();
-    let sample_name = sample_path
+    let path_str = asset_path.to_string_lossy().to_string();
+    let sample_name = asset_path
         .file_stem()
         .map(|s| s.to_string_lossy().to_string());
 
@@ -113,6 +120,7 @@ fn add_sampler_track_from_file(
         if let Some(config) = track.sampler_config_mut() {
             config.buffer_id = Some(buffer_id);
             config.sample_name = sample_name.clone();
+            config.sample_path = Some(path_str);
         }
         if let Some(name) = sample_name {
             track.name = name;
@@ -127,8 +135,15 @@ fn add_chopper_track_from_file(
     audio: &mut AudioHandle,
     sample_path: &std::path::Path,
 ) -> Result<TrackId, String> {
-    let path_str = sample_path.to_string_lossy().to_string();
-    let name = sample_path
+    // Copy to project assets if project is saved
+    let asset_path = if let Some(ref project_path) = state.project.path {
+        super::helpers::copy_to_project_assets(sample_path, project_path)?
+    } else {
+        return Err("Save project before importing samples".to_string());
+    };
+
+    let path_str = asset_path.to_string_lossy().to_string();
+    let name = asset_path
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "chop".to_string());

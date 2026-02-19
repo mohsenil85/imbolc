@@ -2,15 +2,18 @@ use std::any::Any;
 
 use crate::state::drum_sequencer::NUM_PADS;
 use crate::state::AppState;
-use crate::ui::action_id::{ActionId, SequencerActionId};
+use crate::ui::action_id::{ActionId, ModeActionId, SequencerActionId};
 use crate::ui::layout_helpers::center_rect;
+use crate::ui::performance::PerformanceController;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Palette,
-    Pane, PaneId, PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
+    translate_key, Action, Color, InputEvent, KeyCode, Keymap, MouseButton, MouseEvent,
+    MouseEventKind, NavAction, Palette, Pane, PaneId, PaneIdStr, Rect, RenderBuf, SequencerAction,
+    Style, ToggleResult, TrackAction,
 };
 
 pub struct SequencerPane {
     keymap: Keymap,
+    perf: PerformanceController,
     pub(crate) cursor_pad: usize,
     pub(crate) cursor_step: usize,
     view_start_step: usize,
@@ -22,6 +25,7 @@ impl SequencerPane {
     pub fn new(keymap: Keymap) -> Self {
         Self {
             keymap,
+            perf: PerformanceController::new(),
             cursor_pad: 0,
             cursor_step: 0,
             view_start_step: 0,
@@ -72,7 +76,7 @@ impl Pane for SequencerPane {
         PaneIdStr("sequencer")
     }
 
-    fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
+    fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {
         let seq = match state.tracks.selected_drum_sequencer() {
             Some(s) => s,
             None => return Action::None,
@@ -226,6 +230,19 @@ impl Pane for SequencerPane {
             ActionId::Sequencer(SequencerActionId::OpenGroove) => {
                 Action::Sequencer(SequencerAction::OpenPadGroove(self.cursor_pad))
             }
+            ActionId::Mode(ModeActionId::PadEscape) => {
+                self.perf.pad.deactivate();
+                Action::ExitPerformanceMode
+            }
+            ActionId::Mode(ModeActionId::PadKey) => {
+                if let KeyCode::Char(c) = event.key {
+                    let c = translate_key(c, state.keyboard_layout);
+                    if let Some(pad_idx) = self.perf.pad.key_to_pad(c) {
+                        return Action::Track(TrackAction::PlayDrumPad(pad_idx, 100));
+                    }
+                }
+                Action::None
+            }
             _ => Action::None,
         }
     }
@@ -267,6 +284,16 @@ impl Pane for SequencerPane {
 
         // Draw box
         let _inner = buf.draw_block(rect, " Drum Sequencer ", border_style, border_style);
+
+        // Pad mode indicator (top-right of box)
+        if self.perf.pad.is_active() {
+            let pad_str = self.perf.pad.status_label();
+            let pad_x = rect.x + rect.width - pad_str.len() as u16 - 1;
+            buf.draw_line(
+                Rect::new(pad_x, rect.y, pad_str.len() as u16, 1),
+                &[(&pad_str, Style::new().fg(p.bg).bg(p.kit_color))],
+            );
+        }
 
         let cx = rect.x + 2;
         let cy = rect.y + 1;
@@ -581,6 +608,23 @@ impl Pane for SequencerPane {
             }
             _ => Action::None,
         }
+    }
+
+    fn toggle_performance_mode(&mut self, _state: &AppState) -> ToggleResult {
+        // Sequencer is always a kit — go straight to pad mode
+        self.perf.toggle(true)
+    }
+
+    fn activate_pad(&mut self) {
+        self.perf.activate_pad();
+    }
+
+    fn deactivate_performance(&mut self) {
+        self.perf.deactivate();
+    }
+
+    fn supports_performance_mode(&self) -> bool {
+        true
     }
 
     fn keymap(&self) -> &Keymap {

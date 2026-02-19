@@ -628,12 +628,13 @@ fn save_sampler_config(
     config: &crate::state::sampler::SamplerConfig,
 ) -> SqlResult<()> {
     conn.execute(
-        "INSERT INTO sampler_configs (track_id, buffer_id, sample_name, loop_mode, pitch_tracking, next_slice_id, selected_slice)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO sampler_configs (track_id, buffer_id, sample_name, sample_path, loop_mode, pitch_tracking, next_slice_id, selected_slice)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             track_id,
             config.buffer_id.map(|id| id.get() as i64),
             config.sample_name.as_deref(),
+            config.sample_path.as_deref(),
             config.loop_mode as i32,
             config.pitch_tracking as i32,
             config.next_slice_id().get(),

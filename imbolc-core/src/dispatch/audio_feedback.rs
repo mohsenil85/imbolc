@@ -63,10 +63,20 @@ pub fn dispatch_audio_feedback(
             result.stop_playback = true;
             result.reset_playhead = true;
 
+            // Copy rendered WAV to project assets if project is saved
+            let asset_path = if let Some(ref project_path) = state.project.path {
+                match super::helpers::copy_to_project_assets(path, project_path) {
+                    Ok(p) => p,
+                    Err(_) => path.clone(),
+                }
+            } else {
+                path.clone()
+            };
+
             // Convert instrument to PitchedSampler
             let buffer_id = state.tracks.next_sampler_buffer_id;
             state.tracks.next_sampler_buffer_id = buffer_id.next();
-            let path_str = path.to_string_lossy().to_string();
+            let path_str = asset_path.to_string_lossy().to_string();
             let _ = audio.load_sample(buffer_id, &path_str);
 
             if let Some(inst) = state.tracks.track_mut(*instrument_id) {
@@ -76,6 +86,17 @@ pub fn dispatch_audio_feedback(
                 // Override buffer param with our rendered WAV
                 if let Some(p) = inst.source_params.iter_mut().find(|p| p.name == "buffer") {
                     p.value = ParamValue::Int(buffer_id.get() as i32);
+                }
+            }
+
+            // Store sample_path in sampler config
+            if let Some(inst) = state.tracks.track_mut(*instrument_id) {
+                if let Some(config) = inst.sampler_config_mut() {
+                    config.sample_path = Some(path_str.clone());
+                    config.buffer_id = Some(buffer_id);
+                    config.sample_name = asset_path
+                        .file_stem()
+                        .map(|s| s.to_string_lossy().to_string());
                 }
             }
 

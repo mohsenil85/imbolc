@@ -8,8 +8,28 @@ pub(super) fn handle_load_sample_result(
     instrument_id: crate::state::TrackId,
     path: &std::path::Path,
 ) -> DispatchResult {
-    let path_str = path.to_string_lossy().to_string();
-    let sample_name = path.file_stem().map(|s| s.to_string_lossy().to_string());
+    // Copy to project assets if project is saved
+    let asset_path = if let Some(ref project_path) = state.project.path {
+        match super::super::helpers::copy_to_project_assets(path, project_path) {
+            Ok(p) => p,
+            Err(e) => {
+                return DispatchResult::with_status(
+                    audio.status(),
+                    format!("Asset copy failed: {}", e),
+                );
+            }
+        }
+    } else {
+        return DispatchResult::with_status(
+            audio.status(),
+            "Save project before importing samples",
+        );
+    };
+
+    let path_str = asset_path.to_string_lossy().to_string();
+    let sample_name = asset_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string());
 
     let buffer_id = state.tracks.next_sampler_buffer_id;
     state.tracks.next_sampler_buffer_id = buffer_id.next();
@@ -22,6 +42,7 @@ pub(super) fn handle_load_sample_result(
         if let Some(ref mut config) = instrument.sampler_config_mut() {
             config.buffer_id = Some(buffer_id);
             config.sample_name = sample_name;
+            config.sample_path = Some(path_str);
         }
     }
 

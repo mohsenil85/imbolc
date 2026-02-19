@@ -4,6 +4,58 @@ use crate::state::AppState;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Derive the assets directory for a project: foo.sqlite → foo_assets/
+pub fn assets_dir_for_project(project_path: &Path) -> PathBuf {
+    let stem = project_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("project");
+    let parent = project_path.parent().unwrap_or(Path::new("."));
+    parent.join(format!("{}_assets", stem))
+}
+
+/// Copy a file into the project's assets directory.
+/// Returns the new absolute path. Deduplicates filenames with _1, _2, etc.
+/// Skips copy if source is already inside the assets dir.
+pub fn copy_to_project_assets(source: &Path, project_path: &Path) -> Result<PathBuf, String> {
+    let assets_dir = assets_dir_for_project(project_path);
+    std::fs::create_dir_all(&assets_dir)
+        .map_err(|e| format!("Failed to create assets dir: {}", e))?;
+
+    // Skip if already inside assets dir
+    if let (Ok(canon_source), Ok(canon_assets)) = (source.canonicalize(), assets_dir.canonicalize())
+    {
+        if canon_source.starts_with(&canon_assets) {
+            return Ok(canon_source);
+        }
+    }
+
+    let file_name = source
+        .file_name()
+        .ok_or_else(|| "Source has no filename".to_string())?;
+    let stem = source
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("sample");
+    let ext = source.extension().and_then(|e| e.to_str()).unwrap_or("wav");
+
+    let mut dest = assets_dir.join(file_name);
+    let mut counter = 1u32;
+    while dest.exists() {
+        // Check if existing file is identical (same size)
+        if let (Ok(src_meta), Ok(dst_meta)) = (source.metadata(), dest.metadata()) {
+            if src_meta.len() == dst_meta.len() {
+                return Ok(dest);
+            }
+        }
+        dest = assets_dir.join(format!("{}_{}.{}", stem, counter, ext));
+        counter += 1;
+    }
+
+    std::fs::copy(source, &dest).map_err(|e| format!("Failed to copy sample to assets: {}", e))?;
+    Ok(dest)
+}
+
 use super::automation::record_automation_point;
 
 /// Record automation point if currently recording and playing.
