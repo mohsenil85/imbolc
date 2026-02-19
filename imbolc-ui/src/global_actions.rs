@@ -1,6 +1,6 @@
 use crate::action::{
-    AudioEffect, AutomationAction, ClickAction, DomainAction, MixerAction, PaneId as NavPaneId,
-    PianoRollAction, RoutedAction, SequencerAction, UiAction,
+    ArrangementAction, AudioEffect, AutomationAction, ClickAction, DomainAction, MixerAction,
+    PaneId as NavPaneId, PianoRollAction, RoutedAction, SequencerAction, UiAction,
 };
 use crate::audio::AudioHandle;
 use crate::dispatch::LocalDispatcher;
@@ -540,6 +540,32 @@ pub(crate) fn handle_global_action(
                     NavPaneId::PianoRoll
                 };
                 switch_to_pane(target, panes, dispatcher, audio, app_frame, layer_stack);
+
+                // Auto-enter clip edit when switching to piano roll or sequencer
+                if (target == NavPaneId::PianoRoll || target == NavPaneId::Sequencer)
+                    && dispatcher
+                        .state()
+                        .session
+                        .arrangement
+                        .editing_clip
+                        .is_none()
+                {
+                    if let Some(inst) = dispatcher.state().tracks.selected_track() {
+                        let instrument_id = inst.id;
+                        let mut r = dispatcher.dispatch_domain(
+                            &DomainAction::Arrangement(ArrangementAction::AutoEnterClipEdit(
+                                instrument_id,
+                            )),
+                            audio,
+                        );
+                        r.nav.clear();
+                        if r.needs_full_sync {
+                            *needs_full_sync = true;
+                        }
+                        pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
+                        apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
+                    }
+                }
             }
             GlobalActionId::SwitchPane(NavPaneId::Track) => {
                 switch_to_pane(
@@ -707,6 +733,14 @@ pub(crate) fn handle_global_action(
             }
             GlobalActionId::SelectInstrument(n) => {
                 select_instrument(n as usize, dispatcher, panes, audio);
+                re_enter_clip_edit_if_needed(
+                    dispatcher,
+                    panes,
+                    audio,
+                    pending_audio_effects,
+                    needs_full_sync,
+                    app_frame,
+                );
             }
             GlobalActionId::SelectPrevInstrument => {
                 dispatch_side_effect_free(
@@ -716,6 +750,14 @@ pub(crate) fn handle_global_action(
                 );
                 sync_piano_roll_to_selection(dispatcher, panes, audio);
                 sync_instrument_edit(dispatcher.state(), panes);
+                re_enter_clip_edit_if_needed(
+                    dispatcher,
+                    panes,
+                    audio,
+                    pending_audio_effects,
+                    needs_full_sync,
+                    app_frame,
+                );
             }
             GlobalActionId::SelectNextInstrument => {
                 dispatch_side_effect_free(
@@ -725,6 +767,14 @@ pub(crate) fn handle_global_action(
                 );
                 sync_piano_roll_to_selection(dispatcher, panes, audio);
                 sync_instrument_edit(dispatcher.state(), panes);
+                re_enter_clip_edit_if_needed(
+                    dispatcher,
+                    panes,
+                    audio,
+                    pending_audio_effects,
+                    needs_full_sync,
+                    app_frame,
+                );
             }
             GlobalActionId::SelectTwoDigit => {
                 *select_mode = TrackSelectMode::WaitingFirstDigit;
@@ -1025,6 +1075,55 @@ pub(crate) fn handle_global_action(
         _ => return GlobalResult::NotHandled,
     }
     GlobalResult::Handled
+}
+
+/// If on the piano roll or sequencer and currently in clip edit, exit the old clip and
+/// auto-enter clip edit for the newly selected instrument.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn re_enter_clip_edit_if_needed(
+    dispatcher: &mut LocalDispatcher,
+    panes: &mut PaneManager,
+    audio: &mut AudioHandle,
+    pending_audio_effects: &mut Vec<AudioEffect>,
+    needs_full_sync: &mut bool,
+    app_frame: &mut Frame,
+) {
+    let active = panes.active().id().0;
+    if (active == "piano_roll" || active == "sequencer")
+        && dispatcher
+            .state()
+            .session
+            .arrangement
+            .editing_clip
+            .is_some()
+    {
+        // Exit old clip edit
+        let mut exit_r = dispatcher.dispatch_domain(
+            &DomainAction::Arrangement(ArrangementAction::ExitClipEdit),
+            audio,
+        );
+        exit_r.nav.clear();
+        if exit_r.needs_full_sync {
+            *needs_full_sync = true;
+        }
+        pending_audio_effects.extend(std::mem::take(&mut exit_r.audio_effects));
+        apply_dispatch_result(exit_r, dispatcher, panes, app_frame, audio);
+
+        // Enter new clip edit for the new instrument
+        if let Some(inst) = dispatcher.state().tracks.selected_track() {
+            let instrument_id = inst.id;
+            let mut enter_r = dispatcher.dispatch_domain(
+                &DomainAction::Arrangement(ArrangementAction::AutoEnterClipEdit(instrument_id)),
+                audio,
+            );
+            enter_r.nav.clear();
+            if enter_r.needs_full_sync {
+                *needs_full_sync = true;
+            }
+            pending_audio_effects.extend(std::mem::take(&mut enter_r.audio_effects));
+            apply_dispatch_result(enter_r, dispatcher, panes, app_frame, audio);
+        }
+    }
 }
 
 /// Handle a quit intent: check dirty state and show prompt if needed.

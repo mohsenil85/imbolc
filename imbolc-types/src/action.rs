@@ -724,6 +724,9 @@ pub enum ArrangementAction {
     ZoomOut,
     EnterClipEdit(ClipId),
     ExitClipEdit,
+    AutoEnterClipEdit(TrackId),
+    NextClip(TrackId),
+    PrevClip(TrackId),
     TogglePlayback,
 }
 

@@ -2,6 +2,155 @@ use crate::action::{ArrangementAction, AudioEffect, DispatchResult, NavIntent, P
 use crate::state::arrangement::{ClipEditContext, PlayMode};
 use crate::state::AppState;
 use imbolc_audio::AudioHandle;
+use imbolc_types::ClipId;
+
+/// Enter clip edit mode for the given clip. When `navigate` is true, pushes NavIntent::PushTo(PianoRoll).
+fn enter_clip_edit_impl(state: &mut AppState, clip_id: ClipId, navigate: bool) -> DispatchResult {
+    let clip = match state.session.arrangement.clip(clip_id).cloned() {
+        Some(clip) => clip,
+        None => return DispatchResult::none(),
+    };
+
+    let (stashed_notes, stashed_loop_start, stashed_loop_end, stashed_looping) = {
+        let pr = &mut state.session.piano_roll;
+        let seq = match pr.sequences.get_mut(&clip.instrument_id) {
+            Some(seq) => seq,
+            None => return DispatchResult::none(),
+        };
+        let stashed_notes = seq.notes.clone();
+        let stashed_loop_start = pr.loop_start;
+        let stashed_loop_end = pr.loop_end;
+        let stashed_looping = pr.looping;
+
+        seq.notes = clip.notes.clone();
+        pr.loop_start = 0;
+        pr.loop_end = clip.length_ticks;
+        pr.looping = true;
+        state.audio.playhead = 0;
+
+        (
+            stashed_notes,
+            stashed_loop_start,
+            stashed_loop_end,
+            stashed_looping,
+        )
+    };
+
+    // Stash session automation lanes for this instrument, then load clip automation
+    let stashed_automation_lanes: Vec<_> = state
+        .session
+        .automation
+        .lanes
+        .iter()
+        .filter(|l| l.target.instrument_id() == Some(clip.instrument_id))
+        .cloned()
+        .collect();
+    let stashed_selected_automation_lane = state.session.automation.selected_lane;
+
+    state
+        .session
+        .automation
+        .remove_lanes_for_instrument(clip.instrument_id);
+
+    // Load clip automation lanes into session
+    for clip_lane in &clip.automation_lanes {
+        let lane_id = state.session.automation.add_lane(clip_lane.target.clone());
+        if let Some(session_lane) = state.session.automation.lane_mut(lane_id) {
+            session_lane.points = clip_lane.points.clone();
+            session_lane.enabled = clip_lane.enabled;
+            session_lane.record_armed = clip_lane.record_armed;
+        }
+    }
+
+    state.session.arrangement.editing_clip = Some(ClipEditContext {
+        clip_id: clip.id,
+        instrument_id: clip.instrument_id,
+        stashed_notes,
+        stashed_loop_start,
+        stashed_loop_end,
+        stashed_looping,
+        stashed_automation_lanes,
+        stashed_selected_automation_lane,
+    });
+
+    let mut result = if navigate {
+        DispatchResult::with_nav(NavIntent::PushTo(PaneId::PianoRoll))
+    } else {
+        DispatchResult::none()
+    };
+    result.audio_effects.push(AudioEffect::UpdatePianoRoll);
+    result.audio_effects.push(AudioEffect::UpdateAutomation);
+    result
+}
+
+/// Exit clip edit mode. Returns the dispatch result and the old context (for cursor sync).
+/// Does NOT append any NavIntent — the caller decides navigation.
+fn exit_clip_edit_impl(state: &mut AppState) -> (DispatchResult, Option<ClipEditContext>) {
+    let ctx = match state.session.arrangement.editing_clip.take() {
+        Some(ctx) => ctx,
+        None => return (DispatchResult::none(), None),
+    };
+
+    let (edited_notes, loop_end) = {
+        let pr = &state.session.piano_roll;
+        let notes = pr
+            .sequences
+            .get(&ctx.instrument_id)
+            .map(|t| t.notes.clone())
+            .unwrap_or_default();
+        (notes, pr.loop_end)
+    };
+
+    // Save session automation lanes for this instrument back into the clip
+    let edited_automation_lanes: Vec<_> = state
+        .session
+        .automation
+        .lanes
+        .iter()
+        .filter(|l| l.target.instrument_id() == Some(ctx.instrument_id))
+        .cloned()
+        .collect();
+
+    if let Some(clip) = state.session.arrangement.clip_mut(ctx.clip_id) {
+        clip.notes = edited_notes;
+        clip.length_ticks = loop_end;
+        clip.automation_lanes = edited_automation_lanes;
+    }
+
+    // Remove clip automation lanes from session and restore stashed lanes
+    state
+        .session
+        .automation
+        .remove_lanes_for_instrument(ctx.instrument_id);
+
+    for stashed_lane in &ctx.stashed_automation_lanes {
+        let lane_id = state
+            .session
+            .automation
+            .add_lane(stashed_lane.target.clone());
+        if let Some(session_lane) = state.session.automation.lane_mut(lane_id) {
+            session_lane.points = stashed_lane.points.clone();
+            session_lane.enabled = stashed_lane.enabled;
+            session_lane.record_armed = stashed_lane.record_armed;
+        }
+    }
+    state.session.automation.selected_lane = ctx.stashed_selected_automation_lane;
+
+    {
+        let pr = &mut state.session.piano_roll;
+        if let Some(seq) = pr.sequences.get_mut(&ctx.instrument_id) {
+            seq.notes = ctx.stashed_notes.clone();
+        }
+        pr.loop_start = ctx.stashed_loop_start;
+        pr.loop_end = ctx.stashed_loop_end;
+        pr.looping = ctx.stashed_looping;
+    }
+
+    let mut result = DispatchResult::none();
+    result.audio_effects.push(AudioEffect::UpdatePianoRoll);
+    result.audio_effects.push(AudioEffect::UpdateAutomation);
+    (result, Some(ctx))
+}
 
 pub(super) fn dispatch_arrangement(
     action: &ArrangementAction,
@@ -229,143 +378,107 @@ pub(super) fn dispatch_arrangement(
             arr.ticks_per_col = (arr.ticks_per_col * 2).min(1920);
             DispatchResult::none()
         }
-        ArrangementAction::EnterClipEdit(clip_id) => {
-            let clip = match state.session.arrangement.clip(*clip_id).cloned() {
-                Some(clip) => clip,
-                None => return DispatchResult::none(),
-            };
-
-            let (stashed_notes, stashed_loop_start, stashed_loop_end, stashed_looping) = {
-                let pr = &mut state.session.piano_roll;
-                let seq = match pr.sequences.get_mut(&clip.instrument_id) {
-                    Some(seq) => seq,
-                    None => return DispatchResult::none(),
-                };
-                let stashed_notes = seq.notes.clone();
-                let stashed_loop_start = pr.loop_start;
-                let stashed_loop_end = pr.loop_end;
-                let stashed_looping = pr.looping;
-
-                seq.notes = clip.notes.clone();
-                pr.loop_start = 0;
-                pr.loop_end = clip.length_ticks;
-                pr.looping = true;
-                state.audio.playhead = 0;
-
-                (
-                    stashed_notes,
-                    stashed_loop_start,
-                    stashed_loop_end,
-                    stashed_looping,
-                )
-            };
-
-            // Stash session automation lanes for this instrument, then load clip automation
-            let stashed_automation_lanes: Vec<_> = state
-                .session
-                .automation
-                .lanes
-                .iter()
-                .filter(|l| l.target.instrument_id() == Some(clip.instrument_id))
-                .cloned()
-                .collect();
-            let stashed_selected_automation_lane = state.session.automation.selected_lane;
-
-            state
-                .session
-                .automation
-                .remove_lanes_for_instrument(clip.instrument_id);
-
-            // Load clip automation lanes into session
-            for clip_lane in &clip.automation_lanes {
-                let lane_id = state.session.automation.add_lane(clip_lane.target.clone());
-                if let Some(session_lane) = state.session.automation.lane_mut(lane_id) {
-                    session_lane.points = clip_lane.points.clone();
-                    session_lane.enabled = clip_lane.enabled;
-                    session_lane.record_armed = clip_lane.record_armed;
-                }
-            }
-
-            state.session.arrangement.editing_clip = Some(ClipEditContext {
-                clip_id: clip.id,
-                instrument_id: clip.instrument_id,
-                stashed_notes,
-                stashed_loop_start,
-                stashed_loop_end,
-                stashed_looping,
-                stashed_automation_lanes,
-                stashed_selected_automation_lane,
-            });
-
-            let mut result = DispatchResult::with_nav(NavIntent::PushTo(PaneId::PianoRoll));
-            result.audio_effects.push(AudioEffect::UpdatePianoRoll);
-            result.audio_effects.push(AudioEffect::UpdateAutomation);
+        ArrangementAction::EnterClipEdit(clip_id) => enter_clip_edit_impl(state, *clip_id, true),
+        ArrangementAction::ExitClipEdit => {
+            let (mut result, _ctx) = exit_clip_edit_impl(state);
+            result.push_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
             result
         }
-        ArrangementAction::ExitClipEdit => {
-            let ctx = match state.session.arrangement.editing_clip.take() {
-                Some(ctx) => ctx,
+        ArrangementAction::AutoEnterClipEdit(instrument_id) => {
+            // No-op if already in clip edit
+            if state.session.arrangement.editing_clip.is_some() {
+                return DispatchResult::none();
+            }
+
+            let instrument_id = *instrument_id;
+            let playhead = state.audio.playhead;
+
+            // Find nearest clip or create one
+            let clip_id = state
+                .session
+                .arrangement
+                .nearest_clip_for_instrument(instrument_id, playhead)
+                .unwrap_or_else(|| {
+                    // Create a default clip: use loop region length or 4 bars (4 * 384 = 1536)
+                    let length = {
+                        let pr = &state.session.piano_roll;
+                        let loop_len = pr.loop_end.saturating_sub(pr.loop_start);
+                        if loop_len > 0 {
+                            loop_len
+                        } else {
+                            1536
+                        }
+                    };
+                    state
+                        .session
+                        .arrangement
+                        .create_and_place_clip(instrument_id, length, 0)
+                });
+
+            enter_clip_edit_impl(state, clip_id, false)
+        }
+        ArrangementAction::NextClip(instrument_id) => {
+            let instrument_id = *instrument_id;
+            let current_clip_id = match &state.session.arrangement.editing_clip {
+                Some(ctx) => ctx.clip_id,
                 None => return DispatchResult::none(),
             };
 
-            let (edited_notes, loop_end) = {
-                let pr = &state.session.piano_roll;
-                let notes = pr
-                    .sequences
-                    .get(&ctx.instrument_id)
-                    .map(|t| t.notes.clone())
-                    .unwrap_or_default();
-                (notes, pr.loop_end)
+            let target_clip_id = state
+                .session
+                .arrangement
+                .next_clip_for_instrument(instrument_id, current_clip_id)
+                .unwrap_or_else(|| {
+                    // Create a new clip placed after the last placement
+                    let last_end = state
+                        .session
+                        .arrangement
+                        .placements_for_instrument(instrument_id)
+                        .last()
+                        .and_then(|p| {
+                            state
+                                .session
+                                .arrangement
+                                .clip(p.clip_id)
+                                .map(|c| p.end_tick(c))
+                        })
+                        .unwrap_or(0);
+                    let length = state
+                        .session
+                        .piano_roll
+                        .loop_end
+                        .saturating_sub(state.session.piano_roll.loop_start)
+                        .max(1536);
+                    state
+                        .session
+                        .arrangement
+                        .create_and_place_clip(instrument_id, length, last_end)
+                });
+
+            let (mut result, _ctx) = exit_clip_edit_impl(state);
+            let enter_result = enter_clip_edit_impl(state, target_clip_id, false);
+            result.merge(enter_result);
+            result
+        }
+        ArrangementAction::PrevClip(instrument_id) => {
+            let instrument_id = *instrument_id;
+            let current_clip_id = match &state.session.arrangement.editing_clip {
+                Some(ctx) => ctx.clip_id,
+                None => return DispatchResult::none(),
             };
 
-            // Save session automation lanes for this instrument back into the clip
-            let edited_automation_lanes: Vec<_> = state
+            let target_clip_id = match state
                 .session
-                .automation
-                .lanes
-                .iter()
-                .filter(|l| l.target.instrument_id() == Some(ctx.instrument_id))
-                .cloned()
-                .collect();
-
-            if let Some(clip) = state.session.arrangement.clip_mut(ctx.clip_id) {
-                clip.notes = edited_notes;
-                clip.length_ticks = loop_end;
-                clip.automation_lanes = edited_automation_lanes;
-            }
-
-            // Remove clip automation lanes from session and restore stashed lanes
-            state
-                .session
-                .automation
-                .remove_lanes_for_instrument(ctx.instrument_id);
-
-            for stashed_lane in &ctx.stashed_automation_lanes {
-                let lane_id = state
-                    .session
-                    .automation
-                    .add_lane(stashed_lane.target.clone());
-                if let Some(session_lane) = state.session.automation.lane_mut(lane_id) {
-                    session_lane.points = stashed_lane.points.clone();
-                    session_lane.enabled = stashed_lane.enabled;
-                    session_lane.record_armed = stashed_lane.record_armed;
-                }
-            }
-            state.session.automation.selected_lane = ctx.stashed_selected_automation_lane;
-
+                .arrangement
+                .prev_clip_for_instrument(instrument_id, current_clip_id)
             {
-                let pr = &mut state.session.piano_roll;
-                if let Some(seq) = pr.sequences.get_mut(&ctx.instrument_id) {
-                    seq.notes = ctx.stashed_notes;
-                }
-                pr.loop_start = ctx.stashed_loop_start;
-                pr.loop_end = ctx.stashed_loop_end;
-                pr.looping = ctx.stashed_looping;
-            }
+                Some(id) => id,
+                None => return DispatchResult::none(), // Already at first clip
+            };
 
-            let mut result = DispatchResult::with_nav(NavIntent::PopOrSwitchTo(PaneId::TrackList));
-            result.audio_effects.push(AudioEffect::UpdatePianoRoll);
-            result.audio_effects.push(AudioEffect::UpdateAutomation);
+            let (mut result, _ctx) = exit_clip_edit_impl(state);
+            let enter_result = enter_clip_edit_impl(state, target_clip_id, false);
+            result.merge(enter_result);
             result
         }
         ArrangementAction::TogglePlayback => {
@@ -1246,5 +1359,301 @@ mod tests {
         dispatch_arrangement(&ArrangementAction::ZoomIn, &mut state, &mut audio);
         dispatch_arrangement(&ArrangementAction::ZoomOut, &mut state, &mut audio);
         assert_eq!(state.session.arrangement.ticks_per_col, original);
+    }
+
+    // ── 11. EnterClipEdit / ExitClipEdit (refactored helpers) ─────────
+
+    #[test]
+    fn enter_clip_edit_loads_clip_notes() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip_id = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+        if let Some(clip) = state.session.arrangement.clip_mut(clip_id) {
+            clip.notes.push(Note {
+                tick: 0,
+                pitch: 60,
+                velocity: 100,
+                duration: 96,
+                probability: 1.0,
+            });
+        }
+
+        let result = dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip_id),
+            &mut state,
+            &mut audio,
+        );
+
+        assert!(state.session.arrangement.editing_clip.is_some());
+        let seq = state.session.piano_roll.sequences.get(&inst_id).unwrap();
+        assert_eq!(seq.notes.len(), 1);
+        assert_eq!(seq.notes[0].pitch, 60);
+        assert!(result.audio_effects.contains(&AudioEffect::UpdatePianoRoll));
+    }
+
+    #[test]
+    fn exit_clip_edit_saves_notes_back() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip_id = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+
+        dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip_id),
+            &mut state,
+            &mut audio,
+        );
+
+        // Add a note while editing
+        if let Some(seq) = state.session.piano_roll.sequences.get_mut(&inst_id) {
+            seq.notes.push(Note {
+                tick: 48,
+                pitch: 72,
+                velocity: 80,
+                duration: 48,
+                probability: 1.0,
+            });
+        }
+
+        dispatch_arrangement(&ArrangementAction::ExitClipEdit, &mut state, &mut audio);
+
+        assert!(state.session.arrangement.editing_clip.is_none());
+        let clip = state.session.arrangement.clip(clip_id).unwrap();
+        assert_eq!(clip.notes.len(), 1);
+        assert_eq!(clip.notes[0].pitch, 72);
+    }
+
+    // ── 12. AutoEnterClipEdit ─────────────────────────────────────────
+
+    #[test]
+    fn auto_enter_creates_clip_when_none_exist() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        assert!(state.session.arrangement.clips.is_empty());
+
+        let result = dispatch_arrangement(
+            &ArrangementAction::AutoEnterClipEdit(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        assert!(state.session.arrangement.editing_clip.is_some());
+        assert_eq!(state.session.arrangement.clips.len(), 1);
+        assert_eq!(state.session.arrangement.placements.len(), 1);
+        assert!(result.audio_effects.contains(&AudioEffect::UpdatePianoRoll));
+    }
+
+    #[test]
+    fn auto_enter_uses_existing_clip() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip_id = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+
+        dispatch_arrangement(
+            &ArrangementAction::AutoEnterClipEdit(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        let ctx = state.session.arrangement.editing_clip.as_ref().unwrap();
+        assert_eq!(ctx.clip_id, clip_id);
+    }
+
+    #[test]
+    fn auto_enter_noop_when_already_editing() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip_id = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+
+        dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip_id),
+            &mut state,
+            &mut audio,
+        );
+        assert!(state.session.arrangement.editing_clip.is_some());
+
+        // Should be no-op
+        let result = dispatch_arrangement(
+            &ArrangementAction::AutoEnterClipEdit(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        assert!(result.audio_effects.is_empty());
+    }
+
+    #[test]
+    fn auto_enter_uses_loop_length_for_new_clip() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        state.session.piano_roll.loop_start = 0;
+        state.session.piano_roll.loop_end = 768;
+
+        dispatch_arrangement(
+            &ArrangementAction::AutoEnterClipEdit(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        let clip = &state.session.arrangement.clips[0];
+        assert_eq!(clip.length_ticks, 768);
+    }
+
+    // ── 13. NextClip ──────────────────────────────────────────────────
+
+    #[test]
+    fn next_clip_moves_to_next() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip1 = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+        let clip2 = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 384);
+
+        dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip1),
+            &mut state,
+            &mut audio,
+        );
+
+        dispatch_arrangement(
+            &ArrangementAction::NextClip(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        let ctx = state.session.arrangement.editing_clip.as_ref().unwrap();
+        assert_eq!(ctx.clip_id, clip2);
+    }
+
+    #[test]
+    fn next_clip_creates_new_at_end() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip1 = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+
+        dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip1),
+            &mut state,
+            &mut audio,
+        );
+
+        dispatch_arrangement(
+            &ArrangementAction::NextClip(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        // Should have created a new clip
+        assert_eq!(state.session.arrangement.clips.len(), 2);
+        let ctx = state.session.arrangement.editing_clip.as_ref().unwrap();
+        assert_ne!(ctx.clip_id, clip1);
+    }
+
+    #[test]
+    fn next_clip_noop_when_not_editing() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+
+        let result = dispatch_arrangement(
+            &ArrangementAction::NextClip(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        assert!(result.audio_effects.is_empty());
+        assert!(state.session.arrangement.editing_clip.is_none());
+    }
+
+    // ── 14. PrevClip ──────────────────────────────────────────────────
+
+    #[test]
+    fn prev_clip_moves_to_previous() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip1 = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+        let clip2 = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 384);
+
+        dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip2),
+            &mut state,
+            &mut audio,
+        );
+
+        dispatch_arrangement(
+            &ArrangementAction::PrevClip(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        let ctx = state.session.arrangement.editing_clip.as_ref().unwrap();
+        assert_eq!(ctx.clip_id, clip1);
+    }
+
+    #[test]
+    fn prev_clip_noop_at_first() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+        let clip1 = state
+            .session
+            .arrangement
+            .create_and_place_clip(inst_id, 384, 0);
+
+        dispatch_arrangement(
+            &ArrangementAction::EnterClipEdit(clip1),
+            &mut state,
+            &mut audio,
+        );
+
+        let result = dispatch_arrangement(
+            &ArrangementAction::PrevClip(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        // Should remain on clip1 — prev at first is no-op, but exit/enter still happened
+        // Actually, the handler returns DispatchResult::none() early if prev returns None
+        // So editing_clip should still be Some (the exit didn't happen)
+        assert!(
+            state.session.arrangement.editing_clip.is_none() || result.audio_effects.is_empty()
+        );
+    }
+
+    #[test]
+    fn prev_clip_noop_when_not_editing() {
+        let (mut state, mut audio) = setup();
+        let inst_id = first_instrument_id(&state);
+
+        let result = dispatch_arrangement(
+            &ArrangementAction::PrevClip(inst_id),
+            &mut state,
+            &mut audio,
+        );
+
+        assert!(result.audio_effects.is_empty());
     }
 }

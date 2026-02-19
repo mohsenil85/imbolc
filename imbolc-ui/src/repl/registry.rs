@@ -125,6 +125,9 @@ repl_actions! {
         "zoom-out"               => ZoomOut;                                        "Zoom out on arrangement"
         "enter-clip-edit"        => EnterClipEdit(id: ClipId);                     "Enter clip editing mode"
         "exit-clip-edit"         => ExitClipEdit;                                   "Exit clip editing mode"
+        "auto-enter-clip-edit"   => AutoEnterClipEdit(instrument_id: TrackId);      "Auto-enter clip edit for instrument"
+        "next-clip"              => NextClip(instrument_id: TrackId);               "Navigate to next clip"
+        "prev-clip"              => PrevClip(instrument_id: TrackId);               "Navigate to previous clip"
         "play-stop"              => TogglePlayback;                                       "Toggle arrangement playback"
         "select-lane"            => SelectLane(idx: usize);                        "Select arrangement lane"
     }

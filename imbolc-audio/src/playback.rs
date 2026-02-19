@@ -85,8 +85,7 @@ pub fn tick_playback(
                     // (previous tick's pre-scheduling covered the loop boundary).
                     // Just do a simple linear scan from scan_start forward.
                     let clamped_end = (new_playhead + lookahead_ticks).min(piano_roll.loop_end);
-                    let cross_wrap_base = (piano_roll.loop_end - old_playhead
-                        + scan_start
+                    let cross_wrap_base = (piano_roll.loop_end - old_playhead + scan_start
                         - piano_roll.loop_start) as f64;
                     scan_ranges = vec![(scan_start, clamped_end, cross_wrap_base)];
                     effective_scan_end = clamped_end;

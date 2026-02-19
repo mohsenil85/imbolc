@@ -183,7 +183,7 @@ impl AppRuntime {
                 self.dispatcher.state(),
             );
 
-            // Auto-exit clip edit when navigating away from piano roll (standalone-only)
+            // Auto-exit clip edit when navigating away from piano roll / sequencer (standalone-only)
             if matches!(&routed_action, RoutedAction::Ui(UiAction::Nav(_)))
                 && self
                     .dispatcher
@@ -193,11 +193,44 @@ impl AppRuntime {
                     .editing_clip
                     .is_some()
                 && self.panes.active().id().0 != "piano_roll"
+                && self.panes.active().id().0 != "sequencer"
             {
+                // Capture clip position for F2→F3 cursor sync
+                let clip_sync_info = self
+                    .dispatcher
+                    .state()
+                    .session
+                    .arrangement
+                    .editing_clip
+                    .as_ref()
+                    .and_then(|ctx| {
+                        let start_tick = self
+                            .dispatcher
+                            .state()
+                            .session
+                            .arrangement
+                            .placements
+                            .iter()
+                            .find(|p| {
+                                p.clip_id == ctx.clip_id && p.instrument_id == ctx.instrument_id
+                            })
+                            .map(|p| p.start_tick)?;
+                        let lane = self
+                            .dispatcher
+                            .state()
+                            .tracks
+                            .tracks
+                            .iter()
+                            .position(|t| t.id == ctx.instrument_id)?;
+                        Some((start_tick, lane))
+                    });
+
                 let mut exit_result = self.dispatcher.dispatch_domain(
                     &action::DomainAction::Arrangement(action::ArrangementAction::ExitClipEdit),
                     &mut self.audio,
                 );
+                // Suppress nav — the user is already navigating elsewhere
+                exit_result.nav.clear();
                 if exit_result.needs_full_sync {
                     self.needs_full_sync = true;
                 }
@@ -210,6 +243,13 @@ impl AppRuntime {
                     &mut self.app_frame,
                     &mut self.audio,
                 );
+
+                // Sync arrangement cursor to the clip's position
+                if let Some((tick, lane)) = clip_sync_info {
+                    let arr = &mut self.dispatcher.state_mut().session.arrangement;
+                    arr.cursor_tick = tick;
+                    arr.selected_lane = lane;
+                }
             }
 
             // Auto-pop command_palette layer and re-dispatch confirmed command

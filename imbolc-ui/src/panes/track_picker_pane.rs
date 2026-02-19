@@ -4,8 +4,8 @@ use crate::state::{AppState, TrackId};
 use crate::ui::action_id::{ActionId, AddActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind, NavAction, Palette, Pane,
-    PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
+    Action, InputEvent, Keymap, LayerName, MouseButton, MouseEvent, MouseEventKind, NavAction,
+    Palette, Pane, PaneIdStr, Rect, RenderBuf, SequencerAction, Style,
 };
 
 const LIST_HEIGHT: usize = 12;
@@ -123,6 +123,10 @@ impl Default for TrackPickerPane {
 impl Pane for TrackPickerPane {
     fn id(&self) -> PaneIdStr {
         PaneIdStr("instrument_picker")
+    }
+
+    fn layer_name(&self) -> LayerName {
+        LayerName("add")
     }
 
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {

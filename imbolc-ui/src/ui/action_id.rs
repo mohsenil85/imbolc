@@ -354,6 +354,8 @@ define_action_enum! {
         AutomationToggleEnabled => "automation_toggle_enabled",
         AutomationToggleRecording => "automation_toggle_recording",
         AutomationToggleArm => "automation_toggle_arm",
+        NextClip => "next_clip",
+        PrevClip => "prev_clip",
     }
 }
 

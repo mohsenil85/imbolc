@@ -3,8 +3,8 @@ use crate::state::AppState;
 use crate::ui::action_id::{ActionId, ModeActionId, PianoRollActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    translate_key, Action, AutomationAction, InputEvent, KeyCode, MouseButton, MouseEvent,
-    MouseEventKind, PianoRollAction, Rect,
+    translate_key, Action, ArrangementAction, AutomationAction, InputEvent, KeyCode, MouseButton,
+    MouseEvent, MouseEventKind, PianoRollAction, Rect,
 };
 use imbolc_types::TrackId;
 
@@ -642,6 +642,14 @@ impl PianoRollPane {
                     self.automation_cursor_tick = self.cursor_tick;
                 }
                 Action::None
+            }
+            ActionId::PianoRoll(PianoRollActionId::NextClip) => {
+                let instrument_id = self.current_instrument_id(state);
+                Action::Arrangement(ArrangementAction::NextClip(instrument_id))
+            }
+            ActionId::PianoRoll(PianoRollActionId::PrevClip) => {
+                let instrument_id = self.current_instrument_id(state);
+                Action::Arrangement(ArrangementAction::PrevClip(instrument_id))
             }
             // Automation-specific action IDs are no-ops when notes are focused
             ActionId::PianoRoll(

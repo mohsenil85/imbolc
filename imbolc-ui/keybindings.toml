@@ -144,6 +144,8 @@ bindings = [
   { key = "Tab", action = "automation_switch_focus", description = "Switch focus (notes / automation)" },
   { key = "B", action = "bounce_to_wav", description = "Bounce master to WAV" },
   { key = "Ctrl+b", action = "export_stems", description = "Export stems to WAV" },
+  { key = "Ctrl+Right", action = "next_clip", description = "Next clip" },
+  { key = "Ctrl+Left", action = "prev_clip", description = "Previous clip" },
 ]
 
 [layers.sequencer]

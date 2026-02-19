@@ -393,6 +393,112 @@ impl ArrangementState {
         self.next_clip_automation_lane_id = id.next();
         id
     }
+
+    /// Find the clip whose placement contains `tick`, or the nearest placement by distance.
+    /// Returns the clip ID (not placement ID) for use with clip edit.
+    pub fn nearest_clip_for_instrument(&self, instrument_id: TrackId, tick: u32) -> Option<ClipId> {
+        let placements = self.placements_for_instrument(instrument_id);
+        if placements.is_empty() {
+            return None;
+        }
+
+        // First: check if tick falls inside any placement
+        for p in &placements {
+            if let Some(clip) = self.clip(p.clip_id) {
+                if tick >= p.start_tick && tick < p.end_tick(clip) {
+                    return Some(p.clip_id);
+                }
+            }
+        }
+
+        // Otherwise: find nearest by distance to placement start
+        placements
+            .iter()
+            .min_by_key(|p| {
+                let dist_start = (p.start_tick as i64 - tick as i64).unsigned_abs();
+                let dist_end = self
+                    .clip(p.clip_id)
+                    .map(|c| (p.end_tick(c) as i64 - tick as i64).unsigned_abs())
+                    .unwrap_or(u64::MAX);
+                dist_start.min(dist_end)
+            })
+            .map(|p| p.clip_id)
+    }
+
+    /// Next distinct clip by timeline order for the given instrument.
+    /// Finds the first placement after the current clip's placements.
+    pub fn next_clip_for_instrument(
+        &self,
+        instrument_id: TrackId,
+        current_clip_id: ClipId,
+    ) -> Option<ClipId> {
+        let placements = self.placements_for_instrument(instrument_id);
+        // Find the last placement of the current clip
+        let current_end = placements
+            .iter()
+            .filter(|p| p.clip_id == current_clip_id)
+            .filter_map(|p| self.clip(p.clip_id).map(|c| p.end_tick(c)))
+            .max()
+            .unwrap_or(0);
+
+        // Find the first placement that starts at or after current_end with a different clip_id
+        placements
+            .iter()
+            .find(|p| p.clip_id != current_clip_id && p.start_tick >= current_end)
+            .map(|p| p.clip_id)
+            .or_else(|| {
+                // Also check for any clip after the current one in timeline order
+                placements
+                    .iter()
+                    .filter(|p| p.clip_id != current_clip_id)
+                    .find(|p| {
+                        p.start_tick
+                            > placements
+                                .iter()
+                                .filter(|pp| pp.clip_id == current_clip_id)
+                                .map(|pp| pp.start_tick)
+                                .min()
+                                .unwrap_or(0)
+                    })
+                    .map(|p| p.clip_id)
+            })
+    }
+
+    /// Previous distinct clip by timeline order for the given instrument.
+    pub fn prev_clip_for_instrument(
+        &self,
+        instrument_id: TrackId,
+        current_clip_id: ClipId,
+    ) -> Option<ClipId> {
+        let placements = self.placements_for_instrument(instrument_id);
+        // Find the first placement of the current clip
+        let current_start = placements
+            .iter()
+            .filter(|p| p.clip_id == current_clip_id)
+            .map(|p| p.start_tick)
+            .min()
+            .unwrap_or(0);
+
+        // Find the last placement before current_start with a different clip_id
+        placements
+            .iter()
+            .rev()
+            .find(|p| p.clip_id != current_clip_id && p.start_tick < current_start)
+            .map(|p| p.clip_id)
+    }
+
+    /// Create a clip and place it atomically. Returns the new clip ID.
+    pub fn create_and_place_clip(
+        &mut self,
+        instrument_id: TrackId,
+        length: u32,
+        start_tick: u32,
+    ) -> ClipId {
+        let clip_count = self.clips_for_instrument(instrument_id).len();
+        let clip_id = self.add_clip(format!("Clip {}", clip_count + 1), instrument_id, length);
+        self.add_placement(clip_id, instrument_id, start_tick);
+        clip_id
+    }
 }
 
 #[cfg(test)]
@@ -649,6 +755,128 @@ mod tests {
         // dedup_by_key keeps the first, removes duplicates
         let points_at_50: Vec<_> = flat[0].points.iter().filter(|p| p.tick == 50).collect();
         assert_eq!(points_at_50.len(), 1);
+    }
+
+    // ── nearest/next/prev/create clip helpers ──────────────────────
+
+    #[test]
+    fn test_nearest_clip_inside_placement() {
+        let mut arr = ArrangementState::new();
+        let cid = arr.add_clip("A".to_string(), TrackId::new(1), 200);
+        arr.add_placement(cid, TrackId::new(1), 100);
+
+        assert_eq!(
+            arr.nearest_clip_for_instrument(TrackId::new(1), 150),
+            Some(cid)
+        );
+    }
+
+    #[test]
+    fn test_nearest_clip_before_placement() {
+        let mut arr = ArrangementState::new();
+        let cid = arr.add_clip("A".to_string(), TrackId::new(1), 200);
+        arr.add_placement(cid, TrackId::new(1), 100);
+
+        // tick 50 is before the placement at 100; nearest should still find it
+        assert_eq!(
+            arr.nearest_clip_for_instrument(TrackId::new(1), 50),
+            Some(cid)
+        );
+    }
+
+    #[test]
+    fn test_nearest_clip_no_clips() {
+        let arr = ArrangementState::new();
+        assert_eq!(arr.nearest_clip_for_instrument(TrackId::new(1), 0), None);
+    }
+
+    #[test]
+    fn test_nearest_clip_picks_closer() {
+        let mut arr = ArrangementState::new();
+        let cid1 = arr.add_clip("A".to_string(), TrackId::new(1), 100);
+        let cid2 = arr.add_clip("B".to_string(), TrackId::new(1), 100);
+        arr.add_placement(cid1, TrackId::new(1), 0);
+        arr.add_placement(cid2, TrackId::new(1), 500);
+
+        // tick 400 is closer to clip2 at 500 than clip1 ending at 100
+        assert_eq!(
+            arr.nearest_clip_for_instrument(TrackId::new(1), 400),
+            Some(cid2)
+        );
+        // tick 50 is inside clip1
+        assert_eq!(
+            arr.nearest_clip_for_instrument(TrackId::new(1), 50),
+            Some(cid1)
+        );
+    }
+
+    #[test]
+    fn test_next_clip_for_instrument() {
+        let mut arr = ArrangementState::new();
+        let cid1 = arr.add_clip("A".to_string(), TrackId::new(1), 100);
+        let cid2 = arr.add_clip("B".to_string(), TrackId::new(1), 100);
+        arr.add_placement(cid1, TrackId::new(1), 0);
+        arr.add_placement(cid2, TrackId::new(1), 200);
+
+        assert_eq!(
+            arr.next_clip_for_instrument(TrackId::new(1), cid1),
+            Some(cid2)
+        );
+    }
+
+    #[test]
+    fn test_next_clip_at_last_returns_none() {
+        let mut arr = ArrangementState::new();
+        let cid1 = arr.add_clip("A".to_string(), TrackId::new(1), 100);
+        arr.add_placement(cid1, TrackId::new(1), 0);
+
+        assert_eq!(arr.next_clip_for_instrument(TrackId::new(1), cid1), None);
+    }
+
+    #[test]
+    fn test_prev_clip_for_instrument() {
+        let mut arr = ArrangementState::new();
+        let cid1 = arr.add_clip("A".to_string(), TrackId::new(1), 100);
+        let cid2 = arr.add_clip("B".to_string(), TrackId::new(1), 100);
+        arr.add_placement(cid1, TrackId::new(1), 0);
+        arr.add_placement(cid2, TrackId::new(1), 200);
+
+        assert_eq!(
+            arr.prev_clip_for_instrument(TrackId::new(1), cid2),
+            Some(cid1)
+        );
+    }
+
+    #[test]
+    fn test_prev_clip_at_first_returns_none() {
+        let mut arr = ArrangementState::new();
+        let cid1 = arr.add_clip("A".to_string(), TrackId::new(1), 100);
+        arr.add_placement(cid1, TrackId::new(1), 0);
+
+        assert_eq!(arr.prev_clip_for_instrument(TrackId::new(1), cid1), None);
+    }
+
+    #[test]
+    fn test_create_and_place_clip() {
+        let mut arr = ArrangementState::new();
+        let cid = arr.create_and_place_clip(TrackId::new(1), 384, 0);
+
+        assert_eq!(arr.clips.len(), 1);
+        assert_eq!(arr.placements.len(), 1);
+        assert_eq!(arr.clip(cid).unwrap().name, "Clip 1");
+        assert_eq!(arr.clip(cid).unwrap().length_ticks, 384);
+        assert_eq!(arr.placements[0].start_tick, 0);
+        assert_eq!(arr.placements[0].clip_id, cid);
+    }
+
+    #[test]
+    fn test_create_and_place_clip_increments_name() {
+        let mut arr = ArrangementState::new();
+        let cid1 = arr.create_and_place_clip(TrackId::new(1), 384, 0);
+        let cid2 = arr.create_and_place_clip(TrackId::new(1), 384, 384);
+
+        assert_eq!(arr.clip(cid1).unwrap().name, "Clip 1");
+        assert_eq!(arr.clip(cid2).unwrap().name, "Clip 2");
     }
 
     #[test]
