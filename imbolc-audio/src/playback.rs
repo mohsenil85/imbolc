@@ -80,22 +80,32 @@ pub fn tick_playback(
             let effective_scan_end: u32;
 
             if wrapped_playhead {
-                // Playhead already wrapped during advance.
-                // scan_start is before loop_end; new_playhead is after loop_start.
-                // We need: [scan_start, loop_end) and [loop_start, new_playhead + lookahead)
-                let after_wrap_end = (new_playhead + lookahead_ticks).min(piano_roll.loop_end);
-                let _pre_wrap_base = 0.0_f64; // ticks from old_playhead to scan_start
-                let post_wrap_base = (piano_roll.loop_end - old_playhead) as f64;
+                if scan_start < old_playhead {
+                    // last_scheduled_tick is already in the post-wrap region
+                    // (previous tick's pre-scheduling covered the loop boundary).
+                    // Just do a simple linear scan from scan_start forward.
+                    let clamped_end = (new_playhead + lookahead_ticks).min(piano_roll.loop_end);
+                    let cross_wrap_base = (piano_roll.loop_end - old_playhead
+                        + scan_start
+                        - piano_roll.loop_start) as f64;
+                    scan_ranges = vec![(scan_start, clamped_end, cross_wrap_base)];
+                    effective_scan_end = clamped_end;
+                } else {
+                    // Normal wrap: scan_start is in pre-wrap region.
+                    // We need: [scan_start, loop_end) and [loop_start, new_playhead + lookahead)
+                    let after_wrap_end = (new_playhead + lookahead_ticks).min(piano_roll.loop_end);
+                    let post_wrap_base = (piano_roll.loop_end - old_playhead) as f64;
 
-                scan_ranges = vec![
-                    (
-                        scan_start,
-                        piano_roll.loop_end,
-                        (scan_start as f64 - old_playhead as f64),
-                    ),
-                    (piano_roll.loop_start, after_wrap_end, post_wrap_base),
-                ];
-                effective_scan_end = after_wrap_end;
+                    scan_ranges = vec![
+                        (
+                            scan_start,
+                            piano_roll.loop_end,
+                            (scan_start as f64 - old_playhead as f64),
+                        ),
+                        (piano_roll.loop_start, after_wrap_end, post_wrap_base),
+                    ];
+                    effective_scan_end = after_wrap_end;
+                }
             } else if scan_end_raw > piano_roll.loop_end
                 && piano_roll.loop_end > piano_roll.loop_start
             {
@@ -808,6 +818,97 @@ mod tests {
             expected_lt > 14,
             "At 200 BPM, lookahead_ticks ({}) should be > 14 (120 BPM value)",
             expected_lt
+        );
+    }
+
+    #[test]
+    fn loop_wrap_after_pre_schedule_overflow_no_giant_chord() {
+        // Regression test: when pre-scheduling crosses the loop boundary on tick N,
+        // last_scheduled_tick becomes a post-wrap value. On tick N+1 when the playhead
+        // actually wraps, the scan must NOT cover the entire loop.
+        let (mut pr, mut inst, mut session, mut engine, _rx, tx) = make_fixtures();
+
+        // Short loop [0, 100) with notes scattered throughout
+        pr.loop_start = 0;
+        pr.loop_end = 100;
+
+        // Place notes throughout the loop — if the bug triggers, all would fire
+        pr.toggle_note(0, 60, 5, 10, 100);
+        pr.toggle_note(0, 62, 30, 10, 100);
+        pr.toggle_note(0, 64, 50, 10, 100);
+        pr.toggle_note(0, 66, 70, 10, 100);
+        pr.toggle_note(0, 68, 95, 10, 100);
+
+        // Step 1: Position near loop end so pre-scheduling overflows.
+        // At 120 BPM, 480 tpb: lookahead_ticks ≈ 14
+        // Place playhead at 85, advance ~9 ticks → new_playhead ≈ 94
+        // scan_end = 94 + 14 = 108 > loop_end (100) → overflow into [0, 8)
+        // last_scheduled_tick becomes 8 (a post-wrap value)
+        pr.playhead = 85;
+        let mut tick_acc = 0.0;
+        let mut last_sched: Option<u32> = None;
+
+        do_tick(
+            &mut pr,
+            &mut inst,
+            &mut session,
+            &mut engine,
+            &tx,
+            Duration::from_millis(10),
+            &mut tick_acc,
+            &mut last_sched,
+        );
+
+        let sched_after_step1 = last_sched.unwrap();
+        let playhead_after_step1 = pr.playhead;
+        // Verify pre-scheduling crossed the boundary: last_scheduled_tick < loop_end
+        assert!(
+            sched_after_step1 < pr.loop_end,
+            "step 1: last_scheduled_tick ({}) should be in post-wrap region (< loop_end {})",
+            sched_after_step1,
+            pr.loop_end
+        );
+
+        // Step 2: Advance again so the playhead actually wraps.
+        // old_playhead ≈ 94, advance ~9 ticks, wraps past loop_end (100) back to ~3
+        // BUG was: scan_start=8, wrapped=true → scanned (8, 100) covering entire loop
+        // FIX: scan_start=8 < old_playhead=94, so linear scan (8, 3+14) = (8, 17)
+        do_tick(
+            &mut pr,
+            &mut inst,
+            &mut session,
+            &mut engine,
+            &tx,
+            Duration::from_millis(10),
+            &mut tick_acc,
+            &mut last_sched,
+        );
+
+        let sched_after_step2 = last_sched.unwrap();
+        // The scan should cover a small range (~9 ticks), NOT the entire loop
+        // sched_after_step2 should be playhead + lookahead, which is a small number
+        let lookahead_ticks = ((engine.schedule_lookahead_secs * 120.0 / 60.0) * 480.0) as u32;
+        let expected = pr.playhead + lookahead_ticks;
+        assert_eq!(
+            sched_after_step2, expected,
+            "step 2: last_scheduled_tick ({}) should be playhead ({}) + lookahead ({})",
+            sched_after_step2, pr.playhead, lookahead_ticks
+        );
+
+        // The critical invariant: scan range should NOT have been (sched_after_step1, loop_end)
+        // which would be nearly the entire loop. Verify the scanned range was small.
+        assert!(
+            sched_after_step2 < 30,
+            "step 2: scan should cover a small post-wrap range, not the whole loop (got {})",
+            sched_after_step2
+        );
+
+        // Also verify that the playhead actually wrapped
+        assert!(
+            pr.playhead < playhead_after_step1,
+            "playhead should have wrapped: {} should be < {}",
+            pr.playhead,
+            playhead_after_step1
         );
     }
 }
