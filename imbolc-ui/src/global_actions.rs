@@ -818,6 +818,7 @@ pub(crate) fn handle_global_action(
                                     rec.preview_started_at = None;
                                     rec.preview_duration_secs = None;
                                     rec.preview_start_norm = None;
+                                    rec.preview_end_norm = None;
                                 }
                             }
                         }
@@ -830,6 +831,7 @@ pub(crate) fn handle_global_action(
                             rec.preview_started_at = None;
                             rec.preview_duration_secs = None;
                             rec.preview_start_norm = None;
+                            rec.preview_end_norm = None;
 
                             match stop_result {
                                 Ok(()) => app_frame.status_bar.push(
@@ -859,12 +861,12 @@ pub(crate) fn handle_global_action(
                             return GlobalResult::Handled;
                         }
 
-                        let cursor_start_norm = if let Some(waveform) =
+                        let (play_start_norm, play_end_norm) = if let Some(waveform) =
                             panes.get_pane_mut::<WaveformPane>("waveform")
                         {
-                            waveform.playback_start_norm(dispatcher.state())
+                            waveform.playback_range_norm(dispatcher.state())
                         } else {
-                            0.0
+                            (0.0, 1.0)
                         };
 
                         let total_duration_secs = dispatcher
@@ -874,7 +876,7 @@ pub(crate) fn handle_global_action(
                             .unwrap_or(0.0)
                             .max(0.0);
                         let preview_duration_secs =
-                            (total_duration_secs * (1.0 - cursor_start_norm)).max(0.0);
+                            (total_duration_secs * (play_end_norm - play_start_norm)).max(0.0);
 
                         let buffer_id =
                             if let Some(id) = dispatcher.state().recording.preview_buffer_id {
@@ -897,6 +899,7 @@ pub(crate) fn handle_global_action(
                                         rec.preview_started_at = None;
                                         rec.preview_duration_secs = None;
                                         rec.preview_start_norm = None;
+                                        rec.preview_end_norm = None;
                                         app_frame.status_bar.push(
                                             format!("Failed to load recording: {}", err),
                                             crate::ui::status_bar::StatusLevel::Info,
@@ -912,13 +915,14 @@ pub(crate) fn handle_global_action(
                             rec.preview_started_at = None;
                             rec.preview_duration_secs = None;
                             rec.preview_start_norm = None;
+                            rec.preview_end_norm = None;
                         }
 
                         match audio.play_sample_preview_with_node(
                             buffer_id,
                             1.0,
-                            cursor_start_norm,
-                            1.0,
+                            play_start_norm,
+                            play_end_norm,
                             1.0,
                             0.0,
                         ) {
@@ -927,7 +931,8 @@ pub(crate) fn handle_global_action(
                                 rec.preview_node_id = Some(node_id);
                                 rec.preview_started_at = Some(std::time::Instant::now());
                                 rec.preview_duration_secs = Some(preview_duration_secs.max(0.01));
-                                rec.preview_start_norm = Some(cursor_start_norm);
+                                rec.preview_start_norm = Some(play_start_norm);
+                                rec.preview_end_norm = Some(play_end_norm);
                                 app_frame.status_bar.push(
                                     "Playing recording (Space to stop)",
                                     crate::ui::status_bar::StatusLevel::Info,
@@ -939,6 +944,7 @@ pub(crate) fn handle_global_action(
                                 rec.preview_started_at = None;
                                 rec.preview_duration_secs = None;
                                 rec.preview_start_norm = None;
+                                rec.preview_end_norm = None;
                                 app_frame.status_bar.push(
                                     format!("Failed to play recording: {}", err),
                                     crate::ui::status_bar::StatusLevel::Info,

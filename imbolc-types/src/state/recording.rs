@@ -47,6 +47,9 @@ pub struct RecordingState {
     /// Normalized start position (0..1) for current preview playback.
     #[serde(skip)]
     pub preview_start_norm: Option<f32>,
+    /// Normalized end position (0..1) for current preview playback.
+    #[serde(skip)]
+    pub preview_end_norm: Option<f32>,
     /// Tracks armed for recording (instrument IDs)
     #[serde(skip)]
     pub armed_tracks: HashSet<TrackId>,
@@ -130,5 +133,6 @@ mod tests {
         assert!(state.preview_started_at.is_none());
         assert!(state.preview_duration_secs.is_none());
         assert!(state.preview_start_norm.is_none());
+        assert!(state.preview_end_norm.is_none());
     }
 }

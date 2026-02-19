@@ -327,6 +327,26 @@ impl WaveformPane {
         (idx as f32 / len as f32).clamp(0.0, 0.999_9)
     }
 
+    /// Returns `(start_norm, end_norm)` for playback.
+    /// If a selection exists, returns the selection bounds.
+    /// Otherwise, returns cursor position to end.
+    pub fn playback_range_norm(&self, state: &AppState) -> (f32, f32) {
+        let len = state
+            .recorded_waveform_peaks
+            .as_ref()
+            .map(|w| w.len())
+            .unwrap_or(0);
+        if len == 0 {
+            return (0.0, 1.0);
+        }
+        if let Some(sel) = self.active_selection() {
+            if let Some((start, end)) = self.selection_to_norm(sel, len) {
+                return (start.clamp(0.0, 0.999_9), end.clamp(0.001, 1.0));
+            }
+        }
+        (self.playback_start_norm(state), 1.0)
+    }
+
     fn current_clip_name(&self, state: &AppState) -> String {
         if let Some(name) = state.recording.last_recording_name.as_ref() {
             let trimmed = name.trim();
@@ -852,9 +872,14 @@ impl WaveformPane {
                         .preview_start_norm
                         .unwrap_or(0.0)
                         .clamp(0.0, 1.0);
+                    let end_norm = state
+                        .recording
+                        .preview_end_norm
+                        .unwrap_or(1.0)
+                        .clamp(0.0, 1.0);
                     let elapsed = started.elapsed().as_secs_f32();
                     let local_progress = (elapsed / duration_secs).clamp(0.0, 1.0);
-                    let progress = start_norm + local_progress * (1.0 - start_norm);
+                    let progress = start_norm + local_progress * (end_norm - start_norm);
                     if state.recording.preview_node_id.is_some() || local_progress < 1.0 {
                         self.draw_playback_playhead(layout, buf, progress, p);
                     }

@@ -1,4 +1,3 @@
-use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use super::commands::AudioFeedback;
@@ -6,18 +5,20 @@ use super::engine::AudioEngine;
 use super::snapshot::{SessionSnapshot, TrackSnapshot};
 use imbolc_types::{SourceExtra, TrackId};
 
+/// Tick the drum sequencer. Returns delayed feedbacks as `(delay_secs, feedback)` pairs,
+/// where `delay_secs` matches the audio scheduling offset so the UI cursor stays in sync.
 pub fn tick_drum_sequencer(
     instruments: &mut TrackSnapshot,
     session: &SessionSnapshot,
     bpm: f32,
     engine: &mut AudioEngine,
     rng_state: &mut u64,
-    feedback_tx: &Sender<AudioFeedback>,
     elapsed: Duration,
-) {
+) -> Vec<(f64, AudioFeedback)> {
     // Collect instrument triggers to execute after the main loop
     // (target_track_id, freq, velocity, offset_secs)
     let mut instrument_triggers: Vec<(TrackId, f32, f32, f64)> = Vec::new();
+    let mut delayed_feedbacks: Vec<(f64, AudioFeedback)> = Vec::new();
 
     for instrument in &mut instruments.tracks {
         let seq = match &mut instrument.source_extra {
@@ -192,10 +193,13 @@ pub fn tick_drum_sequencer(
                     }
                 }
             }
-            let _ = feedback_tx.send(AudioFeedback::DrumSequencerStep {
-                instrument_id: instrument.id,
-                step,
-            });
+            delayed_feedbacks.push((
+                offset_secs,
+                AudioFeedback::DrumSequencerStep {
+                    instrument_id: instrument.id,
+                    step,
+                },
+            ));
             seq.last_played_step = Some(step);
         }
     }
@@ -205,4 +209,6 @@ pub fn tick_drum_sequencer(
         let _ =
             engine.trigger_instrument_oneshot(target_id, freq, amp, offset, instruments, session);
     }
+
+    delayed_feedbacks
 }

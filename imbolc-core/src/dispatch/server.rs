@@ -105,6 +105,7 @@ pub(super) fn dispatch_server(
                 state.recording.preview_started_at = None;
                 state.recording.preview_duration_secs = None;
                 state.recording.preview_start_norm = None;
+                state.recording.preview_end_norm = None;
 
                 // Ctrl+r after a completed take appends into the previous file.
                 let append_target = state

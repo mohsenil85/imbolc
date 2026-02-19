@@ -78,6 +78,7 @@ impl AppRuntime {
                     state.recording.preview_started_at = None;
                     state.recording.preview_duration_secs = None;
                     state.recording.preview_start_norm = None;
+                    state.recording.preview_end_norm = None;
                 }
             }
             self.app_frame.recording = state.recording.recording;

@@ -11,7 +11,7 @@ Imbolc is a complete music studio that runs right in your terminal. Write beats,
 - **39 built-in effects** -- delays, reverbs, compressors, modulation, distortion, granular, spectral, and more
 - **Piano roll and drum sequencer** -- per-note velocity and probability, variable grid resolution, groove and humanize
 - **Semi-modular audio engine** -- per-track signal chain: source → LFO → effects → 12-band parametric EQ → mixer with bus routing
-- **Mixer with up to 32 buses** -- per-track levels, pan, mute/solo, sends, and master control
+- **Mixer with up to 128 buses** -- per-track levels, pan, mute/solo, sends, and master control
 - **Real-time LAN collaboration** -- multiple players on a shared session over your local network
 - **Automation, arpeggiator, and recording** -- automate any parameter, arpeggiate chords, record and export to WAV
 

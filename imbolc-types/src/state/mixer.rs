@@ -6,7 +6,7 @@ use super::track::{EqConfig, GroupMixer, MixerBus};
 use crate::{BusId, GroupId, TrackId};
 
 /// Maximum number of buses allowed
-pub const MAX_BUSES: u8 = 32;
+pub const MAX_BUSES: u8 = 128;
 
 /// Default number of buses for new projects
 pub const DEFAULT_BUS_COUNT: u8 = 8;

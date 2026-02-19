@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::envelope::EnvConfig;
+use crate::state::mixer::MAX_BUSES;
 use crate::{CustomSynthDefId, Param, ParamValue, VstPluginId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -1041,7 +1042,7 @@ impl SourceType {
                     name: "bus".to_string(),
                     value: ParamValue::Int(1),
                     min: 1.0,
-                    max: 8.0,
+                    max: MAX_BUSES as f32,
                 },
                 Param {
                     name: "gain".to_string(),

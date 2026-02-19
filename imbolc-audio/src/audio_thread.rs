@@ -17,6 +17,13 @@ use crate::arp_state::ArpPlayState;
 use imbolc_types::VstTarget;
 use imbolc_types::{SessionState, TrackId, TrackState};
 
+/// A feedback item scheduled for future delivery, aligning UI updates
+/// with OSC-timetag-scheduled audio events.
+struct DelayedFeedback {
+    deliver_at: Instant,
+    feedback: super::commands::AudioFeedback,
+}
+
 /// Deferred server connection: after spawning scsynth, wait before connecting
 /// so the server has time to initialize. Avoids blocking the audio thread.
 struct PendingServerConnect {
@@ -142,6 +149,8 @@ pub(crate) struct AudioThread {
     last_voice_cleanup: Instant,
     /// Last time server health was checked (rate-limited to reduce overhead)
     last_health_check: Instant,
+    /// Feedback items scheduled for future delivery (audio-visual sync)
+    delayed_feedback: Vec<DelayedFeedback>,
 }
 
 impl AudioThread {
@@ -189,6 +198,7 @@ impl AudioThread {
             last_telemetry_emit: Instant::now(),
             last_voice_cleanup: Instant::now(),
             last_health_check: Instant::now(),
+            delayed_feedback: Vec::new(),
         }
     }
 
@@ -1330,6 +1340,19 @@ impl AudioThread {
         }
     }
 
+    /// Send any delayed feedback items whose delivery time has arrived.
+    fn flush_delayed_feedback(&mut self) {
+        let now = Instant::now();
+        self.delayed_feedback.retain(|item| {
+            if now >= item.deliver_at {
+                let _ = self.feedback_tx.send(item.feedback.clone());
+                false
+            } else {
+                true
+            }
+        });
+    }
+
     fn tick(&mut self, elapsed: Duration) {
         super::playback::tick_playback(
             &mut self.piano_roll,
@@ -1400,15 +1423,22 @@ impl AudioThread {
             }
         }
 
-        super::drum_tick::tick_drum_sequencer(
+        let delayed = super::drum_tick::tick_drum_sequencer(
             &mut self.tracks,
             &self.session,
             self.piano_roll.bpm,
             &mut self.engine,
             &mut self.rng_state,
-            &self.feedback_tx,
             elapsed,
         );
+        let now = Instant::now();
+        self.delayed_feedback
+            .extend(delayed.into_iter().map(|(delay_secs, feedback)| {
+                DelayedFeedback {
+                    deliver_at: now + Duration::from_secs_f64(delay_secs),
+                    feedback,
+                }
+            }));
         super::arpeggiator_tick::tick_arpeggiator(
             &self.tracks,
             &self.session,
@@ -1436,6 +1466,8 @@ impl AudioThread {
             elapsed,
             &mut self.click_accumulator,
         );
+
+        self.flush_delayed_feedback();
     }
 
     fn poll_engine(&mut self) {

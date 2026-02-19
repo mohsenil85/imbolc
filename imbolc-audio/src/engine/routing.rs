@@ -1774,7 +1774,7 @@ impl AudioEngine {
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
 
-        // BusIn "bus" param: translate bus_id (1-8) to SC audio bus number
+        // BusIn "bus" param: translate bus_id to SC audio bus number
         if param == "bus" {
             let bus_id = BusId::new(value as u8);
             if let Some(&audio_bus) = self.bus_audio_buses.get(&bus_id) {

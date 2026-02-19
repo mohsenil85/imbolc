@@ -259,6 +259,7 @@ pub(super) fn dispatch_session(
             state.recording.preview_started_at = None;
             state.recording.preview_duration_secs = None;
             state.recording.preview_start_norm = None;
+            state.recording.preview_end_norm = None;
 
             if let Some(old_preview) = state.recording.preview_buffer_id.take() {
                 audio.free_samples(vec![old_preview]);
@@ -314,6 +315,7 @@ pub(super) fn dispatch_session(
                     state.recording.preview_started_at = None;
                     state.recording.preview_duration_secs = None;
                     state.recording.preview_start_norm = None;
+                    state.recording.preview_end_norm = None;
 
                     if let Some(old_preview) = state.recording.preview_buffer_id.take() {
                         audio.free_samples(vec![old_preview]);
@@ -360,6 +362,7 @@ pub(super) fn dispatch_session(
                     state.recording.preview_started_at = None;
                     state.recording.preview_duration_secs = None;
                     state.recording.preview_start_norm = None;
+                    state.recording.preview_end_norm = None;
 
                     if let Some(old_preview) = state.recording.preview_buffer_id.take() {
                         audio.free_samples(vec![old_preview]);
