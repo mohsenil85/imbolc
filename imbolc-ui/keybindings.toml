@@ -180,6 +180,7 @@ bindings = [
   { key = "Ctrl+=", action = "freq_up", description = "Trigger freq up semitone" },
   { key = "Ctrl+-", action = "freq_down", description = "Trigger freq down semitone" },
   { key = "g", action = "cycle_grid", description = "Cycle step resolution (1/4, 1/8, 1/16, 1/32)", hint = "grid" },
+  { key = "G", action = "open_groove", description = "Pad groove settings", hint = "groove" },
 ]
 
 [layers.instrument_edit]

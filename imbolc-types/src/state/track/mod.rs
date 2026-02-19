@@ -27,6 +27,7 @@ use crate::{BusId, EffectId, GroupId, Param, ParamIndex, TrackId};
 /// Source-type-specific configuration, enforcing mutual exclusivity at compile time.
 /// Replaces the old `sampler_config`, `drum_sequencer`, `vst_param_values`, `vst_state_path` fields.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum SourceExtra {
     #[default]
     None,

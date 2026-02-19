@@ -116,19 +116,35 @@ pub fn tick_drum_sequencer(
                             }
                         }
 
-                        // Per-track groove settings
-                        let effective_humanize_vel = instrument
+                        // Per-pad groove with fallback: pad → track → global
+                        let track_humanize_vel = instrument
                             .groove
                             .humanize_velocity
                             .unwrap_or(session.humanize.velocity);
-                        let effective_humanize_time = instrument
+                        let track_humanize_time = instrument
                             .groove
                             .humanize_timing
                             .unwrap_or(session.humanize.timing);
-                        let timing_offset_ms = instrument.groove.timing_offset_ms;
+                        let effective_humanize_vel =
+                            pad.groove.humanize_velocity.unwrap_or(track_humanize_vel);
+                        let effective_humanize_time =
+                            pad.groove.humanize_timing.unwrap_or(track_humanize_time);
+                        let timing_offset_ms = if pad.groove.timing_offset_ms != 0.0 {
+                            pad.groove.timing_offset_ms
+                        } else {
+                            instrument.groove.timing_offset_ms
+                        };
 
                         // Calculate final offset with timing offset (rush/drag)
                         let mut final_offset = offset_secs + (timing_offset_ms / 1000.0) as f64;
+
+                        // Per-pad swing: apply additional timing offset on odd steps
+                        if let Some(pad_swing) = pad.groove.swing_amount {
+                            if pad_swing > 0.0 && step % 2 == 1 {
+                                let half_step_secs = secs_per_step_unit * 0.5;
+                                final_offset += pad_swing as f64 * half_step_secs;
+                            }
+                        }
 
                         // Timing humanization: jitter offset by up to +/- 20ms
                         if effective_humanize_time > 0.0 {

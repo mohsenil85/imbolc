@@ -1,5 +1,6 @@
 //! Drum sequencer types.
 
+use super::groove::GrooveConfig;
 use super::piano_roll::Note;
 use super::sampler::Slice;
 use crate::TrackId;
@@ -117,6 +118,9 @@ pub struct DrumPad {
     pub slice_end: f32,   // 0.0-1.0, default 1.0
     pub reverse: bool,    // play sample backwards
     pub pitch: i8,        // semitone offset, -24 to +24
+    /// Per-pad groove overrides (swing, humanize, timing)
+    #[serde(default)]
+    pub groove: GrooveConfig,
 }
 
 fn default_midi_base_note() -> u8 {
@@ -140,6 +144,7 @@ impl Default for DrumPad {
             slice_end: 1.0,
             reverse: false,
             pitch: 0,
+            groove: GrooveConfig::default(),
         }
     }
 }
@@ -201,6 +206,9 @@ pub struct DrumSequencerState {
     /// MIDI base note for pad mapping (default 36 = GM kick drum / C1)
     #[serde(default = "default_midi_base_note")]
     pub midi_base_note: u8,
+    /// The pad whose groove is being edited (for groove pane modal)
+    #[serde(skip)]
+    pub groove_editing_pad: Option<usize>,
 }
 
 impl DrumSequencerState {
@@ -224,6 +232,7 @@ impl DrumSequencerState {
             editing_pad: None,
             step_resolution: StepResolution::default(),
             midi_base_note: 36,
+            groove_editing_pad: None,
         }
     }
 

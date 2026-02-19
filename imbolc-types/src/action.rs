@@ -888,6 +888,23 @@ pub enum SequencerAction {
     SelectEditingPad(usize), // pad_idx
     /// Cycle step resolution (1/4 -> 1/8 -> 1/16 -> 1/32)
     NextStepResolution,
+    // Per-pad groove
+    /// Set groove_editing_pad context and open groove pane
+    OpenPadGroove(usize),
+    /// Adjust per-pad swing amount (pad_idx, delta)
+    AdjustPadSwing(usize, f32),
+    /// Set per-pad swing grid (pad_idx, grid)
+    SetPadSwingGrid(usize, Option<crate::SwingGrid>),
+    /// Adjust per-pad velocity humanization (pad_idx, delta)
+    AdjustPadHumanizeVelocity(usize, f32),
+    /// Adjust per-pad timing humanization (pad_idx, delta)
+    AdjustPadHumanizeTiming(usize, f32),
+    /// Adjust per-pad timing offset (pad_idx, delta)
+    AdjustPadTimingOffset(usize, f32),
+    /// Cycle per-pad time signature (pad_idx)
+    NextPadTimeSignature(usize),
+    /// Reset per-pad groove to defaults (pad_idx)
+    ResetPadGroove(usize),
 }
 
 /// Data carried by TrackAction::Update to apply edits without dispatch reading pane state.

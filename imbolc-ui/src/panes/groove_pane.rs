@@ -4,8 +4,8 @@ use crate::state::{AppState, SwingGrid, TrackId};
 use crate::ui::action_id::{ActionId, GrooveActionId};
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
-    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, Style,
-    TrackAction,
+    Action, Color, InputEvent, Keymap, Palette, Pane, PaneIdStr, Rect, RenderBuf, SequencerAction,
+    Style, TrackAction,
 };
 
 /// Parameter indices for the groove pane
@@ -19,6 +19,8 @@ const PARAM_COUNT: usize = 5;
 pub struct GroovePane {
     keymap: Keymap,
     selected_param: usize,
+    /// When Some, we're editing a drum pad's groove instead of the track groove
+    pad_context: Option<usize>,
 }
 
 impl GroovePane {
@@ -26,6 +28,7 @@ impl GroovePane {
         Self {
             keymap,
             selected_param: 0,
+            pad_context: None,
         }
     }
 }
@@ -41,13 +44,32 @@ impl Pane for GroovePane {
         PaneIdStr("groove")
     }
 
+    fn on_enter(&mut self, state: &AppState) {
+        // Check if we're entering in pad-groove mode
+        self.pad_context = state
+            .tracks
+            .selected_drum_sequencer()
+            .and_then(|seq| seq.groove_editing_pad);
+    }
+
     fn handle_action(&mut self, action: ActionId, _event: &InputEvent, state: &AppState) -> Action {
         let instrument = match state.tracks.selected_track() {
             Some(i) => i,
             None => return Action::None,
         };
         let instrument_id = instrument.id;
-        let groove = &instrument.groove;
+
+        // Resolve which groove config we're editing
+        let groove = match self.pad_context {
+            Some(pad_idx) => match state.tracks.selected_drum_sequencer() {
+                Some(seq) => match seq.pads.get(pad_idx) {
+                    Some(pad) => &pad.groove,
+                    None => return Action::None,
+                },
+                None => return Action::None,
+            },
+            None => &instrument.groove,
+        };
 
         match action {
             ActionId::Groove(GrooveActionId::PrevParam) => {
@@ -60,25 +82,44 @@ impl Pane for GroovePane {
             }
             ActionId::Groove(GrooveActionId::Increase)
             | ActionId::Groove(GrooveActionId::IncreaseBig)
-            | ActionId::Groove(GrooveActionId::IncreaseTiny) => {
-                adjust_param(instrument_id, groove, self.selected_param, true, action)
-            }
+            | ActionId::Groove(GrooveActionId::IncreaseTiny) => adjust_param(
+                self.pad_context,
+                instrument_id,
+                groove,
+                self.selected_param,
+                true,
+                action,
+            ),
             ActionId::Groove(GrooveActionId::Decrease)
             | ActionId::Groove(GrooveActionId::DecreaseBig)
-            | ActionId::Groove(GrooveActionId::DecreaseTiny) => {
-                adjust_param(instrument_id, groove, self.selected_param, false, action)
-            }
+            | ActionId::Groove(GrooveActionId::DecreaseTiny) => adjust_param(
+                self.pad_context,
+                instrument_id,
+                groove,
+                self.selected_param,
+                false,
+                action,
+            ),
             ActionId::Groove(GrooveActionId::CycleSwingGrid) => {
                 let current = groove.swing_grid.unwrap_or(SwingGrid::Eighths);
                 let next = current.next();
-                Action::Track(TrackAction::SetTrackSwingGrid(instrument_id, Some(next)))
+                match self.pad_context {
+                    Some(pad_idx) => {
+                        Action::Sequencer(SequencerAction::SetPadSwingGrid(pad_idx, Some(next)))
+                    }
+                    None => {
+                        Action::Track(TrackAction::SetTrackSwingGrid(instrument_id, Some(next)))
+                    }
+                }
             }
-            ActionId::Groove(GrooveActionId::NextTimeSig) => {
-                Action::Track(TrackAction::NextTrackTimeSignature(instrument_id))
-            }
-            ActionId::Groove(GrooveActionId::Reset) => {
-                Action::Track(TrackAction::ResetTrackGroove(instrument_id))
-            }
+            ActionId::Groove(GrooveActionId::NextTimeSig) => match self.pad_context {
+                Some(pad_idx) => Action::Sequencer(SequencerAction::NextPadTimeSignature(pad_idx)),
+                None => Action::Track(TrackAction::NextTrackTimeSignature(instrument_id)),
+            },
+            ActionId::Groove(GrooveActionId::Reset) => match self.pad_context {
+                Some(pad_idx) => Action::Sequencer(SequencerAction::ResetPadGroove(pad_idx)),
+                None => Action::Track(TrackAction::ResetTrackGroove(instrument_id)),
+            },
             _ => Action::None,
         }
     }
@@ -88,9 +129,22 @@ impl Pane for GroovePane {
         let rect = center_rect(area, 40, 12);
 
         let instrument = state.tracks.selected_track();
-        let title = match instrument {
-            Some(i) => format!(" Groove: {} ", i.name),
-            None => " Groove: (none) ".to_string(),
+
+        // Build title based on pad or track context
+        let title = match self.pad_context {
+            Some(pad_idx) => {
+                let pad_name = state
+                    .tracks
+                    .selected_drum_sequencer()
+                    .and_then(|seq| seq.pads.get(pad_idx))
+                    .map(|pad| pad.name.as_str())
+                    .unwrap_or("?");
+                format!(" Pad Groove: {} ", pad_name)
+            }
+            None => match instrument {
+                Some(i) => format!(" Groove: {} ", i.name),
+                None => " Groove: (none) ".to_string(),
+            },
         };
 
         let border_style = Style::new().fg(p.accent_secondary);
@@ -104,24 +158,60 @@ impl Pane for GroovePane {
             }
         };
 
-        let groove = &instrument.groove;
+        // In pad mode, read the pad's groove; in track mode, read the track groove
+        let groove = match self.pad_context {
+            Some(pad_idx) => match state.tracks.selected_drum_sequencer() {
+                Some(seq) => match seq.pads.get(pad_idx) {
+                    Some(pad) => &pad.groove,
+                    None => return,
+                },
+                None => return,
+            },
+            None => &instrument.groove,
+        };
+
+        // In pad mode, fallback values come from the track groove (which itself falls back to global)
+        let track_groove = &instrument.groove;
         let global_swing = state.session.piano_roll.swing_amount;
         let global_grid = SwingGrid::Eighths; // Default global grid
         let global_humanize_vel = state.session.humanize.velocity;
         let global_humanize_time = state.session.humanize.timing;
 
-        // Calculate effective values
-        let swing = groove.effective_swing(global_swing);
-        let swing_grid = groove.effective_swing_grid(global_grid);
-        let humanize_vel = groove.effective_humanize_velocity(global_humanize_vel);
-        let humanize_time = groove.effective_humanize_timing(global_humanize_time);
+        // For pad mode, the "global" fallback is the track's effective value
+        let fallback_swing = match self.pad_context {
+            Some(_) => track_groove.effective_swing(global_swing),
+            None => global_swing,
+        };
+        let fallback_grid = match self.pad_context {
+            Some(_) => track_groove.effective_swing_grid(global_grid),
+            None => global_grid,
+        };
+        let fallback_humanize_vel = match self.pad_context {
+            Some(_) => track_groove.effective_humanize_velocity(global_humanize_vel),
+            None => global_humanize_vel,
+        };
+        let fallback_humanize_time = match self.pad_context {
+            Some(_) => track_groove.effective_humanize_timing(global_humanize_time),
+            None => global_humanize_time,
+        };
+
+        // Calculate effective values using appropriate fallbacks
+        let swing = groove.effective_swing(fallback_swing);
+        let swing_grid = groove.effective_swing_grid(fallback_grid);
+        let humanize_vel = groove.effective_humanize_velocity(fallback_humanize_vel);
+        let humanize_time = groove.effective_humanize_timing(fallback_humanize_time);
         let timing_offset = groove.timing_offset_ms;
 
-        // Is using global?
-        let swing_is_global = groove.swing_amount.is_none();
-        let grid_is_global = groove.swing_grid.is_none();
-        let hvel_is_global = groove.humanize_velocity.is_none();
-        let htime_is_global = groove.humanize_timing.is_none();
+        // Is using fallback?
+        let swing_is_fallback = groove.swing_amount.is_none();
+        let grid_is_fallback = groove.swing_grid.is_none();
+        let hvel_is_fallback = groove.humanize_velocity.is_none();
+        let htime_is_fallback = groove.humanize_timing.is_none();
+        let fallback_label = if self.pad_context.is_some() {
+            " (track)"
+        } else {
+            " (global)"
+        };
 
         let y = inner.y + 1;
         let label_x = inner.x + 2;
@@ -139,7 +229,8 @@ impl Pane for GroovePane {
             y,
             "Swing:",
             &format!("{:.0}%", swing * 100.0),
-            swing_is_global,
+            swing_is_fallback,
+            fallback_label,
             self.selected_param == PARAM_SWING,
             normal_style,
             global_style,
@@ -154,7 +245,8 @@ impl Pane for GroovePane {
             y + 1,
             "Swing Grid:",
             swing_grid.name(),
-            grid_is_global,
+            grid_is_fallback,
+            fallback_label,
             self.selected_param == PARAM_SWING_GRID,
             normal_style,
             global_style,
@@ -169,7 +261,8 @@ impl Pane for GroovePane {
             y + 2,
             "Humanize Vel:",
             &format!("{:.0}%", humanize_vel * 100.0),
-            hvel_is_global,
+            hvel_is_fallback,
+            fallback_label,
             self.selected_param == PARAM_HUMANIZE_VEL,
             normal_style,
             global_style,
@@ -184,7 +277,8 @@ impl Pane for GroovePane {
             y + 3,
             "Humanize Time:",
             &format!("{:.0}%", humanize_time * 100.0),
-            htime_is_global,
+            htime_is_fallback,
+            fallback_label,
             self.selected_param == PARAM_HUMANIZE_TIME,
             normal_style,
             global_style,
@@ -204,7 +298,8 @@ impl Pane for GroovePane {
             y + 4,
             "Push/Pull:",
             &offset_str,
-            false, // Timing offset has no global default
+            false, // Timing offset has no fallback
+            fallback_label,
             self.selected_param == PARAM_TIMING_OFFSET,
             normal_style,
             global_style,
@@ -238,7 +333,8 @@ fn render_param_row(
     y: u16,
     label: &str,
     value: &str,
-    is_global: bool,
+    is_fallback: bool,
+    fallback_label: &str,
     is_selected: bool,
     normal_style: Style,
     global_style: Style,
@@ -251,7 +347,7 @@ fn render_param_row(
     };
     let value_style = if is_selected {
         selected_style
-    } else if is_global {
+    } else if is_fallback {
         global_style
     } else {
         normal_style
@@ -267,16 +363,16 @@ fn render_param_row(
         buf.set_cell(value_x + i as u16, y, ch, value_style);
     }
 
-    // Render "(global)" suffix if using global
-    if is_global && !is_selected {
-        let suffix = " (global)";
-        for (i, ch) in suffix.chars().enumerate() {
+    // Render fallback suffix if using fallback value
+    if is_fallback && !is_selected {
+        for (i, ch) in fallback_label.chars().enumerate() {
             buf.set_cell(value_x + value.len() as u16 + i as u16, y, ch, global_style);
         }
     }
 }
 
 fn adjust_param(
+    pad_context: Option<usize>,
     instrument_id: TrackId,
     groove: &crate::state::GrooveConfig,
     param_idx: usize,
@@ -293,17 +389,26 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(TrackAction::AdjustTrackSwing(instrument_id, signed_delta))
+            match pad_context {
+                Some(pad_idx) => {
+                    Action::Sequencer(SequencerAction::AdjustPadSwing(pad_idx, signed_delta))
+                }
+                None => Action::Track(TrackAction::AdjustTrackSwing(instrument_id, signed_delta)),
+            }
         }
         PARAM_SWING_GRID => {
-            // Cycle swing grid
             let current = groove.swing_grid.unwrap_or(SwingGrid::Eighths);
             let next = if increase {
                 current.next()
             } else {
                 cycle_swing_grid_rev(current)
             };
-            Action::Track(TrackAction::SetTrackSwingGrid(instrument_id, Some(next)))
+            match pad_context {
+                Some(pad_idx) => {
+                    Action::Sequencer(SequencerAction::SetPadSwingGrid(pad_idx, Some(next)))
+                }
+                None => Action::Track(TrackAction::SetTrackSwingGrid(instrument_id, Some(next))),
+            }
         }
         PARAM_HUMANIZE_VEL => {
             let delta = match action {
@@ -314,10 +419,16 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(TrackAction::AdjustTrackHumanizeVelocity(
-                instrument_id,
-                signed_delta,
-            ))
+            match pad_context {
+                Some(pad_idx) => Action::Sequencer(SequencerAction::AdjustPadHumanizeVelocity(
+                    pad_idx,
+                    signed_delta,
+                )),
+                None => Action::Track(TrackAction::AdjustTrackHumanizeVelocity(
+                    instrument_id,
+                    signed_delta,
+                )),
+            }
         }
         PARAM_HUMANIZE_TIME => {
             let delta = match action {
@@ -328,10 +439,16 @@ fn adjust_param(
                 _ => 0.05,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(TrackAction::AdjustTrackHumanizeTiming(
-                instrument_id,
-                signed_delta,
-            ))
+            match pad_context {
+                Some(pad_idx) => Action::Sequencer(SequencerAction::AdjustPadHumanizeTiming(
+                    pad_idx,
+                    signed_delta,
+                )),
+                None => Action::Track(TrackAction::AdjustTrackHumanizeTiming(
+                    instrument_id,
+                    signed_delta,
+                )),
+            }
         }
         PARAM_TIMING_OFFSET => {
             let delta = match action {
@@ -342,10 +459,16 @@ fn adjust_param(
                 _ => 1.0,
             };
             let signed_delta = if increase { delta } else { -delta };
-            Action::Track(TrackAction::AdjustTrackTimingOffset(
-                instrument_id,
-                signed_delta,
-            ))
+            match pad_context {
+                Some(pad_idx) => Action::Sequencer(SequencerAction::AdjustPadTimingOffset(
+                    pad_idx,
+                    signed_delta,
+                )),
+                None => Action::Track(TrackAction::AdjustTrackTimingOffset(
+                    instrument_id,
+                    signed_delta,
+                )),
+            }
         }
         _ => Action::None,
     }

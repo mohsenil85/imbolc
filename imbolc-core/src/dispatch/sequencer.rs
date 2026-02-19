@@ -413,6 +413,80 @@ pub(super) fn dispatch_sequencer(
             result.audio_effects.push(AudioEffect::RebuildInstruments);
             result
         }
+        SequencerAction::OpenPadGroove(pad_idx) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                seq.groove_editing_pad = Some(*pad_idx);
+            }
+            DispatchResult::with_nav(NavIntent::PushTo(PaneId::Groove))
+        }
+        SequencerAction::AdjustPadSwing(pad_idx, delta) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    let current = pad.groove.swing_amount.unwrap_or(0.0);
+                    pad.groove.swing_amount = Some((current + delta).clamp(0.0, 1.0));
+                }
+            }
+            DispatchResult::none()
+        }
+        SequencerAction::SetPadSwingGrid(pad_idx, grid) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    pad.groove.swing_grid = *grid;
+                }
+            }
+            DispatchResult::none()
+        }
+        SequencerAction::AdjustPadHumanizeVelocity(pad_idx, delta) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    let current = pad.groove.humanize_velocity.unwrap_or(0.0);
+                    pad.groove.humanize_velocity = Some((current + delta).clamp(0.0, 1.0));
+                }
+            }
+            DispatchResult::none()
+        }
+        SequencerAction::AdjustPadHumanizeTiming(pad_idx, delta) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    let current = pad.groove.humanize_timing.unwrap_or(0.0);
+                    pad.groove.humanize_timing = Some((current + delta).clamp(0.0, 1.0));
+                }
+            }
+            DispatchResult::none()
+        }
+        SequencerAction::AdjustPadTimingOffset(pad_idx, delta) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    pad.groove.timing_offset_ms =
+                        (pad.groove.timing_offset_ms + delta).clamp(-50.0, 50.0);
+                }
+            }
+            DispatchResult::none()
+        }
+        SequencerAction::NextPadTimeSignature(pad_idx) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    let current = pad.groove.time_signature.unwrap_or((4, 4));
+                    let next = match current {
+                        (4, 4) => (3, 4),
+                        (3, 4) => (6, 8),
+                        (6, 8) => (5, 4),
+                        (5, 4) => (7, 8),
+                        _ => (4, 4),
+                    };
+                    pad.groove.time_signature = Some(next);
+                }
+            }
+            DispatchResult::none()
+        }
+        SequencerAction::ResetPadGroove(pad_idx) => {
+            if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
+                if let Some(pad) = seq.pads.get_mut(*pad_idx) {
+                    pad.groove.reset();
+                }
+            }
+            DispatchResult::none()
+        }
     }
 }
 

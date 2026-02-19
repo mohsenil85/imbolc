@@ -223,6 +223,9 @@ impl Pane for SequencerPane {
             ActionId::Sequencer(SequencerActionId::CycleGrid) => {
                 Action::Sequencer(SequencerAction::NextStepResolution)
             }
+            ActionId::Sequencer(SequencerActionId::OpenGroove) => {
+                Action::Sequencer(SequencerAction::OpenPadGroove(self.cursor_pad))
+            }
             _ => Action::None,
         }
     }

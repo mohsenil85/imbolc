@@ -393,6 +393,7 @@ define_action_enum! {
         FreqUp => "freq_up",
         FreqDown => "freq_down",
         CycleGrid => "cycle_grid",
+        OpenGroove => "open_groove",
     }
 }
 

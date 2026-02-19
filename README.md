@@ -1,8 +1,8 @@
 # Imbolc
 
-Imbolc is a complete music studio that runs right in your terminal. Write beats, layer synthesizers, shape sounds with effects, mix tracks, and record finished songs -- all without leaving your keyboard. It's free, open-source, and yours to keep.
+Imbolc is a complete music studio that runs right in your terminal. Write beats, layer synthesizers, shape sounds with effects, mix tracks, and record finished songs - all without a graphics library. It's free, open-source, and yours to keep.
 
-**Terminal requirement:** Imbolc requires a terminal that supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), such as [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/). The default macOS Terminal and GNOME Terminal are not supported.
+**Terminal requirement:** In order to support keychords, Imbolc requires a terminal that supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), such as [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/). The default macOS Terminal and GNOME Terminal are not supported.
 
 ## Highlights
 

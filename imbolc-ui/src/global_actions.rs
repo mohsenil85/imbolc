@@ -594,6 +594,10 @@ pub(crate) fn handle_global_action(
                 );
             }
             GlobalActionId::SwitchPane(NavPaneId::Groove) => {
+                // Clear pad context so F9 always opens track groove, not pad groove
+                if let Some(seq) = dispatcher.state_mut().tracks.selected_drum_sequencer_mut() {
+                    seq.groove_editing_pad = None;
+                }
                 switch_to_pane(
                     NavPaneId::Groove,
                     panes,
