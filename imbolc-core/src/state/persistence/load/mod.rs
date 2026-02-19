@@ -37,15 +37,6 @@ pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState
     Ok((session, tracks))
 }
 
-pub(super) fn table_exists(conn: &Connection, name: &str) -> SqlResult<bool> {
-    let count: i32 = conn.query_row(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
-        params![name],
-        |row| row.get(0),
-    )?;
-    Ok(count > 0)
-}
-
 pub(super) fn load_params(
     conn: &Connection,
     table: &str,

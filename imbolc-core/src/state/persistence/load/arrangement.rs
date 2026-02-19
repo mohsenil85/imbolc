@@ -244,10 +244,6 @@ pub(super) fn load_midi_recording(conn: &Connection, session: &mut SessionState)
 pub(super) fn load_param_tags(conn: &Connection, session: &mut SessionState) -> SqlResult<()> {
     use imbolc_types::ParamTag;
 
-    if !super::table_exists(conn, "param_tags")? {
-        return Ok(());
-    }
-
     session.param_tags.tags.clear();
 
     let mut tag_stmt = conn.prepare("SELECT id, name FROM param_tags ORDER BY position")?;
