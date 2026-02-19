@@ -15,7 +15,8 @@ pub(super) fn load_session(
         "SELECT bpm, time_sig_num, time_sig_denom, key, scale, tuning_a4, snap,
                 next_track_id, next_sampler_buffer_id, selected_track, next_layer_group_id,
                 humanize_velocity, humanize_timing,
-                click_enabled, click_volume, click_muted
+                click_enabled, click_volume, click_muted,
+                tuning, ji_flavor
          FROM session WHERE id = 1",
         [],
         |row| {
@@ -36,6 +37,8 @@ pub(super) fn load_session(
                 row.get::<_, i32>(13)?,
                 row.get::<_, f32>(14)?,
                 row.get::<_, i32>(15)?,
+                row.get::<_, String>(16)?,
+                row.get::<_, String>(17)?,
             ))
         },
     )?;
@@ -55,16 +58,8 @@ pub(super) fn load_session(
     session.click_track.enabled = row.13 != 0;
     session.click_track.volume = row.14;
     session.click_track.muted = row.15 != 0;
-
-    // Tuning fields (added in schema v13, may not exist in older DBs)
-    if let Ok(tuning_row) = conn.query_row(
-        "SELECT tuning, ji_flavor FROM session WHERE id = 1",
-        [],
-        |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
-    ) {
-        session.tuning = decode_tuning(&tuning_row.0);
-        session.ji_flavor = decode_ji_flavor(&tuning_row.1);
-    }
+    session.tuning = decode_tuning(&row.16);
+    session.ji_flavor = decode_ji_flavor(&row.17);
 
     Ok(())
 }

@@ -121,7 +121,7 @@ impl Default for TrackListPane {
 
 impl Pane for TrackListPane {
     fn id(&self) -> PaneIdStr {
-        PaneIdStr("instrument")
+        PaneIdStr("track_list")
     }
 
     fn handle_action(&mut self, action: ActionId, event: &InputEvent, state: &AppState) -> Action {

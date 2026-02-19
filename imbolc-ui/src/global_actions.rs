@@ -454,15 +454,27 @@ pub(crate) fn handle_global_action(
                 apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
             }
             GlobalActionId::ToggleRecordMaster => {
-                let mut r = dispatcher.dispatch_domain(
-                    &DomainAction::Server(ui::ServerAction::ToggleRecordMaster),
-                    audio,
-                );
-                if r.needs_full_sync {
-                    *needs_full_sync = true;
+                let active_pane = panes.active().id().0;
+                if active_pane == "piano_roll" {
+                    // On the piano roll, C-r does MIDI recording (record notes to piano roll)
+                    let mut r = dispatcher.dispatch_domain(
+                        &DomainAction::PianoRoll(PianoRollAction::ToggleRecordPlayback),
+                        audio,
+                    );
+                    pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
+                    apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
+                } else {
+                    // Elsewhere (waveform, etc.), do audio recording as before
+                    let mut r = dispatcher.dispatch_domain(
+                        &DomainAction::Server(ui::ServerAction::ToggleRecordMaster),
+                        audio,
+                    );
+                    if r.needs_full_sync {
+                        *needs_full_sync = true;
+                    }
+                    pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
+                    apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
                 }
-                pending_audio_effects.extend(std::mem::take(&mut r.audio_effects));
-                apply_dispatch_result(r, dispatcher, panes, app_frame, audio);
             }
             GlobalActionId::Copy => {
                 copy_from_active_pane(dispatcher, panes, audio);

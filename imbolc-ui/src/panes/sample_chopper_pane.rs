@@ -1,9 +1,11 @@
 use std::any::Any;
+use std::time::Instant;
 
 use crate::panes::FileBrowserPane;
 use crate::state::AppState;
 use crate::ui::action_id::{ActionId, SampleSlicerActionId};
 use crate::ui::layout_helpers::center_rect;
+use crate::ui::widgets::waveform;
 use crate::ui::{
     Action, FileSelectAction, InputEvent, Keymap, NavAction, Palette, Pane, PaneIdStr, Rect,
     RenderBuf, SampleSlicerAction, Style,
@@ -14,6 +16,11 @@ pub struct SampleSlicerPane {
     cursor_pos: f32, // 0.0-1.0
     auto_slice_n: usize,
     file_browser: FileBrowserPane,
+    /// Preview playback tracking
+    preview_started_at: Option<Instant>,
+    preview_slice_start: f32,
+    preview_slice_end: f32,
+    preview_duration_secs: f32,
 }
 
 impl SampleSlicerPane {
@@ -23,6 +30,10 @@ impl SampleSlicerPane {
             cursor_pos: 0.5,
             auto_slice_n: 4,
             file_browser: FileBrowserPane::new(file_browser_keymap),
+            preview_started_at: None,
+            preview_slice_start: 0.0,
+            preview_slice_end: 1.0,
+            preview_duration_secs: 0.0,
         }
     }
 
@@ -48,6 +59,35 @@ impl SampleSlicerPane {
         self.selected_drum_sequencer(state)
             .map(|d| d.chopper.is_none())
             .unwrap_or(false)
+    }
+
+    /// Start tracking a preview playback.
+    fn start_preview(&mut self, state: &AppState) {
+        if let Some(chopper) = self.get_slicer_state(state) {
+            if let Some(slice) = chopper.slices.get(chopper.selected_slice) {
+                self.preview_slice_start = slice.start;
+                self.preview_slice_end = slice.end;
+                self.preview_duration_secs = (slice.end - slice.start) * chopper.duration_secs;
+                self.preview_started_at = Some(Instant::now());
+            }
+        }
+    }
+
+    /// Get current preview playback progress as normalized position (0.0-1.0),
+    /// or None if not playing.
+    fn preview_progress(&self) -> Option<f32> {
+        let started = self.preview_started_at?;
+        if self.preview_duration_secs <= 0.0 {
+            return None;
+        }
+        let elapsed = started.elapsed().as_secs_f32();
+        let local_progress = elapsed / self.preview_duration_secs;
+        if local_progress >= 1.0 {
+            return None;
+        }
+        let progress = self.preview_slice_start
+            + local_progress * (self.preview_slice_end - self.preview_slice_start);
+        Some(progress)
     }
 }
 
@@ -114,6 +154,7 @@ impl Pane for SampleSlicerPane {
                 Action::SampleSlicer(SampleSlicerAction::LoadSample)
             }
             ActionId::SampleSlicer(SampleSlicerActionId::Preview) => {
+                self.start_preview(state);
                 Action::SampleSlicer(SampleSlicerAction::PreviewSlice)
             }
             ActionId::SampleSlicer(SampleSlicerActionId::Back) => Action::Nav(NavAction::PopPane),
@@ -202,23 +243,19 @@ impl Pane for SampleSlicerPane {
         // Waveform
         let wave_y = content_y + 2;
         let wave_height: u16 = 8;
-        let wave_width = (rect.width - 4) as usize;
+        let wave_width = rect.width - 4;
 
-        let green_style = Style::new().fg(p.success);
         if !chopper.waveform_peaks.is_empty() {
-            let peaks = &chopper.waveform_peaks;
-            for i in 0..wave_width {
-                let peak_idx = (i as f32 / wave_width as f32 * peaks.len() as f32) as usize;
-                if let Some(&val) = peaks.get(peak_idx) {
-                    let bar_h = (val * wave_height as f32) as u16;
-                    let center_y = wave_y + wave_height / 2;
-                    let top = center_y.saturating_sub(bar_h / 2);
-                    let bottom = center_y.saturating_add(bar_h / 2);
-                    for y in top..=bottom {
-                        buf.set_cell(content_x + i as u16, y, '│', green_style);
-                    }
-                }
-            }
+            waveform::draw_center_line(content_x, wave_y, wave_width, wave_height, buf, &p);
+            waveform::draw_braille_waveform(
+                &chopper.waveform_peaks,
+                content_x,
+                wave_y,
+                wave_width,
+                wave_height,
+                buf,
+                &p,
+            );
         } else {
             buf.draw_line(
                 Rect::new(content_x, wave_y + wave_height / 2, 20, 1),
@@ -227,6 +264,7 @@ impl Pane for SampleSlicerPane {
         }
 
         // Draw slices
+        let wave_width_usize = wave_width as usize;
         let slice_y_start = wave_y;
         let slice_y_end = wave_y + wave_height;
         let dark_gray_style = Style::new().fg(p.dim);
@@ -234,8 +272,8 @@ impl Pane for SampleSlicerPane {
         let sel_white_style = Style::new().fg(p.fg).bg(p.selection_bg);
 
         for (i, slice) in chopper.slices.iter().enumerate() {
-            let start_x = (slice.start * wave_width as f32) as u16;
-            let end_x = (slice.end * wave_width as f32) as u16;
+            let start_x = (slice.start * wave_width_usize as f32) as u16;
+            let end_x = (slice.end * wave_width_usize as f32) as u16;
             let center_x = (start_x + end_x) / 2;
 
             // Draw slice boundaries
@@ -248,7 +286,7 @@ impl Pane for SampleSlicerPane {
             // Highlight selected slice
             if i == chopper.selected_slice {
                 for x in start_x..end_x {
-                    if x >= wave_width as u16 {
+                    if x >= wave_width {
                         break;
                     }
                     buf.set_cell(content_x + x, slice_y_end + 1, ' ', sel_bg_style);
@@ -269,8 +307,21 @@ impl Pane for SampleSlicerPane {
             }
         }
 
+        // Draw playback playhead
+        if let Some(progress) = self.preview_progress() {
+            waveform::draw_playhead(
+                progress,
+                content_x,
+                wave_y,
+                wave_width,
+                wave_height,
+                buf,
+                p.error,
+            );
+        }
+
         // Draw cursor
-        let cursor_screen_x = (self.cursor_pos * wave_width as f32) as u16;
+        let cursor_screen_x = (self.cursor_pos * wave_width_usize as f32) as u16;
         let yellow_style = Style::new().fg(p.warning);
         for y in slice_y_start..=slice_y_end {
             buf.set_cell(content_x + cursor_screen_x, y, '┆', yellow_style);

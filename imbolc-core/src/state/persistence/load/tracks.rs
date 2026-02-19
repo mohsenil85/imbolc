@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
-use super::{load_effects_from, load_params, table_exists};
+use super::{load_effects_from, load_params};
 use crate::state::track_state::TrackState;
 use imbolc_types::BusId;
 
@@ -14,10 +14,6 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
     use imbolc_types::ProcessingStage;
 
     tracks.tracks.clear();
-
-    let has_layer_octave_offset = conn
-        .prepare("SELECT layer_octave_offset FROM tracks LIMIT 0")
-        .is_ok();
 
     let mut stmt = conn.prepare(
         "SELECT id, name, source_type,
@@ -34,7 +30,8 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
             chord_shape, vst_state_path,
             groove_swing_amount, groove_swing_grid,
             groove_humanize_velocity, groove_humanize_timing,
-            groove_timing_offset_ms, groove_time_sig_num, groove_time_sig_denom
+            groove_timing_offset_ms, groove_time_sig_num, groove_time_sig_denom,
+            layer_octave_offset
          FROM tracks ORDER BY position",
     )?;
 
@@ -89,6 +86,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                 groove_timing_offset_ms: row.get(45)?,
                 groove_time_sig_num: row.get(46)?,
                 groove_time_sig_denom: row.get(47)?,
+                layer_octave_offset: row.get(48)?,
             })
         })?
         .collect::<SqlResult<_>>()?;
@@ -226,7 +224,6 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         inst.channel_strip.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
         inst.note_input.arpeggiator = arpeggiator;
         inst.note_input.chord_shape = chord_shape;
-        // Legacy legato fields are ignored — legato is now a NoteEffect in the processing chain
         if let SourceExtra::Vst {
             ref mut state_path, ..
         } = inst.source_extra
@@ -234,18 +231,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
             *state_path = r.vst_state_path.map(PathBuf::from);
         }
         inst.groove = groove;
-
-        // Layer octave offset (backward compat: column may not exist in old databases)
-        if has_layer_octave_offset {
-            let offset: i32 = conn
-                .query_row(
-                    "SELECT layer_octave_offset FROM tracks WHERE id = ?1",
-                    params![r.id],
-                    |row| row.get(0),
-                )
-                .unwrap_or(0);
-            inst.layer.octave_offset = offset.clamp(-4, 4) as i8;
-        }
+        inst.layer.octave_offset = r.layer_octave_offset.clamp(-4, 4) as i8;
 
         // Source params
         inst.source_params = load_params(conn, "track_source_params", "track_id", r.id)?;
@@ -256,9 +242,9 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         let mut filter = filter;
         let mut eq = eq;
 
-        // Build processing_chain: use persisted ordering if available, else legacy fallback
+        // Build processing_chain from persisted ordering
         inst.channel_strip.processing_chain.clear();
-        if table_exists(conn, "track_processing_chain")? {
+        {
             let mut ord_stmt = conn.prepare(
                 "SELECT stage_type, effect_id FROM track_processing_chain \
                  WHERE track_id = ?1 ORDER BY position",
@@ -269,75 +255,49 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                 })?
                 .collect::<SqlResult<_>>()?;
 
-            if ordering.is_empty() {
-                // No chain rows — use legacy order (filter → eq → effects)
-                if let Some(f) = filter.take() {
-                    inst.channel_strip
-                        .processing_chain
-                        .push(ProcessingStage::Filter(f));
-                }
-                if let Some(e) = eq.take() {
-                    inst.channel_strip
-                        .processing_chain
-                        .push(ProcessingStage::Eq(imbolc_types::EffectId::new(0), e));
-                }
-            } else {
-                for (stage_type, eff_id) in &ordering {
-                    match stage_type.as_str() {
-                        "filter" => {
-                            if let Some(f) = filter.take() {
-                                inst.channel_strip
-                                    .processing_chain
-                                    .push(ProcessingStage::Filter(f));
-                            }
+            for (stage_type, eff_id) in &ordering {
+                match stage_type.as_str() {
+                    "filter" => {
+                        if let Some(f) = filter.take() {
+                            inst.channel_strip
+                                .processing_chain
+                                .push(ProcessingStage::Filter(f));
                         }
-                        "eq" => {
-                            if let Some(e) = eq.take() {
-                                let eq_id = imbolc_types::EffectId::new(eff_id.unwrap_or(0));
-                                inst.channel_strip
-                                    .processing_chain
-                                    .push(ProcessingStage::Eq(eq_id, e));
-                            }
-                        }
-                        "effect" => {
-                            if let Some(eid) = eff_id {
-                                if let Some(idx) = effects
-                                    .iter()
-                                    .position(|e| e.id == imbolc_types::EffectId::new(*eid))
-                                {
-                                    inst.channel_strip
-                                        .processing_chain
-                                        .push(ProcessingStage::Effect(effects.remove(idx)));
-                                }
-                            }
-                        }
-                        "note_effect" => {
-                            if let Some(eid) = eff_id {
-                                if let Some(idx) = note_effects
-                                    .iter()
-                                    .position(|ne| ne.id == imbolc_types::EffectId::new(*eid))
-                                {
-                                    inst.channel_strip.processing_chain.push(
-                                        ProcessingStage::NoteEffect(note_effects.remove(idx)),
-                                    );
-                                }
-                            }
-                        }
-                        _ => {}
                     }
+                    "eq" => {
+                        if let Some(e) = eq.take() {
+                            let eq_id = imbolc_types::EffectId::new(eff_id.unwrap_or(0));
+                            inst.channel_strip
+                                .processing_chain
+                                .push(ProcessingStage::Eq(eq_id, e));
+                        }
+                    }
+                    "effect" => {
+                        if let Some(eid) = eff_id {
+                            if let Some(idx) = effects
+                                .iter()
+                                .position(|e| e.id == imbolc_types::EffectId::new(*eid))
+                            {
+                                inst.channel_strip
+                                    .processing_chain
+                                    .push(ProcessingStage::Effect(effects.remove(idx)));
+                            }
+                        }
+                    }
+                    "note_effect" => {
+                        if let Some(eid) = eff_id {
+                            if let Some(idx) = note_effects
+                                .iter()
+                                .position(|ne| ne.id == imbolc_types::EffectId::new(*eid))
+                            {
+                                inst.channel_strip
+                                    .processing_chain
+                                    .push(ProcessingStage::NoteEffect(note_effects.remove(idx)));
+                            }
+                        }
+                    }
+                    _ => {}
                 }
-            }
-        } else {
-            // Legacy fallback: filter → eq → effects
-            if let Some(f) = filter.take() {
-                inst.channel_strip
-                    .processing_chain
-                    .push(ProcessingStage::Filter(f));
-            }
-            if let Some(e) = eq.take() {
-                inst.channel_strip
-                    .processing_chain
-                    .push(ProcessingStage::Eq(imbolc_types::EffectId::new(0), e));
             }
         }
         // Append any effects not covered by ordering (defensive)
@@ -435,6 +395,7 @@ struct TrackRow {
     groove_timing_offset_ms: Option<f32>,
     groove_time_sig_num: Option<i32>,
     groove_time_sig_denom: Option<i32>,
+    layer_octave_offset: i32,
 }
 
 fn load_effects(
@@ -455,9 +416,6 @@ fn load_note_effects(
     conn: &Connection,
     track_id: u32,
 ) -> SqlResult<Vec<imbolc_types::NoteEffectSlot>> {
-    if !table_exists(conn, "track_note_effects")? {
-        return Ok(Vec::new());
-    }
     let mut stmt = conn.prepare(
         "SELECT effect_id, effect_type, enabled FROM track_note_effects \
          WHERE track_id = ?1 ORDER BY position",
@@ -484,11 +442,9 @@ fn load_note_effects(
         ne.enabled = enabled != 0;
 
         // Load params
-        if table_exists(conn, "track_note_effect_params")? {
-            let params = load_params(conn, "track_note_effect_params", "effect_id", eid)?;
-            if !params.is_empty() {
-                ne.params = params;
-            }
+        let params = load_params(conn, "track_note_effect_params", "effect_id", eid)?;
+        if !params.is_empty() {
+            ne.params = params;
         }
 
         result.push(ne);
@@ -502,28 +458,16 @@ fn load_sends(
 ) -> SqlResult<std::collections::BTreeMap<BusId, crate::state::track::MixerSend>> {
     use crate::state::track::MixerSend;
 
-    // Try with tap_point column first; fall back for old schemas
-    let has_tap_point = conn
-        .prepare("SELECT tap_point FROM track_sends LIMIT 0")
-        .is_ok();
-    let query = if has_tap_point {
-        "SELECT bus_id, level, enabled, tap_point FROM track_sends WHERE track_id = ?1 ORDER BY bus_id"
-    } else {
-        "SELECT bus_id, level, enabled FROM track_sends WHERE track_id = ?1 ORDER BY bus_id"
-    };
-    let mut stmt = conn.prepare(query)?;
+    let mut stmt = conn.prepare(
+        "SELECT bus_id, level, enabled, tap_point FROM track_sends WHERE track_id = ?1 ORDER BY bus_id",
+    )?;
     let sends = stmt
         .query_map(params![track_id], |row| {
-            let tap_point = if has_tap_point {
-                decode_tap_point(&row.get::<_, String>(3)?)
-            } else {
-                Default::default()
-            };
             let send = MixerSend {
                 bus_id: BusId::new(row.get::<_, i32>(0)? as u8),
                 level: row.get(1)?,
                 enabled: row.get::<_, i32>(2)? != 0,
-                tap_point,
+                tap_point: decode_tap_point(&row.get::<_, String>(3)?),
             };
             Ok((send.bus_id, send))
         })?

@@ -13,10 +13,7 @@ pub(crate) fn decode_key(s: &str) -> crate::state::music::Key {
         "A" => Key::A,
         "As" => Key::As,
         "B" => Key::B,
-        other => {
-            eprintln!("[imbolc] persistence: unknown Key '{}', using C", other);
-            Key::C
-        }
+        other => panic!("persistence: unknown Key '{other}'"),
     }
 }
 
@@ -34,13 +31,7 @@ pub(crate) fn decode_scale(s: &str) -> crate::state::music::Scale {
         "Pentatonic" => Scale::Pentatonic,
         "Blues" => Scale::Blues,
         "Chromatic" => Scale::Chromatic,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown Scale '{}', using Major",
-                other
-            );
-            Scale::Major
-        }
+        other => panic!("persistence: unknown Scale '{other}'"),
     }
 }
 
@@ -52,13 +43,7 @@ pub(crate) fn decode_tuning(s: &str) -> crate::state::music::Tuning {
         "ChordJI" => Tuning::ChordJI,
         "AdaptiveJI" => Tuning::AdaptiveJI,
         "GlobalJI" => Tuning::GlobalJI,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown Tuning '{}', using EqualTemperament",
-                other
-            );
-            Tuning::EqualTemperament
-        }
+        other => panic!("persistence: unknown Tuning '{other}'"),
     }
 }
 
@@ -68,13 +53,7 @@ pub(crate) fn decode_ji_flavor(s: &str) -> crate::state::music::JIFlavor {
         "FiveLimit" => JIFlavor::FiveLimit,
         "SevenLimit" => JIFlavor::SevenLimit,
         "Pythagorean" => JIFlavor::Pythagorean,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown JIFlavor '{}', using FiveLimit",
-                other
-            );
-            JIFlavor::FiveLimit
-        }
+        other => panic!("persistence: unknown JIFlavor '{other}'"),
     }
 }
 
@@ -150,13 +129,7 @@ pub(crate) fn decode_source_type(s: &str) -> crate::state::track::SourceType {
         "PitchedSampler" => SourceType::PitchedSampler,
         "TimeStretch" => SourceType::TimeStretch,
         "Kit" => SourceType::Kit,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown SourceType '{}', using Saw",
-                other
-            );
-            SourceType::Saw
-        }
+        other => panic!("persistence: unknown SourceType '{other}'"),
     }
 }
 
@@ -208,13 +181,7 @@ pub(crate) fn decode_effect_type(s: &str) -> crate::state::track::EffectType {
         "Denoise" => EffectType::Denoise,
         "Autotune" => EffectType::Autotune,
         "WahPedal" => EffectType::WahPedal,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown EffectType '{}', using Delay",
-                other
-            );
-            EffectType::Delay
-        }
+        other => panic!("persistence: unknown EffectType '{other}'"),
     }
 }
 
@@ -230,13 +197,7 @@ pub(crate) fn decode_filter_type(s: &str) -> crate::state::track::FilterType {
         "Vowel" => FilterType::Vowel,
         "ResDrive" => FilterType::ResDrive,
         "ParametricEq" => FilterType::ParametricEq,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown FilterType '{}', using Lpf",
-                other
-            );
-            FilterType::Lpf
-        }
+        other => panic!("persistence: unknown FilterType '{other}'"),
     }
 }
 
@@ -245,16 +206,10 @@ pub(crate) fn decode_eq_band_type(s: &str) -> crate::state::track::EqBandType {
     match s {
         "HighPass" => EqBandType::HighPass,
         "LowShelf" => EqBandType::LowShelf,
-        "Bell" | "Peaking" => EqBandType::Bell,
+        "Bell" => EqBandType::Bell,
         "HighShelf" => EqBandType::HighShelf,
         "LowPass" => EqBandType::LowPass,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown EqBandType '{}', using Bell",
-                other
-            );
-            EqBandType::Bell
-        }
+        other => panic!("persistence: unknown EqBandType '{other}'"),
     }
 }
 
@@ -265,13 +220,7 @@ pub(crate) fn decode_lfo_shape(s: &str) -> crate::state::track::LfoShape {
         "Square" => LfoShape::Square,
         "Saw" => LfoShape::Saw,
         "Triangle" => LfoShape::Triangle,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown LfoShape '{}', using Sine",
-                other
-            );
-            LfoShape::Sine
-        }
+        other => panic!("persistence: unknown LfoShape '{other}'"),
     }
 }
 
@@ -279,15 +228,8 @@ pub(crate) fn decode_parameter_target(s: &str) -> crate::state::track::Parameter
     use crate::state::track::ParameterTarget;
 
     if let Some(rest) = s.strip_prefix("SendLevel:bus:") {
-        // New format: "SendLevel:bus:N"
         if let Ok(id) = rest.parse::<u8>() {
             return ParameterTarget::SendLevel(imbolc_types::BusId::new(id));
-        }
-    }
-    if let Some(rest) = s.strip_prefix("SendLevel:") {
-        // Legacy format: "SendLevel:N" where N was a Vec index (0-based); bus ids are 1-based
-        if let Ok(idx) = rest.parse::<usize>() {
-            return ParameterTarget::SendLevel(imbolc_types::BusId::new((idx + 1) as u8));
         }
     }
     if let Some(rest) = s.strip_prefix("EffectParam:") {
@@ -378,13 +320,7 @@ pub(crate) fn decode_parameter_target(s: &str) -> crate::state::track::Parameter
         "HumanizeTiming" => ParameterTarget::HumanizeTiming,
         "TimingOffset" => ParameterTarget::TimingOffset,
         "TimeSignature" => ParameterTarget::TimeSignature,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown ParameterTarget '{}', using Level",
-                other
-            );
-            ParameterTarget::Level
-        }
+        other => panic!("persistence: unknown ParameterTarget '{other}'"),
     }
 }
 
@@ -404,13 +340,7 @@ pub(crate) fn decode_tap_point(s: &str) -> crate::state::track::SendTapPoint {
     match s {
         "PostInsert" => SendTapPoint::PostInsert,
         "PreInsert" => SendTapPoint::PreInsert,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown SendTapPoint '{}', using PostInsert",
-                other
-            );
-            SendTapPoint::PostInsert
-        }
+        other => panic!("persistence: unknown SendTapPoint '{other}'"),
     }
 }
 
@@ -419,13 +349,7 @@ pub(crate) fn decode_channel_config(s: &str) -> imbolc_types::ChannelConfig {
     match s {
         "Stereo" => ChannelConfig::Stereo,
         "Mono" => ChannelConfig::Mono,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown ChannelConfig '{}', using Stereo",
-                other
-            );
-            ChannelConfig::Stereo
-        }
+        other => panic!("persistence: unknown ChannelConfig '{other}'"),
     }
 }
 
@@ -436,13 +360,7 @@ pub(crate) fn decode_curve_type(s: &str) -> crate::state::automation::CurveType 
         "Exponential" => CurveType::Exponential,
         "Step" => CurveType::Step,
         "SCurve" => CurveType::SCurve,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown CurveType '{}', using Linear",
-                other
-            );
-            CurveType::Linear
-        }
+        other => panic!("persistence: unknown CurveType '{other}'"),
     }
 }
 
@@ -451,13 +369,7 @@ pub(crate) fn decode_play_mode(s: &str) -> crate::state::arrangement::PlayMode {
     match s {
         "Pattern" => PlayMode::Pattern,
         "Song" => PlayMode::Song,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown PlayMode '{}', using Pattern",
-                other
-            );
-            PlayMode::Pattern
-        }
+        other => panic!("persistence: unknown PlayMode '{other}'"),
     }
 }
 
@@ -468,13 +380,7 @@ pub(crate) fn decode_arp_direction(s: &str) -> crate::state::arpeggiator::ArpDir
         "Down" => ArpDirection::Down,
         "UpDown" => ArpDirection::UpDown,
         "Random" => ArpDirection::Random,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown ArpDirection '{}', using Up",
-                other
-            );
-            ArpDirection::Up
-        }
+        other => panic!("persistence: unknown ArpDirection '{other}'"),
     }
 }
 
@@ -485,13 +391,7 @@ pub(crate) fn decode_arp_rate(s: &str) -> crate::state::arpeggiator::ArpRate {
         "Quarter" => ArpRate::Quarter,
         "Sixteenth" => ArpRate::Sixteenth,
         "ThirtySecond" => ArpRate::ThirtySecond,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown ArpRate '{}', using Eighth",
-                other
-            );
-            ArpRate::Eighth
-        }
+        other => panic!("persistence: unknown ArpRate '{other}'"),
     }
 }
 
@@ -503,13 +403,7 @@ pub(crate) fn decode_glide_rate(s: &str) -> crate::state::arpeggiator::GlideRate
         "Eighth" => GlideRate::Eighth,
         "Sixteenth" => GlideRate::Sixteenth,
         "ThirtySecond" => GlideRate::ThirtySecond,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown GlideRate '{}', using Sixteenth",
-                other
-            );
-            GlideRate::Sixteenth
-        }
+        other => panic!("persistence: unknown GlideRate '{other}'"),
     }
 }
 
@@ -524,13 +418,7 @@ pub(crate) fn decode_chord_shape(s: &str) -> crate::state::arpeggiator::ChordSha
         "Sus4" => ChordShape::Sus4,
         "PowerChord" => ChordShape::PowerChord,
         "Octave" => ChordShape::Octave,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown ChordShape '{}', using Major",
-                other
-            );
-            ChordShape::Major
-        }
+        other => panic!("persistence: unknown ChordShape '{other}'"),
     }
 }
 
@@ -540,13 +428,7 @@ pub(crate) fn decode_swing_grid(s: &str) -> imbolc_types::state::groove::SwingGr
         "Eighths" => SwingGrid::Eighths,
         "Sixteenths" => SwingGrid::Sixteenths,
         "Both" => SwingGrid::Both,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown SwingGrid '{}', using Eighths",
-                other
-            );
-            SwingGrid::Eighths
-        }
+        other => panic!("persistence: unknown SwingGrid '{other}'"),
     }
 }
 
@@ -557,13 +439,7 @@ pub(crate) fn decode_step_resolution(s: &str) -> imbolc_types::StepResolution {
         "Quarter" => StepResolution::Quarter,
         "Eighth" => StepResolution::Eighth,
         "ThirtySecond" => StepResolution::ThirtySecond,
-        other => {
-            eprintln!(
-                "[imbolc] persistence: unknown StepResolution '{}', using Sixteenth",
-                other
-            );
-            StepResolution::Sixteenth
-        }
+        other => panic!("persistence: unknown StepResolution '{other}'"),
     }
 }
 

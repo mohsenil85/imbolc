@@ -256,7 +256,11 @@ impl PianoRollPane {
 
     /// Handle automation-specific keys that conflict with note-editor bindings.
     /// These use raw key inspection since the keybinding layer can't have duplicate keys.
-    fn handle_automation_raw_key(&mut self, event: &InputEvent, state: &AppState) -> Action {
+    pub(super) fn handle_automation_raw_key(
+        &mut self,
+        event: &InputEvent,
+        state: &AppState,
+    ) -> Action {
         match event.key {
             KeyCode::Char('d') => {
                 // Delete point

@@ -59,7 +59,7 @@ bindings = [
   { key = "Ctrl+k", action = "open_checkpoint_list", description = "Checkpoint list" },
 ]
 
-[layers.instrument]
+[layers.track_list]
 bindings = [
   { key = "q", action = "quit", description = "Quit the application" },
   { key = "Down", action = "next", description = "Next instrument", hint = "navigate" },

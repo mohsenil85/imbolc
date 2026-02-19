@@ -271,7 +271,7 @@ mod tests {
         // Should have layers
         assert!(layers.len() > 5);
         // Should have pane keymaps
-        assert!(pane_keymaps.contains_key("instrument"));
+        assert!(pane_keymaps.contains_key("track_list"));
         assert!(pane_keymaps.contains_key("mixer"));
         assert!(pane_keymaps.contains_key("piano_roll"));
     }

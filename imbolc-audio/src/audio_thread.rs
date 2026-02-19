@@ -1433,12 +1433,14 @@ impl AudioThread {
         );
         let now = Instant::now();
         self.delayed_feedback
-            .extend(delayed.into_iter().map(|(delay_secs, feedback)| {
-                DelayedFeedback {
-                    deliver_at: now + Duration::from_secs_f64(delay_secs),
-                    feedback,
-                }
-            }));
+            .extend(
+                delayed
+                    .into_iter()
+                    .map(|(delay_secs, feedback)| DelayedFeedback {
+                        deliver_at: now + Duration::from_secs_f64(delay_secs),
+                        feedback,
+                    }),
+            );
         super::arpeggiator_tick::tick_arpeggiator(
             &self.tracks,
             &self.session,

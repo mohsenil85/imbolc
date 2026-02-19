@@ -1,7 +1,8 @@
 use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 
 use super::decoders::*;
-use super::{load_effects_from, table_exists};
+use super::load_effects_from;
+use super::table_exists;
 use crate::state::session::SessionState;
 use imbolc_types::state::channel_strip::ChannelStrip;
 use imbolc_types::BusId;
@@ -10,8 +11,6 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
     use imbolc_types::MixerBus;
 
     session.mixer.buses.clear();
-
-    let has_bus_effects = table_exists(conn, "bus_effects")?;
 
     let mut stmt =
         conn.prepare("SELECT id, name, level, pan, mute, solo FROM mixer_buses ORDER BY id")?;
@@ -31,22 +30,20 @@ pub(super) fn load_mixer(conn: &Connection, session: &mut SessionState) -> SqlRe
 
     for bus in buses {
         let mut bus = bus?;
-        if has_bus_effects {
-            let effects = load_effects_from(
-                conn,
-                "bus_effects",
-                "bus_effect_params",
-                "bus_effect_vst_params",
-                "bus_id",
-                bus.id.get() as u32,
-            )?;
-            for effect in effects {
-                bus.channel_strip
-                    .processing_chain
-                    .push(imbolc_types::ProcessingStage::Effect(effect));
-            }
-            bus.channel_strip.recalculate_next_effect_id();
+        let effects = load_effects_from(
+            conn,
+            "bus_effects",
+            "bus_effect_params",
+            "bus_effect_vst_params",
+            "bus_id",
+            bus.id.get() as u32,
+        )?;
+        for effect in effects {
+            bus.channel_strip
+                .processing_chain
+                .push(imbolc_types::ProcessingStage::Effect(effect));
         }
+        bus.channel_strip.recalculate_next_effect_id();
         session.mixer.buses.push(bus);
     }
 

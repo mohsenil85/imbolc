@@ -333,6 +333,13 @@ impl Pane for PianoRollPane {
         self.handle_action_impl(action, event, state)
     }
 
+    fn handle_raw_input(&mut self, event: &InputEvent, state: &AppState) -> Action {
+        if self.automation_visible {
+            return self.handle_automation_raw_key(event, state);
+        }
+        Action::None
+    }
+
     fn handle_mouse(&mut self, event: &MouseEvent, area: Rect, state: &AppState) -> Action {
         self.handle_mouse_impl(event, area, state)
     }
