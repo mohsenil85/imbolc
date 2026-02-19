@@ -291,6 +291,19 @@ impl ReplParseable for EffectType {
     }
 }
 
+impl ReplParseable for NoteEffectType {
+    fn parse_repl(s: &str) -> Result<Self, String> {
+        match s {
+            "legato" => Ok(NoteEffectType::Legato),
+            "staccato" => Ok(NoteEffectType::Staccato),
+            _ => Err(format!("unknown articulation: {s} (try: legato, staccato)")),
+        }
+    }
+    fn type_hint() -> &'static str {
+        "<articulation>"
+    }
+}
+
 impl ReplParseable for FilterType {
     fn parse_repl(s: &str) -> Result<Self, String> {
         FilterType::from_name(s)

@@ -107,6 +107,24 @@ pub fn format_track_detail(state: &AppState, id: TrackId) -> String {
         }
     }
 
+    // Articulations
+    let note_effects: Vec<_> = inst.note_effects().collect();
+    if !note_effects.is_empty() {
+        lines.push("  Articulations:".to_string());
+        for ne in note_effects {
+            let bypass = if ne.enabled { "" } else { " [bypassed]" };
+            lines.push(format!(
+                "    - {} (id:{}){}",
+                ne.effect_type.name(),
+                ne.id,
+                bypass
+            ));
+            for (i, param) in ne.params.iter().enumerate() {
+                lines.push(format!("    {}: {} = {:?}", i, param.name, param.value));
+            }
+        }
+    }
+
     // EQ
     let eqs: Vec<_> = inst.eqs().collect();
     if eqs.is_empty() {

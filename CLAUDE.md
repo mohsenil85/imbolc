@@ -74,6 +74,8 @@ Each crate has its own `CLAUDE.md` with detailed guidance:
 1. Add variant to `Action` in `imbolc-types/src/action.rs`
 2. Return it from pane handler in `imbolc-ui/src/panes/`
 3. Handle it in `imbolc-core/src/dispatch/mod.rs`
+4. Add REPL command in `imbolc-ui/src/repl/registry.rs` (`repl_actions!` macro)
+5. Add `ReplParseable` impl in `imbolc-ui/src/repl/parse.rs` if using new argument types
 
 ### Adding a new pane
 1. Create in `imbolc-ui/src/panes/`
