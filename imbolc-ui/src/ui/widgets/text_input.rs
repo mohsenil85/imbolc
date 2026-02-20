@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::widgets::StatefulWidget;
@@ -69,6 +71,54 @@ impl TextInput {
     #[allow(dead_code)]
     pub fn is_focused(&self) -> bool {
         self.state.is_focused()
+    }
+
+    // -- Readline delegation methods --
+
+    /// Current cursor position (grapheme index)
+    pub fn cursor(&self) -> u32 {
+        self.state.cursor()
+    }
+
+    /// Text length in graphemes
+    pub fn len(&self) -> u32 {
+        self.state.len()
+    }
+
+    /// Move cursor to beginning of line (Ctrl+A)
+    pub fn move_to_line_start(&mut self) {
+        self.state.move_to_line_start(false);
+    }
+
+    /// Move cursor to end of line (Ctrl+E)
+    pub fn move_to_line_end(&mut self) {
+        self.state.move_to_line_end(false);
+    }
+
+    /// Set cursor position without extending selection
+    #[allow(dead_code)]
+    pub fn set_cursor(&mut self, pos: u32) {
+        self.state.set_cursor(pos, false);
+    }
+
+    /// Extract text from a grapheme range
+    pub fn str_slice(&self, range: Range<u32>) -> String {
+        self.state.str_slice(range).into_owned()
+    }
+
+    /// Delete a grapheme range
+    pub fn delete_range(&mut self, range: Range<u32>) {
+        self.state.delete_range(range);
+    }
+
+    /// Insert string at cursor position
+    pub fn insert_str(&mut self, s: &str) {
+        self.state.insert_str(s);
+    }
+
+    /// Find the start of the previous word from a position
+    pub fn prev_word_start(&self, pos: u32) -> u32 {
+        self.state.prev_word_start(pos)
     }
 
     /// Handle input, returns true if the event was consumed
@@ -203,5 +253,58 @@ mod tests {
         input.set_value("something");
         input.set_value("");
         assert_eq!(input.value(), "");
+    }
+
+    #[test]
+    fn cursor_and_len() {
+        let mut input = TextInput::new("");
+        input.set_focused(true);
+        input.set_value("hello");
+        assert_eq!(input.len(), 5);
+        // After set_value, cursor is at end
+        input.move_to_line_start();
+        assert_eq!(input.cursor(), 0);
+        input.move_to_line_end();
+        assert_eq!(input.cursor(), 5);
+    }
+
+    #[test]
+    fn set_cursor_position() {
+        let mut input = TextInput::new("");
+        input.set_focused(true);
+        input.set_value("abcde");
+        input.set_cursor(2);
+        assert_eq!(input.cursor(), 2);
+    }
+
+    #[test]
+    fn str_slice_extract() {
+        let mut input = TextInput::new("");
+        input.set_value("hello world");
+        assert_eq!(input.str_slice(0..5), "hello");
+        assert_eq!(input.str_slice(6..11), "world");
+    }
+
+    #[test]
+    fn delete_range_and_insert_str() {
+        let mut input = TextInput::new("");
+        input.set_focused(true);
+        input.set_value("hello world");
+        // Delete "world"
+        input.delete_range(6..11);
+        assert_eq!(input.value(), "hello ");
+        // Insert "rust" at cursor
+        input.move_to_line_end();
+        input.insert_str("rust");
+        assert_eq!(input.value(), "hello rust");
+    }
+
+    #[test]
+    fn prev_word_start_finds_boundary() {
+        let mut input = TextInput::new("");
+        input.set_value("hello world foo");
+        // From end of "foo" (pos 15), should find start of "foo" (pos 12)
+        let pos = input.prev_word_start(15);
+        assert!(pos < 15);
     }
 }

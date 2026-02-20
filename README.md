@@ -48,6 +48,7 @@ Most TUIs are an accessibility nightmare. Imbolc ships a full text-mode REPL wit
 
 - **Screen-reader friendly** — plain stdin/stdout, no visual UI required
 - **Tab completion** — context-aware completion with inline hints
+- **Readline Editing** - C-a, C-e, etc
 - **Built-in help** — `help`, `help <group>`, `help <group> <command>`
 - **Scriptable** — pipe a text file in for automated or headless music production
 - **Works anywhere** — over SSH, in containers, not that you'd want to
