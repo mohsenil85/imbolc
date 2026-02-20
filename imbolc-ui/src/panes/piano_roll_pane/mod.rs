@@ -416,7 +416,7 @@ impl Pane for PianoRollPane {
 mod tests {
     use super::*;
     use crate::state::AppState;
-    use crate::ui::action_id::PianoRollActionId;
+    use crate::ui::action_id::{ModeActionId, PianoRollActionId};
     use crate::ui::{InputEvent, KeyCode, Modifiers, Pane, PianoRollAction};
 
     fn dummy_event() -> InputEvent {
@@ -529,7 +529,7 @@ mod tests {
             &state,
         );
         assert!(pane.automation_visible);
-        assert!(!pane.automation_focus); // Notes keep focus initially
+        assert!(pane.automation_focus);
 
         // Toggle automation off
         pane.handle_action(
@@ -538,6 +538,23 @@ mod tests {
             &state,
         );
         assert!(!pane.automation_visible);
+    }
+
+    #[test]
+    fn automation_add_lane_key_works_even_if_mode_layer_consumes_char() {
+        let mut pane = PianoRollPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.automation_visible = true;
+        pane.automation_focus = true;
+
+        let event = InputEvent::new(KeyCode::Char('a'), Modifiers::default());
+        let action = pane.handle_action(ActionId::Mode(ModeActionId::PianoKey), &event, &state);
+        assert!(matches!(action, Action::None));
+        assert!(matches!(
+            pane.target_picker,
+            TargetPickerState::Active { .. }
+        ));
     }
 
     #[test]
