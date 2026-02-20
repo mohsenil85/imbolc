@@ -28,7 +28,9 @@ mod tests {
         SourceType,
     };
     use crate::state::AutomationTarget;
-    use imbolc_types::{BufferId, BusId, CustomSynthDefId, EffectId, ParamIndex, SliceId};
+    use imbolc_types::{
+        BufferId, BusId, CustomSynthDefId, EffectId, ParamIndex, SampleId, SampleRef, SliceId,
+    };
     use std::path::PathBuf;
 
     #[test]
@@ -111,7 +113,8 @@ mod tests {
         if let Some(inst) = tracks.track_mut(sampler_id) {
             if let Some(config) = inst.sampler_config_mut() {
                 config.buffer_id = Some(BufferId::new(77));
-                config.sample_name = Some("kick.wav".to_string());
+                config.sample_ref =
+                    Some(SampleRef::new(SampleId::default(), "kick.wav".to_string()));
                 config.loop_mode = true;
                 config.pitch_tracking = false;
                 let slice_id = config.add_slice(0.0, 0.5);
@@ -128,7 +131,11 @@ mod tests {
         if let Some(inst) = tracks.track_mut(kit_id) {
             if let Some(seq) = inst.drum_sequencer_mut() {
                 seq.pads[0].buffer_id = Some(BufferId::new(123));
-                seq.pads[0].path = Some("/tmp/kick.wav".to_string());
+                seq.pads[0].sample_ref = Some(SampleRef {
+                    id: SampleId::default(),
+                    name: "Kick".to_string(),
+                    cache_path: Some("/tmp/kick.wav".to_string()),
+                });
                 seq.pads[0].name = "Kick".to_string();
                 seq.pads[0].level = 0.9;
 
@@ -137,8 +144,11 @@ mod tests {
 
                 seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                     buffer_id: Some(BufferId::new(55)),
-                    path: Some("/tmp/chop.wav".to_string()),
-                    name: "Chop".to_string(),
+                    sample_ref: Some(SampleRef {
+                        id: SampleId::default(),
+                        name: "Chop".to_string(),
+                        cache_path: Some("/tmp/chop.wav".to_string()),
+                    }),
                     slices: vec![
                         Slice::new(SliceId::new(0), 0.0, 0.5),
                         Slice::new(SliceId::new(1), 0.5, 1.0),
@@ -320,7 +330,10 @@ mod tests {
             .unwrap();
         let config = loaded_sampler.sampler_config().unwrap();
         assert_eq!(config.buffer_id, Some(BufferId::new(77)));
-        assert_eq!(config.sample_name.as_deref(), Some("kick.wav"));
+        assert_eq!(
+            config.sample_ref.as_ref().map(|sr| sr.name.as_str()),
+            Some("kick.wav")
+        );
         assert!(config.loop_mode);
         assert!(!config.pitch_tracking);
         assert_eq!(config.slices.len(), 2);

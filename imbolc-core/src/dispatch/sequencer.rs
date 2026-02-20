@@ -181,29 +181,22 @@ pub(super) fn dispatch_sequencer(
             result
         }
         SequencerAction::LoadSampleResult(pad_idx, path) => {
-            // Copy to project assets if project is saved
-            let asset_path = if let Some(ref project_path) = state.project.path {
-                match super::helpers::copy_to_project_assets(path, project_path) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        return DispatchResult::with_status(
-                            audio.status(),
-                            format!("Asset copy failed: {}", e),
-                        );
-                    }
+            let sample_ref = match super::helpers::import_sample_blob(state, path) {
+                Ok(sr) => sr,
+                Err(e) => {
+                    return DispatchResult::with_status(
+                        audio.status(),
+                        format!("Import failed: {}", e),
+                    );
                 }
-            } else {
-                return DispatchResult::with_status(
-                    audio.status(),
-                    "Save project before importing samples",
-                );
             };
 
-            let path_str = asset_path.to_string_lossy().to_string();
-            let name = asset_path
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_default();
+            let name = sample_ref.name.clone();
+            let path_str = sample_ref
+                .cache_path
+                .as_deref()
+                .unwrap_or_default()
+                .to_string();
 
             // Allocate from global counter to avoid ID collisions after instrument deletion
             let buffer_id = state.tracks.next_sampler_buffer_id;
@@ -216,7 +209,7 @@ pub(super) fn dispatch_sequencer(
 
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     pad.buffer_id = Some(buffer_id);
-                    pad.path = Some(path_str);
+                    pad.sample_ref = Some(sample_ref);
                     pad.name = name;
                 }
             }
@@ -380,7 +373,7 @@ pub(super) fn dispatch_sequencer(
                 if let Some(pad) = seq.pads.get_mut(*pad_idx) {
                     // Clear sample source when switching to instrument
                     pad.buffer_id = None;
-                    pad.path = None;
+                    pad.sample_ref = None;
                     // Set instrument trigger
                     pad.instrument_id = Some(*instrument_id);
                     pad.trigger_freq = *freq;
@@ -518,31 +511,23 @@ pub(super) fn dispatch_sample_slicer(
             crate::action::FileSelectAction::LoadSlicerSample,
         )),
         SampleSlicerAction::LoadSampleResult(path) => {
-            // Copy to project assets if project is saved
-            let asset_path = if let Some(ref project_path) = state.project.path {
-                match super::helpers::copy_to_project_assets(path, project_path) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        return DispatchResult::with_status(
-                            audio.status(),
-                            format!("Asset copy failed: {}", e),
-                        );
-                    }
+            let sample_ref = match super::helpers::import_sample_blob(state, path) {
+                Ok(sr) => sr,
+                Err(e) => {
+                    return DispatchResult::with_status(
+                        audio.status(),
+                        format!("Import failed: {}", e),
+                    );
                 }
-            } else {
-                return DispatchResult::with_status(
-                    audio.status(),
-                    "Save project before importing samples",
-                );
             };
 
-            let path_str = asset_path.to_string_lossy().to_string();
-            let name = asset_path
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_default();
+            let path_str = sample_ref
+                .cache_path
+                .as_deref()
+                .unwrap_or_default()
+                .to_string();
 
-            // Compute waveform peaks from WAV file
+            // Compute waveform peaks from cached WAV file
             let (peaks, duration_secs) = compute_waveform_peaks(&path_str);
 
             // Allocate from global counter to avoid ID collisions after instrument deletion
@@ -557,8 +542,7 @@ pub(super) fn dispatch_sample_slicer(
                 let initial_slice = Slice::full(SliceId::new(0));
                 seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                     buffer_id: Some(buffer_id),
-                    path: Some(path_str),
-                    name,
+                    sample_ref: Some(sample_ref),
                     slices: vec![initial_slice],
                     selected_slice: 0,
                     next_slice_id: SliceId::new(1),
@@ -631,10 +615,15 @@ pub(super) fn dispatch_sample_slicer(
                         pad.buffer_id = buffer_id;
                         pad.slice_start = start;
                         pad.slice_end = end;
-                        // Copy name from chopper
+                        // Copy name and sample_ref from chopper
                         if let Some(chopper) = &seq.chopper {
-                            pad.name = format!("{} {}", chopper.name, chopper.selected_slice + 1);
-                            pad.path = chopper.path.clone();
+                            let chopper_name = chopper
+                                .sample_ref
+                                .as_ref()
+                                .map(|sr| sr.name.as_str())
+                                .unwrap_or("slice");
+                            pad.name = format!("{} {}", chopper_name, chopper.selected_slice + 1);
+                            pad.sample_ref = chopper.sample_ref.clone();
                         }
                     }
                 }
@@ -733,29 +722,25 @@ pub(super) fn dispatch_sample_slicer(
         SampleSlicerAction::CommitAll => {
             if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &seq.chopper {
+                    let chopper_sample_ref = chopper.sample_ref.clone();
+                    let chopper_name = chopper_sample_ref
+                        .as_ref()
+                        .map(|sr| sr.name.clone())
+                        .unwrap_or_default();
                     let assignments: Vec<_> = chopper
                         .slices
                         .iter()
                         .enumerate()
                         .take(crate::state::drum_sequencer::NUM_PADS)
-                        .map(|(i, s)| {
-                            (
-                                i,
-                                chopper.buffer_id,
-                                s.start,
-                                s.end,
-                                chopper.name.clone(),
-                                chopper.path.clone(),
-                            )
-                        })
+                        .map(|(i, s)| (i, chopper.buffer_id, s.start, s.end))
                         .collect();
-                    for (i, buffer_id, start, end, name, path) in assignments {
+                    for (i, buffer_id, start, end) in assignments {
                         if let Some(pad) = seq.pads.get_mut(i) {
                             pad.buffer_id = buffer_id;
                             pad.slice_start = start;
                             pad.slice_end = end;
-                            pad.name = format!("{} {}", name, i + 1);
-                            pad.path = path;
+                            pad.name = format!("{} {}", chopper_name, i + 1);
+                            pad.sample_ref = chopper_sample_ref.clone();
                         }
                     }
                 }

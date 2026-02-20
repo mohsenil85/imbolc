@@ -2,7 +2,7 @@ use crate::action::{AudioEffect, DispatchResult, NavIntent, PaneId, VstTarget};
 use crate::state::AppState;
 use imbolc_audio::commands::AudioFeedback;
 use imbolc_audio::AudioHandle;
-use imbolc_types::SourceExtra;
+use imbolc_types::{SampleRef, SourceExtra};
 
 pub fn dispatch_audio_feedback(
     feedback: &AudioFeedback,
@@ -63,20 +63,33 @@ pub fn dispatch_audio_feedback(
             result.stop_playback = true;
             result.reset_playhead = true;
 
-            // Copy rendered WAV to project assets if project is saved
-            let asset_path = if let Some(ref project_path) = state.project.path {
-                match super::helpers::copy_to_project_assets(path, project_path) {
-                    Ok(p) => p,
-                    Err(_) => path.clone(),
+            // Import rendered WAV into blob store
+            let sample_ref = match super::helpers::import_sample_blob(state, path) {
+                Ok(sr) => sr,
+                Err(_) => {
+                    // Fallback: use the original path directly
+                    let sample_id = state.tracks.next_sample_id;
+                    state.tracks.next_sample_id = sample_id.next();
+                    SampleRef {
+                        id: sample_id,
+                        name: path
+                            .file_stem()
+                            .map(|s| s.to_string_lossy().to_string())
+                            .unwrap_or_default(),
+                        cache_path: Some(path.to_string_lossy().to_string()),
+                    }
                 }
-            } else {
-                path.clone()
             };
+
+            let path_str = sample_ref
+                .cache_path
+                .as_deref()
+                .unwrap_or_default()
+                .to_string();
 
             // Convert instrument to PitchedSampler
             let buffer_id = state.tracks.next_sampler_buffer_id;
             state.tracks.next_sampler_buffer_id = buffer_id.next();
-            let path_str = asset_path.to_string_lossy().to_string();
             let _ = audio.load_sample(buffer_id, &path_str);
 
             if let Some(inst) = state.tracks.track_mut(*instrument_id) {
@@ -89,14 +102,11 @@ pub fn dispatch_audio_feedback(
                 }
             }
 
-            // Store sample_path in sampler config
+            // Store sample_ref in sampler config
             if let Some(inst) = state.tracks.track_mut(*instrument_id) {
                 if let Some(config) = inst.sampler_config_mut() {
-                    config.sample_path = Some(path_str.clone());
                     config.buffer_id = Some(buffer_id);
-                    config.sample_name = asset_path
-                        .file_stem()
-                        .map(|s| s.to_string_lossy().to_string());
+                    config.sample_ref = Some(sample_ref);
                 }
             }
 

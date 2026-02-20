@@ -42,7 +42,9 @@ CREATE TABLE IF NOT EXISTS session (
     click_muted INTEGER NOT NULL DEFAULT 0,
     -- tuning system
     tuning TEXT NOT NULL DEFAULT 'EqualTemperament',
-    ji_flavor TEXT NOT NULL DEFAULT 'FiveLimit'
+    ji_flavor TEXT NOT NULL DEFAULT 'FiveLimit',
+    -- sample blob store
+    next_sample_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS theme (
@@ -111,7 +113,7 @@ CREATE TABLE IF NOT EXISTS tracks (
     active INTEGER NOT NULL DEFAULT 1,
     output_target TEXT NOT NULL,
     channel_config TEXT NOT NULL DEFAULT 'Stereo',
-    convolution_ir_path TEXT,
+    convolution_ir_sample_id INTEGER,
     layer_group INTEGER,
     next_effect_id INTEGER NOT NULL DEFAULT 0,
     -- EQ
@@ -445,8 +447,7 @@ CREATE TABLE IF NOT EXISTS piano_roll_notes (
 CREATE TABLE IF NOT EXISTS sampler_configs (
     track_id INTEGER PRIMARY KEY,
     buffer_id INTEGER,
-    sample_name TEXT,
-    sample_path TEXT,
+    sample_id INTEGER,
     loop_mode INTEGER NOT NULL,
     pitch_tracking INTEGER NOT NULL,
     next_slice_id INTEGER NOT NULL,
@@ -558,7 +559,7 @@ CREATE TABLE IF NOT EXISTS drum_pads (
     track_id INTEGER NOT NULL,
     pad_index INTEGER NOT NULL,
     buffer_id INTEGER,
-    path TEXT,
+    sample_id INTEGER,
     name TEXT NOT NULL DEFAULT '',
     level REAL NOT NULL DEFAULT 0.8,
     slice_start REAL NOT NULL DEFAULT 0.0,
@@ -595,8 +596,7 @@ CREATE TABLE IF NOT EXISTS drum_steps (
 CREATE TABLE IF NOT EXISTS chopper_states (
     track_id INTEGER PRIMARY KEY,
     buffer_id INTEGER,
-    path TEXT,
-    name TEXT NOT NULL,
+    sample_id INTEGER,
     selected_slice INTEGER NOT NULL,
     next_slice_id INTEGER NOT NULL,
     duration_secs REAL NOT NULL,
@@ -739,6 +739,21 @@ CREATE TABLE IF NOT EXISTS arrangement_clip_automation_points (
     value REAL NOT NULL,
     curve_type TEXT NOT NULL DEFAULT 'Linear',
     PRIMARY KEY (lane_id, tick)
+);
+
+-- ============================================================
+-- Sample Blobs (content-addressed, persists across saves)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS sample_blobs (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    content_hash TEXT NOT NULL UNIQUE,
+    sample_rate INTEGER NOT NULL,
+    num_channels INTEGER NOT NULL,
+    num_frames INTEGER NOT NULL,
+    duration_secs REAL NOT NULL,
+    data BLOB NOT NULL
 );
 
 -- ============================================================

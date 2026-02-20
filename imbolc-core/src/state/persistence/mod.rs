@@ -1,12 +1,16 @@
 mod blob;
 pub mod checkpoint;
 pub mod load;
+mod migrate;
+pub mod sample_cache;
+pub mod sample_store;
 pub mod save;
 pub mod schema;
 #[cfg(test)]
 mod tests;
 
 pub use checkpoint::CheckpointInfo;
+pub use sample_cache::SampleCache;
 
 use std::path::Path;
 
@@ -25,6 +29,9 @@ pub fn save_project(path: &Path, session: &SessionState, tracks: &TrackState) ->
     let conn = SqlConnection::open(path)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
 
+    // Ensure sample_blobs exists before drop_all (it's excluded from drops)
+    sample_store::ensure_table(&conn)?;
+
     let tx = conn.unchecked_transaction()?;
     schema::drop_all_tables(&tx)?;
     schema::create_tables(&tx)?;
@@ -37,6 +44,12 @@ pub fn save_project(path: &Path, session: &SessionState, tracks: &TrackState) ->
 /// Load project from relational format.
 pub fn load_project(path: &Path) -> SqlResult<(SessionState, TrackState)> {
     let conn = SqlConnection::open(path)?;
+
+    // Ensure sample_blobs table exists (for legacy projects)
+    sample_store::ensure_table(&conn)?;
+
+    // Migrate legacy sample references (file paths -> blob IDs)
+    migrate::migrate_legacy_samples(&conn)?;
 
     let (mut session, tracks) = load::load_relational(&conn)?;
     session.recompute_next_bus_id();

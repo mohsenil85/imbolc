@@ -209,15 +209,9 @@ impl Pane for SampleSlicerPane {
 
         // Header info
         let filename = chopper
-            .path
+            .sample_ref
             .as_ref()
-            .map(|p| {
-                std::path::Path::new(p)
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string()
-            })
+            .map(|sr| sr.name.clone())
             .unwrap_or_else(|| "No Sample".to_string());
         buf.draw_line(
             Rect::new(content_x, content_y, rect.width.saturating_sub(4), 1),

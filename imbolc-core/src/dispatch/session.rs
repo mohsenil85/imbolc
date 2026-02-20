@@ -96,19 +96,15 @@ fn add_sampler_track_from_file(
     source_type: SourceType,
     sample_path: &std::path::Path,
 ) -> Result<TrackId, String> {
-    // Copy to project assets if project is saved
-    let asset_path = if let Some(ref project_path) = state.project.path {
-        super::helpers::copy_to_project_assets(sample_path, project_path)?
-    } else {
-        return Err("Save project before importing samples".to_string());
-    };
+    let sample_ref = super::helpers::import_sample_blob(state, sample_path)?;
+    let sample_name = sample_ref.name.clone();
+    let path_str = sample_ref
+        .cache_path
+        .as_deref()
+        .unwrap_or_default()
+        .to_string();
 
     let track_id = state.add_track(source_type);
-    let path_str = asset_path.to_string_lossy().to_string();
-    let sample_name = asset_path
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string());
-
     let buffer_id = state.tracks.next_sampler_buffer_id;
     state.tracks.next_sampler_buffer_id = buffer_id.next();
 
@@ -119,12 +115,9 @@ fn add_sampler_track_from_file(
     if let Some(track) = state.tracks.track_mut(track_id) {
         if let Some(config) = track.sampler_config_mut() {
             config.buffer_id = Some(buffer_id);
-            config.sample_name = sample_name.clone();
-            config.sample_path = Some(path_str);
+            config.sample_ref = Some(sample_ref);
         }
-        if let Some(name) = sample_name {
-            track.name = name;
-        }
+        track.name = sample_name;
     }
 
     Ok(track_id)
@@ -135,18 +128,13 @@ fn add_chopper_track_from_file(
     audio: &mut AudioHandle,
     sample_path: &std::path::Path,
 ) -> Result<TrackId, String> {
-    // Copy to project assets if project is saved
-    let asset_path = if let Some(ref project_path) = state.project.path {
-        super::helpers::copy_to_project_assets(sample_path, project_path)?
-    } else {
-        return Err("Save project before importing samples".to_string());
-    };
-
-    let path_str = asset_path.to_string_lossy().to_string();
-    let name = asset_path
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_else(|| "chop".to_string());
+    let sample_ref = super::helpers::import_sample_blob(state, sample_path)?;
+    let name = sample_ref.name.clone();
+    let path_str = sample_ref
+        .cache_path
+        .as_deref()
+        .unwrap_or_default()
+        .to_string();
     let (peaks, duration_secs) = super::helpers::compute_waveform_peaks(&path_str);
 
     let track_id = state.add_track(SourceType::Kit);
@@ -162,8 +150,7 @@ fn add_chopper_track_from_file(
         if let Some(seq) = track.drum_sequencer_mut() {
             seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                 buffer_id: Some(buffer_id),
-                path: Some(path_str),
-                name,
+                sample_ref: Some(sample_ref),
                 slices: vec![Slice::full(SliceId::new(0))],
                 selected_slice: 0,
                 next_slice_id: SliceId::new(1),
@@ -216,6 +203,9 @@ pub(super) fn dispatch_session(
             state.project.path = None;
             state.project.dirty = false;
             state.undo_history.clear();
+            if let Some(cache) = state.sample_cache.as_mut() {
+                cache.clear();
+            }
             result.audio_effects = AudioEffect::all();
             result.project_name = Some("untitled".to_string());
             result.push_nav(NavIntent::ConditionalPop(PaneId::Confirm));
@@ -1054,18 +1044,20 @@ mod tests {
     // -----------------------------------------------------------------------
 
     #[test]
-    fn cycle_theme_minimal_to_dark() {
+    fn cycle_theme_minimal_to_minimal_light() {
         let (mut state, mut audio, io_tx) = setup();
         assert_eq!(state.session.theme.name, "Minimal");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
-        assert_eq!(state.session.theme.name, "Dark");
+        assert_eq!(state.session.theme.name, "Minimal Light");
     }
 
     #[test]
     fn cycle_theme_dark_to_light() {
         let (mut state, mut audio, io_tx) = setup();
+        // Minimal → Minimal Light → Dark
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Dark");
 
@@ -1077,6 +1069,8 @@ mod tests {
     #[test]
     fn cycle_theme_light_to_high_contrast() {
         let (mut state, mut audio, io_tx) = setup();
+        // Minimal → Minimal Light → Dark → Light
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Light");
@@ -1089,7 +1083,8 @@ mod tests {
     #[test]
     fn cycle_theme_wraps_to_minimal() {
         let (mut state, mut audio, io_tx) = setup();
-        // Cycle through all four
+        // Cycle through all five
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);

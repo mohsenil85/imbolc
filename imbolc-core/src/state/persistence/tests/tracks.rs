@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use super::{load_project, save_project, temp_db_path};
+use super::{insert_test_blob, load_project, save_project, temp_db_path};
 use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
 use crate::state::session::SessionState;
 use crate::state::track::{SourceExtra, SourceType};
 use crate::state::track_state::TrackState;
-use imbolc_types::{BufferId, CustomSynthDefId, VstPluginId};
+use imbolc_types::{BufferId, CustomSynthDefId, SampleId, SampleRef, VstPluginId};
 
 #[test]
 fn round_trip_drum_sequencer() {
@@ -56,10 +56,11 @@ fn round_trip_sampler_config() {
     let mut tracks = TrackState::new();
     let sampler_id = tracks.add_track(SourceType::PitchedSampler);
 
+    let sample_id = SampleId::new(1);
     if let Some(inst) = tracks.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
             config.buffer_id = Some(BufferId::new(42));
-            config.sample_name = Some("test.wav".to_string());
+            config.sample_ref = Some(SampleRef::new(sample_id, "test.wav".to_string()));
             config.loop_mode = true;
             config.pitch_tracking = false;
             let slice_id = config.add_slice(0.0, 0.5);
@@ -74,6 +75,8 @@ fn round_trip_sampler_config() {
 
     let path = temp_db_path();
     save_project(&path, &session, &tracks).expect("save");
+    // Insert a sample_blobs row so the loader can look up the name
+    insert_test_blob(&path, sample_id, "test.wav");
     let (_, loaded_inst) = load_project(&path).expect("load");
 
     let loaded = loaded_inst
@@ -83,7 +86,10 @@ fn round_trip_sampler_config() {
         .unwrap();
     let config = loaded.sampler_config().unwrap();
     assert_eq!(config.buffer_id, Some(BufferId::new(42)));
-    assert_eq!(config.sample_name.as_deref(), Some("test.wav"));
+    assert_eq!(
+        config.sample_ref.as_ref().map(|sr| sr.name.as_str()),
+        Some("test.wav")
+    );
     assert!(config.loop_mode);
     assert!(!config.pitch_tracking);
     assert!(!config.slices.is_empty());

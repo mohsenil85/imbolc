@@ -164,14 +164,12 @@ pub(super) fn reduce(
             }
             true
         }
-        TrackAction::LoadSampleResult(instrument_id, path) => {
+        TrackAction::LoadSampleResult(instrument_id, _path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
             instruments.next_sampler_buffer_id = buffer_id.next();
-            let sample_name = path.file_stem().map(|s| s.to_string_lossy().to_string());
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
                 if let Some(config) = instrument.sampler_config_mut() {
                     config.buffer_id = Some(buffer_id);
-                    config.sample_name = sample_name;
                 }
             }
             true
@@ -277,7 +275,7 @@ pub(super) fn reduce(
             }
             true
         }
-        TrackAction::LoadIRResult(instrument_id, effect_id, path) => {
+        TrackAction::LoadIRResult(instrument_id, effect_id, _path) => {
             let buffer_id = instruments.next_sampler_buffer_id;
             instruments.next_sampler_buffer_id = buffer_id.next();
             if let Some(instrument) = instruments.track_mut(*instrument_id) {
@@ -286,7 +284,6 @@ pub(super) fn reduce(
                         param.value = crate::ParamValue::Int(buffer_id.get() as i32);
                     }
                 }
-                instrument.convolution_ir_path = Some(path.to_string_lossy().to_string());
             }
             true
         }

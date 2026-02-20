@@ -2,8 +2,30 @@
 
 #![allow(dead_code)]
 
-use crate::{BufferId, SliceId};
+use crate::{BufferId, SampleId, SliceId};
 use serde::{Deserialize, Serialize};
+
+/// Reference to a stored sample blob. The `id` identifies the blob in the
+/// project database; `name` is the display name (original filename stem).
+/// `cache_path` is populated at runtime with a temp file path for SuperCollider.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SampleRef {
+    pub id: SampleId,
+    pub name: String,
+    /// Temp file path for SC, populated at runtime (not persisted).
+    #[serde(skip)]
+    pub cache_path: Option<String>,
+}
+
+impl SampleRef {
+    pub fn new(id: SampleId, name: String) -> Self {
+        Self {
+            id,
+            name,
+            cache_path: None,
+        }
+    }
+}
 
 /// A loaded sample buffer
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,9 +103,8 @@ impl Slice {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SamplerConfig {
     pub buffer_id: Option<BufferId>,
-    pub sample_name: Option<String>,
-    /// Full path to the sample file (for reloading after project load)
-    pub sample_path: Option<String>,
+    /// Reference to the stored sample blob (replaces sample_path/sample_name).
+    pub sample_ref: Option<SampleRef>,
     pub slices: Vec<Slice>,
     pub selected_slice: usize,
     pub loop_mode: bool,
@@ -98,8 +119,7 @@ impl SamplerConfig {
         // Create a default full-buffer slice
         let mut config = Self {
             buffer_id: None,
-            sample_name: None,
-            sample_path: None,
+            sample_ref: None,
             slices: Vec::new(),
             selected_slice: 0,
             loop_mode: false,

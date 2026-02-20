@@ -27,6 +27,7 @@ pub use clipboard::{Clipboard, ClipboardContents, ClipboardNote};
 pub use custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
 pub use midi_connection::MidiConnectionState;
 pub use param::{adjust_freq_semitone, adjust_musical_step, is_freq_param, Param, ParamValue};
+pub use persistence::SampleCache;
 pub use sampler::{BufferId, SampleBuffer, SampleRegistry, SamplerConfig, Slice, SliceId};
 pub use session::{
     MixerSelection, MixerState, MusicalSettings, SessionState, DEFAULT_BUS_COUNT, MAX_BUSES,
@@ -66,6 +67,9 @@ pub struct AppState {
     pub midi: MidiConnectionState,
     /// Network collaboration context (None when running standalone)
     pub network: Option<NetworkDisplayContext>,
+    /// Sample blob cache — extracts blobs to temp files for SuperCollider.
+    /// Initialized when a project is opened/created.
+    pub sample_cache: Option<SampleCache>,
 }
 
 impl Default for AppState {
@@ -90,6 +94,7 @@ impl AppState {
             project: ProjectMeta::default(),
             midi: MidiConnectionState::default(),
             network: None,
+            sample_cache: None,
         }
     }
 
@@ -107,6 +112,7 @@ impl AppState {
             project: ProjectMeta::new_with_defaults(defaults),
             midi: MidiConnectionState::default(),
             network: None,
+            sample_cache: None,
         }
     }
 

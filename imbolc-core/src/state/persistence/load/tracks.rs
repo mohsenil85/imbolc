@@ -5,7 +5,7 @@ use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 use super::decoders::*;
 use super::{load_effects_from, load_params};
 use crate::state::track_state::TrackState;
-use imbolc_types::BusId;
+use imbolc_types::{BusId, SampleId, SampleRef};
 
 pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResult<()> {
     use crate::state::arpeggiator::ArpeggiatorConfig;
@@ -23,7 +23,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
             lfo_enabled, lfo_rate, lfo_depth, lfo_shape, lfo_target,
             amp_attack, amp_decay, amp_sustain, amp_release,
             polyphonic, level, pan, mute, solo, active,
-            output_target, channel_config, convolution_ir_path, layer_group,
+            output_target, channel_config, convolution_ir_sample_id, layer_group,
             next_effect_id, eq_enabled,
             arp_enabled, arp_direction, arp_rate, arp_octaves, arp_gate,
             legato_enabled, glide_rate,
@@ -66,7 +66,7 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
                 active: row.get(25)?,
                 output_target: row.get(26)?,
                 channel_config: row.get(27)?,
-                convolution_ir_path: row.get(28)?,
+                convolution_ir_sample_id: row.get(28)?,
                 layer_group: row.get(29)?,
                 next_effect_id: row.get(30)?,
                 eq_enabled: row.get(31)?,
@@ -219,7 +219,15 @@ pub(super) fn load_tracks(conn: &Connection, tracks: &mut TrackState) -> SqlResu
         inst.channel_strip.active = r.active != 0;
         inst.channel_strip.output_target = decode_output_target(&r.output_target);
         inst.channel_strip.channel_config = decode_channel_config(&r.channel_config);
-        inst.convolution_ir_path = r.convolution_ir_path;
+        inst.convolution_ir_sample = r.convolution_ir_sample_id.and_then(|sid| {
+            let sample_id = SampleId::new(sid);
+            let name = lookup_sample_name(conn, sample_id)?;
+            Some(SampleRef {
+                id: sample_id,
+                name,
+                cache_path: None,
+            })
+        });
         inst.layer.group = r.layer_group.map(imbolc_types::GroupId::new);
         inst.channel_strip.next_effect_id = imbolc_types::EffectId::new(r.next_effect_id);
         inst.note_input.arpeggiator = arpeggiator;
@@ -373,7 +381,7 @@ struct TrackRow {
     active: i32,
     output_target: String,
     channel_config: String,
-    convolution_ir_path: Option<String>,
+    convolution_ir_sample_id: Option<u32>,
     layer_group: Option<u32>,
     next_effect_id: u32,
     eq_enabled: Option<i32>,
@@ -570,42 +578,41 @@ fn load_sampler_config(
 ) -> SqlResult<Option<crate::state::sampler::SamplerConfig>> {
     use crate::state::sampler::{SamplerConfig, Slice};
 
-    let result = conn.query_row(
-        "SELECT buffer_id, sample_name, loop_mode, pitch_tracking, next_slice_id, selected_slice
+    let result = conn
+        .query_row(
+            "SELECT buffer_id, sample_id, loop_mode, pitch_tracking, next_slice_id, selected_slice
          FROM sampler_configs WHERE track_id = ?1",
-        params![track_id],
-        |row| {
-            Ok((
-                row.get::<_, Option<i64>>(0)?,
-                row.get::<_, Option<String>>(1)?,
-                row.get::<_, i32>(2)?,
-                row.get::<_, i32>(3)?,
-                row.get::<_, u32>(4)?,
-                row.get::<_, i32>(5)?,
-            ))
-        },
-    ).optional()?;
+            params![track_id],
+            |row| {
+                Ok((
+                    row.get::<_, Option<i64>>(0)?,
+                    row.get::<_, Option<u32>>(1)?,
+                    row.get::<_, i32>(2)?,
+                    row.get::<_, i32>(3)?,
+                    row.get::<_, u32>(4)?,
+                    row.get::<_, i32>(5)?,
+                ))
+            },
+        )
+        .optional()?;
 
-    let Some((buffer_id, sample_name, loop_mode, pitch_tracking, next_slice_id, selected_slice)) =
+    let Some((buffer_id, sample_id, loop_mode, pitch_tracking, next_slice_id, selected_slice)) =
         result
     else {
         return Ok(None);
     };
 
-    // sample_path column may not exist in older DBs
-    let sample_path: Option<String> = conn
-        .query_row(
-            "SELECT sample_path FROM sampler_configs WHERE track_id = ?1",
-            params![track_id],
-            |row| row.get(0),
-        )
-        .ok()
-        .flatten();
-
     let mut config = SamplerConfig::new();
     config.buffer_id = buffer_id.map(|id| imbolc_types::BufferId::new(id as u32));
-    config.sample_name = sample_name;
-    config.sample_path = sample_path;
+    config.sample_ref = sample_id.and_then(|sid| {
+        let id = SampleId::new(sid);
+        let name = lookup_sample_name(conn, id)?;
+        Some(SampleRef {
+            id,
+            name,
+            cache_path: None,
+        })
+    });
     config.loop_mode = loop_mode != 0;
     config.pitch_tracking = pitch_tracking != 0;
     config.set_next_slice_id(imbolc_types::SliceId::new(next_slice_id));
@@ -677,14 +684,14 @@ fn load_drum_sequencer(
 
     // Pads
     let mut pad_stmt = conn.prepare(
-        "SELECT pad_index, buffer_id, path, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq
+        "SELECT pad_index, buffer_id, sample_id, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq
          FROM drum_pads WHERE track_id = ?1 ORDER BY pad_index"
     )?;
     #[allow(clippy::type_complexity)]
     let pads: Vec<(
         usize,
         Option<i64>,
-        Option<String>,
+        Option<u32>,
         String,
         f32,
         f32,
@@ -714,7 +721,7 @@ fn load_drum_sequencer(
     for (
         idx,
         buffer_id,
-        path,
+        sample_id,
         name,
         level,
         slice_start,
@@ -727,7 +734,15 @@ fn load_drum_sequencer(
     {
         if idx < seq.pads.len() {
             seq.pads[idx].buffer_id = buffer_id.map(|id| imbolc_types::BufferId::new(id as u32));
-            seq.pads[idx].path = path;
+            seq.pads[idx].sample_ref = sample_id.and_then(|sid| {
+                let id = SampleId::new(sid);
+                let sample_name = lookup_sample_name(conn, id)?;
+                Some(SampleRef {
+                    id,
+                    name: sample_name,
+                    cache_path: None,
+                })
+            });
             seq.pads[idx].name = name;
             seq.pads[idx].level = level;
             seq.pads[idx].slice_start = slice_start;
@@ -809,23 +824,22 @@ fn load_chopper(
     use crate::state::sampler::Slice;
 
     let result = conn.query_row(
-        "SELECT buffer_id, path, name, selected_slice, next_slice_id, duration_secs, waveform_peaks
+        "SELECT buffer_id, sample_id, selected_slice, next_slice_id, duration_secs, waveform_peaks
          FROM chopper_states WHERE track_id = ?1",
         params![track_id],
         |row| {
             Ok((
                 row.get::<_, Option<i64>>(0)?,
-                row.get::<_, Option<String>>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, i32>(3)?,
-                row.get::<_, u32>(4)?,
-                row.get::<_, f32>(5)?,
-                row.get::<_, Option<Vec<u8>>>(6)?,
+                row.get::<_, Option<u32>>(1)?,
+                row.get::<_, i32>(2)?,
+                row.get::<_, u32>(3)?,
+                row.get::<_, f32>(4)?,
+                row.get::<_, Option<Vec<u8>>>(5)?,
             ))
         },
     ).optional()?;
 
-    let Some((buffer_id, path, name, selected_slice, next_slice_id, duration_secs, peaks_blob)) =
+    let Some((buffer_id, sample_id, selected_slice, next_slice_id, duration_secs, peaks_blob)) =
         result
     else {
         return Ok(None);
@@ -858,12 +872,30 @@ fn load_chopper(
 
     Ok(Some(SampleSlicerState {
         buffer_id: buffer_id.map(|id| imbolc_types::BufferId::new(id as u32)),
-        path,
-        name,
+        sample_ref: sample_id.and_then(|sid| {
+            let id = SampleId::new(sid);
+            let name = lookup_sample_name(conn, id)?;
+            Some(SampleRef {
+                id,
+                name,
+                cache_path: None,
+            })
+        }),
         slices,
         selected_slice: selected_slice as usize,
         next_slice_id: imbolc_types::SliceId::new(next_slice_id),
         waveform_peaks,
         duration_secs,
     }))
+}
+
+/// Look up a sample's display name from the `sample_blobs` table.
+/// Returns `None` if the sample_id doesn't exist (e.g. orphaned reference).
+fn lookup_sample_name(conn: &Connection, sample_id: SampleId) -> Option<String> {
+    conn.query_row(
+        "SELECT name FROM sample_blobs WHERE id = ?1",
+        params![sample_id.get() as i64],
+        |row| row.get(0),
+    )
+    .ok()
 }

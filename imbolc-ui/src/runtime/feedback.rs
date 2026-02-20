@@ -87,6 +87,20 @@ impl AppRuntime {
                                     state.project.path = Some(path.clone());
                                     state.project.dirty = false;
                                 }
+
+                                // Materialize sample blobs to temp files for SC
+                                if let Some(ref project_path) = state.project.path {
+                                    if let Ok(conn) = rusqlite::Connection::open(project_path) {
+                                        let cache = state.sample_cache.get_or_insert_with(|| {
+                                            state::SampleCache::in_temp_dir("project")
+                                        });
+                                        if let Err(e) =
+                                            cache.materialize_all(&conn, &mut state.tracks)
+                                        {
+                                            log::warn!("Failed to materialize sample cache: {}", e);
+                                        }
+                                    }
+                                }
                             }
                             if recovering_autosave {
                                 self.app_frame

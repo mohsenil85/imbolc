@@ -40,8 +40,8 @@ fn save_session(conn: &Connection, session: &SessionState, tracks: &TrackState) 
             next_track_id, next_sampler_buffer_id, selected_track, next_layer_group_id,
             humanize_velocity, humanize_timing,
             click_enabled, click_volume, click_muted,
-            tuning, ji_flavor)
-         VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            tuning, ji_flavor, next_sample_id)
+         VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
         params![
             session.bpm,
             session.time_signature.0,
@@ -61,6 +61,7 @@ fn save_session(conn: &Connection, session: &SessionState, tracks: &TrackState) 
             session.click_track.muted as i32,
             format!("{:?}", session.tuning),
             format!("{:?}", session.ji_flavor),
+            tracks.next_sample_id.get(),
         ],
     )?;
     Ok(())
@@ -207,7 +208,7 @@ fn save_instruments(conn: &Connection, tracks: &TrackState) -> SqlResult<()> {
             lfo_enabled, lfo_rate, lfo_depth, lfo_shape, lfo_target,
             amp_attack, amp_decay, amp_sustain, amp_release,
             polyphonic, level, pan, mute, solo, active,
-            output_target, channel_config, convolution_ir_path, layer_group,
+            output_target, channel_config, convolution_ir_sample_id, layer_group,
             next_effect_id, eq_enabled,
             arp_enabled, arp_direction, arp_rate, arp_octaves, arp_gate,
             legato_enabled, glide_rate,
@@ -295,7 +296,9 @@ fn save_instruments(conn: &Connection, tracks: &TrackState) -> SqlResult<()> {
             inst.channel_strip.active as i32,
             output_target,
             channel_config,
-            inst.convolution_ir_path.as_deref(),
+            inst.convolution_ir_sample
+                .as_ref()
+                .map(|sr| sr.id.get() as i64),
             inst.layer.group.map(|g| g.get()),
             inst.channel_strip.next_effect_id.get(),
             eq_enabled,
@@ -628,13 +631,12 @@ fn save_sampler_config(
     config: &crate::state::sampler::SamplerConfig,
 ) -> SqlResult<()> {
     conn.execute(
-        "INSERT INTO sampler_configs (track_id, buffer_id, sample_name, sample_path, loop_mode, pitch_tracking, next_slice_id, selected_slice)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO sampler_configs (track_id, buffer_id, sample_id, loop_mode, pitch_tracking, next_slice_id, selected_slice)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             track_id,
             config.buffer_id.map(|id| id.get() as i64),
-            config.sample_name.as_deref(),
-            config.sample_path.as_deref(),
+            config.sample_ref.as_ref().map(|sr| sr.id.get() as i64),
             config.loop_mode as i32,
             config.pitch_tracking as i32,
             config.next_slice_id().get(),
@@ -685,12 +687,12 @@ fn save_drum_sequencer(
     // Pads
     for (pad_idx, pad) in seq.pads.iter().enumerate() {
         conn.execute(
-            "INSERT INTO drum_pads (track_id, pad_index, buffer_id, path, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq)
+            "INSERT INTO drum_pads (track_id, pad_index, buffer_id, sample_id, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 track_id, pad_idx as i32,
                 pad.buffer_id.map(|id| id.get() as i64),
-                pad.path.as_deref(),
+                pad.sample_ref.as_ref().map(|sr| sr.id.get() as i64),
                 pad.name,
                 pad.level,
                 pad.slice_start,
@@ -742,13 +744,12 @@ fn save_drum_sequencer(
         };
 
         conn.execute(
-            "INSERT INTO chopper_states (track_id, buffer_id, path, name, selected_slice, next_slice_id, duration_secs, waveform_peaks)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO chopper_states (track_id, buffer_id, sample_id, selected_slice, next_slice_id, duration_secs, waveform_peaks)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 track_id,
                 chopper.buffer_id.map(|id| id.get() as i64),
-                chopper.path.as_deref(),
-                chopper.name,
+                chopper.sample_ref.as_ref().map(|sr| sr.id.get() as i64),
                 chopper.selected_slice as i32,
                 chopper.next_slice_id.get(),
                 chopper.duration_secs,

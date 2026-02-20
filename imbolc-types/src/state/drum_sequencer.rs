@@ -2,7 +2,7 @@
 
 use super::groove::GrooveConfig;
 use super::piano_roll::Note;
-use super::sampler::Slice;
+use super::sampler::{SampleRef, Slice};
 use crate::TrackId;
 use crate::{BufferId, SliceId};
 use serde::{Deserialize, Serialize};
@@ -90,8 +90,8 @@ impl Default for DrumStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SampleSlicerState {
     pub buffer_id: Option<BufferId>,
-    pub path: Option<String>,
-    pub name: String,
+    /// Reference to the stored sample blob (replaces path/name).
+    pub sample_ref: Option<SampleRef>,
     pub slices: Vec<Slice>,
     pub selected_slice: usize,
     pub next_slice_id: SliceId,
@@ -103,7 +103,8 @@ pub struct SampleSlicerState {
 pub struct DrumPad {
     // Sample source
     pub buffer_id: Option<BufferId>,
-    pub path: Option<String>,
+    /// Reference to the stored sample blob (replaces path).
+    pub sample_ref: Option<SampleRef>,
 
     // Track trigger (one-shot)
     #[serde(default)]
@@ -135,7 +136,7 @@ impl Default for DrumPad {
     fn default() -> Self {
         Self {
             buffer_id: None,
-            path: None,
+            sample_ref: None,
             instrument_id: None,
             trigger_freq: 440.0,
             name: String::new(),

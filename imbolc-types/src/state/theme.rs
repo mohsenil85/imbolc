@@ -356,12 +356,79 @@ impl Theme {
         }
     }
 
+    /// Minimal monochrome theme on a light background — color only for meters, recording, and playing
+    pub fn minimal_light() -> Self {
+        let mono = ThemeColor::new(100, 100, 100);
+        Self {
+            name: "Minimal Light".to_string(),
+
+            // Base
+            background: ThemeColor::new(240, 240, 240),
+            foreground: ThemeColor::new(60, 60, 60),
+            border: ThemeColor::new(180, 180, 180),
+
+            // Accent (monochrome)
+            accent: ThemeColor::new(50, 50, 50),
+            accent_secondary: ThemeColor::new(120, 120, 120),
+            dim: ThemeColor::new(180, 180, 180),
+
+            // Semantic (subtle muted tones for state readability)
+            selection_bg: ThemeColor::new(180, 190, 210),
+            selection_fg: ThemeColor::new(40, 40, 40),
+            muted: ThemeColor::new(180, 180, 180),
+            error: ThemeColor::new(160, 90, 90),
+            warning: ThemeColor::new(160, 140, 80),
+            success: ThemeColor::new(80, 140, 80),
+
+            // Track type indicators (subtle color for state)
+            mute_color: ThemeColor::new(160, 90, 90),
+            solo_color: ThemeColor::new(160, 145, 80),
+            bus_color: mono,
+            group_color: mono,
+            master_color: mono,
+
+            // Module types (all mono dark gray)
+            osc_color: mono,
+            filter_color: mono,
+            env_color: mono,
+            lfo_color: mono,
+            fx_color: mono,
+            sample_color: mono,
+            midi_color: mono,
+            audio_in_color: mono,
+            eq_color: mono,
+            custom_color: mono,
+            kit_color: mono,
+            bus_in_color: mono,
+            vst_color: mono,
+
+            // Meters — keep color for functional clarity
+            meter_low: ThemeColor::new(50, 180, 50),
+            meter_mid: ThemeColor::new(200, 180, 0),
+            meter_high: ThemeColor::new(200, 50, 50),
+
+            // Waveform gradient (light-to-dark grays)
+            waveform_gradient: [
+                ThemeColor::new(210, 210, 210),
+                ThemeColor::new(160, 160, 160),
+                ThemeColor::new(120, 120, 120),
+                ThemeColor::new(80, 80, 80),
+            ],
+
+            // Status — keep color for recording/playing
+            playing: ThemeColor::new(0, 255, 0),
+            recording: ThemeColor::new(255, 0, 0),
+            armed: ThemeColor::new(160, 90, 90),
+        }
+    }
+
     /// Get all built-in themes
     pub fn built_in_themes() -> Vec<Theme> {
         vec![
             Self::dark(),
             Self::light(),
             Self::minimal(),
+            Self::minimal_light(),
             Self::high_contrast(),
         ]
     }
@@ -387,11 +454,12 @@ mod tests {
     #[test]
     fn test_built_in_themes() {
         let themes = Theme::built_in_themes();
-        assert_eq!(themes.len(), 4);
+        assert_eq!(themes.len(), 5);
         assert_eq!(themes[0].name, "Dark");
         assert_eq!(themes[1].name, "Light");
         assert_eq!(themes[2].name, "Minimal");
-        assert_eq!(themes[3].name, "High Contrast");
+        assert_eq!(themes[3].name, "Minimal Light");
+        assert_eq!(themes[4].name, "High Contrast");
     }
 
     #[test]

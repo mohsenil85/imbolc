@@ -16,7 +16,7 @@ pub(super) fn load_session(
                 next_track_id, next_sampler_buffer_id, selected_track, next_layer_group_id,
                 humanize_velocity, humanize_timing,
                 click_enabled, click_volume, click_muted,
-                tuning, ji_flavor
+                tuning, ji_flavor, next_sample_id
          FROM session WHERE id = 1",
         [],
         |row| {
@@ -39,6 +39,7 @@ pub(super) fn load_session(
                 row.get::<_, i32>(15)?,
                 row.get::<_, String>(16)?,
                 row.get::<_, String>(17)?,
+                row.get::<_, u32>(18)?,
             ))
         },
     )?;
@@ -60,6 +61,7 @@ pub(super) fn load_session(
     session.click_track.muted = row.15 != 0;
     session.tuning = decode_tuning(&row.16);
     session.ji_flavor = decode_ji_flavor(&row.17);
+    tracks.next_sample_id = imbolc_types::SampleId::new(row.18);
 
     Ok(())
 }

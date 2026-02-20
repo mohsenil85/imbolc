@@ -1336,42 +1336,50 @@ impl AudioThread {
         use imbolc_types::{BufferId, EffectType, ParamValue};
 
         for instrument in &self.tracks.tracks {
-            // PitchedSampler / TimeStretch: sampler_config.buffer_id + sample_path
+            // PitchedSampler / TimeStretch: sampler_config.buffer_id + sample_ref.cache_path
             if let Some(config) = instrument.sampler_config() {
-                if let (Some(buffer_id), Some(path)) =
-                    (config.buffer_id, config.sample_path.as_ref())
-                {
-                    let _ = self.engine.load_sample(buffer_id, path);
+                if let (Some(buffer_id), Some(ref sr)) = (config.buffer_id, &config.sample_ref) {
+                    if let Some(ref path) = sr.cache_path {
+                        let _ = self.engine.load_sample(buffer_id, path);
+                    }
                 }
             }
 
-            // Drum Kit pads: pad.buffer_id + pad.path
+            // Drum Kit pads: pad.buffer_id + pad.sample_ref.cache_path
             if let Some(seq) = instrument.drum_sequencer() {
                 for pad in &seq.pads {
-                    if let (Some(buffer_id), Some(path)) = (pad.buffer_id, pad.path.as_ref()) {
-                        let _ = self.engine.load_sample(buffer_id, path);
+                    if let (Some(buffer_id), Some(ref sr)) = (pad.buffer_id, &pad.sample_ref) {
+                        if let Some(ref path) = sr.cache_path {
+                            let _ = self.engine.load_sample(buffer_id, path);
+                        }
                     }
                 }
 
-                // Chopper/Slicer: chopper.buffer_id + chopper.path
+                // Chopper/Slicer: chopper.buffer_id + chopper.sample_ref.cache_path
                 if let Some(chopper) = &seq.chopper {
-                    if let (Some(buffer_id), Some(path)) =
-                        (chopper.buffer_id, chopper.path.as_ref())
+                    if let (Some(buffer_id), Some(ref sr)) =
+                        (chopper.buffer_id, &chopper.sample_ref)
                     {
-                        let _ = self.engine.load_sample(buffer_id, path);
+                        if let Some(ref path) = sr.cache_path {
+                            let _ = self.engine.load_sample(buffer_id, path);
+                        }
                     }
                 }
             }
 
-            // ConvolutionReverb IR: ir_buffer param + convolution_ir_path
-            if let Some(ref ir_path) = instrument.convolution_ir_path {
-                for effect in instrument.effects() {
-                    if effect.effect_type == EffectType::ConvolutionReverb {
-                        if let Some(param) = effect.params.iter().find(|p| p.name == "ir_buffer") {
-                            if let ParamValue::Int(v) = param.value {
-                                if v >= 0 {
-                                    let buffer_id = BufferId::new(v as u32);
-                                    let _ = self.engine.load_sample(buffer_id, ir_path);
+            // ConvolutionReverb IR: ir_buffer param + convolution_ir_sample.cache_path
+            if let Some(ref ir_sample) = instrument.convolution_ir_sample {
+                if let Some(ref ir_path) = ir_sample.cache_path {
+                    for effect in instrument.effects() {
+                        if effect.effect_type == EffectType::ConvolutionReverb {
+                            if let Some(param) =
+                                effect.params.iter().find(|p| p.name == "ir_buffer")
+                            {
+                                if let ParamValue::Int(v) = param.value {
+                                    if v >= 0 {
+                                        let buffer_id = BufferId::new(v as u32);
+                                        let _ = self.engine.load_sample(buffer_id, ir_path);
+                                    }
                                 }
                             }
                         }

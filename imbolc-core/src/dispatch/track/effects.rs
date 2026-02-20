@@ -101,34 +101,34 @@ pub(super) fn handle_load_ir_result(
     effect_id: crate::state::EffectId,
     path: &std::path::Path,
 ) -> DispatchResult {
-    // Copy to project assets if project is saved
-    let asset_path = if let Some(ref project_path) = state.project.path {
-        match super::super::helpers::copy_to_project_assets(path, project_path) {
-            Ok(p) => p,
-            Err(e) => {
-                return DispatchResult::with_status(
-                    audio.status(),
-                    format!("Asset copy failed: {}", e),
-                );
-            }
+    let sample_ref = match super::super::helpers::import_sample_blob(state, path) {
+        Ok(sr) => sr,
+        Err(e) => {
+            return DispatchResult::with_status(audio.status(), format!("Import failed: {}", e));
         }
-    } else {
-        return DispatchResult::with_status(
-            audio.status(),
-            "Save project before importing samples",
-        );
     };
+
+    let path_str = sample_ref
+        .cache_path
+        .as_deref()
+        .unwrap_or_default()
+        .to_string();
 
     // Load sample into audio engine before reducer increments the buffer_id
     let buffer_id = state.tracks.next_sampler_buffer_id;
     if audio.is_running() {
-        let _ = audio.load_sample(buffer_id, &asset_path.to_string_lossy());
+        let _ = audio.load_sample(buffer_id, &path_str);
     }
 
     reduce(
         state,
-        &TrackAction::LoadIRResult(instrument_id, effect_id, asset_path),
+        &TrackAction::LoadIRResult(instrument_id, effect_id, path.to_path_buf()),
     );
+
+    // Set the convolution IR sample ref
+    if let Some(inst) = state.tracks.track_mut(instrument_id) {
+        inst.convolution_ir_sample = Some(sample_ref);
+    }
 
     let mut result = DispatchResult::with_nav(NavIntent::Pop);
     result.audio_effects.push(AudioEffect::RebuildInstruments);

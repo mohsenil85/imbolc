@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{load_project, save_project, temp_db_path};
+use super::{insert_test_blob, load_project, save_project, temp_db_path};
 use crate::state::custom_synthdef::{CustomSynthDef, CustomSynthDefRegistry, ParamSpec};
 use crate::state::param::ParamValue;
 use crate::state::sampler::Slice;
@@ -11,7 +11,10 @@ use crate::state::track::{
 };
 use crate::state::track_state::TrackState;
 use crate::state::AutomationTarget;
-use imbolc_types::{BufferId, BusId, CustomSynthDefId, EffectId, MixerSend, ParamIndex, SliceId};
+use imbolc_types::{
+    BufferId, BusId, CustomSynthDefId, EffectId, MixerSend, ParamIndex, SampleId, SampleRef,
+    SliceId,
+};
 
 #[test]
 fn save_and_load_round_trip_basic() {
@@ -179,11 +182,16 @@ fn save_and_load_round_trip_complex() {
         }
     }
 
+    // Sample IDs for blob references
+    let kick_sample_id = SampleId::new(1);
+    let pad_sample_id = SampleId::new(2);
+    let chop_sample_id = SampleId::new(3);
+
     // Sampler instrument: config and slices
     if let Some(inst) = tracks.track_mut(sampler_id) {
         if let Some(config) = inst.sampler_config_mut() {
             config.buffer_id = Some(BufferId::new(77));
-            config.sample_name = Some("kick.wav".to_string());
+            config.sample_ref = Some(SampleRef::new(kick_sample_id, "kick.wav".to_string()));
             config.loop_mode = true;
             config.pitch_tracking = false;
             let slice_id = config.add_slice(0.0, 0.5);
@@ -200,7 +208,11 @@ fn save_and_load_round_trip_complex() {
     if let Some(inst) = tracks.track_mut(kit_id) {
         if let Some(seq) = inst.drum_sequencer_mut() {
             seq.pads[0].buffer_id = Some(BufferId::new(123));
-            seq.pads[0].path = Some("/tmp/kick.wav".to_string());
+            seq.pads[0].sample_ref = Some(SampleRef {
+                id: pad_sample_id,
+                name: "Kick".to_string(),
+                cache_path: None,
+            });
             seq.pads[0].name = "Kick".to_string();
             seq.pads[0].level = 0.9;
 
@@ -209,8 +221,11 @@ fn save_and_load_round_trip_complex() {
 
             seq.chopper = Some(crate::state::drum_sequencer::SampleSlicerState {
                 buffer_id: Some(BufferId::new(55)),
-                path: Some("/tmp/chop.wav".to_string()),
-                name: "Chop".to_string(),
+                sample_ref: Some(SampleRef {
+                    id: chop_sample_id,
+                    name: "Chop".to_string(),
+                    cache_path: None,
+                }),
                 slices: vec![
                     Slice::new(SliceId::new(0), 0.0, 0.5),
                     Slice::new(SliceId::new(1), 0.5, 1.0),
@@ -264,6 +279,10 @@ fn save_and_load_round_trip_complex() {
 
     let path = temp_db_path();
     save_project(&path, &session, &tracks).expect("save_project");
+    // Insert sample_blobs rows so the loader can look up names by sample_id
+    insert_test_blob(&path, kick_sample_id, "kick.wav");
+    insert_test_blob(&path, pad_sample_id, "Kick");
+    insert_test_blob(&path, chop_sample_id, "Chop");
     let (loaded_session, loaded_instruments) = load_project(&path).expect("load_project");
 
     // Custom synthdefs
@@ -328,7 +347,10 @@ fn save_and_load_round_trip_complex() {
     assert!(matches!(loaded_sampler.source, SourceType::PitchedSampler));
     let config = loaded_sampler.sampler_config().unwrap();
     assert_eq!(config.buffer_id, Some(BufferId::new(77)));
-    assert_eq!(config.sample_name.as_deref(), Some("kick.wav"));
+    assert_eq!(
+        config.sample_ref.as_ref().map(|sr| sr.name.as_str()),
+        Some("kick.wav")
+    );
     assert!(config.loop_mode);
     assert!(!config.pitch_tracking);
     assert_eq!(config.selected_slice, 1);
@@ -350,7 +372,10 @@ fn save_and_load_round_trip_complex() {
     assert_eq!(seq.patterns[0].steps[0][0].velocity, 110);
     let chopper = seq.chopper.as_ref().unwrap();
     assert_eq!(chopper.buffer_id, Some(BufferId::new(55)));
-    assert_eq!(chopper.name, "Chop");
+    assert_eq!(
+        chopper.sample_ref.as_ref().map(|sr| sr.name.as_str()),
+        Some("Chop")
+    );
     assert_eq!(chopper.slices.len(), 2);
     assert_eq!(chopper.slices[0].name, "A");
 

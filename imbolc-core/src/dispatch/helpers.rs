@@ -1,59 +1,78 @@
 use crate::action::{AudioEffect, DispatchResult};
 use crate::state::automation::AutomationTarget;
+use crate::state::persistence::{sample_store, SampleCache};
 use crate::state::AppState;
+use imbolc_types::SampleRef;
+use rusqlite::Connection as SqlConnection;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Derive the assets directory for a project: foo.sqlite → foo_assets/
-pub fn assets_dir_for_project(project_path: &Path) -> PathBuf {
-    let stem = project_path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("project");
-    let parent = project_path.parent().unwrap_or(Path::new("."));
-    parent.join(format!("{}_assets", stem))
+/// Import a sample file into the project's blob store and materialize it
+/// to a temp file for SuperCollider.
+///
+/// Returns a `SampleRef` with `cache_path` populated and ready for SC.
+/// Advances `state.tracks.next_sample_id` if a new blob was inserted (dedup may skip).
+pub fn import_sample_blob(state: &mut AppState, path: &Path) -> Result<SampleRef, String> {
+    let project_path = state
+        .project
+        .path
+        .as_ref()
+        .ok_or_else(|| "Save project before importing samples".to_string())?;
+
+    let conn = SqlConnection::open(project_path)
+        .map_err(|e| format!("Failed to open project DB: {}", e))?;
+    sample_store::ensure_table(&conn).map_err(|e| e.to_string())?;
+
+    let next_id = state.tracks.next_sample_id;
+    let (mut sample_ref, consumed) = sample_store::import_sample(&conn, path, next_id)?;
+
+    if consumed {
+        state.tracks.next_sample_id = next_id.next();
+    }
+
+    // Materialize to temp file for SC
+    let cache = state
+        .sample_cache
+        .get_or_insert_with(|| SampleCache::in_temp_dir("project"));
+    let cache_path = cache.materialize_str(&conn, sample_ref.id)?;
+    sample_ref.cache_path = Some(cache_path);
+
+    Ok(sample_ref)
 }
 
-/// Copy a file into the project's assets directory.
-/// Returns the new absolute path. Deduplicates filenames with _1, _2, etc.
-/// Skips copy if source is already inside the assets dir.
-pub fn copy_to_project_assets(source: &Path, project_path: &Path) -> Result<PathBuf, String> {
-    let assets_dir = assets_dir_for_project(project_path);
-    std::fs::create_dir_all(&assets_dir)
-        .map_err(|e| format!("Failed to create assets dir: {}", e))?;
+/// Import raw WAV bytes into the project's blob store and materialize.
+///
+/// Same as `import_sample_blob` but takes in-memory bytes instead of a file path.
+#[allow(dead_code)]
+pub fn import_sample_blob_bytes(
+    state: &mut AppState,
+    name: &str,
+    data: &[u8],
+) -> Result<SampleRef, String> {
+    let project_path = state
+        .project
+        .path
+        .as_ref()
+        .ok_or_else(|| "Save project before importing samples".to_string())?;
 
-    // Skip if already inside assets dir
-    if let (Ok(canon_source), Ok(canon_assets)) = (source.canonicalize(), assets_dir.canonicalize())
-    {
-        if canon_source.starts_with(&canon_assets) {
-            return Ok(canon_source);
-        }
+    let conn = SqlConnection::open(project_path)
+        .map_err(|e| format!("Failed to open project DB: {}", e))?;
+    sample_store::ensure_table(&conn).map_err(|e| e.to_string())?;
+
+    let next_id = state.tracks.next_sample_id;
+    let (mut sample_ref, consumed) = sample_store::import_sample_bytes(&conn, name, data, next_id)?;
+
+    if consumed {
+        state.tracks.next_sample_id = next_id.next();
     }
 
-    let file_name = source
-        .file_name()
-        .ok_or_else(|| "Source has no filename".to_string())?;
-    let stem = source
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("sample");
-    let ext = source.extension().and_then(|e| e.to_str()).unwrap_or("wav");
+    let cache = state
+        .sample_cache
+        .get_or_insert_with(|| SampleCache::in_temp_dir("project"));
+    let cache_path = cache.materialize_str(&conn, sample_ref.id)?;
+    sample_ref.cache_path = Some(cache_path);
 
-    let mut dest = assets_dir.join(file_name);
-    let mut counter = 1u32;
-    while dest.exists() {
-        // Check if existing file is identical (same size)
-        if let (Ok(src_meta), Ok(dst_meta)) = (source.metadata(), dest.metadata()) {
-            if src_meta.len() == dst_meta.len() {
-                return Ok(dest);
-            }
-        }
-        dest = assets_dir.join(format!("{}_{}.{}", stem, counter, ext));
-        counter += 1;
-    }
-
-    std::fs::copy(source, &dest).map_err(|e| format!("Failed to copy sample to assets: {}", e))?;
-    Ok(dest)
+    Ok(sample_ref)
 }
 
 use super::automation::record_automation_point;
@@ -96,12 +115,7 @@ pub fn apply_layer_group_update(
     }
 }
 
-/// Compute waveform peaks from a WAV file for display
-pub fn compute_waveform_peaks(path: &str) -> (Vec<f32>, f32) {
-    let reader = match hound::WavReader::open(path) {
-        Ok(r) => r,
-        Err(_) => return (Vec::new(), 0.0),
-    };
+fn compute_peaks_from_reader<R: std::io::Read>(reader: hound::WavReader<R>) -> (Vec<f32>, f32) {
     let spec = reader.spec();
     let num_channels = spec.channels as usize;
     let sample_rate = spec.sample_rate;
@@ -133,6 +147,25 @@ pub fn compute_waveform_peaks(path: &str) -> (Vec<f32>, f32) {
     }
 
     (peaks, duration_secs)
+}
+
+/// Compute waveform peaks from in-memory WAV bytes for display.
+#[allow(dead_code)]
+pub fn compute_waveform_peaks_from_bytes(data: &[u8]) -> (Vec<f32>, f32) {
+    let reader = match hound::WavReader::new(std::io::Cursor::new(data)) {
+        Ok(r) => r,
+        Err(_) => return (Vec::new(), 0.0),
+    };
+    compute_peaks_from_reader(reader)
+}
+
+/// Compute waveform peaks from a WAV file for display.
+pub fn compute_waveform_peaks(path: &str) -> (Vec<f32>, f32) {
+    let reader = match hound::WavReader::open(path) {
+        Ok(r) => r,
+        Err(_) => return (Vec::new(), 0.0),
+    };
+    compute_peaks_from_reader(reader)
 }
 
 /// Append `segment` WAV samples to `target` WAV in-place.

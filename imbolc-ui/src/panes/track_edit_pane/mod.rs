@@ -72,7 +72,7 @@ impl TrackEditPane {
         self.source_params = instrument.source_params.clone();
         self.sample_name = instrument
             .sampler_config()
-            .and_then(|c| c.sample_name.clone());
+            .and_then(|c| c.sample_ref.as_ref().map(|sr| sr.name.clone()));
         self.processing_chain = instrument.channel_strip.processing_chain.clone();
         self.lfo = instrument.modulation.lfo.clone();
         self.amp_envelope = instrument.modulation.amp_envelope.clone();
@@ -93,7 +93,7 @@ impl TrackEditPane {
         self.source_params = instrument.source_params.clone();
         self.sample_name = instrument
             .sampler_config()
-            .and_then(|c| c.sample_name.clone());
+            .and_then(|c| c.sample_ref.as_ref().map(|sr| sr.name.clone()));
         self.processing_chain = instrument.channel_strip.processing_chain.clone();
         self.lfo = instrument.modulation.lfo.clone();
         self.amp_envelope = instrument.modulation.amp_envelope.clone();

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::drum_sequencer::DrumSequencerState;
 use super::track::{SourceType, Track};
-use crate::{BufferId, GroupId, TrackId};
+use crate::{BufferId, GroupId, SampleId, TrackId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrackState {
@@ -15,6 +15,9 @@ pub struct TrackState {
     pub next_id: TrackId,
     #[serde(default = "default_sampler_buffer_id")]
     pub next_sampler_buffer_id: BufferId,
+    /// Counter for allocating sample blob IDs
+    #[serde(default)]
+    pub next_sample_id: SampleId,
     /// Set by dispatch when editing a track; read by TrackEditPane on_enter
     #[serde(skip)]
     pub editing_track_id: Option<TrackId>,
@@ -32,6 +35,7 @@ impl TrackState {
             selected: None,
             next_id: TrackId::new(0),
             next_sampler_buffer_id: BufferId::new(20000),
+            next_sample_id: SampleId::default(),
             editing_track_id: None,
             next_layer_group_id: GroupId::new(0),
             id_index: HashMap::new(),

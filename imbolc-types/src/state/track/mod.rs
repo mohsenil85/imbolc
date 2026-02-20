@@ -21,7 +21,7 @@ use super::arpeggiator::{ArpeggiatorConfig, ChordShape};
 use super::channel_strip::ChannelStrip;
 use super::drum_sequencer::DrumSequencerState;
 use super::groove::GrooveConfig;
-use super::sampler::SamplerConfig;
+use super::sampler::{SampleRef, SamplerConfig};
 use crate::{BusId, EffectId, GroupId, Param, ParamIndex, TrackId};
 
 /// Source-type-specific configuration, enforcing mutual exclusivity at compile time.
@@ -437,8 +437,8 @@ pub struct Track {
     pub source_extra: SourceExtra,
     /// Arpeggiator and chord input configuration
     pub note_input: NoteInputConfig,
-    /// Path to loaded impulse response file for convolution reverb
-    pub convolution_ir_path: Option<String>,
+    /// Stored sample blob for convolution reverb impulse response.
+    pub convolution_ir_sample: Option<SampleRef>,
     /// Layer group membership and octave offset
     pub layer: LayerConfig,
     /// Per-track groove settings (swing, humanization, timing offset)
@@ -472,7 +472,7 @@ impl Track {
             channel_strip: ChannelStrip::new_instrument(!source.is_audio_input()),
             source_extra,
             note_input: NoteInputConfig::default(),
-            convolution_ir_path: None,
+            convolution_ir_sample: None,
             layer: LayerConfig::default(),
             groove: GrooveConfig::default(),
         }
@@ -560,7 +560,7 @@ impl Track {
     }
 
     /// Remove an effect by its EffectId. Returns true if removed.
-    /// Also clears convolution_ir_path if removing a ConvolutionReverb.
+    /// Also clears convolution_ir_sample if removing a ConvolutionReverb.
     pub fn remove_effect(&mut self, id: EffectId) -> bool {
         // Check if it's a convolution reverb before removing
         let is_conv = self
@@ -569,7 +569,7 @@ impl Track {
             .is_some_and(|e| e.effect_type == EffectType::ConvolutionReverb);
         if self.channel_strip.remove_effect(id) {
             if is_conv {
-                self.convolution_ir_path = None;
+                self.convolution_ir_sample = None;
             }
             true
         } else {
@@ -703,9 +703,9 @@ impl Track {
             .any(|e| e.effect_type == EffectType::ConvolutionReverb)
     }
 
-    pub fn convolution_ir(&self) -> Option<&str> {
+    pub fn convolution_ir_ref(&self) -> Option<&SampleRef> {
         if self.has_convolution_reverb() {
-            self.convolution_ir_path.as_deref()
+            self.convolution_ir_sample.as_ref()
         } else {
             None
         }
@@ -1432,34 +1432,43 @@ mod tests {
     fn convolution_ir_none_without_effect() {
         let inst = Track::new(TrackId::new(1), SourceType::Saw);
         assert!(!inst.has_convolution_reverb());
-        assert!(inst.convolution_ir().is_none());
+        assert!(inst.convolution_ir_ref().is_none());
     }
 
     #[test]
-    fn convolution_ir_some_with_effect_and_path() {
+    fn convolution_ir_some_with_effect_and_sample() {
         let mut inst = Track::new(TrackId::new(1), SourceType::Saw);
         inst.add_effect(EffectType::ConvolutionReverb);
-        inst.convolution_ir_path = Some("/path/to/ir.wav".to_string());
+        inst.convolution_ir_sample = Some(SampleRef::new(
+            crate::SampleId::new(1),
+            "ir.wav".to_string(),
+        ));
         assert!(inst.has_convolution_reverb());
-        assert_eq!(inst.convolution_ir(), Some("/path/to/ir.wav"));
+        assert_eq!(inst.convolution_ir_ref().unwrap().name, "ir.wav");
     }
 
     #[test]
-    fn remove_convolution_reverb_clears_ir_path() {
+    fn remove_convolution_reverb_clears_ir_sample() {
         let mut inst = Track::new(TrackId::new(1), SourceType::Saw);
         let id = inst.add_effect(EffectType::ConvolutionReverb);
-        inst.convolution_ir_path = Some("/path/to/ir.wav".to_string());
+        inst.convolution_ir_sample = Some(SampleRef::new(
+            crate::SampleId::new(1),
+            "ir.wav".to_string(),
+        ));
         assert!(inst.remove_effect(id));
-        assert!(inst.convolution_ir_path.is_none());
+        assert!(inst.convolution_ir_sample.is_none());
     }
 
     #[test]
-    fn remove_non_convolution_effect_preserves_ir_path() {
+    fn remove_non_convolution_effect_preserves_ir_sample() {
         let mut inst = Track::new(TrackId::new(1), SourceType::Saw);
         inst.add_effect(EffectType::ConvolutionReverb);
-        inst.convolution_ir_path = Some("/path/to/ir.wav".to_string());
+        inst.convolution_ir_sample = Some(SampleRef::new(
+            crate::SampleId::new(1),
+            "ir.wav".to_string(),
+        ));
         let delay_id = inst.add_effect(EffectType::Delay);
         assert!(inst.remove_effect(delay_id));
-        assert_eq!(inst.convolution_ir_path.as_deref(), Some("/path/to/ir.wav"));
+        assert!(inst.convolution_ir_sample.is_some());
     }
 }

@@ -247,3 +247,5 @@ define_id!(/// Unique identifier for a sample buffer.
     BufferId);
 define_id!(/// Unique identifier for a sample slice.
     SliceId);
+define_id!(/// Unique identifier for a stored sample blob.
+    SampleId);
