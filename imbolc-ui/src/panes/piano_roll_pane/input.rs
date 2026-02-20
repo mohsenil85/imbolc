@@ -31,12 +31,26 @@ impl PianoRollPane {
         state: &AppState,
     ) -> Action {
         match action {
-            // Piano mode actions always pass through (from piano layer)
-            ActionId::Mode(_) => self.handle_piano_mode_action(action, event, state),
             // Target picker intercepts all actions
             _ if matches!(self.target_picker, TargetPickerState::Active { .. }) => {
                 self.handle_target_picker_action(action, event, state)
             }
+            // When automation is visible, let automation command keys win over
+            // piano/pad performance key events from mode layers.
+            ActionId::Mode(mode_action @ (ModeActionId::PianoKey | ModeActionId::PadKey))
+                if self.automation_visible =>
+            {
+                if matches!(
+                    event.key,
+                    KeyCode::Char('d' | 'c' | 'C' | 'a' | 'x' | 'e' | 'r' | 'R')
+                ) {
+                    self.handle_automation_raw_key(event, state)
+                } else {
+                    self.handle_piano_mode_action(ActionId::Mode(mode_action), event, state)
+                }
+            }
+            // Piano mode actions always pass through (from piano layer)
+            ActionId::Mode(_) => self.handle_piano_mode_action(action, event, state),
             // Automation focus routes to automation handler
             _ if self.automation_visible && self.automation_focus => {
                 self.handle_automation_action(action, event, state)
@@ -615,7 +629,7 @@ impl PianoRollPane {
             ActionId::PianoRoll(PianoRollActionId::ToggleAutomation) => {
                 self.automation_visible = !self.automation_visible;
                 if self.automation_visible {
-                    self.automation_focus = false; // Start with notes focused
+                    self.automation_focus = true;
                     self.automation_cursor_tick = self.cursor_tick;
                 } else {
                     self.automation_focus = false;
