@@ -9,7 +9,36 @@
 
 Write beats, layer synthesizers, shape sounds with effects, mix tracks, record finished songs, annoy your neighbors, all from the comfort of your terminal.
 
-<!-- ![Imbolc screenshot](docs/assets/screenshot.png) -->
+![Track View](docs/assets/track-view.png)
+
+<details>
+<summary>More screenshots</summary>
+
+### Piano Roll & Automation
+![Piano Roll](docs/assets/piano-roll.png)
+
+### Mixer
+![Mixer](docs/assets/mixer.png)
+
+### Instrument Editor
+![Instrument Editor](docs/assets/instrument-editor.png)
+
+### Drum Sequencer
+![Drum Sequencer](docs/assets/drum-sequencer.png)
+
+### Generative Engine
+![Generative Engine](docs/assets/generative-engine.png)
+
+### Audio Input
+![Audio Input](docs/assets/audio-input.png)
+
+### Add Track
+![Add Track](docs/assets/add-track.png)
+
+### REPL
+![REPL](docs/assets/repl.png)
+
+</details>
 
 ## Highlights
 
