@@ -69,6 +69,7 @@ Write beats, layer synthesizers, shape sounds with effects, mix tracks, record f
 - **Just intonation** — 5 tuning systems (12-TET, scale JI, chord JI, adaptive JI, global JI) with 3 JI flavors (5-limit, 7-limit, Pythagorean)
 - **Per-pad groove** — independent swing, timing offset, humanization, and time signature per pad
 - **Generative composition** — Euclidean rhythms, Markov chains, and L-systems with macro controls for density, chaos, energy, and motion
+- **Harmonic Snap** - No think.  Just midi.
 
 
 ### Accessible REPL
