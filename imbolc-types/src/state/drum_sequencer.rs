@@ -1,5 +1,7 @@
 //! Drum sequencer types.
 
+use std::collections::HashSet;
+
 use super::groove::GrooveConfig;
 use super::piano_roll::Note;
 use super::sampler::{SampleRef, Slice};
@@ -119,6 +121,9 @@ pub struct DrumPad {
     pub slice_end: f32,   // 0.0-1.0, default 1.0
     pub reverse: bool,    // play sample backwards
     pub pitch: i8,        // semitone offset, -24 to +24
+    /// Total sample duration in seconds (set on load, used for reverse pre-triggering)
+    #[serde(default)]
+    pub duration_secs: f32,
     /// Per-pad groove overrides (swing, humanize, timing)
     #[serde(default)]
     pub groove: GrooveConfig,
@@ -145,6 +150,7 @@ impl Default for DrumPad {
             slice_end: 1.0,
             reverse: false,
             pitch: 0,
+            duration_secs: 0.0,
             groove: GrooveConfig::default(),
         }
     }
@@ -210,6 +216,10 @@ pub struct DrumSequencerState {
     /// The pad whose groove is being edited (for groove pane modal)
     #[serde(skip)]
     pub groove_editing_pad: Option<usize>,
+    /// Tracks (pad_idx, target_step) pairs that have been pre-triggered for reverse playback.
+    /// Cleared when the target step passes or sequencer stops.
+    #[serde(skip)]
+    pub reverse_fired: HashSet<(usize, usize)>,
 }
 
 impl DrumSequencerState {
@@ -234,6 +244,7 @@ impl DrumSequencerState {
             step_resolution: StepResolution::default(),
             midi_base_note: 36,
             groove_editing_pad: None,
+            reverse_fired: HashSet::new(),
         }
     }
 

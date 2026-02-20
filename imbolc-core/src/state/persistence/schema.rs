@@ -568,6 +568,7 @@ CREATE TABLE IF NOT EXISTS drum_pads (
     pitch INTEGER NOT NULL DEFAULT 0,
     trigger_track_id INTEGER,
     trigger_freq REAL NOT NULL DEFAULT 440.0,
+    duration_secs REAL NOT NULL DEFAULT 0.0,
     PRIMARY KEY (track_id, pad_index)
 );
 

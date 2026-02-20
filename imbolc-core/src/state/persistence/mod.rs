@@ -51,6 +51,9 @@ pub fn load_project(path: &Path) -> SqlResult<(SessionState, TrackState)> {
     // Migrate legacy sample references (file paths -> blob IDs)
     migrate::migrate_legacy_samples(&conn)?;
 
+    // Add duration_secs column to drum_pads if missing
+    migrate::migrate_drum_pad_duration(&conn)?;
+
     let (mut session, tracks) = load::load_relational(&conn)?;
     session.recompute_next_bus_id();
     Ok((session, tracks))

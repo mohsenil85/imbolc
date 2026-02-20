@@ -211,6 +211,10 @@ pub(super) fn dispatch_sequencer(
                     pad.buffer_id = Some(buffer_id);
                     pad.sample_ref = Some(sample_ref);
                     pad.name = name;
+
+                    // Compute sample duration for reverse pre-triggering
+                    let (_, duration) = compute_waveform_peaks(&path_str);
+                    pad.duration_secs = duration;
                 }
             }
 
@@ -615,7 +619,7 @@ pub(super) fn dispatch_sample_slicer(
                         pad.buffer_id = buffer_id;
                         pad.slice_start = start;
                         pad.slice_end = end;
-                        // Copy name and sample_ref from chopper
+                        // Copy name, sample_ref, and duration from chopper
                         if let Some(chopper) = &seq.chopper {
                             let chopper_name = chopper
                                 .sample_ref
@@ -624,6 +628,7 @@ pub(super) fn dispatch_sample_slicer(
                                 .unwrap_or("slice");
                             pad.name = format!("{} {}", chopper_name, chopper.selected_slice + 1);
                             pad.sample_ref = chopper.sample_ref.clone();
+                            pad.duration_secs = chopper.duration_secs;
                         }
                     }
                 }
@@ -723,6 +728,7 @@ pub(super) fn dispatch_sample_slicer(
             if let Some(seq) = state.tracks.selected_drum_sequencer_mut() {
                 if let Some(chopper) = &seq.chopper {
                     let chopper_sample_ref = chopper.sample_ref.clone();
+                    let chopper_duration = chopper.duration_secs;
                     let chopper_name = chopper_sample_ref
                         .as_ref()
                         .map(|sr| sr.name.clone())
@@ -741,6 +747,7 @@ pub(super) fn dispatch_sample_slicer(
                             pad.slice_end = end;
                             pad.name = format!("{} {}", chopper_name, i + 1);
                             pad.sample_ref = chopper_sample_ref.clone();
+                            pad.duration_secs = chopper_duration;
                         }
                     }
                 }

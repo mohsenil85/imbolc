@@ -687,8 +687,8 @@ fn save_drum_sequencer(
     // Pads
     for (pad_idx, pad) in seq.pads.iter().enumerate() {
         conn.execute(
-            "INSERT INTO drum_pads (track_id, pad_index, buffer_id, sample_id, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO drum_pads (track_id, pad_index, buffer_id, sample_id, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq, duration_secs)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 track_id, pad_idx as i32,
                 pad.buffer_id.map(|id| id.get() as i64),
@@ -701,6 +701,7 @@ fn save_drum_sequencer(
                 pad.pitch as i32,
                 pad.instrument_id.map(|id| id.get() as i64),
                 pad.trigger_freq,
+                pad.duration_secs,
             ],
         )?;
     }

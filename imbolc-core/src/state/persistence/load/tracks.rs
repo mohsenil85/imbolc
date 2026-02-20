@@ -684,7 +684,7 @@ fn load_drum_sequencer(
 
     // Pads
     let mut pad_stmt = conn.prepare(
-        "SELECT pad_index, buffer_id, sample_id, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq
+        "SELECT pad_index, buffer_id, sample_id, name, level, slice_start, slice_end, reverse, pitch, trigger_track_id, trigger_freq, duration_secs
          FROM drum_pads WHERE track_id = ?1 ORDER BY pad_index"
     )?;
     #[allow(clippy::type_complexity)]
@@ -700,6 +700,7 @@ fn load_drum_sequencer(
         i32,
         Option<i64>,
         f32,
+        f32,
     )> = pad_stmt
         .query_map(params![track_id], |row| {
             Ok((
@@ -714,6 +715,7 @@ fn load_drum_sequencer(
                 row.get(8)?,
                 row.get(9)?,
                 row.get(10)?,
+                row.get(11)?,
             ))
         })?
         .collect::<SqlResult<_>>()?;
@@ -730,6 +732,7 @@ fn load_drum_sequencer(
         pitch,
         trigger_inst,
         trigger_freq,
+        duration_secs,
     ) in pads
     {
         if idx < seq.pads.len() {
@@ -752,6 +755,7 @@ fn load_drum_sequencer(
             seq.pads[idx].instrument_id =
                 trigger_inst.map(|id| imbolc_types::TrackId::new(id as u32));
             seq.pads[idx].trigger_freq = trigger_freq;
+            seq.pads[idx].duration_secs = duration_secs;
         }
     }
 

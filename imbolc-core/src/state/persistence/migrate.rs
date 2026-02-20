@@ -30,6 +30,17 @@ fn add_column_if_missing(conn: &Connection, table: &str, column: &str, col_type:
     conn.execute_batch(&sql).is_ok()
 }
 
+/// Add `duration_secs` column to `drum_pads` if missing (idempotent).
+pub fn migrate_drum_pad_duration(conn: &Connection) -> SqlResult<()> {
+    add_column_if_missing(
+        conn,
+        "drum_pads",
+        "duration_secs",
+        "REAL NOT NULL DEFAULT 0.0",
+    );
+    Ok(())
+}
+
 /// Migrate a legacy project's sample references from file paths to blob IDs.
 ///
 /// Detects old schema by checking for `sample_path` in `sampler_configs`.

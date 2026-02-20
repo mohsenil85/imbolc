@@ -602,6 +602,7 @@ impl AudioThread {
                                 new_seq.current_step = old_seq.current_step;
                                 new_seq.step_accumulator = old_seq.step_accumulator;
                                 new_seq.last_played_step = old_seq.last_played_step;
+                                new_seq.reverse_fired = old_seq.reverse_fired.clone();
                             }
                         }
                     }
