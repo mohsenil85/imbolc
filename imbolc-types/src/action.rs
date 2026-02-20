@@ -688,8 +688,12 @@ pub enum SessionAction {
     AdjustHumanizeVelocity(f32),
     AdjustHumanizeTiming(f32),
     ToggleMasterMute,
-    /// Cycle through available themes (dark -> light -> high contrast)
+    /// Cycle through available themes
     NextTheme,
+    /// Set theme by name (built-in or user-defined)
+    SetThemeByName(String),
+    /// Export a theme as a TOML file to ~/.config/imbolc/themes/
+    ExportTheme(String),
     /// Create a named checkpoint (persistent restore point)
     CreateCheckpoint(String),
     /// Restore project state to a checkpoint

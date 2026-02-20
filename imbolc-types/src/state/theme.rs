@@ -4,12 +4,73 @@
 
 use serde::{Deserialize, Serialize};
 
-/// RGB color representation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// RGB color representation.
+///
+/// Serializes as `[r, g, b]` array for concise TOML output.
+/// Deserializes from both `[r, g, b]` array and `{r, g, b}` struct formats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ThemeColor {
     pub r: u8,
     pub g: u8,
     pub b: u8,
+}
+
+impl Serialize for ThemeColor {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        (self.r, self.g, self.b).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ThemeColor {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de;
+
+        struct ThemeColorVisitor;
+
+        impl<'de> de::Visitor<'de> for ThemeColorVisitor {
+            type Value = ThemeColor;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("[r, g, b] array or {r, g, b} map")
+            }
+
+            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                let r = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &"3"))?;
+                let g = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &"3"))?;
+                let b = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(2, &"3"))?;
+                Ok(ThemeColor { r, g, b })
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                let mut r = None;
+                let mut g = None;
+                let mut b = None;
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "r" => r = Some(map.next_value()?),
+                        "g" => g = Some(map.next_value()?),
+                        "b" => b = Some(map.next_value()?),
+                        _ => {
+                            let _ = map.next_value::<de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ThemeColor {
+                    r: r.ok_or_else(|| de::Error::missing_field("r"))?,
+                    g: g.ok_or_else(|| de::Error::missing_field("g"))?,
+                    b: b.ok_or_else(|| de::Error::missing_field("b"))?,
+                })
+            }
+        }
+
+        deserializer.deserialize_any(ThemeColorVisitor)
+    }
 }
 
 impl ThemeColor {
@@ -495,5 +556,32 @@ mod tests {
         let last_idx = themes.len() - 1;
         let next_idx = (last_idx + 1) % themes.len();
         assert_eq!(next_idx, 0);
+    }
+
+    #[test]
+    fn theme_color_serde_array_round_trip() {
+        let color = ThemeColor::new(10, 20, 30);
+        let json = serde_json::to_string(&color).unwrap();
+        assert_eq!(json, "[10,20,30]");
+        let back: ThemeColor = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, color);
+    }
+
+    #[test]
+    fn theme_color_deserialize_struct_format() {
+        let json = r#"{"r":100,"g":200,"b":50}"#;
+        let color: ThemeColor = serde_json::from_str(json).unwrap();
+        assert_eq!(color, ThemeColor::new(100, 200, 50));
+    }
+
+    #[test]
+    fn full_theme_toml_round_trip() {
+        let theme = Theme::dark();
+        let toml_str = toml::to_string_pretty(&theme).unwrap();
+        let back: Theme = toml::from_str(&toml_str).unwrap();
+        assert_eq!(back.name, theme.name);
+        assert_eq!(back.background, theme.background);
+        assert_eq!(back.accent, theme.accent);
+        assert_eq!(back.waveform_gradient, theme.waveform_gradient);
     }
 }

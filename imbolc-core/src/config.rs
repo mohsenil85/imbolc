@@ -137,13 +137,22 @@ impl Config {
             .clamp(1, 10_080)
     }
 
-    /// Get the configured theme, falling back to Minimal.
+    /// Get the configured theme, checking built-ins then user themes, falling back to Minimal.
     pub fn theme(&self) -> imbolc_types::state::theme::Theme {
-        self.runtime
-            .theme
-            .as_deref()
-            .and_then(imbolc_types::state::theme::Theme::from_name)
-            .unwrap_or_default()
+        let Some(name) = self.runtime.theme.as_deref() else {
+            return imbolc_types::state::theme::Theme::default();
+        };
+        // Check built-ins first
+        if let Some(t) = imbolc_types::state::theme::Theme::from_name(name) {
+            return t;
+        }
+        // Check user themes
+        for t in load_user_themes() {
+            if t.name.eq_ignore_ascii_case(name) {
+                return t;
+            }
+        }
+        imbolc_types::state::theme::Theme::default()
     }
 
     /// Persist the theme name to the user config file.
@@ -167,6 +176,243 @@ impl Config {
 
 fn user_config_path() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("imbolc").join("config.toml"))
+}
+
+/// Path to user-defined theme files: `~/.config/imbolc/themes/`
+pub fn user_themes_dir() -> Option<PathBuf> {
+    dirs::config_dir().map(|d| d.join("imbolc").join("themes"))
+}
+
+// ============================================================================
+// User-defined TOML theme files
+// ============================================================================
+
+use imbolc_types::state::theme::{Theme, ThemeColor};
+
+/// Deserialization-only struct for user theme files.
+/// All color fields are optional to support partial overrides via `extends`.
+#[derive(Deserialize)]
+struct ThemeFile {
+    name: String,
+    #[serde(default)]
+    extends: Option<String>,
+
+    // Base colors
+    background: Option<ThemeColor>,
+    foreground: Option<ThemeColor>,
+    border: Option<ThemeColor>,
+
+    // Accent colors
+    accent: Option<ThemeColor>,
+    accent_secondary: Option<ThemeColor>,
+    dim: Option<ThemeColor>,
+
+    // Semantic UI colors
+    selection_bg: Option<ThemeColor>,
+    selection_fg: Option<ThemeColor>,
+    muted: Option<ThemeColor>,
+    error: Option<ThemeColor>,
+    warning: Option<ThemeColor>,
+    success: Option<ThemeColor>,
+
+    // Track type indicator colors
+    mute_color: Option<ThemeColor>,
+    solo_color: Option<ThemeColor>,
+    bus_color: Option<ThemeColor>,
+    group_color: Option<ThemeColor>,
+    master_color: Option<ThemeColor>,
+
+    // Module type colors
+    osc_color: Option<ThemeColor>,
+    filter_color: Option<ThemeColor>,
+    env_color: Option<ThemeColor>,
+    lfo_color: Option<ThemeColor>,
+    fx_color: Option<ThemeColor>,
+    sample_color: Option<ThemeColor>,
+    midi_color: Option<ThemeColor>,
+    audio_in_color: Option<ThemeColor>,
+    eq_color: Option<ThemeColor>,
+    custom_color: Option<ThemeColor>,
+    kit_color: Option<ThemeColor>,
+    bus_in_color: Option<ThemeColor>,
+    vst_color: Option<ThemeColor>,
+
+    // Meter colors
+    meter_low: Option<ThemeColor>,
+    meter_mid: Option<ThemeColor>,
+    meter_high: Option<ThemeColor>,
+
+    // Waveform gradient
+    waveform_gradient: Option<[ThemeColor; 4]>,
+
+    // Status colors
+    playing: Option<ThemeColor>,
+    recording: Option<ThemeColor>,
+    armed: Option<ThemeColor>,
+}
+
+impl ThemeFile {
+    /// Overlay non-None fields onto a base theme, producing a complete Theme.
+    fn apply_to(self, base: &Theme) -> Theme {
+        Theme {
+            name: self.name,
+            background: self.background.unwrap_or(base.background),
+            foreground: self.foreground.unwrap_or(base.foreground),
+            border: self.border.unwrap_or(base.border),
+            accent: self.accent.unwrap_or(base.accent),
+            accent_secondary: self.accent_secondary.unwrap_or(base.accent_secondary),
+            dim: self.dim.unwrap_or(base.dim),
+            selection_bg: self.selection_bg.unwrap_or(base.selection_bg),
+            selection_fg: self.selection_fg.unwrap_or(base.selection_fg),
+            muted: self.muted.unwrap_or(base.muted),
+            error: self.error.unwrap_or(base.error),
+            warning: self.warning.unwrap_or(base.warning),
+            success: self.success.unwrap_or(base.success),
+            mute_color: self.mute_color.unwrap_or(base.mute_color),
+            solo_color: self.solo_color.unwrap_or(base.solo_color),
+            bus_color: self.bus_color.unwrap_or(base.bus_color),
+            group_color: self.group_color.unwrap_or(base.group_color),
+            master_color: self.master_color.unwrap_or(base.master_color),
+            osc_color: self.osc_color.unwrap_or(base.osc_color),
+            filter_color: self.filter_color.unwrap_or(base.filter_color),
+            env_color: self.env_color.unwrap_or(base.env_color),
+            lfo_color: self.lfo_color.unwrap_or(base.lfo_color),
+            fx_color: self.fx_color.unwrap_or(base.fx_color),
+            sample_color: self.sample_color.unwrap_or(base.sample_color),
+            midi_color: self.midi_color.unwrap_or(base.midi_color),
+            audio_in_color: self.audio_in_color.unwrap_or(base.audio_in_color),
+            eq_color: self.eq_color.unwrap_or(base.eq_color),
+            custom_color: self.custom_color.unwrap_or(base.custom_color),
+            kit_color: self.kit_color.unwrap_or(base.kit_color),
+            bus_in_color: self.bus_in_color.unwrap_or(base.bus_in_color),
+            vst_color: self.vst_color.unwrap_or(base.vst_color),
+            meter_low: self.meter_low.unwrap_or(base.meter_low),
+            meter_mid: self.meter_mid.unwrap_or(base.meter_mid),
+            meter_high: self.meter_high.unwrap_or(base.meter_high),
+            waveform_gradient: self.waveform_gradient.unwrap_or(base.waveform_gradient),
+            playing: self.playing.unwrap_or(base.playing),
+            recording: self.recording.unwrap_or(base.recording),
+            armed: self.armed.unwrap_or(base.armed),
+        }
+    }
+}
+
+/// Load user-defined themes from `~/.config/imbolc/themes/*.toml`.
+/// Resolves `extends` chains (built-in lookup first, then already-loaded user themes).
+/// Logs warnings for malformed files. Detects circular extends.
+pub fn load_user_themes() -> Vec<Theme> {
+    let Some(dir) = user_themes_dir() else {
+        return vec![];
+    };
+    if !dir.exists() {
+        return vec![];
+    }
+
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return vec![];
+    };
+
+    // First pass: parse all theme files
+    let mut theme_files: Vec<(String, ThemeFile)> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("toml") {
+            continue;
+        }
+        match std::fs::read_to_string(&path) {
+            Ok(contents) => match toml::from_str::<ThemeFile>(&contents) {
+                Ok(tf) => {
+                    let name = tf.name.clone();
+                    theme_files.push((name, tf));
+                }
+                Err(e) => {
+                    log::warn!(target: "config", "ignoring malformed theme {}: {}", path.display(), e);
+                }
+            },
+            Err(e) => {
+                log::warn!(target: "config", "could not read theme {}: {}", path.display(), e);
+            }
+        }
+    }
+
+    // Second pass: resolve extends chains
+    let built_ins = Theme::built_in_themes();
+    let mut resolved: Vec<Theme> = Vec::new();
+
+    // We need multiple passes since a user theme might extend another user theme
+    let mut remaining = theme_files;
+    let max_passes = remaining.len() + 1; // prevent infinite loops
+    for _ in 0..max_passes {
+        if remaining.is_empty() {
+            break;
+        }
+        let mut still_remaining = Vec::new();
+        let mut made_progress = false;
+        for (name, tf) in remaining {
+            match &tf.extends {
+                None => {
+                    // No extends — use Minimal as implicit base
+                    resolved.push(tf.apply_to(&Theme::default()));
+                    made_progress = true;
+                }
+                Some(base_name) => {
+                    // Look up base in built-ins first, then in already-resolved user themes
+                    let base = built_ins
+                        .iter()
+                        .find(|t| t.name.eq_ignore_ascii_case(base_name))
+                        .or_else(|| {
+                            resolved
+                                .iter()
+                                .find(|t| t.name.eq_ignore_ascii_case(base_name))
+                        });
+                    match base {
+                        Some(b) => {
+                            resolved.push(tf.apply_to(b));
+                            made_progress = true;
+                        }
+                        None => {
+                            still_remaining.push((name, tf));
+                        }
+                    }
+                }
+            }
+        }
+        remaining = still_remaining;
+        if !made_progress {
+            // Circular or unresolvable extends
+            for (name, _) in &remaining {
+                log::warn!(target: "config", "theme '{}' has unresolvable extends chain", name);
+            }
+            break;
+        }
+    }
+
+    resolved
+}
+
+/// All available themes: built-in themes followed by user-defined themes.
+pub fn all_themes() -> Vec<Theme> {
+    let mut themes = Theme::built_in_themes();
+    themes.extend(load_user_themes());
+    themes
+}
+
+/// Serialize a theme to pretty TOML for export.
+pub fn export_theme_toml(theme: &Theme) -> String {
+    toml::to_string_pretty(theme).unwrap_or_default()
+}
+
+/// Write a theme TOML file to the user themes directory.
+/// Creates the directory if it doesn't exist. Returns the path on success.
+pub fn save_theme_file(name: &str, content: &str) -> Result<PathBuf, String> {
+    let dir =
+        user_themes_dir().ok_or_else(|| "could not determine config directory".to_string())?;
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("could not create themes directory: {}", e))?;
+    let filename = name.to_lowercase().replace(' ', "-") + ".toml";
+    let path = dir.join(filename);
+    std::fs::write(&path, content).map_err(|e| format!("could not write theme file: {}", e))?;
+    Ok(path)
 }
 
 fn merge_defaults(base: &mut DefaultsConfig, user: DefaultsConfig) {
@@ -374,5 +620,65 @@ mod tests {
             Some(KeyboardLayout::Colemak)
         );
         assert_eq!(parse_keyboard_layout("unknown"), None);
+    }
+
+    #[test]
+    fn export_theme_toml_round_trip() {
+        use imbolc_types::state::theme::Theme;
+        let theme = Theme::dark();
+        let toml_str = export_theme_toml(&theme);
+        assert!(toml_str.contains("name = \"Dark\""));
+        assert!(toml_str.contains("background"));
+        // Should deserialize back
+        let back: Theme = toml::from_str(&toml_str).unwrap();
+        assert_eq!(back.name, "Dark");
+        assert_eq!(back.background, theme.background);
+    }
+
+    #[test]
+    fn all_themes_includes_built_ins() {
+        let themes = all_themes();
+        // At minimum, all 5 built-ins
+        assert!(themes.len() >= 5);
+        assert_eq!(themes[0].name, "Dark");
+        assert_eq!(themes[1].name, "Light");
+    }
+
+    #[test]
+    fn theme_file_extends_resolution() {
+        use imbolc_types::state::theme::{Theme, ThemeColor};
+        let tf: ThemeFile = toml::from_str(
+            r#"
+            name = "Neon Dark"
+            extends = "Dark"
+            accent = [255, 0, 255]
+            "#,
+        )
+        .unwrap();
+        let dark = Theme::dark();
+        let result = tf.apply_to(&dark);
+        assert_eq!(result.name, "Neon Dark");
+        assert_eq!(result.accent, ThemeColor::new(255, 0, 255));
+        // Inherited from Dark
+        assert_eq!(result.background, dark.background);
+        assert_eq!(result.foreground, dark.foreground);
+    }
+
+    #[test]
+    fn save_and_load_theme_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let themes_dir = dir.path().join("themes");
+        std::fs::create_dir_all(&themes_dir).unwrap();
+
+        let content = r#"name = "Test"
+background = [10, 20, 30]
+"#;
+        let path = themes_dir.join("test.toml");
+        std::fs::write(&path, content).unwrap();
+
+        let tf: ThemeFile = toml::from_str(content).unwrap();
+        assert_eq!(tf.name, "Test");
+        assert_eq!(tf.background, Some(ThemeColor::new(10, 20, 30)));
+        assert!(tf.extends.is_none());
     }
 }

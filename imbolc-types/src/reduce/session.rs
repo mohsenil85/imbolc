@@ -27,18 +27,10 @@ pub(super) fn reduce(
             session.mixer.master_mute = !session.mixer.master_mute;
             true
         }
-        SessionAction::NextTheme => {
-            use crate::state::Theme;
-            let current_name = &session.theme.name;
-            session.theme = match current_name.as_str() {
-                "Minimal" => Theme::minimal_light(),
-                "Minimal Light" => Theme::dark(),
-                "Dark" => Theme::light(),
-                "Light" => Theme::high_contrast(),
-                _ => Theme::minimal(),
-            };
-            true
-        }
+        // Theme cycling/setting handled by dispatch (needs filesystem access for user themes)
+        SessionAction::NextTheme
+        | SessionAction::SetThemeByName(_)
+        | SessionAction::ExportTheme(_) => false,
         SessionAction::ImportVstPlugin(ref path, kind) => {
             use crate::state::vst::VstPlugin;
             let name = path

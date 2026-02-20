@@ -157,6 +157,8 @@ repl_actions! {
         "adjust-hum-time"       => AdjustHumanizeTiming(d: f32);                  "Adjust global timing humanization"
         "toggle-master-mute"    => ToggleMasterMute;                              "Toggle master mute"
         "cycle-theme"           => NextTheme;                                    "Cycle UI theme"
+        "set-theme"             => SetThemeByName(name: String);                 "Set theme by name"
+        "export-theme"          => ExportTheme(name: String);                    "Export theme as TOML file"
         "create-checkpoint"     => CreateCheckpoint(name: String);                "Create named checkpoint"
         "restore-checkpoint"    => RestoreCheckpoint(id: i64);                    "Restore checkpoint by ID"
         "delete-checkpoint"     => DeleteCheckpoint(id: i64);                     "Delete checkpoint by ID"

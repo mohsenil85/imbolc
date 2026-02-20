@@ -681,17 +681,58 @@ pub(super) fn dispatch_session(
             result.audio_effects.push(AudioEffect::UpdateMixerParams);
         }
         SessionAction::NextTheme => {
-            imbolc_types::reduce::reduce_action(
-                &DomainAction::Session(action.clone()),
-                &mut state.tracks,
-                &mut state.session,
-            );
-            // Persist globally
+            let themes = crate::config::all_themes();
+            let current_name = &state.session.theme.name;
+            let current_idx = themes
+                .iter()
+                .position(|t| t.name.eq_ignore_ascii_case(current_name))
+                .unwrap_or(0);
+            let next_idx = (current_idx + 1) % themes.len();
+            state.session.theme = themes.into_iter().nth(next_idx).unwrap();
             crate::config::Config::save_theme(&state.session.theme.name);
             result.push_status(
                 audio.status(),
                 format!("Theme: {}", state.session.theme.name),
             );
+        }
+        SessionAction::SetThemeByName(ref name) => {
+            let themes = crate::config::all_themes();
+            match themes
+                .into_iter()
+                .find(|t| t.name.eq_ignore_ascii_case(name))
+            {
+                Some(theme) => {
+                    let theme_name = theme.name.clone();
+                    state.session.theme = theme;
+                    crate::config::Config::save_theme(&theme_name);
+                    result.push_status(audio.status(), format!("Theme: {}", theme_name));
+                }
+                None => {
+                    result.push_status(audio.status(), format!("Theme '{}' not found", name));
+                }
+            }
+        }
+        SessionAction::ExportTheme(ref name) => {
+            let themes = crate::config::all_themes();
+            match themes.iter().find(|t| t.name.eq_ignore_ascii_case(name)) {
+                Some(theme) => {
+                    let toml_str = crate::config::export_theme_toml(theme);
+                    match crate::config::save_theme_file(&theme.name, &toml_str) {
+                        Ok(path) => {
+                            result.push_status(
+                                audio.status(),
+                                format!("Exported theme to {}", path.display()),
+                            );
+                        }
+                        Err(e) => {
+                            result.push_status(audio.status(), format!("Export failed: {}", e));
+                        }
+                    }
+                }
+                None => {
+                    result.push_status(audio.status(), format!("Theme '{}' not found", name));
+                }
+            }
         }
         SessionAction::CreateCheckpoint(ref label) => {
             let path = state.project.path.clone().unwrap_or_else(default_rack_path);
@@ -1040,7 +1081,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // CycleTheme
+    // CycleTheme (order follows all_themes(): Dark, Light, Minimal, Minimal Light, High Contrast)
+    // Starting from default "Minimal" (index 2): → Minimal Light → High Contrast → Dark → Light → Minimal
     // -----------------------------------------------------------------------
 
     #[test]
@@ -1054,41 +1096,38 @@ mod tests {
     }
 
     #[test]
-    fn cycle_theme_dark_to_light() {
+    fn cycle_theme_minimal_light_to_high_contrast() {
         let (mut state, mut audio, io_tx) = setup();
-        // Minimal → Minimal Light → Dark
+        // Minimal → Minimal Light
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        assert_eq!(state.session.theme.name, "Dark");
-
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-
-        assert_eq!(state.session.theme.name, "Light");
-    }
-
-    #[test]
-    fn cycle_theme_light_to_high_contrast() {
-        let (mut state, mut audio, io_tx) = setup();
-        // Minimal → Minimal Light → Dark → Light
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        assert_eq!(state.session.theme.name, "Light");
+        assert_eq!(state.session.theme.name, "Minimal Light");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert_eq!(state.session.theme.name, "High Contrast");
+    }
+
+    #[test]
+    fn cycle_theme_high_contrast_to_dark() {
+        let (mut state, mut audio, io_tx) = setup();
+        // Minimal → Minimal Light → High Contrast
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        assert_eq!(state.session.theme.name, "High Contrast");
+
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "Dark");
     }
 
     #[test]
     fn cycle_theme_wraps_to_minimal() {
         let (mut state, mut audio, io_tx) = setup();
-        // Cycle through all five
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        assert_eq!(state.session.theme.name, "High Contrast");
+        // Cycle through all five: Minimal → Minimal Light → High Contrast → Dark → Light
+        for _ in 0..4 {
+            dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        }
+        assert_eq!(state.session.theme.name, "Light");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
@@ -1112,6 +1151,55 @@ mod tests {
         let result = dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
         assert!(result.audio_effects.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // SetThemeByName
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn set_theme_by_name_found() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(
+            &SessionAction::SetThemeByName("Dark".to_string()),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert_eq!(state.session.theme.name, "Dark");
+        assert!(result.status[0].message.contains("Theme: Dark"));
+    }
+
+    #[test]
+    fn set_theme_by_name_not_found() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        let result = dispatch_session(
+            &SessionAction::SetThemeByName("Nonexistent".to_string()),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        // Theme unchanged
+        assert_eq!(state.session.theme.name, "Minimal");
+        assert!(result.status[0].message.contains("not found"));
+    }
+
+    #[test]
+    fn set_theme_by_name_case_insensitive() {
+        let (mut state, mut audio, io_tx) = setup();
+
+        dispatch_session(
+            &SessionAction::SetThemeByName("dark".to_string()),
+            &mut state,
+            &mut audio,
+            &io_tx,
+        );
+
+        assert_eq!(state.session.theme.name, "Dark");
     }
 
     // -----------------------------------------------------------------------
