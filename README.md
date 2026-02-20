@@ -1,6 +1,6 @@
-# Imbolc
+# Imbolc Studio
 
-**A complete music studio in your terminal.**
+**A (somewhat) complete audio workstation in your terminal.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![CI](https://github.com/mohsenil85/imbolc/actions/workflows/ci.yml/badge.svg)](https://github.com/mohsenil85/imbolc/actions/workflows/ci.yml)
