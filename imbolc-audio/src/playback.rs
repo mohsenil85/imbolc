@@ -79,6 +79,13 @@ pub fn tick_playback(
             let scan_ranges: Vec<(u32, u32, f64)>;
             let effective_scan_end: u32;
 
+            // Detect if scan_start (from last_scheduled_tick) is already in the
+            // post-wrap region while the playhead hasn't wrapped yet. This happens
+            // when a previous tick's pre-scheduling crossed the loop boundary.
+            let scan_start_is_post_wrap = !wrapped_playhead
+                && scan_start < old_playhead
+                && piano_roll.loop_end > piano_roll.loop_start;
+
             if wrapped_playhead {
                 if scan_start < old_playhead {
                     // last_scheduled_tick is already in the post-wrap region
@@ -105,6 +112,22 @@ pub fn tick_playback(
                     ];
                     effective_scan_end = after_wrap_end;
                 }
+            } else if scan_start_is_post_wrap {
+                // Pre-scheduling already crossed into the next loop iteration on a
+                // previous tick. The pre-wrap region is fully scheduled up to loop_end.
+                // Only extend scheduling further into the post-wrap region.
+                let overflow = scan_end_raw.saturating_sub(piano_roll.loop_end);
+                let after_wrap_end = if overflow > 0 {
+                    (piano_roll.loop_start + overflow)
+                        .min(piano_roll.loop_end)
+                        .max(scan_start)
+                } else {
+                    scan_start // nothing new to schedule
+                };
+                let cross_wrap_base = (piano_roll.loop_end - old_playhead + scan_start
+                    - piano_roll.loop_start) as f64;
+                scan_ranges = vec![(scan_start, after_wrap_end, cross_wrap_base)];
+                effective_scan_end = after_wrap_end;
             } else if scan_end_raw > piano_roll.loop_end
                 && piano_roll.loop_end > piano_roll.loop_start
             {
@@ -908,6 +931,91 @@ mod tests {
             "playhead should have wrapped: {} should be < {}",
             pr.playhead,
             playhead_after_step1
+        );
+    }
+
+    #[test]
+    fn post_wrap_scan_start_without_playhead_wrap_no_giant_chord() {
+        // Regression test: with a longer loop, pre-scheduling can cross the loop
+        // boundary while the playhead is still multiple ticks away from wrapping.
+        // On the next tick, scan_start is a post-wrap value but wrapped_playhead is false.
+        // The scan must NOT cover the entire loop.
+        let (mut pr, mut inst, mut session, mut engine, _rx, tx) = make_fixtures();
+
+        // Loop [0, 960) — 2 beats. With ~9 tick advances, the playhead won't wrap
+        // on the tick immediately after pre-scheduling crosses the boundary.
+        pr.loop_start = 0;
+        pr.loop_end = 960;
+        pr.looping = true;
+
+        // Scatter notes throughout the loop
+        pr.toggle_note(0, 60, 10, 10, 100);
+        pr.toggle_note(0, 62, 200, 10, 100);
+        pr.toggle_note(0, 64, 400, 10, 100);
+        pr.toggle_note(0, 66, 600, 10, 100);
+        pr.toggle_note(0, 68, 800, 10, 100);
+
+        // Position so pre-scheduling crosses the boundary but playhead stays pre-wrap.
+        // At 120 BPM, 480 tpb: lookahead ≈ 14 ticks, tick_delta ≈ 9 per 10ms.
+        // playhead at 940, advance 9 → 949. scan_end = 949+14 = 963 > 960.
+        // Pre-scheduling crosses boundary: last_sched = 3 (post-wrap).
+        // But playhead (949) is still far from loop_end (960).
+        pr.playhead = 940;
+        let mut tick_acc = 0.0;
+        let mut last_sched: Option<u32> = None;
+
+        do_tick(
+            &mut pr,
+            &mut inst,
+            &mut session,
+            &mut engine,
+            &tx,
+            Duration::from_millis(10),
+            &mut tick_acc,
+            &mut last_sched,
+        );
+
+        let sched_after_step1 = last_sched.unwrap();
+        assert!(
+            sched_after_step1 < pr.loop_end,
+            "step 1: last_sched ({}) should be post-wrap (< loop_end {})",
+            sched_after_step1,
+            pr.loop_end
+        );
+        // Playhead should NOT have wrapped yet
+        assert!(
+            pr.playhead > 900,
+            "step 1: playhead ({}) should still be near loop end",
+            pr.playhead
+        );
+
+        // Step 2: Advance again. Playhead still hasn't wrapped (949 + 9 = 958 < 960).
+        // scan_start = last_sched ≈ 3 (post-wrap), old_playhead ≈ 949.
+        // BUG: without fix, scan covers [3, 960) — the entire loop = giant chord!
+        do_tick(
+            &mut pr,
+            &mut inst,
+            &mut session,
+            &mut engine,
+            &tx,
+            Duration::from_millis(10),
+            &mut tick_acc,
+            &mut last_sched,
+        );
+
+        let sched_after_step2 = last_sched.unwrap();
+        // The scan should cover a tiny post-wrap region, NOT the entire loop.
+        // sched_after_step2 should be close to sched_after_step1 (a few ticks further).
+        assert!(
+            sched_after_step2 < 30,
+            "step 2: last_sched ({}) should be small post-wrap value, not near loop_end",
+            sched_after_step2
+        );
+        assert!(
+            sched_after_step2 >= sched_after_step1,
+            "step 2: last_sched ({}) should advance from step 1 ({})",
+            sched_after_step2,
+            sched_after_step1
         );
     }
 }

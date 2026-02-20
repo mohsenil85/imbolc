@@ -31,10 +31,10 @@ pub(super) fn reduce(
             use crate::state::Theme;
             let current_name = &session.theme.name;
             session.theme = match current_name.as_str() {
+                "Minimal" => Theme::dark(),
                 "Dark" => Theme::light(),
-                "Light" => Theme::minimal(),
-                "Minimal" => Theme::high_contrast(),
-                _ => Theme::dark(),
+                "Light" => Theme::high_contrast(),
+                _ => Theme::minimal(),
             };
             true
         }

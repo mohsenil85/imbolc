@@ -137,7 +137,7 @@ impl Config {
             .clamp(1, 10_080)
     }
 
-    /// Get the configured theme, falling back to Dark.
+    /// Get the configured theme, falling back to Minimal.
     pub fn theme(&self) -> imbolc_types::state::theme::Theme {
         self.runtime
             .theme

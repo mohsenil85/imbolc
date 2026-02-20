@@ -187,6 +187,18 @@ pub(crate) fn process_layer_actions(
     }
 }
 
+/// Auto-pop tap_tempo layer when pane is no longer tapping.
+pub(crate) fn process_tap_tempo_auto_pop(panes: &mut PaneManager, layer_stack: &mut LayerStack) {
+    if layer_stack.has_layer("tap_tempo") {
+        let still_tapping = panes
+            .get_pane_mut::<FrameEditPane>("frame_edit")
+            .is_some_and(|p| p.is_tapping());
+        if !still_tapping {
+            layer_stack.pop("tap_tempo");
+        }
+    }
+}
+
 /// Auto-pop text_edit layer when pane is no longer editing.
 pub(crate) fn process_text_edit_auto_pop(panes: &mut PaneManager, layer_stack: &mut LayerStack) {
     if layer_stack.has_layer("text_edit") {

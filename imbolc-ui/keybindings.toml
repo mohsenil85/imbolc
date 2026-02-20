@@ -269,6 +269,7 @@ bindings = [
   { key = "Right", action = "increase", description = "Increase value" },
   { key = "Enter", action = "confirm", description = "Confirm changes" },
   { key = "Escape", action = "cancel", description = "Cancel" },
+  { key = "t", action = "tap_tempo", description = "Tap tempo", hint = "tap tempo" },
 ]
 
 [layers.file_browser]
@@ -641,4 +642,14 @@ transparent = false
 bindings = [
   { key = "Enter", action = "text:confirm", description = "Confirm" },
   { key = "Escape", action = "text:cancel", description = "Cancel" },
+]
+
+[layers.tap_tempo]
+transparent = false
+bindings = [
+  { key = "Space", action = "tap:tap", description = "Tap beat", hint = "tap" },
+  { key = "Left", action = "tap:prev", description = "Previous candidate", hint = "select" },
+  { key = "Right", action = "tap:next", description = "Next candidate", hint = "select" },
+  { key = "Enter", action = "tap:confirm", description = "Apply BPM", hint = "apply" },
+  { key = "Escape", action = "tap:cancel", description = "Cancel", hint = "cancel" },
 ]

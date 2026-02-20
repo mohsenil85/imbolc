@@ -229,7 +229,13 @@ impl TrackEditPane {
                     self.edit_input.set_focused(false);
                     self.emit_update()
                 }
-                ModeActionId::PaletteConfirm | ModeActionId::PaletteCancel => Action::None,
+                ModeActionId::PaletteConfirm
+                | ModeActionId::PaletteCancel
+                | ModeActionId::TapTap
+                | ModeActionId::TapPrev
+                | ModeActionId::TapNext
+                | ModeActionId::TapConfirm
+                | ModeActionId::TapCancel => Action::None,
             };
         }
 

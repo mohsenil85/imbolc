@@ -421,6 +421,9 @@ pub fn run_client(addr: &str, own_instruments: Vec<u32>) -> std::io::Result<()> 
             // Auto-pop text_edit layer when pane is no longer editing
             process_text_edit_auto_pop(&mut panes, &mut layer_stack);
 
+            // Auto-pop tap_tempo layer when pane is no longer tapping
+            process_tap_tempo_auto_pop(&mut panes, &mut layer_stack);
+
             // Navigation and pane layer sync
             process_nav_and_sync(&routed_action, &mut panes, &mut layer_stack, &local_state);
 

@@ -1054,8 +1054,19 @@ mod tests {
     // -----------------------------------------------------------------------
 
     #[test]
+    fn cycle_theme_minimal_to_dark() {
+        let (mut state, mut audio, io_tx) = setup();
+        assert_eq!(state.session.theme.name, "Minimal");
+
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "Dark");
+    }
+
+    #[test]
     fn cycle_theme_dark_to_light() {
         let (mut state, mut audio, io_tx) = setup();
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Dark");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
@@ -1064,23 +1075,11 @@ mod tests {
     }
 
     #[test]
-    fn cycle_theme_light_to_minimal() {
+    fn cycle_theme_light_to_high_contrast() {
         let (mut state, mut audio, io_tx) = setup();
-        // Set to Light first
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Light");
-
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-
-        assert_eq!(state.session.theme.name, "Minimal");
-    }
-
-    #[test]
-    fn cycle_theme_minimal_to_high_contrast() {
-        let (mut state, mut audio, io_tx) = setup();
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        assert_eq!(state.session.theme.name, "Minimal");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
@@ -1088,7 +1087,7 @@ mod tests {
     }
 
     #[test]
-    fn cycle_theme_wraps_to_dark() {
+    fn cycle_theme_wraps_to_minimal() {
         let (mut state, mut audio, io_tx) = setup();
         // Cycle through all four
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
@@ -1098,7 +1097,7 @@ mod tests {
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
-        assert_eq!(state.session.theme.name, "Dark");
+        assert_eq!(state.session.theme.name, "Minimal");
     }
 
     #[test]

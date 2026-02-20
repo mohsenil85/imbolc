@@ -90,7 +90,7 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::dark()
+        Self::minimal()
     }
 }
 
@@ -306,17 +306,17 @@ impl Theme {
             accent_secondary: ThemeColor::new(160, 160, 160),
             dim: ThemeColor::new(80, 80, 80),
 
-            // Semantic (mostly mono)
-            selection_bg: ThemeColor::new(60, 60, 60),
+            // Semantic (subtle color for state readability)
+            selection_bg: ThemeColor::new(35, 42, 58),
             selection_fg: ThemeColor::new(220, 220, 220),
             muted: ThemeColor::new(80, 80, 80),
-            error: ThemeColor::new(200, 200, 200),
-            warning: ThemeColor::new(200, 200, 200),
-            success: ThemeColor::new(200, 200, 200),
+            error: ThemeColor::new(180, 120, 120),
+            warning: ThemeColor::new(180, 165, 120),
+            success: ThemeColor::new(120, 170, 120),
 
-            // Track type indicators (mono)
-            mute_color: mono,
-            solo_color: mono,
+            // Track type indicators (subtle color for state)
+            mute_color: ThemeColor::new(180, 120, 120),
+            solo_color: ThemeColor::new(180, 170, 120),
             bus_color: mono,
             group_color: mono,
             master_color: mono,
@@ -352,7 +352,7 @@ impl Theme {
             // Status — keep color for recording/playing
             playing: ThemeColor::new(0, 255, 0),
             recording: ThemeColor::new(255, 0, 0),
-            armed: ThemeColor::new(200, 200, 200),
+            armed: ThemeColor::new(180, 120, 120),
         }
     }
 
@@ -379,9 +379,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_is_dark() {
+    fn test_default_is_minimal() {
         let theme = Theme::default();
-        assert_eq!(theme.name, "Dark");
+        assert_eq!(theme.name, "Minimal");
     }
 
     #[test]

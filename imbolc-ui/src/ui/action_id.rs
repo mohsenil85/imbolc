@@ -444,6 +444,7 @@ define_action_enum! {
         Increase => "increase",
         Confirm => "confirm",
         Cancel => "cancel",
+        TapTempo => "tap_tempo",
     }
 }
 
@@ -732,7 +733,7 @@ define_action_enum! {
 }
 
 define_action_enum! {
-    /// Mode layer actions (piano_mode, pad_mode, text_edit, command_palette)
+    /// Mode layer actions (piano_mode, pad_mode, text_edit, command_palette, tap_tempo)
     pub enum ModeActionId {
         PianoEscape => "piano:escape",
         PianoOctaveDown => "piano:octave_down",
@@ -745,6 +746,11 @@ define_action_enum! {
         TextCancel => "text:cancel",
         PaletteConfirm => "palette:confirm",
         PaletteCancel => "palette:cancel",
+        TapTap => "tap:tap",
+        TapPrev => "tap:prev",
+        TapNext => "tap:next",
+        TapConfirm => "tap:confirm",
+        TapCancel => "tap:cancel",
     }
 }
 
@@ -896,7 +902,7 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "project_browser" => ProjectBrowserActionId::from_str(action).map(ActionId::ProjectBrowser),
         "checkpoint_list" => CheckpointListActionId::from_str(action).map(ActionId::CheckpointList),
         "tag_view" => TagViewActionId::from_str(action).map(ActionId::TagView),
-        "piano_mode" | "pad_mode" | "text_edit" | "command_palette" => {
+        "piano_mode" | "pad_mode" | "text_edit" | "command_palette" | "tap_tempo" => {
             ModeActionId::from_str(action).map(ActionId::Mode)
         }
         "command_line" | "quit_prompt" | "save_as" => None, // No actions — handled via raw input

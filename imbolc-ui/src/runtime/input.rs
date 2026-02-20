@@ -148,6 +148,9 @@ impl AppRuntime {
             // Auto-pop text_edit layer when pane is no longer editing
             process_text_edit_auto_pop(&mut self.panes, &mut self.layer_stack);
 
+            // Auto-pop tap_tempo layer when pane is no longer tapping
+            process_tap_tempo_auto_pop(&mut self.panes, &mut self.layer_stack);
+
             // Detect SaveAs cancel during quit flow
             if self.quit_after_save
                 && matches!(
