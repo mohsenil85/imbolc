@@ -70,6 +70,7 @@ impl FileBrowserPane {
                 "aif".to_string(),
             ]),
             FileSelectAction::ImportProject => Some(vec!["sqlite".to_string()]),
+            FileSelectAction::ImportPatch => Some(vec!["toml".to_string()]),
         };
         let default_dir = match &self.on_select_action {
             FileSelectAction::ImportVstInstrument | FileSelectAction::ImportVstEffect => {
@@ -81,6 +82,14 @@ impl FileBrowserPane {
                 }
             }
             FileSelectAction::ImportProject => dirs::home_dir(),
+            FileSelectAction::ImportPatch => {
+                let dir = imbolc_core::paths::patches_dir();
+                if dir.exists() {
+                    Some(dir)
+                } else {
+                    None
+                }
+            }
             _ => None,
         };
         self.current_dir = start_dir.or(default_dir).unwrap_or_else(|| {
@@ -219,6 +228,9 @@ impl Pane for FileBrowserPane {
                             FileSelectAction::ImportProject => {
                                 Action::Session(SessionAction::LoadFrom(entry.path.clone()))
                             }
+                            FileSelectAction::ImportPatch => {
+                                Action::Session(SessionAction::ImportPatch(entry.path.clone()))
+                            }
                         }
                     }
                 } else {
@@ -291,6 +303,7 @@ impl Pane for FileBrowserPane {
             FileSelectAction::LoadWaveformFile => " Load Waveform ",
             FileSelectAction::LoadImpulseResponse(_, _) => " Load Impulse Response ",
             FileSelectAction::ImportProject => " Import Project ",
+            FileSelectAction::ImportPatch => " Import Patch ",
         };
         let border_style = Style::new().fg(p.bus_color);
         let inner = buf.draw_block(rect, title, border_style, border_style);
@@ -507,6 +520,11 @@ impl Pane for FileBrowserPane {
                                     }
                                     FileSelectAction::ImportProject => {
                                         return Action::Session(SessionAction::LoadFrom(
+                                            self.entries[clicked_idx].path.clone(),
+                                        ));
+                                    }
+                                    FileSelectAction::ImportPatch => {
+                                        return Action::Session(SessionAction::ImportPatch(
                                             self.entries[clicked_idx].path.clone(),
                                         ));
                                     }

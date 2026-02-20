@@ -22,6 +22,7 @@ vst3 = "0.3"
 crossbeam-channel = "0.5"
 cpal = "0.15"
 sha2 = "0.10"
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = "3"

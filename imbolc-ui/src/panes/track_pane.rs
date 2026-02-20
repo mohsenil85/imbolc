@@ -363,6 +363,11 @@ impl Pane for TrackPane {
                 }
                 Action::None
             }
+            ActionId::Track(TrackActionId::ImportPatch) => {
+                Action::Session(crate::ui::SessionAction::RequestFileBrowser(
+                    crate::ui::FileSelectAction::ImportPatch,
+                ))
+            }
 
             // --- Text edit mode ---
             ActionId::Mode(ModeActionId::TextConfirm) => {

@@ -628,6 +628,9 @@ impl TrackEditPane {
                 }
                 Action::None
             }
+            TrackEditActionId::ExportPatch => {
+                Action::Nav(crate::ui::NavAction::PushPane(PaneId::PatchExport))
+            }
         }
     }
 

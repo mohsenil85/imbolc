@@ -72,6 +72,8 @@ pub fn is_reducible(action: &DomainAction) -> bool {
                 | SessionAction::NextTheme
                 | SessionAction::SetThemeByName(_)
                 | SessionAction::ExportTheme(_)
+                | SessionAction::ExportPatch(_, _)
+                | SessionAction::ImportPatch(_)
                 | SessionAction::CreateCheckpoint(_)
                 | SessionAction::RestoreCheckpoint(_)
                 | SessionAction::DeleteCheckpoint(_)

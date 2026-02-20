@@ -63,6 +63,8 @@ pub(super) fn reduce(
         | SessionAction::Load
         | SessionAction::LoadFrom(_)
         | SessionAction::ImportCustomSynthDef(_)
+        | SessionAction::ExportPatch(_, _)
+        | SessionAction::ImportPatch(_)
         | SessionAction::CreateCheckpoint(_)
         | SessionAction::RestoreCheckpoint(_)
         | SessionAction::DeleteCheckpoint(_) => false,

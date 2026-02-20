@@ -40,6 +40,7 @@ pub enum PaneId {
     InstrumentPicker,
     MidiSettings,
     Mixer,
+    PatchExport,
     PianoRoll,
     ProjectBrowser,
     QuitPrompt,
@@ -78,6 +79,7 @@ impl PaneId {
             PaneId::InstrumentPicker => "instrument_picker",
             PaneId::MidiSettings => "midi_settings",
             PaneId::Mixer => "mixer",
+            PaneId::PatchExport => "patch_export",
             PaneId::PianoRoll => "piano_roll",
             PaneId::ProjectBrowser => "project_browser",
             PaneId::QuitPrompt => "quit_prompt",
@@ -130,6 +132,7 @@ impl PaneId {
             | PaneId::Confirm
             | PaneId::Help
             | PaneId::InstrumentPicker
+            | PaneId::PatchExport
             | PaneId::ProjectBrowser
             | PaneId::QuitPrompt
             | PaneId::SaveAs
@@ -187,6 +190,7 @@ impl PaneId {
             "instrument_picker" => Some(PaneId::InstrumentPicker),
             "midi_settings" => Some(PaneId::MidiSettings),
             "mixer" => Some(PaneId::Mixer),
+            "patch_export" => Some(PaneId::PatchExport),
             "piano_roll" => Some(PaneId::PianoRoll),
             "project_browser" => Some(PaneId::ProjectBrowser),
             "quit_prompt" => Some(PaneId::QuitPrompt),
@@ -433,6 +437,7 @@ pub enum FileSelectAction {
     LoadWaveformFile,
     LoadImpulseResponse(TrackId, EffectId), // instrument_id, effect_id
     ImportProject,
+    ImportPatch,
 }
 
 /// Navigation intent returned from dispatch — processed by the UI layer.
@@ -694,6 +699,10 @@ pub enum SessionAction {
     SetThemeByName(String),
     /// Export a theme as a TOML file to ~/.config/imbolc/themes/
     ExportTheme(String),
+    /// Export a track's signal chain as a TOML patch file
+    ExportPatch(TrackId, PathBuf),
+    /// Import a patch from a TOML file (creates a new track)
+    ImportPatch(PathBuf),
     /// Create a named checkpoint (persistent restore point)
     CreateCheckpoint(String),
     /// Restore project state to a checkpoint
@@ -1444,6 +1453,7 @@ mod tests {
             PaneId::InstrumentPicker,
             PaneId::MidiSettings,
             PaneId::Mixer,
+            PaneId::PatchExport,
             PaneId::PianoRoll,
             PaneId::ProjectBrowser,
             PaneId::QuitPrompt,
@@ -1608,6 +1618,7 @@ mod tests {
             PaneId::InstrumentPicker,
             PaneId::MidiSettings,
             PaneId::Mixer,
+            PaneId::PatchExport,
             PaneId::PianoRoll,
             PaneId::ProjectBrowser,
             PaneId::QuitPrompt,

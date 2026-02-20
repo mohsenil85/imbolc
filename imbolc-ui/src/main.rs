@@ -22,10 +22,10 @@ use std::fs::File;
 use panes::{
     AddEffectPane, AddPane, ArpeggiatorPane, CheckpointListPane, CommandLinePane,
     CommandPalettePane, ConfirmPane, EqMode, EqPane, FileBrowserPane, FrameEditPane,
-    GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PianoRollPane,
-    ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane, ServerPane,
-    TagPickerPane, TagViewPane, TrackEditPane, TrackPane, TrackPickerPane, TunerPane, VstParamPane,
-    WaveformPane,
+    GenerativePane, GroovePane, HelpPane, HomePane, MidiSettingsPane, MixerPane, PatchExportPane,
+    PianoRollPane, ProjectBrowserPane, QuitPromptPane, SampleSlicerPane, SaveAsPane, SequencerPane,
+    ServerPane, TagPickerPane, TagViewPane, TrackEditPane, TrackPane, TrackPickerPane, TunerPane,
+    VstParamPane, WaveformPane,
 };
 use ui::{Keymap, PaneManager, RatatuiBackend};
 
@@ -216,6 +216,10 @@ pub(crate) fn register_all_panes(
         "project_browser",
     ))));
     panes.add_pane(Box::new(SaveAsPane::new(pane_keymap(keymaps, "save_as"))));
+    panes.add_pane(Box::new(PatchExportPane::new(pane_keymap(
+        keymaps,
+        "patch_export",
+    ))));
     panes.add_pane(Box::new(CommandLinePane::new(pane_keymap(
         keymaps,
         "command_line",

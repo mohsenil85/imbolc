@@ -8,6 +8,7 @@ mod local;
 mod master;
 mod midi;
 mod mixer;
+pub mod patch;
 mod piano_roll;
 mod sequencer;
 mod server;

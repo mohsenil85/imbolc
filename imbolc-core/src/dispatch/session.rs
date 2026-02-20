@@ -712,6 +712,64 @@ pub(super) fn dispatch_session(
                 }
             }
         }
+        SessionAction::ExportPatch(track_id, ref path) => {
+            let project_path = state.project.path.clone();
+            match project_path {
+                Some(ref pp) => match state.tracks.track(*track_id) {
+                    Some(track) => match super::patch::export_patch(track, pp) {
+                        Ok(toml_str) => {
+                            if let Some(parent) = path.parent() {
+                                let _ = std::fs::create_dir_all(parent);
+                            }
+                            match std::fs::write(path, &toml_str) {
+                                Ok(()) => {
+                                    result.push_status(
+                                        audio.status(),
+                                        format!("Exported patch to {}", path.display()),
+                                    );
+                                }
+                                Err(e) => {
+                                    result.push_status(
+                                        audio.status(),
+                                        format!("Export failed: {}", e),
+                                    );
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            result.push_status(audio.status(), format!("Export failed: {}", e));
+                        }
+                    },
+                    None => {
+                        result.push_status(audio.status(), "Track not found");
+                    }
+                },
+                None => {
+                    result.push_status(audio.status(), "Save project before exporting patches");
+                }
+            }
+            result.push_nav(NavIntent::ConditionalPop(PaneId::PatchExport));
+        }
+        SessionAction::ImportPatch(ref path) => {
+            match super::patch::import_patch_from_file(path, state) {
+                Ok(new_id) => {
+                    let name = state
+                        .tracks
+                        .track(new_id)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_default();
+                    result.audio_effects.push(AudioEffect::RebuildInstruments);
+                    result
+                        .audio_effects
+                        .push(AudioEffect::AddInstrumentRouting(new_id));
+                    result.push_status(audio.status(), format!("Imported patch: {}", name));
+                }
+                Err(e) => {
+                    result.push_status(audio.status(), format!("Import failed: {}", e));
+                }
+            }
+            result.push_nav(NavIntent::ConditionalPop(PaneId::FileBrowser));
+        }
         SessionAction::ExportTheme(ref name) => {
             let themes = crate::config::all_themes();
             match themes.iter().find(|t| t.name.eq_ignore_ascii_case(name)) {

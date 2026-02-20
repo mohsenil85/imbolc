@@ -257,6 +257,7 @@ define_action_enum! {
         Done => "done",
         TagParam => "tag_param",
         OpenEq => "open_eq",
+        ExportPatch => "export_patch",
     }
 }
 
@@ -667,6 +668,7 @@ define_action_enum! {
         LayerOctaveUp => "layer_octave_up",
         LayerOctaveDown => "layer_octave_down",
         RenameLayerGroup => "rename_layer_group",
+        ImportPatch => "import_patch",
     }
 }
 
@@ -905,7 +907,7 @@ pub fn parse_action_id(layer: &str, action: &str) -> Option<ActionId> {
         "piano_mode" | "pad_mode" | "text_edit" | "command_palette" | "tap_tempo" => {
             ModeActionId::from_str(action).map(ActionId::Mode)
         }
-        "command_line" | "quit_prompt" | "save_as" => None, // No actions — handled via raw input
+        "command_line" | "quit_prompt" | "save_as" | "patch_export" => None, // No actions — handled via raw input
         _ => None,
     }
 }
@@ -1023,6 +1025,7 @@ mod tests {
             TrackEditActionId::Done,
             TrackEditActionId::TagParam,
             TrackEditActionId::OpenEq,
+            TrackEditActionId::ExportPatch,
         ];
 
         for action in actions {

@@ -178,6 +178,22 @@ impl AppRuntime {
                 }
             }
 
+            // Configure PatchExport pane before pushing
+            if matches!(
+                &routed_action,
+                RoutedAction::Ui(UiAction::Nav(action::NavAction::PushPane(
+                    action::PaneId::PatchExport
+                )))
+            ) {
+                if let Some(track) = self.dispatcher.state().tracks.selected_track() {
+                    let track_id = track.id;
+                    let default_name = track.name.clone();
+                    if let Some(pe) = self.panes.get_pane_mut::<PatchExportPane>("patch_export") {
+                        pe.setup(track_id, &default_name);
+                    }
+                }
+            }
+
             // Process navigation and sync pane layer
             process_nav_and_sync(
                 &routed_action,

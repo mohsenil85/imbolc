@@ -162,6 +162,8 @@ repl_actions! {
         "create-checkpoint"     => CreateCheckpoint(name: String);                "Create named checkpoint"
         "restore-checkpoint"    => RestoreCheckpoint(id: i64);                    "Restore checkpoint by ID"
         "delete-checkpoint"     => DeleteCheckpoint(id: i64);                     "Delete checkpoint by ID"
+        "export-patch"          => ExportPatch(id: TrackId, path: PathBuf);       "Export track patch to TOML"
+        "import-patch"          => ImportPatch(path: PathBuf);                    "Import patch from TOML"
     }
 
     group "server" => DomainAction::Server, ServerAction {

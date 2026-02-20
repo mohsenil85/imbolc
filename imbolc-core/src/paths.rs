@@ -40,3 +40,15 @@ pub fn custom_synthdefs_dir() -> PathBuf {
         PathBuf::from("synthdefs")
     }
 }
+
+/// User-local directory for patches (`~/.config/imbolc/patches/`).
+pub fn patches_dir() -> PathBuf {
+    if let Some(home) = std::env::var_os("HOME") {
+        PathBuf::from(home)
+            .join(".config")
+            .join("imbolc")
+            .join("patches")
+    } else {
+        PathBuf::from("patches")
+    }
+}
