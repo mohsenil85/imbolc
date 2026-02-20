@@ -73,7 +73,7 @@ Write beats, layer synthesizers, shape sounds with effects, mix tracks, record f
 
 ### Accessible REPL
 
-Most TUIs are an accessibility nightmare. Imbolc ships a full text-mode REPL with **236 commands** across 16 domains — every action available in the UI is available as a typed command.
+TUIs can be an accessibility nightmare. Imbolc ships a full text-mode REPL with **236 commands** across 16 domains — every action available in the UI is available as a typed command.
 
 - **Screen-reader friendly** — plain stdin/stdout, no visual UI required
 - **Tab completion** — context-aware completion with inline hints
