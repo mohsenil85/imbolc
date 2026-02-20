@@ -297,10 +297,6 @@ impl AudioHandle {
     /// rebuild metadata. Skips unprojectable actions (undo/redo, etc.) — those
     /// are handled via `apply_effects()` with full sync.
     pub fn forward_action(&mut self, action: &DomainAction, effects: &[AudioEffect]) {
-        if effects.is_empty() {
-            return;
-        }
-
         if !imbolc_types::reduce::is_reducible(action) {
             return;
         }

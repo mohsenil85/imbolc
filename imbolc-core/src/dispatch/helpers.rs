@@ -27,7 +27,7 @@ pub fn import_sample_blob(state: &mut AppState, path: &Path) -> Result<SampleRef
     let (mut sample_ref, consumed) = sample_store::import_sample(&conn, path, next_id)?;
 
     if consumed {
-        state.tracks.next_sample_id = next_id.next();
+        state.tracks.next_sample_id = sample_ref.id.next();
     }
 
     // Materialize to temp file for SC
@@ -63,7 +63,7 @@ pub fn import_sample_blob_bytes(
     let (mut sample_ref, consumed) = sample_store::import_sample_bytes(&conn, name, data, next_id)?;
 
     if consumed {
-        state.tracks.next_sample_id = next_id.next();
+        state.tracks.next_sample_id = sample_ref.id.next();
     }
 
     let cache = state

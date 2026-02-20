@@ -127,7 +127,7 @@ pub fn import_patch_from_file(path: &Path, state: &mut AppState) -> Result<Track
             sample_store::import_sample_bytes(&conn, &ps.name, &data, next_id)?;
 
         if consumed {
-            state.tracks.next_sample_id = next_id.next();
+            state.tracks.next_sample_id = sample_ref.id.next();
         }
 
         // Materialize to temp file for SC

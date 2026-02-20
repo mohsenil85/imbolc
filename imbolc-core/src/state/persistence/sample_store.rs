@@ -100,11 +100,23 @@ pub fn import_sample_bytes(
     // Extract WAV metadata
     let (sample_rate, num_channels, num_frames, duration_secs) = wav_metadata(data)?;
 
+    // Guard against stale next_id (e.g. after undo rolls back the counter
+    // while rows inserted before undo remain in SQLite).
+    let max_existing: Option<i64> = conn
+        .query_row("SELECT MAX(id) FROM sample_blobs", [], |row| row.get(0))
+        .optional()
+        .map_err(|e| e.to_string())?
+        .flatten();
+    let safe_id = match max_existing {
+        Some(max) => SampleId::new(next_id.get().max(max as u32 + 1)),
+        None => next_id,
+    };
+
     conn.execute(
         "INSERT INTO sample_blobs (id, name, content_hash, sample_rate, num_channels, num_frames, duration_secs, data)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
-            next_id.get() as i64,
+            safe_id.get() as i64,
             name,
             hash,
             sample_rate,
@@ -116,7 +128,7 @@ pub fn import_sample_bytes(
     )
     .map_err(|e| format!("Failed to insert sample blob: {}", e))?;
 
-    Ok((SampleRef::new(next_id, name.to_string()), true))
+    Ok((SampleRef::new(safe_id, name.to_string()), true))
 }
 
 /// Read the raw WAV bytes for a stored sample.
@@ -280,5 +292,47 @@ mod tests {
 
         assert!(blob_exists(&conn, SampleId::new(1)).unwrap());
         assert!(!blob_exists(&conn, SampleId::new(99)).unwrap());
+    }
+
+    /// Helper: generate a different WAV (880 Hz instead of 440 Hz).
+    fn different_wav_bytes() -> Vec<u8> {
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut cursor = Cursor::new(Vec::new());
+        {
+            let mut writer = hound::WavWriter::new(&mut cursor, spec).unwrap();
+            for i in 0..44100 {
+                let t = i as f32 / 44100.0;
+                let sample = (t * 880.0 * std::f32::consts::TAU).sin() * 16000.0;
+                writer.write_sample(sample as i16).unwrap();
+            }
+            writer.finalize().unwrap();
+        }
+        cursor.into_inner()
+    }
+
+    #[test]
+    fn stale_next_id_after_undo_skips_to_safe_id() {
+        let conn = Connection::open_in_memory().unwrap();
+        ensure_table(&conn).unwrap();
+
+        // Insert a blob with ID 5 (simulates pre-undo state).
+        let wav1 = test_wav_bytes();
+        let (ref1, consumed1) =
+            import_sample_bytes(&conn, "before_undo", &wav1, SampleId::new(5)).unwrap();
+        assert!(consumed1);
+        assert_eq!(ref1.id, SampleId::new(5));
+
+        // After undo, next_sample_id rolled back to 5 — but row 5 still exists.
+        // Importing a *different* blob with stale next_id=5 must not crash.
+        let wav2 = different_wav_bytes();
+        let (ref2, consumed2) =
+            import_sample_bytes(&conn, "after_undo", &wav2, SampleId::new(5)).unwrap();
+        assert!(consumed2);
+        assert_eq!(ref2.id, SampleId::new(6)); // skipped past existing row
     }
 }

@@ -875,7 +875,7 @@ impl AudioEngine {
         let out_bus = self
             .bus_allocator
             .get_audio_bus(instrument_id, "source_out")
-            .unwrap_or(0);
+            .unwrap_or(16);
 
         let node_id = self.next_node_id;
         self.next_node_id += 1;

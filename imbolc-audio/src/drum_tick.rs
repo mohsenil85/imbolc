@@ -19,6 +19,7 @@ pub fn tick_drum_sequencer(
     // (target_track_id, freq, velocity, offset_secs)
     let mut instrument_triggers: Vec<(TrackId, f32, f32, f64)> = Vec::new();
     let mut delayed_feedbacks: Vec<(f64, AudioFeedback)> = Vec::new();
+    let any_solo = instruments.any_track_solo();
 
     for instrument in &mut instruments.tracks {
         let seq = match &mut instrument.source_extra {
@@ -100,9 +101,13 @@ pub fn tick_drum_sequencer(
             ));
         }
 
+        let effective_mute = instrument.channel_strip.mute
+            || session.mixer.master_mute
+            || (any_solo && !instrument.channel_strip.solo);
+
         // Play each step with its precise offset
         for &(step, pattern_idx, offset_secs) in &steps_to_play {
-            if engine.is_running() && !instrument.channel_strip.mute {
+            if engine.is_running() && !effective_mute {
                 let pattern = &seq.patterns[pattern_idx];
                 for (pad_idx, pad) in seq.pads.iter().enumerate() {
                     if let Some(step_data) = pattern.steps.get(pad_idx).and_then(|s| s.get(step)) {
@@ -219,7 +224,7 @@ pub fn tick_drum_sequencer(
         // --- Reverse pre-trigger look-ahead pass ---
         // For reversed sample pads, scan ahead in the pattern and fire early so the
         // sample finishes playing at the target step time (builds into the beat).
-        if engine.is_running() && !instrument.channel_strip.mute {
+        if engine.is_running() && !effective_mute {
             let elapsed_secs = elapsed.as_secs_f64();
             let current_pattern_idx = seq.current_pattern;
             let current_step = seq.current_step;
