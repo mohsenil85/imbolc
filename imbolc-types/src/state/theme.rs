@@ -31,7 +31,7 @@ impl<'de> Deserialize<'de> for ThemeColor {
             type Value = ThemeColor;
 
             fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str("[r, g, b] array or {r, g, b} map")
+                f.write_str("[r, g, b] tuple")
             }
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
@@ -46,30 +46,9 @@ impl<'de> Deserialize<'de> for ThemeColor {
                     .ok_or_else(|| de::Error::invalid_length(2, &"3"))?;
                 Ok(ThemeColor { r, g, b })
             }
-
-            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
-                let mut r = None;
-                let mut g = None;
-                let mut b = None;
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "r" => r = Some(map.next_value()?),
-                        "g" => g = Some(map.next_value()?),
-                        "b" => b = Some(map.next_value()?),
-                        _ => {
-                            let _ = map.next_value::<de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(ThemeColor {
-                    r: r.ok_or_else(|| de::Error::missing_field("r"))?,
-                    g: g.ok_or_else(|| de::Error::missing_field("g"))?,
-                    b: b.ok_or_else(|| de::Error::missing_field("b"))?,
-                })
-            }
         }
 
-        deserializer.deserialize_any(ThemeColorVisitor)
+        deserializer.deserialize_tuple(3, ThemeColorVisitor)
     }
 }
 
@@ -568,8 +547,8 @@ mod tests {
     }
 
     #[test]
-    fn theme_color_deserialize_struct_format() {
-        let json = r#"{"r":100,"g":200,"b":50}"#;
+    fn theme_color_deserialize_array_format() {
+        let json = "[100,200,50]";
         let color: ThemeColor = serde_json::from_str(json).unwrap();
         assert_eq!(color, ThemeColor::new(100, 200, 50));
     }
