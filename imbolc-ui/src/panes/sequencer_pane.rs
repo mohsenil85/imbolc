@@ -313,7 +313,6 @@ impl Pane for SequencerPane {
         let pat_str = format!("Pattern {}", pattern_label);
         let len_str = format!("  Length: {}", pattern.length);
         let grid_str = format!("  Grid: {}", grid_label);
-        let bpm_str = format!("  BPM: {:.0}", state.audio.bpm);
         let play_str = format!("  {}", play_label);
         buf.draw_line(
             Rect::new(cx, cy, rect.width.saturating_sub(4), 1),
@@ -321,7 +320,6 @@ impl Pane for SequencerPane {
                 (&pat_str, Style::new().fg(p.fg).bold()),
                 (&len_str, Style::new().fg(p.dim)),
                 (&grid_str, Style::new().fg(p.accent)),
-                (&bpm_str, Style::new().fg(p.dim)),
                 (&play_str, Style::new().fg(play_color).bold()),
             ],
         );
