@@ -313,6 +313,22 @@ pub fn key_root_freq(key: Key, tuning_a4: f32) -> f32 {
     tuning_a4 * 2.0_f32.powf((midi - 69.0) / 12.0)
 }
 
+/// Param names for the 12 pitch-class quantization slots sent to SynthDefs.
+pub const QUANT_PARAM_NAMES: [&str; 12] = [
+    "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
+];
+
+/// Push scale quantization params (q0..q11, ref_offset) into a param vec.
+/// Used by EffectType and FilterType `musical_context_params()` methods.
+pub fn push_quant_params(params: &mut Vec<(&'static str, f32)>, session: &super::SessionState) {
+    let table = scale_quantization_table(session.key, session.scale);
+    let ref_offset = tuning_ref_offset(session.tuning_a4);
+    for (i, &corr) in table.iter().enumerate() {
+        params.push((QUANT_PARAM_NAMES[i], corr));
+    }
+    params.push(("ref_offset", ref_offset));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

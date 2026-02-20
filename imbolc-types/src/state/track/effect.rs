@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::state::music::{key_root_freq, scale_quantization_table, tuning_ref_offset};
+use crate::state::music::{key_root_freq, push_quant_params, QUANT_PARAM_NAMES};
 use crate::{EffectId, Param, ParamValue, SessionState, VstPluginId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -58,19 +58,7 @@ pub enum EffectType {
     Vst(VstPluginId),
 }
 
-const QUANT_PARAM_NAMES: [&str; 12] = [
-    "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
-];
 const ROOT_FREQ_PARAM: &str = "root_freq";
-
-fn push_quant_params(params: &mut Vec<(&'static str, f32)>, session: &SessionState) {
-    let table = scale_quantization_table(session.key, session.scale);
-    let ref_offset = tuning_ref_offset(session.tuning_a4);
-    for (i, &corr) in table.iter().enumerate() {
-        params.push((QUANT_PARAM_NAMES[i], corr));
-    }
-    params.push(("ref_offset", ref_offset));
-}
 
 impl EffectType {
     pub fn name(&self) -> &'static str {
@@ -351,7 +339,9 @@ impl EffectType {
             EffectType::Resonator
             | EffectType::RingMod
             | EffectType::WahPedal
-            | EffectType::ParaEq => {
+            | EffectType::ParaEq
+            | EffectType::PitchShifter
+            | EffectType::GranularDelay => {
                 let mut params = Vec::with_capacity(QUANT_PARAM_NAMES.len() + 1);
                 push_quant_params(&mut params, session);
                 params

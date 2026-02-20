@@ -312,6 +312,9 @@ impl AudioEngine {
             for p in &filter.extra_params {
                 params.push((p.name.clone(), p.value.to_f32()));
             }
+            for (name, value) in filter.filter_type.musical_context_params(session) {
+                params.push((name.to_string(), value));
+            }
 
             let client = self.backend.as_ref().ok_or("Not connected")?;
             client

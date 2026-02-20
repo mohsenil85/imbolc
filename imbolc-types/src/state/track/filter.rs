@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::ModulatedParam;
-use crate::{Param, ParamValue};
+use crate::state::music::push_quant_params;
+use crate::{Param, ParamValue, SessionState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FilterType {
@@ -119,6 +120,19 @@ impl FilterType {
                 max: 24.0,
             }],
             _ => vec![],
+        }
+    }
+
+    /// Hidden params derived from session musical context.
+    /// Injected at routing build time, not shown in filter UI.
+    pub fn musical_context_params(&self, session: &SessionState) -> Vec<(&'static str, f32)> {
+        match self {
+            FilterType::Comb => {
+                let mut params = Vec::with_capacity(14);
+                push_quant_params(&mut params, session);
+                params
+            }
+            _ => Vec::new(),
         }
     }
 }
