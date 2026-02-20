@@ -1,0 +1,12 @@
+baseURL = "https://imbolc.studio/"
+languageCode = "en-us"
+title = "Imbolc Studio"
+
+[params]
+  tagline = "A complete music studio in your terminal."
+  description = "Write beats, layer synthesizers, shape sounds with effects, mix tracks, record finished songs — all from the comfort of your terminal."
+  githubUrl = "https://github.com/mohsenil85/imbolc"
+  sponsorUrl = "https://github.com/sponsors/mohsenil85"
+  kofiUrl = "https://ko-fi.com/mohsenil85"
+  docsUrl = "https://github.com/mohsenil85/imbolc/blob/main/docs/README.md"
+  license = "GPL-3.0"

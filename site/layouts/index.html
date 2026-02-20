@@ -1,0 +1,87 @@
+{{ define "main" }}
+<main>
+
+  {{/* ── Hero ── */}}
+  <section class="hero">
+    <div class="container">
+      <h1>Imbolc<span class="studio">Studio</span></h1>
+      <p class="tagline">{{ .Site.Params.tagline }}</p>
+      <p class="subtitle">{{ .Site.Params.description }}</p>
+      <div class="cta">
+        <a href="{{ .Site.Params.githubUrl }}" class="btn btn-primary">GitHub</a>
+        <a href="{{ .Site.Params.githubUrl }}#quick-start" class="btn btn-secondary">Get Started</a>
+      </div>
+    </div>
+  </section>
+
+  {{/* ── Hero Screenshot ── */}}
+  <section class="hero-screenshot">
+    <div class="container">
+      <img src="/img/track-view.png" alt="Imbolc Track View" loading="eager">
+    </div>
+  </section>
+
+  {{/* ── Features ── */}}
+  <section class="features" id="features">
+    <div class="container">
+      <h2>Features</h2>
+      <div class="feature-grid">
+        {{ range .Params.features }}
+        <div class="feature-card">
+          <div class="feature-icon">{{ .icon }}</div>
+          <h3>{{ .title }}</h3>
+          <ul>
+            {{ range .items }}
+            <li>{{ . }}</li>
+            {{ end }}
+          </ul>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+  </section>
+
+  {{/* ── Screenshots ── */}}
+  <section class="screenshots" id="screenshots">
+    <div class="container">
+      <h2>Screenshots</h2>
+      <div class="screenshot-grid">
+        {{ range .Params.screenshots }}
+        <figure class="screenshot">
+          <img src="/img/{{ .file }}" alt="{{ .alt }}" loading="lazy">
+          <figcaption>{{ .alt }}</figcaption>
+        </figure>
+        {{ end }}
+      </div>
+    </div>
+  </section>
+
+  {{/* ── Quick Start ── */}}
+  <section class="quickstart" id="quickstart">
+    <div class="container">
+      <h2>Quick Start</h2>
+      <ol>
+        <li>Install <a href="https://rustup.rs/">Rust</a> and <a href="https://supercollider.github.io/">SuperCollider</a> (<code>scsynth</code> must be on your PATH)</li>
+        <li>Compile SynthDefs: <code>imbolc-core/bin/compile-synthdefs</code></li>
+        <li>Run: <code>cargo run -p imbolc-ui --release</code></li>
+      </ol>
+      <p class="note">Requires a terminal with <a href="https://sw.kovidgoyal.net/kitty/keyboard-protocol/">Kitty keyboard protocol</a> support — <a href="https://sw.kovidgoyal.net/kitty/">Kitty</a> or <a href="https://ghostty.org/">Ghostty</a> recommended.</p>
+    </div>
+  </section>
+
+  {{/* ── Footer ── */}}
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="{{ .Site.Params.githubUrl }}">GitHub</a>
+        <a href="{{ .Site.Params.docsUrl }}">Docs</a>
+        <a href="{{ .Site.Params.sponsorUrl }}">Sponsor</a>
+        <a href="{{ .Site.Params.kofiUrl }}">Ko-fi</a>
+        <a href="{{ .Site.Params.githubUrl }}/blob/main/LICENSE">License</a>
+      </div>
+      <p class="copyright">GPL-3.0 · Built with care by one person.</p>
+    </div>
+  </footer>
+
+</main>
+{{ end }}
