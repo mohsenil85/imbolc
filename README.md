@@ -1,25 +1,71 @@
 # Imbolc
 
-Imbolc is a complete music studio that runs right in your terminal. Write beats, layer synthesizers, shape sounds with effects, mix tracks, and record finished songs - all without a graphics library. It's free, open-source, and yours to keep.
+**A complete music studio in your terminal.**
 
-**Terminal requirement:** In order to support keychords, Imbolc requires a terminal that supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), such as [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/). The default macOS Terminal and GNOME Terminal are not supported.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![CI](https://github.com/mohsenil85/imbolc/actions/workflows/ci.yml/badge.svg)](https://github.com/mohsenil85/imbolc/actions/workflows/ci.yml)
+[![GitHub Stars](https://img.shields.io/github/stars/mohsenil85/imbolc)](https://github.com/mohsenil85/imbolc)
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/mohsenil85)
+
+Write beats, layer synthesizers, shape sounds with effects, mix tracks, record finished songs, annoy your neighbors, all from the comfort of your terminal.
+
+<!-- ![Imbolc screenshot](docs/assets/screenshot.png) -->
 
 ## Highlights
 
-- **Supercollider** -- uses Supercollider for DSP and sythdefs
-- **58 built-in instruments** -- oscillators, FM synthesis, physical models, drums, classic synths, samplers, and more
-- **39 built-in effects** -- delays, reverbs, compressors, modulation, distortion, granular, spectral, and more
-- **Piano roll and drum sequencer** -- per-note velocity and probability, variable grid resolution, groove and humanize
-- **Semi-modular audio engine** -- per-track signal chain: source → LFO → effects → 12-band parametric EQ → mixer with bus routing
-- **Mixer with up to 128 buses** -- per-track levels, pan, mute/solo, sends, and master control
-- **Real-time LAN collaboration** -- multiple players on a shared session over your local network
-- **Automation, arpeggiator, and recording** -- automate any parameter, arpeggiate chords, record and export to WAV
+### Sound Design
+
+- **58 built-in instruments** — oscillators, FM synthesis, physical models, drums, classic synths, samplers, and more
+- **39 built-in effects** — delays, reverbs, compressors, modulation, distortion, granular, spectral, and more
+- **Semi-modular signal chain** — per-track source → LFO → effects → EQ → mixer with bus routing
+- **Powered by SuperCollider** — professional-grade DSP with custom synthdefs
+
+### Sequencing
+
+- **Piano roll and drum sequencer** — per-note velocity and probability, variable grid resolution, groove and humanize
+- **Automation** — automate any parameter with drawable lanes
+- **Arpeggiator** — arpeggiate chords with configurable patterns
+- **Generative Engine** — like gambling with snare hits
+
+### Studio
+
+- **Mixer with up to 128 buses** — per-track levels, pan, mute/solo, sends, and master control
+- **Real-time LAN collaboration** — multiple players on a shared session over your local network
+- **Record and export** — capture your session and export to WAV
+- **SQLite project files** — projects are plain SQLite databases you can query, edit, and share with standard tools (patch export WIP)
+
+### Does your DAW have
+
+- **Stradella bass keyboard** — full accordion layout with automatic chord voicing across a circle-of-fifths grid
+- **Just intonation** — 5 tuning systems (12-TET, scale JI, chord JI, adaptive JI, global JI) with 3 JI flavors (5-limit, 7-limit, Pythagorean)
+- **Per-pad groove** — independent swing, timing offset, humanization, and time signature per pad
+- **Generative composition** — Euclidean rhythms, Markov chains, and L-systems with macro controls for density, chaos, energy, and motion
+
+
+### Accessible REPL
+
+Most TUIs are an accessibility nightmare. Imbolc ships a full text-mode REPL with **236 commands** across 16 domains — every action available in the UI is available as a typed command.
+
+- **Screen-reader friendly** — plain stdin/stdout, no visual UI required
+- **Tab completion** — context-aware completion with inline hints
+- **Built-in help** — `help`, `help <group>`, `help <group> <command>`
+- **Scriptable** — pipe a text file in for automated or headless music production
+- **Works anywhere** — over SSH, in containers, not that you'd want to
+
+## Support the Project
+
+Imbolc is built by one person and given away for free. Sponsorship keeps development going — new instruments, new effects, and new features — while keeping Imbolc open source and $0 for everyone.
+
+- [GitHub Sponsors](https://github.com/sponsors/mohsenil85)
+- [Ko-fi](https://ko-fi.com/mohsenil85)
 
 ## Quick Start
 
 1. Install [Rust](https://rustup.rs/) and [SuperCollider](https://supercollider.github.io/) (`scsynth` must be on your PATH).
 2. Compile SynthDefs: `imbolc-core/bin/compile-synthdefs`
 3. Run: `cargo run -p imbolc-ui --release`
+
+**Terminal requirement:** Imbolc requires a terminal that supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), such as [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/). The default macOS Terminal and GNOME Terminal are not supported.
 
 ## Press the buttons
 
@@ -30,12 +76,18 @@ Imbolc is a complete music studio that runs right in your terminal. Write beats,
 - F12 - Server settings
 - ? - Show keybindings
 - : - Invoke
-- ; - Pane Switcher
+- ; - Repl
 - ^n - New Instrument
 - ^N - Add new instrument to current layer group
-- ^p - Repl
 - ^m - Midi settings
+- 1-0 - Select Instrument
+- / - Piano mode
 - ^q - Quit
+
+## Community
+
+- [GitHub Discussions](https://github.com/mohsenil85/imbolc/discussions) — feature requests and ideas
+- Discord — chat, help, share music *(coming soon)*
 
 ## Documentation
 
@@ -46,10 +98,3 @@ Imbolc is a complete music studio that runs right in your terminal. Write beats,
 ## License
 
 This project is licensed under the GNU GPL v3.0. See [LICENSE](LICENSE) for details.
-
-## Support the Project
-
-Imbolc is free and open source. If you find it useful, consider supporting development:
-
-- [GitHub Sponsors](https://github.com/sponsors/mohsenil85)
-- [Ko-fi](https://ko-fi.com/mohsenil85)
