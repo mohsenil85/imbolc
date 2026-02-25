@@ -13,9 +13,7 @@ _Last verified: 2026-02-11_
 1. Install Rust (edition 2021 toolchain):
    - [https://rustup.rs](https://rustup.rs)
 2. Install SuperCollider so `scsynth` is on your `PATH`.
-3. Use a terminal with Kitty keyboard protocol support (for the TUI):
-   - [Kitty](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
-   - [Ghostty](https://ghostty.org/)
+3. Use any modern terminal emulator. [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/) recommended for enhanced keyboard detection.
 4. Clone the repo and compile SynthDefs:
 
 ```bash
@@ -102,10 +100,10 @@ After launch, confirm:
 - SuperCollider is not installed or not on your `PATH`.
 - Reopen your terminal after installation.
 
-### TUI keybindings behave incorrectly
+### Some shortcuts don't work (Save As, MIDI settings, Refresh)
 
-- You are likely using an unsupported terminal.
-- Switch to Kitty or Ghostty.
+- A few shortcuts (`Ctrl+S`, `Ctrl+m`, `Ctrl+L`) require the Kitty keyboard protocol (Kitty or Ghostty).
+- In other terminals, access these commands via the command palette (`:` or `;`).
 
 ### Build fails with `libclang` / bindgen errors
 

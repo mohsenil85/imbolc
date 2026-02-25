@@ -29,7 +29,7 @@ Available everywhere in Imbolc.
 | `Ctrl+l` | Load |
 | `Ctrl+o` | Project browser |
 | `Ctrl+z` | Undo |
-| `Ctrl+Z` | Redo |
+| `Ctrl+y` | Redo |
 | `Ctrl+c` | Copy |
 | `Ctrl+x` | Cut |
 | `Ctrl+v` | Paste |

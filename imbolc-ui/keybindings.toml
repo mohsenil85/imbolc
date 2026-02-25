@@ -3,7 +3,7 @@ version = 2
 [layers.global]
 bindings = [
   { key = "Ctrl+z", action = "undo", description = "Undo" },
-  { key = "Ctrl+Z", action = "redo", description = "Redo" },
+  { key = "Ctrl+y", action = "redo", description = "Redo" },
   { key = "Ctrl+q", action = "quit", description = "Quit" },
   { key = "Ctrl+s", action = "save", description = "Save session" },
   { key = "Ctrl+l", action = "load", description = "Load session" },

@@ -96,7 +96,7 @@ Imbolc is built by one person and given away for free. Sponsorship keeps develop
 2. Compile SynthDefs: `imbolc-core/bin/compile-synthdefs`
 3. Run: `cargo run -p imbolc-ui --release`
 
-**Terminal requirement:** Imbolc requires a terminal that supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), such as [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/). The default macOS Terminal and GNOME Terminal are not supported.
+**Terminal:** Works in any modern terminal. For the best experience (enhanced piano keyboard), use [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/).
 
 ## Press the buttons
 
