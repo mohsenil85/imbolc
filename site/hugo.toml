@@ -3,7 +3,7 @@ languageCode = "en-us"
 title = "Imbolc Studio"
 
 [params]
-  tagline = "A (somewhat) complete audio workstation in your terminal."
+  tagline = "A complete audio workstation in your terminal."
   description = "Write beats, layer synthesizers, shape sounds with effects, mix tracks, record finished songs, annoy your neighbors, all from the comfort of your terminal."
   githubUrl = "https://github.com/mohsenil85/imbolc"
   sponsorUrl = "https://github.com/sponsors/mohsenil85"
