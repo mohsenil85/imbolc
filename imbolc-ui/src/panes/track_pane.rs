@@ -742,7 +742,7 @@ impl Pane for TrackPane {
 
                     // Render clip block
                     let block_width = vis_end - vis_start;
-                    let name = &clip.name;
+                    let name = clip.id.get().to_string();
                     let display_name: String = if name.len() > block_width as usize {
                         name[..block_width as usize].to_string()
                     } else {
