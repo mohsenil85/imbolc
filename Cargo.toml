@@ -8,6 +8,11 @@ members = [
     "imbolc-audio",
 ]
 
+[workspace.metadata.release]
+shared-version = true
+tag-name = "v{{version}}"
+publish = false
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
