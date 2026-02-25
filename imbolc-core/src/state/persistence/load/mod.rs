@@ -17,7 +17,6 @@ pub fn load_relational(conn: &Connection) -> SqlResult<(SessionState, TrackState
     let mut tracks = TrackState::new();
 
     session::load_session(conn, &mut session, &mut tracks)?;
-    session::load_theme(conn, &mut session)?;
     mixer::load_mixer(conn, &mut session)?;
     mixer::load_layer_group_mixers(conn, &mut session)?;
     session::load_musical_settings(conn, &mut session)?;

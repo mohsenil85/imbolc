@@ -1148,24 +1148,12 @@ mod tests {
 
     // -----------------------------------------------------------------------
     // CycleTheme (order follows all_themes(): Dark, Light, Minimal, Minimal Light, High Contrast)
-    // Starting from default "Minimal" (index 2): → Minimal Light → High Contrast → Dark → Light → Minimal
+    // Starting from default "Minimal Light" (index 3): → High Contrast → Dark → Light → Minimal → Minimal Light
     // -----------------------------------------------------------------------
-
-    #[test]
-    fn cycle_theme_minimal_to_minimal_light() {
-        let (mut state, mut audio, io_tx) = setup();
-        assert_eq!(state.session.theme.name, "Minimal");
-
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-
-        assert_eq!(state.session.theme.name, "Minimal Light");
-    }
 
     #[test]
     fn cycle_theme_minimal_light_to_high_contrast() {
         let (mut state, mut audio, io_tx) = setup();
-        // Minimal → Minimal Light
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "Minimal Light");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
@@ -1176,8 +1164,7 @@ mod tests {
     #[test]
     fn cycle_theme_high_contrast_to_dark() {
         let (mut state, mut audio, io_tx) = setup();
-        // Minimal → Minimal Light → High Contrast
-        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        // Minimal Light → High Contrast
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
         assert_eq!(state.session.theme.name, "High Contrast");
 
@@ -1187,17 +1174,30 @@ mod tests {
     }
 
     #[test]
-    fn cycle_theme_wraps_to_minimal() {
+    fn cycle_theme_dark_to_light() {
         let (mut state, mut audio, io_tx) = setup();
-        // Cycle through all five: Minimal → Minimal Light → High Contrast → Dark → Light
-        for _ in 0..4 {
-            dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
-        }
-        assert_eq!(state.session.theme.name, "Light");
+        // Minimal Light → High Contrast → Dark
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        assert_eq!(state.session.theme.name, "Dark");
 
         dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
 
+        assert_eq!(state.session.theme.name, "Light");
+    }
+
+    #[test]
+    fn cycle_theme_wraps_to_minimal_light() {
+        let (mut state, mut audio, io_tx) = setup();
+        // Cycle through all five: Minimal Light → High Contrast → Dark → Light → Minimal
+        for _ in 0..4 {
+            dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+        }
         assert_eq!(state.session.theme.name, "Minimal");
+
+        dispatch_session(&SessionAction::NextTheme, &mut state, &mut audio, &io_tx);
+
+        assert_eq!(state.session.theme.name, "Minimal Light");
     }
 
     #[test]
@@ -1250,7 +1250,7 @@ mod tests {
         );
 
         // Theme unchanged
-        assert_eq!(state.session.theme.name, "Minimal");
+        assert_eq!(state.session.theme.name, "Minimal Light");
         assert!(result.status[0].message.contains("not found"));
     }
 

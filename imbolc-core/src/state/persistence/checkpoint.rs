@@ -12,7 +12,6 @@ use crate::state::track_state::TrackState;
 /// Data tables to include in session diffs (all tables except metadata/checkpoint tables).
 const DIFF_TABLES: &[&str] = &[
     "session",
-    "theme",
     "tracks",
     "track_source_params",
     "track_effects",

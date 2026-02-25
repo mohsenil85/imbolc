@@ -130,7 +130,7 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::minimal()
+        Self::minimal_light()
     }
 }
 
@@ -486,9 +486,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_is_minimal() {
+    fn test_default_is_minimal_light() {
         let theme = Theme::default();
-        assert_eq!(theme.name, "Minimal");
+        assert_eq!(theme.name, "Minimal Light");
     }
 
     #[test]

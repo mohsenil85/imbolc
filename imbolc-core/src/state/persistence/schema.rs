@@ -47,38 +47,6 @@ CREATE TABLE IF NOT EXISTS session (
     next_sample_id INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS theme (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    name TEXT NOT NULL,
-    background_r INTEGER NOT NULL, background_g INTEGER NOT NULL, background_b INTEGER NOT NULL,
-    foreground_r INTEGER NOT NULL, foreground_g INTEGER NOT NULL, foreground_b INTEGER NOT NULL,
-    border_r INTEGER NOT NULL, border_g INTEGER NOT NULL, border_b INTEGER NOT NULL,
-    selection_bg_r INTEGER NOT NULL, selection_bg_g INTEGER NOT NULL, selection_bg_b INTEGER NOT NULL,
-    selection_fg_r INTEGER NOT NULL, selection_fg_g INTEGER NOT NULL, selection_fg_b INTEGER NOT NULL,
-    muted_r INTEGER NOT NULL, muted_g INTEGER NOT NULL, muted_b INTEGER NOT NULL,
-    error_r INTEGER NOT NULL, error_g INTEGER NOT NULL, error_b INTEGER NOT NULL,
-    warning_r INTEGER NOT NULL, warning_g INTEGER NOT NULL, warning_b INTEGER NOT NULL,
-    success_r INTEGER NOT NULL, success_g INTEGER NOT NULL, success_b INTEGER NOT NULL,
-    osc_color_r INTEGER NOT NULL, osc_color_g INTEGER NOT NULL, osc_color_b INTEGER NOT NULL,
-    filter_color_r INTEGER NOT NULL, filter_color_g INTEGER NOT NULL, filter_color_b INTEGER NOT NULL,
-    env_color_r INTEGER NOT NULL, env_color_g INTEGER NOT NULL, env_color_b INTEGER NOT NULL,
-    lfo_color_r INTEGER NOT NULL, lfo_color_g INTEGER NOT NULL, lfo_color_b INTEGER NOT NULL,
-    fx_color_r INTEGER NOT NULL, fx_color_g INTEGER NOT NULL, fx_color_b INTEGER NOT NULL,
-    sample_color_r INTEGER NOT NULL, sample_color_g INTEGER NOT NULL, sample_color_b INTEGER NOT NULL,
-    midi_color_r INTEGER NOT NULL, midi_color_g INTEGER NOT NULL, midi_color_b INTEGER NOT NULL,
-    audio_in_color_r INTEGER NOT NULL, audio_in_color_g INTEGER NOT NULL, audio_in_color_b INTEGER NOT NULL,
-    meter_low_r INTEGER NOT NULL, meter_low_g INTEGER NOT NULL, meter_low_b INTEGER NOT NULL,
-    meter_mid_r INTEGER NOT NULL, meter_mid_g INTEGER NOT NULL, meter_mid_b INTEGER NOT NULL,
-    meter_high_r INTEGER NOT NULL, meter_high_g INTEGER NOT NULL, meter_high_b INTEGER NOT NULL,
-    waveform_grad_0_r INTEGER NOT NULL, waveform_grad_0_g INTEGER NOT NULL, waveform_grad_0_b INTEGER NOT NULL,
-    waveform_grad_1_r INTEGER NOT NULL, waveform_grad_1_g INTEGER NOT NULL, waveform_grad_1_b INTEGER NOT NULL,
-    waveform_grad_2_r INTEGER NOT NULL, waveform_grad_2_g INTEGER NOT NULL, waveform_grad_2_b INTEGER NOT NULL,
-    waveform_grad_3_r INTEGER NOT NULL, waveform_grad_3_g INTEGER NOT NULL, waveform_grad_3_b INTEGER NOT NULL,
-    playing_r INTEGER NOT NULL, playing_g INTEGER NOT NULL, playing_b INTEGER NOT NULL,
-    recording_r INTEGER NOT NULL, recording_g INTEGER NOT NULL, recording_b INTEGER NOT NULL,
-    armed_r INTEGER NOT NULL, armed_g INTEGER NOT NULL, armed_b INTEGER NOT NULL
-);
-
 -- ============================================================
 -- Instruments
 -- ============================================================
@@ -779,7 +747,6 @@ CREATE TABLE IF NOT EXISTS checkpoint_changesets (
 
 const DELETE_ALL_SQL: &str = "
 DELETE FROM session;
-DELETE FROM theme;
 DELETE FROM tracks;
 DELETE FROM track_source_params;
 DELETE FROM track_effects;
@@ -838,7 +805,6 @@ DELETE FROM arrangement_clip_automation_points;
 const DROP_ALL_SQL: &str = "
 DROP TABLE IF EXISTS schema_version;
 DROP TABLE IF EXISTS session;
-DROP TABLE IF EXISTS theme;
 DROP TABLE IF EXISTS tracks;
 DROP TABLE IF EXISTS track_source_params;
 DROP TABLE IF EXISTS track_effects;
