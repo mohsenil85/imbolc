@@ -247,10 +247,18 @@ pub(super) fn dispatch_session(
                 return result;
             }
 
-            let path_str = path.to_string_lossy().to_string();
+            let wav_path = match crate::audio_decode::ensure_wav_file(path) {
+                Ok(p) => p,
+                Err(e) => {
+                    result.push_status(audio.status(), format!("Failed to decode audio: {}", e));
+                    result.push_nav(NavIntent::PopOrSwitchTo(PaneId::Waveform));
+                    return result;
+                }
+            };
+            let path_str = wav_path.to_string_lossy().to_string();
             let (peaks, duration_secs) = super::helpers::compute_waveform_peaks(&path_str);
 
-            state.recording.last_recording_path = Some(path.clone());
+            state.recording.last_recording_path = Some(wav_path.clone());
             state.recording.last_recording_duration_secs = Some(duration_secs);
             state.recording.last_recording_name = path
                 .file_stem()

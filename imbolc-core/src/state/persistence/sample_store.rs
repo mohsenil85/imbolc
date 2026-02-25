@@ -60,12 +60,13 @@ pub fn import_sample(
     next_id: SampleId,
 ) -> Result<(SampleRef, bool), String> {
     let data = std::fs::read(path).map_err(|e| format!("Failed to read sample file: {}", e))?;
+    let wav_data = crate::audio_decode::normalize_to_wav(&data)?;
     let name = path
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("sample")
         .to_string();
-    import_sample_bytes(conn, &name, &data, next_id)
+    import_sample_bytes(conn, &name, &wav_data, next_id)
 }
 
 /// Import sample bytes directly into the blob store (for recordings, edits).

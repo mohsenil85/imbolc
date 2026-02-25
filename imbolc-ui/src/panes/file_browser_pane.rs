@@ -2,15 +2,26 @@ use std::any::Any;
 use std::fs;
 use std::path::PathBuf;
 
+use imbolc_core::state::bookmarks::Bookmarks;
+
 use crate::state::AppState;
 use crate::state::VstPluginKind;
 use crate::ui::action_id::{ActionId, FileBrowserActionId};
+use crate::ui::input::KeyCode;
 use crate::ui::layout_helpers::center_rect;
 use crate::ui::{
     Action, FileSelectAction, InputEvent, Keymap, MouseButton, MouseEvent, MouseEventKind,
     NavAction, Palette, Pane, PaneIdStr, Rect, RenderBuf, SampleSlicerAction, SequencerAction,
     SessionAction, Style, TrackAction,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BookmarkMode {
+    None,
+    JumpPending,
+    SetPending,
+    DeletePending,
+}
 
 struct DirEntry {
     name: String,
@@ -29,6 +40,8 @@ pub struct FileBrowserPane {
     on_select_action: FileSelectAction,
     scroll_offset: usize,
     show_hidden: bool,
+    bookmarks: Bookmarks,
+    bookmark_mode: BookmarkMode,
 }
 
 impl FileBrowserPane {
@@ -45,6 +58,8 @@ impl FileBrowserPane {
             on_select_action: FileSelectAction::ImportCustomSynthDef,
             scroll_offset: 0,
             show_hidden: false,
+            bookmarks: Bookmarks::load(),
+            bookmark_mode: BookmarkMode::None,
         };
         pane.refresh_entries();
         pane
@@ -68,6 +83,7 @@ impl FileBrowserPane {
                 "wav".to_string(),
                 "aiff".to_string(),
                 "aif".to_string(),
+                "caf".to_string(),
             ]),
             FileSelectAction::ImportProject => Some(vec!["sqlite".to_string()]),
             FileSelectAction::ImportPatch => Some(vec!["toml".to_string()]),
@@ -98,6 +114,7 @@ impl FileBrowserPane {
         });
         self.selected = 0;
         self.scroll_offset = 0;
+        self.bookmark_mode = BookmarkMode::None;
         self.refresh_entries();
     }
 
@@ -170,6 +187,10 @@ impl Default for FileBrowserPane {
     fn default() -> Self {
         Self::new(Keymap::new())
     }
+}
+
+fn is_bookmark_char(ch: char) -> bool {
+    ch.is_ascii_lowercase()
 }
 
 impl Pane for FileBrowserPane {
@@ -284,8 +305,67 @@ impl Pane for FileBrowserPane {
                 self.refresh_entries();
                 Action::None
             }
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkJump) => {
+                self.bookmark_mode = BookmarkMode::JumpPending;
+                Action::None
+            }
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkSet) => {
+                self.bookmark_mode = BookmarkMode::SetPending;
+                Action::None
+            }
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkDelete) => {
+                self.bookmark_mode = BookmarkMode::DeletePending;
+                Action::None
+            }
             _ => Action::None,
         }
+    }
+
+    fn handle_raw_input(&mut self, event: &InputEvent, _state: &AppState) -> Action {
+        if self.bookmark_mode == BookmarkMode::None {
+            return Action::None;
+        }
+
+        // Escape cancels pending mode
+        if event.key == KeyCode::Escape {
+            self.bookmark_mode = BookmarkMode::None;
+            return Action::None;
+        }
+
+        // Only accept lowercase a-z
+        if let KeyCode::Char(ch) = event.key {
+            if is_bookmark_char(ch) {
+                match self.bookmark_mode {
+                    BookmarkMode::JumpPending => {
+                        self.bookmark_mode = BookmarkMode::None;
+                        if let Some(path) = self.bookmarks.get(&ch).cloned() {
+                            if path.is_dir() {
+                                self.current_dir = path;
+                                self.selected = 0;
+                                self.scroll_offset = 0;
+                                self.refresh_entries();
+                            }
+                        }
+                    }
+                    BookmarkMode::SetPending => {
+                        self.bookmark_mode = BookmarkMode::None;
+                        self.bookmarks.set(ch, self.current_dir.clone());
+                        self.bookmarks.save();
+                    }
+                    BookmarkMode::DeletePending => {
+                        self.bookmark_mode = BookmarkMode::None;
+                        self.bookmarks.delete(ch);
+                        self.bookmarks.save();
+                    }
+                    BookmarkMode::None => unreachable!(),
+                }
+                return Action::None;
+            }
+        }
+
+        // Non-letter key cancels pending mode
+        self.bookmark_mode = BookmarkMode::None;
+        Action::None
     }
 
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
@@ -429,6 +509,61 @@ impl Pane for FileBrowserPane {
                     ),
                     &[("...", scroll_style)],
                 );
+            }
+        }
+
+        // Footer: bookmark mode indicator or bookmark hints
+        let footer_y = inner.y + inner.height.saturating_sub(2);
+        let footer_width = inner.width.saturating_sub(2);
+
+        match self.bookmark_mode {
+            BookmarkMode::JumpPending => {
+                let label = "JUMP TO BOOKMARK: press a-z";
+                buf.draw_line(
+                    Rect::new(content_x, footer_y, footer_width, 1),
+                    &[(label, Style::new().fg(p.accent).bold())],
+                );
+            }
+            BookmarkMode::SetPending => {
+                let label = "SET BOOKMARK: press a-z";
+                buf.draw_line(
+                    Rect::new(content_x, footer_y, footer_width, 1),
+                    &[(label, Style::new().fg(p.accent).bold())],
+                );
+            }
+            BookmarkMode::DeletePending => {
+                let label = "DELETE BOOKMARK: press a-z";
+                buf.draw_line(
+                    Rect::new(content_x, footer_y, footer_width, 1),
+                    &[(label, Style::new().fg(p.accent).bold())],
+                );
+            }
+            BookmarkMode::None => {
+                // Show existing bookmarks as hints
+                if !self.bookmarks.is_empty() {
+                    let hints: Vec<String> = self
+                        .bookmarks
+                        .iter()
+                        .map(|(ch, path)| {
+                            let name = path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| path.to_string_lossy().to_string());
+                            format!("{}:{}", ch, name)
+                        })
+                        .collect();
+                    let hint_str = hints.join("  ");
+                    let max_len = footer_width as usize;
+                    let display = if hint_str.len() > max_len {
+                        format!("{}...", &hint_str[..max_len.saturating_sub(3)])
+                    } else {
+                        hint_str
+                    };
+                    buf.draw_line(
+                        Rect::new(content_x, footer_y, footer_width, 1),
+                        &[(&display, Style::new().fg(p.dim))],
+                    );
+                }
             }
         }
     }
@@ -617,5 +752,130 @@ mod tests {
         assert_eq!(pane.selected, pane.entries.len() - 1);
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn bookmark_mode_resets_on_escape() {
+        let mut pane = FileBrowserPane::new(Keymap::new());
+        let state = AppState::new();
+
+        // Enter jump pending mode
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkJump),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.bookmark_mode, BookmarkMode::JumpPending);
+
+        // Escape cancels
+        let esc_event = InputEvent::new(KeyCode::Escape, Modifiers::default());
+        pane.handle_raw_input(&esc_event, &state);
+        assert_eq!(pane.bookmark_mode, BookmarkMode::None);
+    }
+
+    #[test]
+    fn bookmark_mode_resets_on_non_letter() {
+        let mut pane = FileBrowserPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkSet),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.bookmark_mode, BookmarkMode::SetPending);
+
+        // Non-letter key cancels
+        let digit_event = InputEvent::new(KeyCode::Char('1'), Modifiers::default());
+        pane.handle_raw_input(&digit_event, &state);
+        assert_eq!(pane.bookmark_mode, BookmarkMode::None);
+    }
+
+    #[test]
+    fn bookmark_set_and_jump_roundtrip() {
+        let dir = make_temp_dir();
+        let sub = dir.join("subdir");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(dir.join("a.scd"), "a").unwrap();
+
+        let mut pane = FileBrowserPane::new(Keymap::new());
+        pane.open_for(FileSelectAction::ImportCustomSynthDef, Some(sub.clone()));
+        let state = AppState::new();
+
+        // Set bookmark 's' to current dir (subdir)
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkSet),
+            &dummy_event(),
+            &state,
+        );
+        let s_event = InputEvent::new(KeyCode::Char('s'), Modifiers::default());
+        pane.handle_raw_input(&s_event, &state);
+        assert_eq!(pane.bookmark_mode, BookmarkMode::None);
+        assert_eq!(pane.bookmarks.get(&'s'), Some(&sub));
+
+        // Navigate away to parent
+        pane.current_dir = dir.clone();
+        pane.refresh_entries();
+        assert_eq!(pane.current_dir, dir);
+
+        // Jump to bookmark 's'
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkJump),
+            &dummy_event(),
+            &state,
+        );
+        pane.handle_raw_input(&s_event, &state);
+        assert_eq!(pane.current_dir, sub);
+
+        // Delete bookmark 's'
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkDelete),
+            &dummy_event(),
+            &state,
+        );
+        pane.handle_raw_input(&s_event, &state);
+        assert_eq!(pane.bookmarks.get(&'s'), None);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn bookmark_jump_nonexistent_is_noop() {
+        let dir = make_temp_dir();
+        let mut pane = FileBrowserPane::new(Keymap::new());
+        pane.open_for(FileSelectAction::ImportCustomSynthDef, Some(dir.clone()));
+        let state = AppState::new();
+
+        let original_dir = pane.current_dir.clone();
+
+        // Jump to non-existent bookmark
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkJump),
+            &dummy_event(),
+            &state,
+        );
+        let z_event = InputEvent::new(KeyCode::Char('z'), Modifiers::default());
+        pane.handle_raw_input(&z_event, &state);
+
+        assert_eq!(pane.current_dir, original_dir);
+        assert_eq!(pane.bookmark_mode, BookmarkMode::None);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn open_for_resets_bookmark_mode() {
+        let mut pane = FileBrowserPane::new(Keymap::new());
+        let state = AppState::new();
+
+        pane.handle_action(
+            ActionId::FileBrowser(FileBrowserActionId::BookmarkJump),
+            &dummy_event(),
+            &state,
+        );
+        assert_eq!(pane.bookmark_mode, BookmarkMode::JumpPending);
+
+        pane.open_for(FileSelectAction::ImportCustomSynthDef, None);
+        assert_eq!(pane.bookmark_mode, BookmarkMode::None);
     }
 }

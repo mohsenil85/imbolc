@@ -2,6 +2,7 @@ pub mod arpeggiator;
 pub mod arrangement;
 pub mod audio_feedback;
 pub mod automation;
+pub mod bookmarks;
 pub mod clipboard;
 pub mod custom_synthdef;
 pub mod drum_sequencer;

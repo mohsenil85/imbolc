@@ -461,6 +461,9 @@ define_action_enum! {
         GotoTop => "goto_top",
         GotoBottom => "goto_bottom",
         ToggleHidden => "toggle_hidden",
+        BookmarkJump => "bookmark_jump",
+        BookmarkSet => "bookmark_set",
+        BookmarkDelete => "bookmark_delete",
     }
 }
 

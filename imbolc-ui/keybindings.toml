@@ -284,6 +284,9 @@ bindings = [
   { key = "Home", action = "goto_top", description = "Go to top" },
   { key = "End", action = "goto_bottom", description = "Go to bottom" },
   { key = "&", action = "toggle_hidden", description = "Toggle hidden files", hint = "hidden" },
+  { key = "!", action = "bookmark_jump", description = "Jump to bookmark", hint = "jump" },
+  { key = "@", action = "bookmark_set", description = "Set bookmark", hint = "set" },
+  { key = "#", action = "bookmark_delete", description = "Delete bookmark", hint = "del" },
 ]
 
 [layers.sample_slicer]

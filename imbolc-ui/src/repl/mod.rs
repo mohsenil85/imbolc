@@ -233,6 +233,80 @@ pub fn parse_command(input: &str, state: &AppState) -> Result<CommandResult, Str
                 server, playing, n_inst, state.session.bpm,
             )))
         }
+        "bookmark" => {
+            use imbolc_core::state::bookmarks::Bookmarks;
+            if parts.len() < 2 {
+                return Err(
+                    "bookmark what? Try: bookmark list, bookmark set <letter> <path>, bookmark delete <letter>"
+                        .to_string(),
+                );
+            }
+            match parts[1].as_str() {
+                "list" => {
+                    check_no_trailing(&parts, 2)?;
+                    let bookmarks = Bookmarks::load();
+                    if bookmarks.is_empty() {
+                        Ok(CommandResult::Output("No bookmarks set.".to_string()))
+                    } else {
+                        let lines: Vec<String> = bookmarks
+                            .iter()
+                            .map(|(ch, path)| format!("  {} -> {}", ch, path.display()))
+                            .collect();
+                        Ok(CommandResult::Output(lines.join("\n")))
+                    }
+                }
+                "set" => {
+                    if parts.len() < 4 {
+                        return Err("bookmark set <letter> <path>".to_string());
+                    }
+                    check_no_trailing(&parts, 4)?;
+                    let letter = parts[2].chars().next().ok_or("invalid letter")?;
+                    if !letter.is_ascii_lowercase() || parts[2].len() != 1 {
+                        return Err(
+                            "bookmark key must be a single lowercase letter a-z".to_string()
+                        );
+                    }
+                    let path = PathBuf::from(&parts[3]);
+                    let mut bookmarks = Bookmarks::load();
+                    bookmarks.set(letter, path.clone());
+                    bookmarks.save();
+                    Ok(CommandResult::Output(format!(
+                        "Bookmark '{}' set to {}",
+                        letter,
+                        path.display()
+                    )))
+                }
+                "delete" => {
+                    if parts.len() < 3 {
+                        return Err("bookmark delete <letter>".to_string());
+                    }
+                    check_no_trailing(&parts, 3)?;
+                    let letter = parts[2].chars().next().ok_or("invalid letter")?;
+                    if !letter.is_ascii_lowercase() || parts[2].len() != 1 {
+                        return Err(
+                            "bookmark key must be a single lowercase letter a-z".to_string()
+                        );
+                    }
+                    let mut bookmarks = Bookmarks::load();
+                    if bookmarks.delete(letter) {
+                        bookmarks.save();
+                        Ok(CommandResult::Output(format!(
+                            "Bookmark '{}' deleted",
+                            letter
+                        )))
+                    } else {
+                        Ok(CommandResult::Output(format!(
+                            "No bookmark '{}' found",
+                            letter
+                        )))
+                    }
+                }
+                other => Err(format!(
+                    "unknown bookmark subcommand: '{}'. Try: list, set, delete",
+                    other
+                )),
+            }
+        }
         _ => {
             let action = registry::parse_action(input)?;
             Ok(CommandResult::Action(action))

@@ -72,7 +72,7 @@ pub fn complete_input(input: &str) -> Vec<String> {
 
     // Meta commands
     let meta_commands = &[
-        "help", "show", "set", "undo", "redo", "save", "load", "quit", "exit", "status",
+        "help", "show", "set", "undo", "redo", "save", "load", "quit", "exit", "status", "bookmark",
     ];
 
     if parts.is_empty() || (parts.len() == 1 && !trailing_space) {
@@ -120,6 +120,10 @@ pub fn complete_input(input: &str) -> Vec<String> {
                 .into_iter()
                 .map(String::from)
                 .collect(),
+            "bookmark" => vec!["list", "set", "delete"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
             "help" => {
                 let mut groups: Vec<String> = registry::group_names()
                     .iter()
@@ -159,6 +163,13 @@ pub fn complete_input(input: &str) -> Vec<String> {
             }
             "set" => {
                 let subs = ["bpm", "key", "scale", "tuning", "ji-flavor"];
+                subs.iter()
+                    .filter(|s| s.starts_with(prefix))
+                    .map(|s| s.to_string())
+                    .collect()
+            }
+            "bookmark" => {
+                let subs = ["list", "set", "delete"];
                 subs.iter()
                     .filter(|s| s.starts_with(prefix))
                     .map(|s| s.to_string())
