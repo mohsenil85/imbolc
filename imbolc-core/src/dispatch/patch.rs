@@ -253,8 +253,10 @@ mod tests {
 
     #[test]
     fn remap_source_extra_sampler() {
-        let mut config = SamplerConfig::default();
-        config.sample_ref = Some(SampleRef::new(SampleId::new(10), "old.wav".to_string()));
+        let config = SamplerConfig {
+            sample_ref: Some(SampleRef::new(SampleId::new(10), "old.wav".to_string())),
+            ..Default::default()
+        };
         let extra = SourceExtra::Sampler(config);
 
         let mut map = HashMap::new();

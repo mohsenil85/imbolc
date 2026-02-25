@@ -403,7 +403,7 @@ mod tests {
 
     /// Helper: populate history by setting input + simulating Enter logic
     fn push_history(pane: &mut CommandLinePane, cmd: &str) {
-        if pane.history.last().map_or(true, |last| *last != cmd) {
+        if pane.history.last().is_none_or(|last| *last != cmd) {
             pane.history.push(cmd.to_string());
         }
         pane.history_index = None;
