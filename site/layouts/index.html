@@ -1,9 +1,10 @@
 {{ define "main" }}
-<main>
+<main class="landing">
 
   {{/* ── Hero ── */}}
   <section class="hero">
     <div class="container">
+      <p class="eyebrow">Open-source terminal-first DAW</p>
       <h1>Imbolc<span class="studio">Studio</span></h1>
       <p class="tagline">{{ .Site.Params.tagline }}</p>
       <p class="subtitle">{{ .Site.Params.description }}</p>
@@ -18,6 +19,7 @@
   <section class="hero-screenshot">
     <div class="container">
       <img src="/img/track-view.png" alt="Imbolc Track View" loading="eager">
+      <p class="hero-screenshot-note">Real production session running in the terminal.</p>
     </div>
   </section>
 
@@ -73,6 +75,7 @@
   <footer>
     <div class="container">
       <div class="footer-links">
+        <a href="/blog/">Blog</a>
         <a href="{{ .Site.Params.githubUrl }}">GitHub</a>
         <a href="{{ .Site.Params.docsUrl }}">Docs</a>
         <a href="{{ .Site.Params.sponsorUrl }}">Sponsor</a>
