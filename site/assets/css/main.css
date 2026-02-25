@@ -188,8 +188,6 @@ code {
   padding: 0.76rem 1.45rem;
   border: 1px solid transparent;
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
     background 0.18s ease,
     color 0.18s ease,
     border-color 0.18s ease;
@@ -204,8 +202,6 @@ code {
 .btn-primary:hover {
   background: #15110d;
   color: #fff8ec;
-  transform: translateY(-2px);
-  box-shadow: 0 16px 28px -22px rgba(16, 12, 10, 0.9);
 }
 
 .btn-secondary {
@@ -217,7 +213,6 @@ code {
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.82);
   color: var(--ink);
-  transform: translateY(-2px);
   border-color: rgba(31, 26, 21, 0.45);
 }
 
@@ -297,10 +292,7 @@ code {
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(1.5px);
   transform: translateY(var(--card-shift));
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
+  transition: border-color 0.22s ease;
 }
 
 .feature-card:nth-child(odd) {
@@ -328,8 +320,6 @@ code {
 }
 
 .feature-card:hover {
-  transform: translateY(calc(var(--card-shift) - 4px));
-  box-shadow: 0 22px 32px -28px rgba(27, 22, 18, 0.9);
   border-color: var(--line-strong);
 }
 
@@ -382,12 +372,11 @@ code {
   border: 1px solid var(--line);
   background: var(--surface-strong);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  transition: border-color 0.16s ease;
 }
 
 .screenshot:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 17px 25px -24px rgba(27, 22, 18, 0.85);
+  border-color: var(--line-strong);
 }
 
 .screenshot img {
