@@ -1,6 +1,6 @@
 # Imbolc Studio
 
-**A (somewhat) complete audio workstation in your terminal.**
+**A complete audio workstation in your terminal.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![CI](https://github.com/mohsenil85/imbolc/actions/workflows/ci.yml/badge.svg)](https://github.com/mohsenil85/imbolc/actions/workflows/ci.yml)
@@ -63,7 +63,7 @@ Write beats, layer synthesizers, shape sounds with effects, mix tracks, record f
 - **Just intonation** — 5 tuning systems (12-TET, scale JI, chord JI, adaptive JI, global JI) with 3 JI flavors (5-limit, 7-limit, Pythagorean)
 - **Per-pad groove** — independent swing, timing offset, humanization, and time signature per pad
 - **Generative composition** — Euclidean rhythms, Markov chains, and L-systems with macro controls for density, chaos, energy, and motion
-- **Harmonic Snap** - No think.  Just midi.
+- **Harmonic Snap** — notes automatically quantize to your key and scale
 
 
 ### Accessible REPL
@@ -75,7 +75,7 @@ TUIs can be an accessibility nightmare. Imbolc ships a full text-mode REPL with 
 - **Readline Editing** - C-a, C-e, etc
 - **Built-in help** — `help`, `help <group>`, `help <group> <command>`
 - **Scriptable** — pipe a text file in for automated or headless music production
-- **Works anywhere** — over SSH, in containers, not that you'd want to
+- **Works anywhere** — over SSH, in containers, on headless servers
 
 ## Support the Project
 
@@ -92,7 +92,7 @@ Imbolc is built by one person and given away for free. Sponsorship keeps develop
 
 **Terminal:** Works in any modern terminal. For the best experience (enhanced piano keyboard), use [Kitty](https://sw.kovidgoyal.net/kitty/) or [Ghostty](https://ghostty.org/).
 
-## Press the buttons
+## Keybindings
 
 - F1 - Create instruments and groups
 - F2 - Edit patterns
