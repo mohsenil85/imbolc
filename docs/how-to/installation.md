@@ -103,7 +103,7 @@ After launch, confirm:
 ### Some shortcuts don't work (Save As, MIDI settings, Refresh)
 
 - A few shortcuts (`Ctrl+S`, `Ctrl+m`, `Ctrl+L`) require the Kitty keyboard protocol (Kitty or Ghostty).
-- In other terminals, access these commands via the command palette (`:` or `;`).
+- In other terminals, access these commands via the command palette (`;`) or command line (`:`).
 
 ### Build fails with `libclang` / bindgen errors
 

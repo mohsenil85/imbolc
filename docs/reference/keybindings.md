@@ -44,8 +44,8 @@ Available everywhere in Imbolc.
 | `_` | Two-digit track select |
 | `<` / `>` | Previous / Next track |
 | `/` | Toggle piano keyboard |
-| `:` | Command palette |
-| `;` | Pane switcher |
+| `:` | Command line (REPL) |
+| `;` | Command palette |
 | `?` | Context help |
 | `.` | Toggle master mute |
 | `M` | Toggle metronome |
