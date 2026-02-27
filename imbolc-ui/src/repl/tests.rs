@@ -1,4 +1,5 @@
 use super::*;
+use imbolc_types::DomainAction;
 
 fn test_setup() -> (LocalDispatcher, AudioHandle) {
     // SAFETY: tests run with --test-threads=1 or accept env-var race; this is standard test setup.
@@ -295,4 +296,87 @@ fn test_unclosed_quote_error() {
         err.contains("unclosed quote"),
         "expected unclosed quote error, got: {err}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Compile-time REPL exhaustiveness for DomainAction
+// ---------------------------------------------------------------------------
+
+/// Map every DomainAction variant to its expected REPL group name (or None).
+///
+/// The exhaustive match is the real test: adding a new DomainAction variant
+/// without updating this function causes a compile error, forcing you to
+/// decide whether it gets a REPL group or is explicitly excluded.
+fn expected_repl_group(action: &DomainAction) -> Option<&'static str> {
+    match action {
+        DomainAction::Track(..) => Some("track"),
+        DomainAction::Mixer(..) => Some("mixer"),
+        DomainAction::PianoRoll(..) => Some("piano-roll"),
+        DomainAction::Arrangement(..) => Some("arrangement"),
+        DomainAction::Server(..) => Some("server"),
+        DomainAction::Session(..) => Some("session"),
+        DomainAction::Sequencer(..) => Some("sequencer"),
+        DomainAction::SampleSlicer(..) => Some("slicer"),
+        DomainAction::Automation(..) => Some("automation"),
+        DomainAction::Midi(..) => Some("midi"),
+        DomainAction::Bus(..) => Some("bus"),
+        DomainAction::Group(..) => Some("layer-group"),
+        DomainAction::Master(..) => Some("master"),
+        DomainAction::VstParam(..) => Some("vst-param"),
+        DomainAction::Click(..) => Some("click"),
+        DomainAction::Tuner(..) => Some("tuner"),
+        DomainAction::Generative(..) => Some("generative"),
+        // Intentionally excluded from REPL:
+        DomainAction::Tag(..) => None,           // TODO: add REPL commands
+        DomainAction::AudioFeedback(..) => None,  // internal audio thread feedback
+        DomainAction::Undo | DomainAction::Redo => None, // top-level commands in parse_command()
+    }
+}
+
+#[test]
+fn repl_covers_all_domain_actions() {
+    let groups = registry::group_names();
+
+    // Collect the unique group names referenced in the exhaustive match.
+    // We use a dummy action per variant just to exercise every arm.
+    let dummy_actions: Vec<DomainAction> = vec![
+        DomainAction::Track(TrackAction::SelectNext),
+        DomainAction::Mixer(MixerAction::ToggleMute),
+        DomainAction::PianoRoll(PianoRollAction::ToggleNote {
+            pitch: 60, tick: 0, duration: 480, velocity: 100, track: 0,
+        }),
+        DomainAction::Arrangement(ArrangementAction::TogglePlayMode),
+        DomainAction::Server(ServerAction::Connect),
+        DomainAction::Session(SessionAction::Save),
+        DomainAction::Sequencer(SequencerAction::ToggleStep(0, 0)),
+        DomainAction::SampleSlicer(SampleSlicerAction::LoadSample),
+        DomainAction::Automation(AutomationAction::AddLane(AutomationTarget::Global(GlobalParameter::Bpm))),
+        DomainAction::Midi(MidiAction::ConnectPort(0)),
+        DomainAction::Bus(BusAction::Add),
+        DomainAction::Group(GroupAction::AddEffect(GroupId::new(0), EffectType::Delay)),
+        DomainAction::Master(MasterAction::AddEffect(EffectType::Delay)),
+        DomainAction::VstParam(VstParamAction::SetParam(
+            TrackId::new(0), VstTarget::Source, 0, 0.0,
+        )),
+        DomainAction::Click(ClickAction::Toggle),
+        DomainAction::Tuner(TunerAction::PlayTone(440.0)),
+        DomainAction::Generative(GenerativeAction::ToggleEnabled),
+        DomainAction::Tag(TagAction::CreateTag(String::new())),
+        DomainAction::AudioFeedback(imbolc_types::AudioFeedback::PendingBufferFreed),
+        DomainAction::Undo,
+        DomainAction::Redo,
+    ];
+
+    for action in &dummy_actions {
+        if let Some(group) = expected_repl_group(action) {
+            assert!(
+                groups.contains(&group),
+                "DomainAction::{:?} maps to REPL group '{}' which doesn't exist in registry. \
+                 Available groups: {:?}",
+                std::mem::discriminant(action),
+                group,
+                groups,
+            );
+        }
+    }
 }
