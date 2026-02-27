@@ -50,7 +50,6 @@ Write beats, layer synthesizers, shape sounds with effects, mix tracks, record f
 - **Piano roll and drum sequencer** — per-note velocity and probability, variable grid resolution, groove and humanize
 - **Automation** — automate any parameter with drawable lanes
 - **Arpeggiator** — arpeggiate chords with configurable patterns
-- **Generative Engine** — like gambling with snare hits
 
 ### Studio
 
