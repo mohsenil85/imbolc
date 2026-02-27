@@ -7,39 +7,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
+## [0.1.0-alpha.1] - 2026-02-27
 
-- Placeholder
-
-### Changed
-
-- Placeholder
-
-### Fixed
-
-- Placeholder
-
-### Removed
-
-- Placeholder
-
-### Security
-
-- Placeholder
-
-## [0.1.0-alpha.1] - TBD
-
-### Added
-
-- Initial public alpha release.
-
-### Changed
-
-- Placeholder
-
-### Fixed
-
-- Placeholder
+Initial public alpha release.
 
 [unreleased]: https://github.com/mohsenil85/imbolc/compare/v0.1.0-alpha.1...HEAD
 [0.1.0-alpha.1]: https://github.com/mohsenil85/imbolc/releases/tag/v0.1.0-alpha.1
