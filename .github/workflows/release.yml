@@ -56,7 +56,8 @@ jobs:
           mkdir -p "${staging}"
 
           cp "target/${{ matrix.target }}/release/imbolc-ui" "${staging}/"
-          cp -R imbolc-core/synthdefs "${staging}/synthdefs"
+          mkdir -p "${staging}/synthdefs"
+          cp imbolc-core/synthdefs/*.scsyndef "${staging}/synthdefs/"
 
           tar -czf "${artifact}.tar.gz" -C dist "${artifact}"
 
