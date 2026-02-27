@@ -7,6 +7,8 @@
 [![GitHub Stars](https://img.shields.io/github/stars/mohsenil85/imbolc)](https://github.com/mohsenil85/imbolc)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/mohsenil85)
 
+> **Alpha software.** Imbolc is under active development. Expect rough edges. [Bug reports](https://github.com/mohsenil85/imbolc/issues) are very welcome.
+
 Write beats, layer synthesizers, shape sounds with effects, mix tracks, record finished songs, annoy your neighbors, all from the comfort of your terminal.
 
 ![Piano Roll & Automation](docs/assets/imbolc-main.png)
