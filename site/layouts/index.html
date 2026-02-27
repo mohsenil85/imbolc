@@ -1,4 +1,26 @@
 {{ define "main" }}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Imbolc Studio",
+  "description": "{{ .Site.Params.description }}",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "macOS, Linux",
+  "url": "https://imbolc.studio/",
+  "downloadUrl": "https://github.com/mohsenil85/imbolc",
+  "license": "https://opensource.org/licenses/GPL-3.0",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "Logan Mohseni"
+  }
+}
+</script>
 <main class="landing">
 
   {{/* ── Hero ── */}}

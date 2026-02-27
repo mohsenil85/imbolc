@@ -1,4 +1,4 @@
-# Imbolc Studio
+# [Imbolc Studio](https://imbolc.studio)
 
 **A complete audio workstation in your terminal.**
 
