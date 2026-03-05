@@ -13,28 +13,17 @@ Write beats, layer synthesizers, shape sounds with effects, mix tracks, record f
 
 ![Piano Roll & Automation](docs/assets/imbolc-main.png)
 
-<details>
-<summary>More screenshots</summary>
-
-### Arrangement
 ![Arrangement](docs/assets/arrangement.png)
 
-### Mixer
 ![Mixer](docs/assets/mixer.png)
 
-### Instrument Editor
 ![Instrument Editor](docs/assets/edit-instrument.png)
 
-### Add Track
 ![Add Track](docs/assets/add-track.png)
 
-### Command Palette
 ![Command Palette](docs/assets/palette.png)
 
-### Reference Tuner
 ![Reference Tuner](docs/assets/tuner.png)
-
-</details>
 
 ## Highlights
 
