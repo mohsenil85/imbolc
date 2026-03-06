@@ -7,6 +7,7 @@ edition = "2021"
 default = []
 net = ["dep:imbolc-net", "dep:hostname"]
 mdns = ["net", "imbolc-net/mdns"]
+mcp = ["imbolc-types/ipc"]
 
 [dependencies]
 imbolc-core = { path = "../imbolc-core" }

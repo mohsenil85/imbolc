@@ -10,6 +10,8 @@
 
 pub mod action;
 mod audio;
+#[cfg(feature = "ipc")]
+pub mod ipc;
 mod param;
 pub mod reduce;
 pub mod state;

@@ -47,6 +47,10 @@ pub struct AppRuntime {
     // Interaction logging
     pub(crate) ui_log: Option<InteractionLog>,
 
+    // MCP listener (when feature enabled)
+    #[cfg(feature = "mcp")]
+    pub(crate) mcp_handle: Option<crate::mcp_listener::McpListenerHandle>,
+
     // Per-frame state
     pub(crate) select_mode: TrackSelectMode,
     pub(crate) pending_audio_effects: Vec<AudioEffect>,
@@ -164,6 +168,16 @@ impl AppRuntime {
             layer_stack.set_pane_layer(panes.active());
         }
 
+        // Start MCP listener if feature enabled
+        #[cfg(feature = "mcp")]
+        let mcp_handle = match crate::mcp_listener::start_listener() {
+            Ok(handle) => Some(handle),
+            Err(e) => {
+                log::warn!("Failed to start MCP listener: {}", e);
+                None
+            }
+        };
+
         // Auto-start SuperCollider and apply status events
         {
             let startup_events = setup::auto_start_sc(&mut audio);
@@ -180,6 +194,8 @@ impl AppRuntime {
             io_rx,
             recent_projects,
             ui_log: InteractionLog::ui(),
+            #[cfg(feature = "mcp")]
+            mcp_handle,
             select_mode: TrackSelectMode::Normal,
             pending_audio_effects,
             needs_full_sync,
@@ -219,6 +235,8 @@ impl AppRuntime {
             }
 
             self.process_tick();
+            #[cfg(feature = "mcp")]
+            self.drain_mcp_requests();
             self.apply_pending_effects();
             self.drain_io_feedback();
             self.maybe_autosave();
@@ -232,6 +250,19 @@ impl AppRuntime {
             self.maybe_render(backend)?;
         }
         Ok(())
+    }
+
+    /// Drain pending MCP IPC requests.
+    #[cfg(feature = "mcp")]
+    pub(crate) fn drain_mcp_requests(&mut self) {
+        if let Some(handle) = &self.mcp_handle {
+            crate::mcp_listener::drain_mcp_requests(
+                handle,
+                &mut self.dispatcher,
+                &mut self.audio,
+                &mut self.pending_audio_effects,
+            );
+        }
     }
 
     /// Persist a periodic crash-recovery snapshot when project state is dirty.

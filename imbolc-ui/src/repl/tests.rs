@@ -327,8 +327,8 @@ fn expected_repl_group(action: &DomainAction) -> Option<&'static str> {
         DomainAction::Tuner(..) => Some("tuner"),
         DomainAction::Generative(..) => Some("generative"),
         // Intentionally excluded from REPL:
-        DomainAction::Tag(..) => None,           // TODO: add REPL commands
-        DomainAction::AudioFeedback(..) => None,  // internal audio thread feedback
+        DomainAction::Tag(..) => None, // TODO: add REPL commands
+        DomainAction::AudioFeedback(..) => None, // internal audio thread feedback
         DomainAction::Undo | DomainAction::Redo => None, // top-level commands in parse_command()
     }
 }
@@ -343,20 +343,29 @@ fn repl_covers_all_domain_actions() {
         DomainAction::Track(TrackAction::SelectNext),
         DomainAction::Mixer(MixerAction::ToggleMute),
         DomainAction::PianoRoll(PianoRollAction::ToggleNote {
-            pitch: 60, tick: 0, duration: 480, velocity: 100, track: 0,
+            pitch: 60,
+            tick: 0,
+            duration: 480,
+            velocity: 100,
+            track: 0,
         }),
         DomainAction::Arrangement(ArrangementAction::TogglePlayMode),
         DomainAction::Server(ServerAction::Connect),
         DomainAction::Session(SessionAction::Save),
         DomainAction::Sequencer(SequencerAction::ToggleStep(0, 0)),
         DomainAction::SampleSlicer(SampleSlicerAction::LoadSample),
-        DomainAction::Automation(AutomationAction::AddLane(AutomationTarget::Global(GlobalParameter::Bpm))),
+        DomainAction::Automation(AutomationAction::AddLane(AutomationTarget::Global(
+            GlobalParameter::Bpm,
+        ))),
         DomainAction::Midi(MidiAction::ConnectPort(0)),
         DomainAction::Bus(BusAction::Add),
         DomainAction::Group(GroupAction::AddEffect(GroupId::new(0), EffectType::Delay)),
         DomainAction::Master(MasterAction::AddEffect(EffectType::Delay)),
         DomainAction::VstParam(VstParamAction::SetParam(
-            TrackId::new(0), VstTarget::Source, 0, 0.0,
+            TrackId::new(0),
+            VstTarget::Source,
+            0,
+            0.0,
         )),
         DomainAction::Click(ClickAction::Toggle),
         DomainAction::Tuner(TunerAction::PlayTone(440.0)),

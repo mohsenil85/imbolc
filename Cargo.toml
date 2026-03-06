@@ -6,6 +6,7 @@ members = [
     "imbolc-types",
     "imbolc-net",
     "imbolc-audio",
+    "imbolc-mcp",
 ]
 
 [workspace.metadata.release]

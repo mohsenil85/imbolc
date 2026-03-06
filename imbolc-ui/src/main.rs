@@ -8,6 +8,8 @@ pub use imbolc_core::scd_parser;
 pub use imbolc_core::state;
 
 mod global_actions;
+#[cfg(feature = "mcp")]
+mod mcp_listener;
 mod midi_dispatch;
 #[cfg(feature = "net")]
 mod network;

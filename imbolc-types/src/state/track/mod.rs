@@ -2,6 +2,7 @@ mod effect;
 mod envelope;
 mod filter;
 mod lfo;
+pub mod meta;
 mod note_effect;
 mod source_type;
 
@@ -9,6 +10,11 @@ pub use effect::*;
 pub use envelope::*;
 pub use filter::*;
 pub use lfo::*;
+pub use meta::{
+    effect_categories, effects_by_category, effects_by_tag, instrument_categories,
+    instruments_by_category, instruments_by_tag, EffectMeta, FilterMeta, InstrumentMeta,
+    EFFECT_CATALOG, FILTER_CATALOG, INSTRUMENT_CATALOG,
+};
 pub use note_effect::*;
 pub use source_type::*;
 
