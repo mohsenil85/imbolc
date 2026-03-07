@@ -11,6 +11,7 @@
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Index encoding for triple buffer state.
 /// Uses 2 bits per slot to track which logical buffer each physical slot represents.
@@ -27,6 +28,11 @@ pub struct TripleBufferShared<T> {
     /// Atomic state: encodes which slot is front/middle/back
     /// Bit 0 = fresh data available in middle
     state: AtomicU8,
+    /// Shared-handle reads must be serialized so a second reader cannot
+    /// recycle the current front slot while another thread still borrows it.
+    reader_lock: Mutex<()>,
+    /// Shared-handle writes are also serialized to keep cloned handles safe.
+    writer_lock: Mutex<()>,
 }
 
 // Safety: We guarantee exclusive access through the atomic state machine
@@ -45,6 +51,8 @@ impl<T: Clone + Default> TripleBufferShared<T> {
             // Initial state: slot 0 = front (reader), slot 1 = middle, slot 2 = back (writer)
             // Encoded as: back=2, middle=1, front=0, fresh=0
             state: AtomicU8::new((2 << BACK_SHIFT) | (1 << MIDDLE_SHIFT) | (0 << FRONT_SHIFT)),
+            reader_lock: Mutex::new(()),
+            writer_lock: Mutex::new(()),
         }
     }
 
@@ -57,6 +65,8 @@ impl<T: Clone + Default> TripleBufferShared<T> {
                 UnsafeCell::new(value),
             ],
             state: AtomicU8::new((2 << BACK_SHIFT) | (1 << MIDDLE_SHIFT) | (0 << FRONT_SHIFT)),
+            reader_lock: Mutex::new(()),
+            writer_lock: Mutex::new(()),
         }
     }
 
@@ -260,8 +270,9 @@ impl<T: Clone + Default> TripleBufferHandle<T> {
     }
 
     /// Write a value (call from writer thread).
-    /// Note: Only one thread should write at a time.
+    /// Shared handles serialize writers so cloned handles remain safe.
     pub fn write(&self, value: T) {
+        let _writer_guard = self.shared.writer_lock.lock().unwrap();
         // Safety: We rely on the caller ensuring single-writer semantics
         // (the OSC receive thread is the only writer)
         unsafe {
@@ -271,11 +282,12 @@ impl<T: Clone + Default> TripleBufferHandle<T> {
     }
 
     /// Modify the back buffer in place and publish (call from writer thread).
-    /// Note: Only one thread should write at a time.
+    /// Shared handles serialize writers so cloned handles remain safe.
     pub fn modify<F>(&self, f: F)
     where
         F: FnOnce(&mut T),
     {
+        let _writer_guard = self.shared.writer_lock.lock().unwrap();
         // Safety: We rely on the caller ensuring single-writer semantics
         unsafe {
             f(self.shared.back_mut());
@@ -284,14 +296,14 @@ impl<T: Clone + Default> TripleBufferHandle<T> {
     }
 
     /// Read the latest value (call from reader thread).
-    /// Note: Only one thread should read at a time for best performance,
-    /// but multiple readers are safe (just less optimal).
+    /// Shared handles serialize readers so cloned readers cannot race.
     pub fn read(&self) -> T
     where
         T: Clone,
     {
+        let _reader_guard = self.shared.reader_lock.lock().unwrap();
         self.shared.consume();
-        // Safety: single logical reader at a time expected
+        // Safety: reader_lock keeps the borrowed front slot exclusive.
         unsafe { self.shared.front().clone() }
     }
 
@@ -300,6 +312,7 @@ impl<T: Clone + Default> TripleBufferHandle<T> {
     where
         F: FnOnce(&T) -> R,
     {
+        let _reader_guard = self.shared.reader_lock.lock().unwrap();
         self.shared.consume();
         unsafe { f(self.shared.front()) }
     }
@@ -356,5 +369,40 @@ mod tests {
         writer.write(vec![1, 2, 3]);
         let sum: i32 = reader.with(|v| v.iter().sum());
         assert_eq!(sum, 6);
+    }
+
+    #[test]
+    fn test_handle_supports_concurrent_cloned_readers() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let handle = TripleBufferHandle::new_with(vec![0_i32]);
+        let writer = handle.clone();
+        let reader_a = handle.clone();
+        let reader_b = handle.clone();
+
+        let writer_thread = thread::spawn(move || {
+            for value in 1..=256 {
+                writer.write(vec![value]);
+            }
+        });
+
+        let read_thread_a = thread::spawn(move || {
+            for _ in 0..256 {
+                let _ = reader_a.read();
+            }
+        });
+
+        let read_thread_b = thread::spawn(move || {
+            for _ in 0..256 {
+                let _ = reader_b.with(|values| Arc::new(values.clone()));
+            }
+        });
+
+        writer_thread.join().unwrap();
+        read_thread_a.join().unwrap();
+        read_thread_b.join().unwrap();
+
+        assert_eq!(handle.read(), vec![256]);
     }
 }
