@@ -77,8 +77,8 @@ impl ArrangementFlattenCache {
         }
     }
 
-    /// Compute a simple hash of the arrangement structure for cache invalidation.
-    /// Includes: clip count, placement count, clip lengths, placement positions, notes count per clip.
+    /// Compute a hash of the arrangement data that affects flattened note or
+    /// automation playback in Song mode.
     fn compute_version_hash(arr: &ArrangementState) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -90,22 +90,28 @@ impl ArrangementFlattenCache {
 
         for clip in &arr.clips {
             clip.id.hash(&mut hasher);
+            clip.instrument_id.hash(&mut hasher);
             clip.length_ticks.hash(&mut hasher);
             clip.notes.len().hash(&mut hasher);
             clip.automation_lanes.len().hash(&mut hasher);
-            // Hash note positions for detecting edits
+            // Hash note fields that survive flattening into playback.
             for note in &clip.notes {
                 note.tick.hash(&mut hasher);
                 note.pitch.hash(&mut hasher);
                 note.duration.hash(&mut hasher);
+                note.velocity.hash(&mut hasher);
+                note.probability.to_bits().hash(&mut hasher);
             }
-            // Hash automation points
+            // Hash automation metadata and points that survive flattening.
             for lane in &clip.automation_lanes {
+                lane.target.hash(&mut hasher);
+                lane.min_value.to_bits().hash(&mut hasher);
+                lane.max_value.to_bits().hash(&mut hasher);
                 lane.points.len().hash(&mut hasher);
                 for point in &lane.points {
                     point.tick.hash(&mut hasher);
-                    // Hash value as bits for deterministic hashing
                     point.value.to_bits().hash(&mut hasher);
+                    std::mem::discriminant(&point.curve).hash(&mut hasher);
                 }
             }
         }
@@ -113,6 +119,7 @@ impl ArrangementFlattenCache {
         for placement in &arr.placements {
             placement.id.hash(&mut hasher);
             placement.clip_id.hash(&mut hasher);
+            placement.instrument_id.hash(&mut hasher);
             placement.start_tick.hash(&mut hasher);
             placement.length_override.hash(&mut hasher);
         }
@@ -1313,5 +1320,104 @@ impl Drop for AudioHandle {
 impl Default for AudioHandle {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ArrangementFlattenCache;
+    use imbolc_types::{
+        ArrangementState, AutomationLane, AutomationLaneId, AutomationPoint, AutomationTarget,
+        CurveType, Note, TrackId,
+    };
+
+    fn id(n: u32) -> TrackId {
+        TrackId::new(n)
+    }
+
+    fn arrangement_with_clip(track_id: TrackId) -> (ArrangementState, imbolc_types::ClipId) {
+        let mut arrangement = ArrangementState::new();
+        let clip_id = arrangement.add_clip("clip".to_string(), track_id, 480);
+        arrangement.add_placement(clip_id, track_id, 0);
+        (arrangement, clip_id)
+    }
+
+    #[test]
+    fn arrangement_cache_refreshes_after_note_expression_changes() {
+        let track_id = id(1);
+        let (mut arrangement, clip_id) = arrangement_with_clip(track_id);
+        let clip = arrangement.clip_mut(clip_id).unwrap();
+        clip.notes.push(Note {
+            tick: 0,
+            duration: 120,
+            pitch: 60,
+            velocity: 100,
+            probability: 1.0,
+        });
+
+        let mut cache = ArrangementFlattenCache::new();
+        {
+            let (flattened, _, _) = cache.get_or_compute(&arrangement);
+            let note = &flattened.get(&track_id).unwrap()[0];
+            assert_eq!(note.velocity, 100);
+            assert_eq!(note.probability, 1.0);
+        }
+
+        let clip = arrangement.clip_mut(clip_id).unwrap();
+        clip.notes[0].velocity = 64;
+        clip.notes[0].probability = 0.25;
+
+        let (flattened, _, _) = cache.get_or_compute(&arrangement);
+        let note = &flattened.get(&track_id).unwrap()[0];
+        assert_eq!(note.velocity, 64);
+        assert_eq!(note.probability, 0.25);
+    }
+
+    #[test]
+    fn arrangement_cache_refreshes_after_placement_and_automation_changes() {
+        let track_a = id(1);
+        let track_b = id(2);
+        let (mut arrangement, clip_id) = arrangement_with_clip(track_a);
+        let clip = arrangement.clip_mut(clip_id).unwrap();
+        clip.notes.push(Note {
+            tick: 0,
+            duration: 120,
+            pitch: 60,
+            velocity: 100,
+            probability: 1.0,
+        });
+
+        let mut lane =
+            AutomationLane::new(AutomationLaneId::new(1), AutomationTarget::level(track_a));
+        lane.min_value = -1.0;
+        lane.max_value = 1.0;
+        lane.points
+            .push(AutomationPoint::with_curve(0, 0.2, CurveType::Linear));
+        clip.automation_lanes.push(lane);
+
+        let mut cache = ArrangementFlattenCache::new();
+        {
+            let (flattened, _, automation) = cache.get_or_compute(&arrangement);
+            assert!(flattened.get(&track_a).is_some());
+            assert!(flattened.get(&track_b).is_none());
+            assert_eq!(automation[0].target, AutomationTarget::level(track_a));
+            assert_eq!(automation[0].min_value, -1.0);
+            assert_eq!(automation[0].points[0].curve, CurveType::Linear);
+        }
+
+        arrangement.placements[0].instrument_id = track_b;
+        let clip = arrangement.clip_mut(clip_id).unwrap();
+        clip.automation_lanes[0].target = AutomationTarget::pan(track_b);
+        clip.automation_lanes[0].min_value = 0.0;
+        clip.automation_lanes[0].max_value = 0.5;
+        clip.automation_lanes[0].points[0].curve = CurveType::Step;
+
+        let (flattened, _, automation) = cache.get_or_compute(&arrangement);
+        assert!(flattened.get(&track_a).is_none());
+        assert!(flattened.get(&track_b).is_some());
+        assert_eq!(automation[0].target, AutomationTarget::pan(track_b));
+        assert_eq!(automation[0].min_value, 0.0);
+        assert_eq!(automation[0].max_value, 0.5);
+        assert_eq!(automation[0].points[0].curve, CurveType::Step);
     }
 }
