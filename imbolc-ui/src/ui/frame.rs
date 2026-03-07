@@ -238,9 +238,9 @@ impl Frame {
 
         // Autosave indicator
         let autosave_text = if self.autosave_enabled {
-            format!(" ASV {}m ", self.autosave_interval_minutes)
+            format!(" autosave {}m ", self.autosave_interval_minutes)
         } else {
-            " ASV OFF ".to_string()
+            " autosave off ".to_string()
         };
         let autosave_start = cursor.saturating_sub(autosave_text.len() as u16);
         let autosave_style = if self.autosave_enabled {
