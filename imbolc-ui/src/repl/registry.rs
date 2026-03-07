@@ -60,6 +60,7 @@ repl_actions! {
         "adjust-sustain"           => AdjustEnvelopeSustain(id: TrackId, d: f32);                 "Adjust envelope sustain"
         "adjust-release"           => AdjustEnvelopeRelease(id: TrackId, d: f32);                 "Adjust envelope release"
         "toggle-channel-config"    => ToggleChannelConfig(id: TrackId);                           "Toggle mono/stereo channel config"
+        "load-sample"              => LoadSampleResult(id: TrackId, path: PathBuf);               "Load sample file into track"
     }
 
     group "mixer" => DomainAction::Mixer, MixerAction {
@@ -112,6 +113,7 @@ repl_actions! {
         "adjust-pad-pitch"      => AdjustPadPitch(pad: usize, d: i8);                          "Adjust pad pitch"
         "adjust-step-pitch"     => AdjustStepPitch(pad: usize, step: usize, d: i8);            "Adjust step pitch offset"
         "cycle-step-resolution" => NextStepResolution;                                         "Cycle step resolution"
+        "load-sample"           => LoadSampleResult(pad: usize, path: PathBuf);               "Load sample file into kit pad"
     }
 
     group "arrangement" => DomainAction::Arrangement, ArrangementAction {
