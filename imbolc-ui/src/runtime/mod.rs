@@ -256,12 +256,17 @@ impl AppRuntime {
     #[cfg(feature = "mcp")]
     pub(crate) fn drain_mcp_requests(&mut self) {
         if let Some(handle) = &self.mcp_handle {
-            crate::mcp_listener::drain_mcp_requests(
+            let nav = crate::mcp_listener::drain_mcp_requests(
                 handle,
                 &mut self.dispatcher,
                 &mut self.audio,
                 &mut self.pending_audio_effects,
             );
+            if let Some(crate::action::NavAction::SwitchPane(pane_id)) = nav {
+                self.panes.switch_to(pane_id, self.dispatcher.state());
+                crate::global_actions::sync_pane_layer(&mut self.panes, &mut self.layer_stack);
+                self.render_needed = true;
+            }
         }
     }
 

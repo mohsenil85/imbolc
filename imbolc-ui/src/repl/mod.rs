@@ -14,7 +14,7 @@ use std::sync::mpsc::{self, Receiver};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
-use crate::action::IoFeedback;
+use crate::action::{IoFeedback, NavAction};
 use crate::audio::AudioHandle;
 use crate::config;
 use crate::dispatch::LocalDispatcher;
@@ -29,6 +29,8 @@ use completion::ReplHelper;
 pub enum CommandResult {
     /// A domain action to dispatch.
     Action(DomainAction),
+    /// A navigation action (pane switch).
+    Nav(NavAction),
     /// Read-only output text (show, help, status).
     Output(String),
     /// User wants to quit.
@@ -307,10 +309,50 @@ pub fn parse_command(input: &str, state: &AppState) -> Result<CommandResult, Str
                 )),
             }
         }
+        "view" => {
+            if parts.len() < 2 {
+                return Err(
+                    "view what? Try: view mixer, view piano-roll, view track, ...".to_string(),
+                );
+            }
+            check_no_trailing(&parts, 2)?;
+            parse_view_target(&parts[1])
+        }
         _ => {
             let action = registry::parse_action(input)?;
             Ok(CommandResult::Action(action))
         }
+    }
+}
+
+fn parse_view_target(name: &str) -> Result<CommandResult, String> {
+    // Normalize separators: accept both - and _
+    let normalized = name.replace('-', "_");
+    let pane_id = match normalized.as_str() {
+        // Short aliases
+        "pr" => Some(PaneId::PianoRoll),
+        "mix" => Some(PaneId::Mixer),
+        "auto" => Some(PaneId::Automation),
+        "seq" => Some(PaneId::Sequencer),
+        "gen" => Some(PaneId::Generative),
+        "eq" => Some(PaneId::Eq),
+        "arp" => Some(PaneId::Arpeggiator),
+        "midi" => Some(PaneId::MidiSettings),
+        "files" => Some(PaneId::FileBrowser),
+        "slicer" => Some(PaneId::SampleSlicer),
+        "vst" => Some(PaneId::VstParams),
+        "tags" => Some(PaneId::TagView),
+        "instrument" => Some(PaneId::InstrumentEdit),
+        // Full names via PaneId::from_str
+        other => PaneId::from_str(other),
+    };
+    match pane_id {
+        Some(id) if id.is_switchable() => Ok(CommandResult::Nav(NavAction::SwitchPane(id))),
+        Some(id) => Err(format!("'{}' is not a switchable pane", id.as_str())),
+        None => Err(format!(
+            "unknown view target: '{}'. Try: mixer, piano-roll, track, instrument, server, ...",
+            name
+        )),
     }
 }
 
@@ -322,6 +364,9 @@ fn parse_and_execute(
     match parse_command(input, dispatcher.state())? {
         CommandResult::Quit => Ok(ReplResult::Quit),
         CommandResult::Output(text) => Ok(ReplResult::Output(text)),
+        CommandResult::Nav(_) => Ok(ReplResult::Output(
+            "Navigation not available in REPL mode".to_string(),
+        )),
         CommandResult::Action(action) => {
             let result = dispatcher.dispatch_domain(&action, audio);
             Ok(ReplResult::Dispatched(action, result))
@@ -473,6 +518,8 @@ fn format_help(args: &[&str]) -> String {
             "  redo                    Redo last undone action".to_string(),
             "  save [path]             Save project".to_string(),
             "  load [path]             Load project".to_string(),
+            "  view <pane>             Switch to a pane (mixer, piano-roll, track, ...)"
+                .to_string(),
             "  status                  Show status summary".to_string(),
             "  quit                    Exit REPL".to_string(),
             String::new(),

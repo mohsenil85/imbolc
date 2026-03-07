@@ -346,10 +346,13 @@ impl AppRuntime {
                 sync_pane_layer(&mut self.panes, &mut self.layer_stack);
             }
 
-            // Auto-pop command_line and dispatch pending action
+            // Auto-pop command_line and dispatch pending action/nav
             if self.panes.active().id().0 != "command_line" {
                 if let Some(cl) = self.panes.get_pane_mut::<CommandLinePane>("command_line") {
-                    if let Some(action) = cl.take_action() {
+                    let pending_action = cl.take_action();
+                    let pending_nav = cl.take_nav();
+
+                    if let Some(action) = pending_action {
                         let mut r = self.dispatcher.dispatch_domain(&action, &mut self.audio);
                         if r.quit {
                             should_quit = true;
@@ -367,6 +370,10 @@ impl AppRuntime {
                             &mut self.app_frame,
                             &mut self.audio,
                         );
+                    }
+                    if let Some(action::NavAction::SwitchPane(pane_id)) = pending_nav {
+                        self.panes.switch_to(pane_id, self.dispatcher.state());
+                        sync_pane_layer(&mut self.panes, &mut self.layer_stack);
                     }
                 }
             }

@@ -1,5 +1,5 @@
 use super::*;
-use imbolc_types::DomainAction;
+use imbolc_types::{DomainAction, NavAction, PaneId};
 
 fn test_setup() -> (LocalDispatcher, AudioHandle) {
     // SAFETY: tests run with --test-threads=1 or accept env-var race; this is standard test setup.
@@ -388,4 +388,97 @@ fn repl_covers_all_domain_actions() {
             );
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// View command
+// ---------------------------------------------------------------------------
+
+fn parse(input: &str) -> Result<CommandResult, String> {
+    let state = AppState::default();
+    parse_command(input, &state)
+}
+
+#[test]
+fn test_view_mixer() {
+    match parse("view mixer").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::Mixer)) => {}
+        other => panic!("expected Nav(SwitchPane(Mixer)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_piano_roll_hyphen() {
+    match parse("view piano-roll").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::PianoRoll)) => {}
+        other => panic!("expected Nav(SwitchPane(PianoRoll)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_piano_roll_underscore() {
+    match parse("view piano_roll").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::PianoRoll)) => {}
+        other => panic!("expected Nav(SwitchPane(PianoRoll)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_short_alias_pr() {
+    match parse("view pr").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::PianoRoll)) => {}
+        other => panic!("expected Nav(SwitchPane(PianoRoll)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_short_alias_mix() {
+    match parse("view mix").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::Mixer)) => {}
+        other => panic!("expected Nav(SwitchPane(Mixer)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_short_alias_auto() {
+    match parse("view auto").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::Automation)) => {}
+        other => panic!("expected Nav(SwitchPane(Automation)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_track() {
+    match parse("view track").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::Track)) => {}
+        other => panic!("expected Nav(SwitchPane(Track)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_instrument() {
+    match parse("view instrument").unwrap() {
+        CommandResult::Nav(NavAction::SwitchPane(PaneId::InstrumentEdit)) => {}
+        other => panic!("expected Nav(SwitchPane(InstrumentEdit)), got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_view_no_arg() {
+    assert!(parse("view").is_err());
+}
+
+#[test]
+fn test_view_unknown() {
+    assert!(parse("view nonexistent").is_err());
+}
+
+#[test]
+fn test_view_non_switchable() {
+    assert!(parse("view add").is_err());
+}
+
+#[test]
+fn test_view_trailing_rejected() {
+    assert!(parse("view mixer extra").is_err());
 }

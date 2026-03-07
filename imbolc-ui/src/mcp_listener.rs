@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use imbolc_types::ipc::*;
-use imbolc_types::SourceExtra;
+use imbolc_types::{NavAction, SourceExtra};
 
 use crate::action::AudioEffect;
 use crate::dispatch::LocalDispatcher;
@@ -142,22 +142,28 @@ fn handle_connection(client_id: u32, mut stream: UnixStream, main_tx: Sender<Mcp
 /// Process all pending MCP requests in the main loop.
 ///
 /// Call this each frame (like `drain_io_feedback`).
+/// Returns the last nav action requested (if any) for the runtime to process.
 pub fn drain_mcp_requests(
     handle: &McpListenerHandle,
     dispatcher: &mut LocalDispatcher,
     audio: &mut crate::audio::AudioHandle,
     pending_effects: &mut Vec<AudioEffect>,
-) {
+) -> Option<NavAction> {
+    let mut nav = None;
     while let Ok(msg) = handle.rx.try_recv() {
-        let response = process_request(
+        let (response, req_nav) = process_request(
             msg.client_id,
             msg.request,
             dispatcher,
             audio,
             pending_effects,
         );
+        if req_nav.is_some() {
+            nav = req_nav;
+        }
         let _ = msg.response_tx.send(response);
     }
+    nav
 }
 
 /// Collect status messages from a DispatchResult.
@@ -166,14 +172,16 @@ fn collect_status_messages(result: &imbolc_types::DispatchResult) -> Vec<String>
 }
 
 /// Process a single IPC request and produce a response.
+/// Returns (response, optional nav action for the runtime to execute).
 fn process_request(
     client_id: u32,
     request: IpcRequest,
     dispatcher: &mut LocalDispatcher,
     audio: &mut crate::audio::AudioHandle,
     pending_effects: &mut Vec<AudioEffect>,
-) -> IpcResponse {
-    match request {
+) -> (IpcResponse, Option<NavAction>) {
+    let mut nav = None;
+    let response = match request {
         IpcRequest::Hello(info) => {
             log::info!("MCP client {} connected: {}", client_id, info.name);
             IpcResponse::Welcome { client_id }
@@ -265,6 +273,18 @@ fn process_request(
                             },
                         }
                     }
+                    crate::repl::CommandResult::Nav(nav_action) => {
+                        let pane_name = match &nav_action {
+                            NavAction::SwitchPane(id) => id.as_str(),
+                            NavAction::PushPane(id) => id.as_str(),
+                            NavAction::PopPane => "previous",
+                        };
+                        let output = format!("Switched to {}", pane_name);
+                        nav = Some(nav_action);
+                        IpcResponse::CommandResult {
+                            output: Some(output),
+                        }
+                    }
                     crate::repl::CommandResult::Output(text) => {
                         IpcResponse::CommandResult { output: Some(text) }
                     }
@@ -275,5 +295,6 @@ fn process_request(
                 Err(e) => IpcResponse::CommandError(e),
             }
         }
-    }
+    };
+    (response, nav)
 }

@@ -17,6 +17,7 @@ pub struct CommandLinePane {
     output: Vec<String>,
     scroll: usize,
     pending_action: Option<DomainAction>,
+    pending_nav: Option<NavAction>,
     error: Option<String>,
     history: Vec<String>,
     history_index: Option<usize>,
@@ -34,6 +35,7 @@ impl CommandLinePane {
             output: Vec::new(),
             scroll: 0,
             pending_action: None,
+            pending_nav: None,
             error: None,
             history: Vec::new(),
             history_index: None,
@@ -45,6 +47,11 @@ impl CommandLinePane {
     /// Called by runtime after pop to get the pending domain action.
     pub fn take_action(&mut self) -> Option<DomainAction> {
         self.pending_action.take()
+    }
+
+    /// Called by runtime after pop to get the pending nav action.
+    pub fn take_nav(&mut self) -> Option<NavAction> {
+        self.pending_nav.take()
     }
 
     fn history_prev(&mut self) {
@@ -185,6 +192,13 @@ impl Pane for CommandLinePane {
                     Ok(repl::CommandResult::Action(domain)) => {
                         self.output.push(format!(": {}", input));
                         self.pending_action = Some(domain);
+                        self.text_input.set_value("");
+                        self.error = None;
+                        Action::Nav(NavAction::PopPane)
+                    }
+                    Ok(repl::CommandResult::Nav(nav)) => {
+                        self.output.push(format!(": {}", input));
+                        self.pending_nav = Some(nav);
                         self.text_input.set_value("");
                         self.error = None;
                         Action::Nav(NavAction::PopPane)

@@ -66,13 +66,21 @@ impl Completer for ReplHelper {
     }
 }
 
+fn view_pane_names() -> Vec<String> {
+    imbolc_types::PaneId::switchable_panes()
+        .iter()
+        .map(|(id, _)| id.as_str().replace('_', "-"))
+        .collect()
+}
+
 pub fn complete_input(input: &str) -> Vec<String> {
     let parts: Vec<&str> = input.split_whitespace().collect();
     let trailing_space = input.ends_with(' ');
 
     // Meta commands
     let meta_commands = &[
-        "help", "show", "set", "undo", "redo", "save", "load", "quit", "exit", "status", "bookmark",
+        "help", "show", "set", "undo", "redo", "save", "load", "quit", "exit", "status",
+        "bookmark", "view",
     ];
 
     if parts.is_empty() || (parts.len() == 1 && !trailing_space) {
@@ -124,6 +132,7 @@ pub fn complete_input(input: &str) -> Vec<String> {
                 .into_iter()
                 .map(String::from)
                 .collect(),
+            "view" => view_pane_names(),
             "help" => {
                 let mut groups: Vec<String> = registry::group_names()
                     .iter()
@@ -175,6 +184,10 @@ pub fn complete_input(input: &str) -> Vec<String> {
                     .map(|s| s.to_string())
                     .collect()
             }
+            "view" => view_pane_names()
+                .into_iter()
+                .filter(|s| s.starts_with(prefix))
+                .collect(),
             "help" => registry::group_names()
                 .iter()
                 .filter(|g| g.starts_with(prefix))
