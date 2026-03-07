@@ -636,6 +636,39 @@ mod tests {
     }
 
     #[test]
+    fn set_effect_param_maps_ir_buffer_to_sc_bufnum() {
+        let (mut engine, backend) = connect_engine_with_test_backend();
+        let mut state = AppState::new();
+
+        let inst_id = state.add_track(SourceType::Saw);
+        let effect_id = {
+            let inst = state.tracks.track_mut(inst_id).expect("track should exist");
+            inst.add_effect(EffectType::ConvolutionReverb)
+        };
+
+        engine.buffer_map.insert(BufferId::new(7), 1234);
+
+        engine
+            .rebuild_instrument_routing(&state.tracks, &state.session)
+            .expect("rebuild routing");
+
+        backend.clear();
+        engine
+            .set_effect_param(inst_id, effect_id, "ir_buffer", 7.0)
+            .expect("set_effect_param");
+
+        let op = backend
+            .find(|op| matches!(op, TestOp::SetParam { param, .. } if param == "ir_buffer"))
+            .expect("ir_buffer param should be sent");
+
+        let TestOp::SetParam { value, .. } = op else {
+            panic!("expected SetParam operation");
+        };
+
+        assert_eq!(value, 1234.0);
+    }
+
+    #[test]
     fn apply_automation_covers_all_targets() {
         let mut engine = connect_engine();
         let mut state = AppState::new();
@@ -1150,6 +1183,54 @@ mod tests {
                 cleanup.is_some(),
                 "group free should be scheduled after release tail"
             );
+        }
+
+        #[test]
+        fn release_all_voices_defers_bus_reuse_until_node_end() {
+            let (mut engine, backend) = engine_with_test_backend();
+            let inst_id = TrackId::new(1);
+            let group_id = 9300;
+            let midi_node_id = 9301;
+            let source_node = 9302;
+            let control_buses = engine.voice_allocator.alloc_control_buses();
+            let gate_bus = control_buses.1;
+
+            engine.voice_allocator.add(VoiceChain {
+                instrument_id: inst_id,
+                pitch: 67,
+                velocity: 0.8,
+                group_id,
+                midi_node_id,
+                source_node,
+                spawn_time: Instant::now(),
+                release_secs: 0.05,
+                release_state: None,
+                control_buses,
+            });
+
+            engine.release_all_voices();
+
+            let ops = backend.operations();
+            let immediate = ops.iter().find(|op| {
+                matches!(
+                    op,
+                    TestOp::SendBundle { offset_secs, messages }
+                        if (*offset_secs - 0.0).abs() < f64::EPSILON
+                        && messages.contains(&("/n_free".to_string(), vec![RawArg::Int(midi_node_id)]))
+                        && messages.contains(&("/c_set".to_string(), vec![RawArg::Int(gate_bus), RawArg::Float(0.0)]))
+                )
+            });
+            assert!(
+                immediate.is_some(),
+                "release_all_voices should still force the gate bus low immediately"
+            );
+
+            assert_eq!(engine.voice_allocator.control_bus_pool_size(), 0);
+            assert_eq!(engine.oneshot_buses.get(&group_id), Some(&(control_buses)));
+
+            engine.process_node_ends(&[group_id]);
+            assert_eq!(engine.voice_allocator.control_bus_pool_size(), 1);
+            assert!(!engine.oneshot_buses.contains_key(&group_id));
         }
 
         #[test]
@@ -2243,6 +2324,86 @@ mod tests {
             assert_ne!(
                 send_in, delay_out,
                 "PreInsert tap should differ from post-effects final bus"
+            );
+        }
+
+        #[test]
+        fn send_level_lfo_only_wires_the_targeted_send() {
+            let (mut engine, backend) = engine_with_test_backend();
+            let mut state = AppState::new();
+            let inst_id = state.add_track(SourceType::AudioIn);
+            if let Some(inst) = state.tracks.track_mut(inst_id) {
+                inst.channel_strip.sends.insert(
+                    BusId::new(1),
+                    imbolc_types::MixerSend {
+                        bus_id: BusId::new(1),
+                        level: 0.5,
+                        enabled: true,
+                        tap_point: SendTapPoint::PostInsert,
+                    },
+                );
+                inst.channel_strip.sends.insert(
+                    BusId::new(2),
+                    imbolc_types::MixerSend {
+                        bus_id: BusId::new(2),
+                        level: 0.5,
+                        enabled: true,
+                        tap_point: SendTapPoint::PostInsert,
+                    },
+                );
+                inst.modulation.lfo.enabled = true;
+                inst.modulation.lfo.target =
+                    imbolc_types::ParameterTarget::SendLevel(BusId::new(1));
+            }
+
+            engine
+                .rebuild_instrument_routing(&state.tracks, &state.session)
+                .expect("rebuild routing");
+
+            let bus1_out = engine.bus_audio_buses.get(&BusId::new(1)).copied().unwrap() as f32;
+            let bus2_out = engine.bus_audio_buses.get(&BusId::new(2)).copied().unwrap() as f32;
+            let synths = backend.synths_created();
+
+            let send_to_bus1 = synths
+                .iter()
+                .find_map(|op| {
+                    if let TestOp::CreateSynth {
+                        def_name, params, ..
+                    } = op
+                    {
+                        if def_name == "imbolc_send"
+                            && params.iter().any(|(k, v)| k == "out" && *v == bus1_out)
+                        {
+                            return Some(params);
+                        }
+                    }
+                    None
+                })
+                .expect("send to bus 1");
+            let send_to_bus2 = synths
+                .iter()
+                .find_map(|op| {
+                    if let TestOp::CreateSynth {
+                        def_name, params, ..
+                    } = op
+                    {
+                        if def_name == "imbolc_send"
+                            && params.iter().any(|(k, v)| k == "out" && *v == bus2_out)
+                        {
+                            return Some(params);
+                        }
+                    }
+                    None
+                })
+                .expect("send to bus 2");
+
+            assert!(
+                send_to_bus1.iter().any(|(k, _)| k == "level_mod_in"),
+                "targeted send should receive the LFO modulation bus"
+            );
+            assert!(
+                !send_to_bus2.iter().any(|(k, _)| k == "level_mod_in"),
+                "untargeted sends should not receive the LFO modulation bus"
             );
         }
     }

@@ -1038,6 +1038,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "imbolc-ui2"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "dirs",
+ "hound",
+ "imbolc-audio",
+ "imbolc-core",
+ "imbolc-types",
+ "log",
+ "midir",
+ "rat-event",
+ "rat-widget",
+ "ratatui",
+ "regex",
+ "rosc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "simplelog",
+ "toml",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

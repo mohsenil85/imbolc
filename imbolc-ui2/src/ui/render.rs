@@ -1,0 +1,129 @@
+use ratatui::buffer::Buffer;
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Widget};
+
+pub use ratatui::layout::Rect;
+
+use super::style::Style;
+
+/// Rendering abstraction layer.
+///
+/// Wraps a ratatui `Buffer` and accepts our `Style`/`Color` types natively.
+/// Provides convenience methods for common rendering patterns. Use `raw_buf()`
+/// as an escape hatch for code that still talks to ratatui directly.
+pub struct RenderBuf<'a> {
+    buf: &'a mut Buffer,
+    cursor_position: Option<(u16, u16)>,
+    hint_anchor: Option<Rect>,
+}
+
+impl<'a> RenderBuf<'a> {
+    pub fn new(buf: &'a mut Buffer) -> Self {
+        Self {
+            buf,
+            cursor_position: None,
+            hint_anchor: None,
+        }
+    }
+
+    /// Set a single character at (x, y) with the given style.
+    pub fn set_cell(&mut self, x: u16, y: u16, ch: char, style: Style) {
+        if let Some(cell) = self.buf.cell_mut((x, y)) {
+            cell.set_char(ch)
+                .set_style(ratatui::style::Style::from(style));
+        }
+    }
+
+    /// Draw a string at (x, y) without wrapping. Characters beyond the buffer
+    /// boundary are silently clipped.
+    pub fn draw_str(&mut self, x: u16, y: u16, text: &str, style: Style) {
+        let rat_style = ratatui::style::Style::from(style);
+        for (i, ch) in text.chars().enumerate() {
+            if let Some(cell) = self.buf.cell_mut((x + i as u16, y)) {
+                cell.set_char(ch).set_style(rat_style);
+            }
+        }
+    }
+
+    /// Draw a bordered block with a title. Returns the inner `Rect`.
+    ///
+    /// The first call per frame automatically registers the block rect as the
+    /// hint anchor (used by PaneManager to position the hint bar).
+    pub fn draw_block(
+        &mut self,
+        area: Rect,
+        title: &str,
+        border_style: Style,
+        title_style: Style,
+    ) -> Rect {
+        if self.hint_anchor.is_none() {
+            self.hint_anchor = Some(area);
+        }
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(title)
+            .border_style(ratatui::style::Style::from(border_style))
+            .title_style(ratatui::style::Style::from(title_style));
+        let inner = block.inner(area);
+        block.render(area, self.buf);
+        inner
+    }
+
+    /// Draw styled spans on a single line within the given area.
+    /// Replaces the `Paragraph::new(Line::from(Span::styled(...)))` pattern.
+    pub fn draw_line(&mut self, area: Rect, spans: &[(&str, Style)]) {
+        let rat_spans: Vec<Span> = spans
+            .iter()
+            .map(|(text, style)| Span::styled(*text, ratatui::style::Style::from(*style)))
+            .collect();
+        let line = Line::from(rat_spans);
+        ratatui::widgets::Paragraph::new(line).render(area, self.buf);
+    }
+
+    /// Fill a horizontal line with a background color.
+    /// Useful for extending selection highlighting across the full width.
+    #[allow(dead_code)]
+    pub fn fill_line_bg(&mut self, x: u16, y: u16, width: u16, style: Style) {
+        for col in x..x.saturating_add(width) {
+            self.set_cell(col, y, ' ', style);
+        }
+    }
+
+    /// Fill an entire rectangular area with a background color.
+    /// Used to set the theme background before any content is drawn.
+    pub fn fill_bg(&mut self, area: Rect, bg: super::style::Color) {
+        let style = Style::new().bg(bg);
+        for y in area.y..area.y.saturating_add(area.height) {
+            for x in area.x..area.x.saturating_add(area.width) {
+                self.set_cell(x, y, ' ', style);
+            }
+        }
+    }
+
+    /// Set the terminal cursor position (for blinking cursor in text inputs).
+    pub fn set_cursor_position(&mut self, x: u16, y: u16) {
+        self.cursor_position = Some((x, y));
+    }
+
+    /// Get the cursor position set during rendering, if any.
+    pub fn cursor_position(&self) -> Option<(u16, u16)> {
+        self.cursor_position
+    }
+
+    /// Get the hint anchor rect set during rendering, if any.
+    pub fn hint_anchor(&self) -> Option<Rect> {
+        self.hint_anchor
+    }
+
+    /// Clear the hint anchor (called before each pane render).
+    pub fn clear_hint_anchor(&mut self) {
+        self.hint_anchor = None;
+    }
+
+    /// Escape hatch: direct access to the underlying ratatui `Buffer`.
+    /// Use this for code that hasn't been migrated yet, or for ratatui widgets
+    /// that need a raw buffer reference.
+    pub fn raw_buf(&mut self) -> &mut Buffer {
+        self.buf
+    }
+}

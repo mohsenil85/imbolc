@@ -1,6 +1,6 @@
 //! MCP server handler — registers tools and dispatches to IPC.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -17,7 +17,8 @@ use imbolc_types::ipc::*;
 #[derive(Clone)]
 pub struct ImbolcServer {
     tool_router: ToolRouter<Self>,
-    ipc: Option<Arc<IpcClient>>,
+    /// Lazy IPC connection — connects on first use, reconnects if the DAW restarts.
+    ipc: Arc<Mutex<Option<Arc<IpcClient>>>>,
 }
 
 // ============================================================================
@@ -59,7 +60,7 @@ impl ImbolcServer {
     pub fn new(ipc: Option<Arc<IpcClient>>) -> Self {
         Self {
             tool_router: Self::tool_router(),
-            ipc,
+            ipc: Arc::new(Mutex::new(ipc)),
         }
     }
 
@@ -279,15 +280,41 @@ impl ServerHandler for ImbolcServer {
 // ============================================================================
 
 impl ImbolcServer {
-    /// Execute an IPC call, returning an error message if not connected.
+    /// Get or lazily establish the IPC connection.
+    fn get_ipc(&self) -> Option<Arc<IpcClient>> {
+        let mut guard = self.ipc.lock().unwrap();
+        if guard.is_some() {
+            return guard.clone();
+        }
+        // Try to connect now
+        match IpcClient::connect() {
+            Ok(client) => {
+                if let Err(e) = client.hello("Claude MCP") {
+                    tracing::warn!("IPC hello failed: {}", e);
+                    return None;
+                }
+                tracing::info!("Connected to Imbolc DAW (lazy)");
+                let arc = Arc::new(client);
+                *guard = Some(arc.clone());
+                Some(arc)
+            }
+            Err(_) => None,
+        }
+    }
+
+    /// Execute an IPC call, connecting lazily if needed.
     fn with_ipc<F>(&self, f: F) -> String
     where
         F: FnOnce(&IpcClient) -> std::io::Result<String>,
     {
-        match &self.ipc {
-            Some(ipc) => match f(ipc) {
+        match self.get_ipc() {
+            Some(ipc) => match f(&ipc) {
                 Ok(result) => result,
-                Err(e) => format!("IPC error: {}. Is the DAW running with --features mcp?", e),
+                Err(e) => {
+                    // Connection broke — clear it so next call retries
+                    *self.ipc.lock().unwrap() = None;
+                    format!("IPC error: {}. Is the DAW running with --features mcp?", e)
+                }
             },
             None => {
                 "Not connected to DAW. Start Imbolc with: cargo run -p imbolc-ui --features mcp"

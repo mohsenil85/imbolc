@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "imbolc-ui",
+    "imbolc-ui2",
     "imbolc-core",
     "imbolc-types",
     "imbolc-net",

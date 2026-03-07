@@ -155,11 +155,18 @@ impl VoiceAllocator {
     /// Drain all voices. Returns removed voices for the caller to free via OSC.
     /// Control buses of all drained voices are returned to the pool.
     pub fn drain_all(&mut self) -> Vec<VoiceChain> {
-        let drained: Vec<VoiceChain> = self.chains.drain(..).collect();
+        let drained = self.drain_all_pending_free();
         for voice in &drained {
             self.control_bus_pool.push(voice.control_buses);
         }
         drained
+    }
+
+    /// Drain all voices without returning their control buses yet.
+    /// Use this when the caller will free the voices asynchronously and must
+    /// wait for `/n_end` before reusing the buses.
+    pub fn drain_all_pending_free(&mut self) -> Vec<VoiceChain> {
+        self.chains.drain(..).collect()
     }
 
     /// Remove and return all voices for a specific instrument.
@@ -342,6 +349,18 @@ mod tests {
         let drained = alloc.drain_all();
         assert_eq!(drained.len(), 2);
         assert_eq!(alloc.control_bus_pool_size(), 2);
+        assert!(alloc.chains().is_empty());
+    }
+
+    #[test]
+    fn test_drain_all_pending_free_keeps_buses_reserved() {
+        let mut alloc = VoiceAllocator::new();
+        let buses = alloc.alloc_control_buses();
+        alloc.add(make_voice(id(1), 60, 100, buses));
+
+        let drained = alloc.drain_all_pending_free();
+        assert_eq!(drained.len(), 1);
+        assert_eq!(alloc.control_bus_pool_size(), 0);
         assert!(alloc.chains().is_empty());
     }
 

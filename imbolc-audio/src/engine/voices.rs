@@ -713,10 +713,12 @@ impl AudioEngine {
     /// Release all active voices with anti-click fade (force gate bus to 0, then delayed free)
     pub fn release_all_voices(&mut self) {
         if let Some(ref backend) = self.backend {
-            for chain in self.voice_allocator.drain_all() {
+            for chain in self.voice_allocator.drain_all_pending_free() {
                 self.node_registry.unregister(chain.group_id);
                 self.node_registry.unregister(chain.midi_node_id);
                 self.node_registry.unregister(chain.source_node);
+                self.oneshot_buses
+                    .insert(chain.group_id, chain.control_buses);
                 let _ = Self::anti_click_free(backend.as_ref(), &chain);
             }
         }

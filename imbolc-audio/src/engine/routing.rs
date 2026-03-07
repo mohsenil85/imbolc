@@ -116,8 +116,9 @@ impl AudioEngine {
         }
     }
 
-    /// Runtime remap for targeted /n_set updates of effect bus selector params.
-    fn remap_effect_bus_param_runtime<'a>(
+    /// Runtime remap for targeted /n_set updates of effect params that use
+    /// logical IDs in state but require backend-specific values at the synth.
+    fn remap_effect_param_runtime<'a>(
         &self,
         param_name: &'a str,
         value: f32,
@@ -130,6 +131,19 @@ impl AudioEngine {
             ),
             // Crossfader selector: same name in UI and SynthDef, but still map ID->SC bus.
             "bus_b" => (Cow::Borrowed("bus_b"), self.map_bus_selector_value(value)),
+            // Convolution IR selector: state stores a logical BufferId, synth expects bufnum.
+            "ir_buffer" => {
+                let buffer_id = value.round() as i32;
+                let sc_bufnum = if buffer_id >= 0 {
+                    self.buffer_map
+                        .get(&BufferId::new(buffer_id as u32))
+                        .copied()
+                        .unwrap_or(-1) as f32
+                } else {
+                    -1.0
+                };
+                (Cow::Borrowed("ir_buffer"), sc_bufnum)
+            }
             _ => (Cow::Borrowed(param_name), value),
         }
     }
@@ -554,23 +568,20 @@ impl AudioEngine {
             .unwrap_or(16);
         let is_mono = instrument.channel_strip.channel_config.is_mono();
 
-        let send_lfo_bus = if instrument.modulation.lfo.enabled
-            && matches!(
-                instrument.modulation.lfo.target,
-                ParameterTarget::SendLevel(_)
-            ) {
-            self.bus_allocator
-                .get_control_bus(instrument.id, "lfo_out")
-                .map(|b| b as f32)
-                .unwrap_or(-1.0)
-        } else {
-            -1.0
-        };
-
         for send in instrument.channel_strip.sends.values() {
             if !send.enabled || send.level <= 0.0 {
                 continue;
             }
+            let send_lfo_bus = if instrument.modulation.lfo.enabled
+                && instrument.modulation.lfo.target == ParameterTarget::SendLevel(send.bus_id)
+            {
+                self.bus_allocator
+                    .get_control_bus(instrument.id, "lfo_out")
+                    .map(|b| b as f32)
+                    .unwrap_or(-1.0)
+            } else {
+                -1.0
+            };
             if let Some(&bus_audio) = self.bus_audio_buses.get(&send.bus_id) {
                 let tap_bus = match send.tap_point {
                     SendTapPoint::PreInsert => source_out_bus,
@@ -1862,7 +1873,7 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
-        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
+        let (mapped_param, mapped_value) = self.remap_effect_param_runtime(param, value);
 
         if let Some(nodes) = self.node_map.get(&instrument_id) {
             if let Some(&effect_node) = nodes.effects.get(&effect_id) {
@@ -1906,7 +1917,7 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
-        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
+        let (mapped_param, mapped_value) = self.remap_effect_param_runtime(param, value);
 
         if let Some(&node_id) = self.bus_effect_node_map.get(&(bus_id, effect_id)) {
             let _ = client.set_param(node_id, mapped_param.as_ref(), mapped_value);
@@ -1927,7 +1938,7 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
-        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
+        let (mapped_param, mapped_value) = self.remap_effect_param_runtime(param, value);
 
         if let Some(&node_id) = self.layer_group_effect_node_map.get(&(group_id, effect_id)) {
             let _ = client.set_param(node_id, mapped_param.as_ref(), mapped_value);
@@ -2006,7 +2017,7 @@ impl AudioEngine {
             return Ok(());
         }
         let client = self.backend.as_ref().ok_or("Not connected")?;
-        let (mapped_param, mapped_value) = self.remap_effect_bus_param_runtime(param, value);
+        let (mapped_param, mapped_value) = self.remap_effect_param_runtime(param, value);
 
         if let Some(&node_id) = self.master_effect_node_map.get(&effect_id) {
             let _ = client.set_param(node_id, mapped_param.as_ref(), mapped_value);
