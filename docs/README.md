@@ -6,6 +6,12 @@ Organized following the [Diataxis](https://diataxis.fr/) framework.
 
 ---
 
+## [Philosophy](philosophy.md)
+
+Why Imbolc exists — creation over consumption, music as healing practice, and the design principles that follow.
+
+---
+
 ## Learning-oriented (Tutorials)
 
 | Document | Description |
