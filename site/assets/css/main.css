@@ -242,6 +242,7 @@ code {
 /* --- Shared Section --- */
 .features,
 .screenshots,
+.philosophy,
 .quickstart,
 .support {
   padding: clamp(3.8rem, 6vw, 5rem) 0;
@@ -249,6 +250,7 @@ code {
 
 .features h2,
 .screenshots h2,
+.philosophy h2,
 .quickstart h2,
 .support h2 {
   font-family: var(--font-display);
@@ -261,6 +263,7 @@ code {
 
 .features .container,
 .screenshots .container,
+.philosophy .container,
 .quickstart .container,
 .support .container {
   position: relative;
@@ -268,6 +271,7 @@ code {
 
 .features .container::before,
 .screenshots .container::before,
+.philosophy .container::before,
 .quickstart .container::before,
 .support .container::before {
   content: "";
@@ -397,6 +401,78 @@ code {
   text-transform: uppercase;
   color: var(--ink-faint);
   text-align: center;
+}
+
+/* --- Philosophy --- */
+.philosophy {
+  border-top: 1px dashed var(--line-strong);
+}
+
+.philosophy-prose {
+  max-width: 70ch;
+  margin-bottom: 2.4rem;
+}
+
+.philosophy-prose p {
+  color: var(--ink-soft);
+  font-size: 1.08rem;
+  line-height: 1.72;
+  margin-bottom: 1rem;
+  text-wrap: pretty;
+}
+
+.principles-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.1rem;
+  margin-bottom: 2.4rem;
+}
+
+.principle-card {
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(1.5px);
+  transition: border-color 0.22s ease;
+}
+
+.principle-card:hover {
+  border-color: var(--line-strong);
+}
+
+.principle-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.55rem;
+  color: var(--ink);
+}
+
+.principle-card p {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.philosophy-name {
+  max-width: 70ch;
+  border-left: 3px solid var(--accent-warm);
+  padding-left: 1.1rem;
+}
+
+.philosophy-name p {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1.65;
+  margin-bottom: 0.6rem;
+}
+
+.philosophy-name p:last-child {
+  margin-bottom: 0;
+  font-style: italic;
+  color: var(--ink-faint);
 }
 
 /* --- Quick Start --- */
@@ -759,6 +835,9 @@ footer {
 }
 
 .feature-card,
+.philosophy-prose,
+.principle-card,
+.philosophy-name,
 .quickstart li,
 .support-pitch,
 .support-buttons,
@@ -788,6 +867,30 @@ footer {
 .feature-card:nth-child(4),
 .post-entry:nth-child(4) {
   animation-delay: 0.22s;
+}
+
+.philosophy-prose {
+  animation-delay: 0.04s;
+}
+
+.principle-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.principle-card:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.principle-card:nth-child(3) {
+  animation-delay: 0.22s;
+}
+
+.principle-card:nth-child(4) {
+  animation-delay: 0.28s;
+}
+
+.philosophy-name {
+  animation-delay: 0.34s;
 }
 
 .support-pitch {
@@ -834,6 +937,10 @@ footer {
   .screenshot-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .principles-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -856,6 +963,7 @@ footer {
 
   .features .container::before,
   .screenshots .container::before,
+  .philosophy .container::before,
   .quickstart .container::before,
   .support .container::before {
     width: 62px;
@@ -863,7 +971,8 @@ footer {
   }
 
   .feature-grid,
-  .screenshot-grid {
+  .screenshot-grid,
+  .principles-grid {
     grid-template-columns: 1fr;
   }
 
