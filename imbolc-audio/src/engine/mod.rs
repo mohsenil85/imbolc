@@ -366,7 +366,7 @@ impl AudioEngine {
 
     /// Create a simple synth on bus 0 (hardware out) for the tuner reference tone.
     /// Returns the allocated node ID, or None if not connected.
-    pub fn create_tuner_synth(&mut self, freq: f32) -> Option<i32> {
+    pub fn create_tuner_synth(&mut self, freq: f32, bright: f32) -> Option<i32> {
         let backend = self.backend.as_ref()?;
         let node_id = self.next_node_id;
         self.next_node_id += 1;
@@ -374,6 +374,7 @@ impl AudioEngine {
             ("freq".to_string(), freq),
             ("amp".to_string(), 0.3),
             ("gate".to_string(), 1.0),
+            ("bright".to_string(), bright),
         ];
         let _ = backend.create_synth("imbolc_tuner_tone", node_id, 0, &params);
         Some(node_id)

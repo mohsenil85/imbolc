@@ -343,6 +343,8 @@ bindings = [
   { key = "Left", action = "prev_instrument", description = "Previous instrument", hint = "instrument" },
   { key = "Right", action = "next_instrument", description = "Next instrument", hint = "instrument" },
   { key = "Enter", action = "play_stop", description = "Play / Stop tone", hint = "play" },
+  { key = "d", action = "toggle_full_step_down", description = "Toggle full step down", hint = "D tuning" },
+  { key = "b", action = "toggle_bright", description = "Toggle bright mode (harmonics)", hint = "bright" },
 ]
 
 [layers.groove]

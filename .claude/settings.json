@@ -3,5 +3,16 @@
     "allow": [
       "Bash"
     ]
+  },
+  "mcpServers": {
+    "git-bug": {
+      "command": "/Users/log/.local/bin/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/log/Projects/git-bug-mcp",
+        "git-bug-mcp"
+      ]
+    }
   }
 }

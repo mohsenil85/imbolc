@@ -675,11 +675,13 @@ impl AudioThread {
             AudioCmd::SetClickMuted { muted } => {
                 self.click_state.muted = muted;
             }
-            AudioCmd::StartTunerTone { freq } => {
+            AudioCmd::StartTunerTone { freq, bright } => {
+                let bright_val = if bright { 1.0 } else { 0.0 };
                 if let Some(node_id) = self.tuner_node_id {
-                    // Tone already playing — just update frequency
+                    // Tone already playing — just update params
                     self.engine.set_node_param(node_id, "freq", freq);
-                } else if let Some(node_id) = self.engine.create_tuner_synth(freq) {
+                    self.engine.set_node_param(node_id, "bright", bright_val);
+                } else if let Some(node_id) = self.engine.create_tuner_synth(freq, bright_val) {
                     self.tuner_node_id = Some(node_id);
                 }
             }

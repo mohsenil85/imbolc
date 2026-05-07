@@ -46,6 +46,16 @@ const PRESETS: &[TunerPreset] = &[
     },
 ];
 
+const NOTE_NAMES: [&str; 12] = [
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+];
+
+fn midi_to_note_name(midi: u8) -> String {
+    let note = (midi % 12) as usize;
+    let octave = (midi as i32 / 12) - 1;
+    format!("{}{}", NOTE_NAMES[note], octave)
+}
+
 // ── Pane state ──────────────────────────────────────────────────────────
 
 pub struct TunerPane {
@@ -53,6 +63,8 @@ pub struct TunerPane {
     instrument_idx: usize,
     string_idx: usize,
     playing: bool,
+    full_step_down: bool,
+    bright: bool,
 }
 
 impl TunerPane {
@@ -62,11 +74,27 @@ impl TunerPane {
             instrument_idx: 0,
             string_idx: 0,
             playing: false,
+            full_step_down: false,
+            bright: false,
         }
     }
 
     fn preset(&self) -> &TunerPreset {
         &PRESETS[self.instrument_idx]
+    }
+
+    fn effective_midi(&self, midi: u8) -> u8 {
+        if self.full_step_down {
+            midi.saturating_sub(2)
+        } else {
+            midi
+        }
+    }
+
+    fn play_current(&self, state: &AppState) -> Action {
+        let midi = self.effective_midi(self.preset().strings[self.string_idx].1);
+        let freq = Self::midi_to_freq(midi, state.session.tuning_a4);
+        Action::Tuner(TunerAction::PlayTone(freq, self.bright))
     }
 
     fn midi_to_freq(midi: u8, tuning_a4: f32) -> f32 {
@@ -125,9 +153,7 @@ impl Pane for TunerPane {
                     self.string_idx -= 1;
                 }
                 if self.playing {
-                    let midi = self.preset().strings[self.string_idx].1;
-                    let freq = Self::midi_to_freq(midi, state.session.tuning_a4);
-                    return Action::Tuner(TunerAction::PlayTone(freq));
+                    return self.play_current(state);
                 }
                 Action::None
             }
@@ -135,9 +161,7 @@ impl Pane for TunerPane {
                 let count = self.preset().strings.len();
                 self.string_idx = (self.string_idx + 1) % count;
                 if self.playing {
-                    let midi = self.preset().strings[self.string_idx].1;
-                    let freq = Self::midi_to_freq(midi, state.session.tuning_a4);
-                    return Action::Tuner(TunerAction::PlayTone(freq));
+                    return self.play_current(state);
                 }
                 Action::None
             }
@@ -147,9 +171,23 @@ impl Pane for TunerPane {
                     Action::Tuner(TunerAction::StopTone)
                 } else {
                     self.playing = true;
-                    let midi = self.preset().strings[self.string_idx].1;
-                    let freq = Self::midi_to_freq(midi, state.session.tuning_a4);
-                    Action::Tuner(TunerAction::PlayTone(freq))
+                    self.play_current(state)
+                }
+            }
+            TunerActionId::ToggleFullStepDown => {
+                self.full_step_down = !self.full_step_down;
+                if self.playing {
+                    self.play_current(state)
+                } else {
+                    Action::None
+                }
+            }
+            TunerActionId::ToggleBright => {
+                self.bright = !self.bright;
+                if self.playing {
+                    self.play_current(state)
+                } else {
+                    Action::None
                 }
             }
         }
@@ -158,7 +196,8 @@ impl Pane for TunerPane {
     fn render(&mut self, area: Rect, buf: &mut RenderBuf, state: &AppState) {
         let p = Palette::from(&state.session.theme);
         let preset = self.preset();
-        let height = (preset.strings.len() as u16) + 6; // title + instrument + a4 + gap + strings
+        let extra_lines = if self.full_step_down { 1 } else { 0 };
+        let height = (preset.strings.len() as u16) + 6 + extra_lines;
         let width = 44;
         let inner = center_rect(area, width, height);
 
@@ -173,7 +212,11 @@ impl Pane for TunerPane {
         let mut y = inner.y;
 
         // Title
-        let title = "Reference Tuner";
+        let title = if self.bright {
+            "Reference Tuner [bright]"
+        } else {
+            "Reference Tuner"
+        };
         let tx = inner.x + (inner.width.saturating_sub(title.len() as u16)) / 2;
         buf.draw_str(tx, y, title, Style::new().fg(p.fg).bg(bg));
         y += 2;
@@ -189,6 +232,14 @@ impl Pane for TunerPane {
         );
         y += 1;
 
+        // Full step down indicator
+        if self.full_step_down {
+            let label = "Full Step Down";
+            let lx = inner.x + (inner.width.saturating_sub(label.len() as u16)) / 2;
+            buf.draw_str(lx, y, label, Style::new().fg(p.accent).bg(bg));
+            y += 1;
+        }
+
         // A4 tuning value
         let a4_line = format!("A4 = {:.1} Hz", state.session.tuning_a4);
         let ax = inner.x + (inner.width.saturating_sub(a4_line.len() as u16)) / 2;
@@ -196,8 +247,10 @@ impl Pane for TunerPane {
         y += 2;
 
         // String list
-        for (i, (note_name, midi)) in preset.strings.iter().enumerate() {
-            let freq = Self::midi_to_freq(*midi, state.session.tuning_a4);
+        for (i, (_note_name, midi)) in preset.strings.iter().enumerate() {
+            let effective = self.effective_midi(*midi);
+            let note_name = midi_to_note_name(effective);
+            let freq = Self::midi_to_freq(effective, state.session.tuning_a4);
             let is_selected = i == self.string_idx;
 
             let marker = if is_selected && self.playing {
@@ -254,19 +307,19 @@ mod tests {
         let state = make_state();
         let event = make_event();
 
-        // Initially not playing
         assert!(!pane.playing);
 
-        // Play
         let action = pane.handle_action(
             ActionId::Tuner(TunerActionId::TogglePlayback),
             &event,
             &state,
         );
         assert!(pane.playing);
-        assert!(matches!(action, Action::Tuner(TunerAction::PlayTone(_))));
+        assert!(matches!(
+            action,
+            Action::Tuner(TunerAction::PlayTone(_, false))
+        ));
 
-        // Stop
         let action = pane.handle_action(
             ActionId::Tuner(TunerActionId::TogglePlayback),
             &event,
@@ -282,31 +335,31 @@ mod tests {
         let state = make_state();
         let event = make_event();
 
-        assert_eq!(pane.instrument_idx, 0); // Guitar
+        assert_eq!(pane.instrument_idx, 0);
         pane.handle_action(
             ActionId::Tuner(TunerActionId::NextInstrument),
             &event,
             &state,
         );
-        assert_eq!(pane.instrument_idx, 1); // Bass
+        assert_eq!(pane.instrument_idx, 1);
         pane.handle_action(
             ActionId::Tuner(TunerActionId::NextInstrument),
             &event,
             &state,
         );
-        assert_eq!(pane.instrument_idx, 2); // Ukulele
+        assert_eq!(pane.instrument_idx, 2);
         pane.handle_action(
             ActionId::Tuner(TunerActionId::NextInstrument),
             &event,
             &state,
         );
-        assert_eq!(pane.instrument_idx, 3); // Guitulele
+        assert_eq!(pane.instrument_idx, 3);
         pane.handle_action(
             ActionId::Tuner(TunerActionId::NextInstrument),
             &event,
             &state,
         );
-        assert_eq!(pane.instrument_idx, 0); // Wraps to Guitar
+        assert_eq!(pane.instrument_idx, 0);
     }
 
     #[test]
@@ -330,16 +383,13 @@ mod tests {
         let state = make_state();
         let event = make_event();
 
-        // Guitar has 6 strings
         assert_eq!(pane.string_idx, 0);
         pane.handle_action(ActionId::Tuner(TunerActionId::NextString), &event, &state);
         assert_eq!(pane.string_idx, 1);
-        // Go back
         pane.handle_action(ActionId::Tuner(TunerActionId::PrevString), &event, &state);
         assert_eq!(pane.string_idx, 0);
-        // Wrap backwards
         pane.handle_action(ActionId::Tuner(TunerActionId::PrevString), &event, &state);
-        assert_eq!(pane.string_idx, 5); // last string of guitar
+        assert_eq!(pane.string_idx, 5);
     }
 
     #[test]
@@ -371,15 +421,12 @@ mod tests {
 
     #[test]
     fn test_midi_to_freq() {
-        // A4 = 69 should give exactly the tuning frequency
         let freq = TunerPane::midi_to_freq(69, 432.0);
         assert!((freq - 432.0).abs() < 0.01);
 
-        // A4 = 69 at 440 Hz
         let freq = TunerPane::midi_to_freq(69, 440.0);
         assert!((freq - 440.0).abs() < 0.01);
 
-        // E2 = 40 at 432 Hz
         let freq = TunerPane::midi_to_freq(40, 432.0);
         let expected = 432.0 * 2.0_f32.powf((40.0 - 69.0) / 12.0);
         assert!((freq - expected).abs() < 0.01);
@@ -391,7 +438,6 @@ mod tests {
         let state = make_state();
         let event = make_event();
 
-        // Start playing
         pane.handle_action(
             ActionId::Tuner(TunerActionId::TogglePlayback),
             &event,
@@ -399,8 +445,152 @@ mod tests {
         );
         assert!(pane.playing);
 
-        // Navigate to next string — should emit PlayTone with new freq
         let action = pane.handle_action(ActionId::Tuner(TunerActionId::NextString), &event, &state);
-        assert!(matches!(action, Action::Tuner(TunerAction::PlayTone(_))));
+        assert!(matches!(action, Action::Tuner(TunerAction::PlayTone(_, _))));
+    }
+
+    #[test]
+    fn test_full_step_down_toggle() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        assert!(!pane.full_step_down);
+        pane.handle_action(
+            ActionId::Tuner(TunerActionId::ToggleFullStepDown),
+            &event,
+            &state,
+        );
+        assert!(pane.full_step_down);
+        pane.handle_action(
+            ActionId::Tuner(TunerActionId::ToggleFullStepDown),
+            &event,
+            &state,
+        );
+        assert!(!pane.full_step_down);
+    }
+
+    #[test]
+    fn test_full_step_down_lowers_frequency() {
+        let tuning_a4 = 440.0;
+        let midi_e4: u8 = 64;
+
+        let freq_standard = TunerPane::midi_to_freq(midi_e4, tuning_a4);
+        let freq_dropped = TunerPane::midi_to_freq(midi_e4 - 2, tuning_a4);
+
+        assert!(freq_dropped < freq_standard);
+        let expected = tuning_a4 * 2.0_f32.powf((62.0 - 69.0) / 12.0);
+        assert!((freq_dropped - expected).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_full_step_down_updates_tone_when_playing() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        pane.handle_action(
+            ActionId::Tuner(TunerActionId::TogglePlayback),
+            &event,
+            &state,
+        );
+        assert!(pane.playing);
+
+        let action = pane.handle_action(
+            ActionId::Tuner(TunerActionId::ToggleFullStepDown),
+            &event,
+            &state,
+        );
+        assert!(matches!(action, Action::Tuner(TunerAction::PlayTone(_, _))));
+        assert!(pane.full_step_down);
+    }
+
+    #[test]
+    fn test_full_step_down_no_action_when_not_playing() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        let action = pane.handle_action(
+            ActionId::Tuner(TunerActionId::ToggleFullStepDown),
+            &event,
+            &state,
+        );
+        assert!(matches!(action, Action::None));
+    }
+
+    #[test]
+    fn test_midi_to_note_name() {
+        assert_eq!(midi_to_note_name(69), "A4");
+        assert_eq!(midi_to_note_name(60), "C4");
+        assert_eq!(midi_to_note_name(64), "E4");
+        assert_eq!(midi_to_note_name(62), "D4");
+        assert_eq!(midi_to_note_name(40), "E2");
+        assert_eq!(midi_to_note_name(38), "D2");
+    }
+
+    #[test]
+    fn test_bright_toggle() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        assert!(!pane.bright);
+        pane.handle_action(ActionId::Tuner(TunerActionId::ToggleBright), &event, &state);
+        assert!(pane.bright);
+        pane.handle_action(ActionId::Tuner(TunerActionId::ToggleBright), &event, &state);
+        assert!(!pane.bright);
+    }
+
+    #[test]
+    fn test_bright_updates_tone_when_playing() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        pane.handle_action(
+            ActionId::Tuner(TunerActionId::TogglePlayback),
+            &event,
+            &state,
+        );
+        assert!(pane.playing);
+
+        let action =
+            pane.handle_action(ActionId::Tuner(TunerActionId::ToggleBright), &event, &state);
+        assert!(matches!(
+            action,
+            Action::Tuner(TunerAction::PlayTone(_, true))
+        ));
+    }
+
+    #[test]
+    fn test_bright_no_action_when_not_playing() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        let action =
+            pane.handle_action(ActionId::Tuner(TunerActionId::ToggleBright), &event, &state);
+        assert!(matches!(action, Action::None));
+    }
+
+    #[test]
+    fn test_play_carries_bright_state() {
+        let mut pane = TunerPane::default();
+        let state = make_state();
+        let event = make_event();
+
+        // Enable bright first
+        pane.bright = true;
+
+        let action = pane.handle_action(
+            ActionId::Tuner(TunerActionId::TogglePlayback),
+            &event,
+            &state,
+        );
+        assert!(matches!(
+            action,
+            Action::Tuner(TunerAction::PlayTone(_, true))
+        ));
     }
 }

@@ -140,8 +140,8 @@ fn audio_effects_for_undo_scope(scope: UndoScope) -> Vec<AudioEffect> {
 /// Dispatch tuner actions.
 fn dispatch_tuner(action: &TunerAction, audio: &mut AudioHandle) -> DispatchResult {
     match action {
-        TunerAction::PlayTone(freq) => {
-            audio.start_tuner_tone(*freq);
+        TunerAction::PlayTone(freq, bright) => {
+            audio.start_tuner_tone(*freq, *bright);
         }
         TunerAction::StopTone => {
             audio.stop_tuner_tone();

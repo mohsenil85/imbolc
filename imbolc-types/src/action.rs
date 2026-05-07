@@ -1162,8 +1162,8 @@ impl TrackAction {
 /// Reference tuner actions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TunerAction {
-    /// Play a reference tone at the given frequency
-    PlayTone(f32),
+    /// Play a reference tone at the given frequency (bright adds harmonics)
+    PlayTone(f32, bool),
     /// Stop the currently playing reference tone
     StopTone,
 }

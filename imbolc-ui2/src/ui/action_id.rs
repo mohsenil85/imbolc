@@ -580,6 +580,8 @@ define_action_enum! {
         PrevString => "prev_string",
         NextString => "next_string",
         TogglePlayback => "play_stop",
+        ToggleFullStepDown => "toggle_full_step_down",
+        ToggleBright => "toggle_bright",
     }
 }
 

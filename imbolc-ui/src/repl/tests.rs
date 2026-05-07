@@ -368,7 +368,7 @@ fn repl_covers_all_domain_actions() {
             0.0,
         )),
         DomainAction::Click(ClickAction::Toggle),
-        DomainAction::Tuner(TunerAction::PlayTone(440.0)),
+        DomainAction::Tuner(TunerAction::PlayTone(440.0, false)),
         DomainAction::Generative(GenerativeAction::ToggleEnabled),
         DomainAction::Tag(TagAction::CreateTag(String::new())),
         DomainAction::AudioFeedback(imbolc_types::AudioFeedback::PendingBufferFreed),

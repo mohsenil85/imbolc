@@ -286,7 +286,7 @@ repl_actions! {
     }
 
     group "tuner" => DomainAction::Tuner, TunerAction {
-        "play"  => PlayTone(freq: f32);                                "Play reference tone at frequency"
+        "play"  => PlayTone(freq: f32, bright: bool);                   "Play reference tone at frequency (bright=true adds harmonics)"
         "stop"  => StopTone;                                           "Stop reference tone"
     }
 

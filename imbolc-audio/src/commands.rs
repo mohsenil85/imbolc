@@ -286,6 +286,7 @@ pub enum AudioCmd {
     // ── Tuner tone ────────────────────────────────────────────────
     StartTunerTone {
         freq: f32,
+        bright: bool,
     },
     StopTunerTone,
 

@@ -1285,8 +1285,8 @@ impl AudioHandle {
 
     // ── Tuner Tone ───────────────────────────────────────────────
 
-    pub fn start_tuner_tone(&self, freq: f32) {
-        self.send(AudioCmd::StartTunerTone { freq });
+    pub fn start_tuner_tone(&self, freq: f32, bright: bool) {
+        self.send(AudioCmd::StartTunerTone { freq, bright });
     }
 
     pub fn stop_tuner_tone(&self) {
